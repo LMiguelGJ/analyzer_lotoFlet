@@ -9,6 +9,11 @@ class MarkovPredictor:
         self.counts_runs = {'Par': 0, 'Impar': 0}  # Conteo de patrones consecutivos (solo longitud 'order')
         # Transiciones por clave exacta de longitud k (1..order): clave -> siguiente estado
         self.transitions_by_key = {k: defaultdict(lambda: {'Par': 0, 'Impar': 0}) for k in range(1, order + 1)}
+        # Qué viene después de un patrón consecutivo de longitud order
+        self.after_runs = {
+            'Par': {'Par': 0, 'Impar': 0},
+            'Impar': {'Par': 0, 'Impar': 0}
+        }
 
     def _state(self, number):
         return 'Par' if number % 2 == 0 else 'Impar'
@@ -23,6 +28,11 @@ class MarkovPredictor:
             if len(self.history) >= k:
                 key = tuple(list(self.history)[-k:])
                 self.transitions_by_key[k][key][current_state] += 1
+
+        # Detectar si la ventana anterior tenía order estados iguales (antes de agregar current_state)
+        if len(self.history) == self.order and all(s == self.history[0] for s in self.history):
+            run_state = self.history[0]
+            self.after_runs[run_state][current_state] += 1
 
         # 2) Agregar el estado actual a la ventana
         self.history.append(current_state)
@@ -117,7 +127,7 @@ class MarkovPredictor:
 if __name__ == "__main__":
     # Variable para limitar cuántos números hacia atrás considerar
     NUMEROS_A_ANALIZAR = 0
-    NUMERO_ORDER = 8
+    NUMERO_ORDER = 3
     
     with open("loteka_numbers.json", "r", encoding="utf-8") as f:
         raw = json.load(f)
