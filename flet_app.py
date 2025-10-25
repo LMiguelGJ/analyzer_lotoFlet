@@ -170,6 +170,32 @@ def main(page: ft.Page):
     def clear_output(e):
         output_text.value = ""
         page.update()
+
+    def delete_last_number(e):
+        json_file_path = os.path.join(os.getcwd(), "loteka_numbers.json")
+        if not os.path.exists(json_file_path):
+            append_output("❌ No data file found to delete from.", "#ff4444")
+            return
+
+        try:
+            # Read and update the JSON file
+            with open(json_file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            if data and isinstance(data, list):
+                removed_number = data.pop()
+                with open(json_file_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f)
+                append_output(f"🗑️ Removed last number: {removed_number}", "#fbbf24")
+            else:
+                append_output("ℹ️ No numbers to remove.", "#94a3b8")
+
+        except Exception as ex:
+            append_output(f"❌ Error modifying data file: {str(ex)}", "#ff4444")
+
+        # Update the UI
+        last_numbers_label.value = f"Ultimos: {get_last_10_numbers()}"
+        page.update()
     
 
     
@@ -222,6 +248,22 @@ def main(page: ft.Page):
                 ),
                 on_click=clear_output,
                 tooltip="Clear console",
+            ),
+            col={"xs": 12, "sm": 6, "md": 3},
+        ),
+        ft.Container(
+            content=ft.ElevatedButton(
+                content=ft.Row([
+                    ft.Icon(ft.icons.DELETE_FOREVER_ROUNDED, color="white", size=18),
+                    ft.Text("Delete Last", color="white", weight=ft.FontWeight.W_600, size=14),
+                ], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
+                style=ft.ButtonStyle(
+                    bgcolor={ft.ControlState.DEFAULT: "#f43f5e", ft.ControlState.HOVERED: "#be123c"},
+                    padding=ft.padding.symmetric(horizontal=16, vertical=16),
+                    shape=ft.RoundedRectangleBorder(radius=12),
+                ),
+                on_click=delete_last_number,
+                tooltip="Remove the last number",
             ),
             col={"xs": 12, "sm": 6, "md": 3},
         ),
