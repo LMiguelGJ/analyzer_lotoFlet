@@ -38,9 +38,9 @@ def main():
     predictions = {'global': [], 'context': [], 'combined': []}
     
     for order in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
-        print(f"\n{'='*50}")
+        print(f"\n{'='*20}")
         print(f"Order {order} Analysis")
-        print(f"{'='*50}")
+        print(f"{'='*20}")
         
         try:
             preds = get_predictions(order)
@@ -63,9 +63,9 @@ def main():
             print(f"Error with order {order}: {e}")
     
     # Final count summary
-    print(f"\n{'='*50}")
+    print(f"\n{'='*20}")
     print("📊 FINAL COUNT SUMMARY")
-    print(f"{'='*50}")
+    print(f"{'='*20}")
     
     for pred_type in ['global', 'context', 'combined']:
         par_count = predictions[pred_type].count('Par')

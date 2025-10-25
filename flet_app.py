@@ -274,10 +274,16 @@ def main(page: ft.Page):
     top_section = ft.Container(
         content=ft.Column([
             # Status indicator
-            ft.Row(
+            ft.ResponsiveRow(
                 [
-                    status_indicator,
-                    last_numbers_label,
+                    ft.Container(
+                        content=status_indicator,
+                        col={"xs": 12, "sm": 6, "md": 6},
+                    ),
+                    ft.Container(
+                        content=last_numbers_label,
+                        col={"xs": 12, "sm": 6, "md": 6},
+                    ),
                 ],
                 alignment=ft.MainAxisAlignment.START,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
