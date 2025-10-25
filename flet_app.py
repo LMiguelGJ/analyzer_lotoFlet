@@ -8,6 +8,23 @@ import time
 from datetime import datetime
 import sys
 
+def get_last_10_numbers():
+    json_file_path = os.path.join(os.getcwd(), "loteka_numbers.json")
+    if not os.path.exists(json_file_path):
+        return "No data file found."
+    
+    try:
+        with open(json_file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        if not data or not isinstance(data, list):
+            return "No numbers in data file."
+        
+        last_10 = data[-10:]
+        return ", ".join(map(str, last_10))
+    except Exception as e:
+        return f"Error reading numbers: {str(e)}"
+
 def main(page: ft.Page):
     page.title = "LOTeka Analyzer"
     page.theme_mode = ft.ThemeMode.DARK
@@ -51,6 +68,12 @@ def main(page: ft.Page):
         size=14,
         weight=ft.FontWeight.W_500,
     )
+    last_numbers_label = ft.Text(
+        f"Ultimos: {get_last_10_numbers()}",
+        color="white",
+        size=14,
+        weight=ft.FontWeight.W_500,
+    )
     
     status_indicator = ft.Container(
         content=ft.Row([
@@ -83,6 +106,7 @@ def main(page: ft.Page):
         }
         status_dot.bgcolor = dot_colors.get(color, color)
         status_text.value = message
+        last_numbers_label.value = f"Ultimos: {get_last_10_numbers()}"
         page.update()
     
     def append_output(text, color="#00ff00"):
@@ -147,18 +171,7 @@ def main(page: ft.Page):
         output_text.value = ""
         page.update()
     
-    def export_results(e):
-        try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"loteka_analysis_{timestamp}.txt"
-            
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write(output_text.value)
-            
-            append_output(f"📄 Results exported to {filename}", "#00ffff")
-            update_status("Results exported successfully!", "green")
-        except Exception as e:
-            append_output(f"❌ Export failed: {str(e)}", "#ff4444")
+
     
     # Removed header section
     
@@ -212,29 +225,22 @@ def main(page: ft.Page):
             ),
             col={"xs": 12, "sm": 6, "md": 3},
         ),
-        ft.Container(
-            content=ft.ElevatedButton(
-                content=ft.Row([
-                    ft.Icon(ft.icons.FILE_DOWNLOAD_ROUNDED, color="white", size=18),
-                    ft.Text("Export Results", color="white", weight=ft.FontWeight.W_600, size=14),
-                ], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
-                style=ft.ButtonStyle(
-                    bgcolor={ft.ControlState.DEFAULT: "#10b981", ft.ControlState.HOVERED: "#059669"},
-                    padding=ft.padding.symmetric(horizontal=16, vertical=16),
-                    shape=ft.RoundedRectangleBorder(radius=12),
-                ),
-                on_click=export_results,
-                tooltip="Export to file",
-            ),
-            col={"xs": 12, "sm": 6, "md": 3},
-        ),
+
     ], spacing=10)
     
     # Top section - Buttons + Status
     top_section = ft.Container(
         content=ft.Column([
             # Status indicator
-            status_indicator,
+            ft.Row(
+                [
+                    status_indicator,
+                    last_numbers_label,
+                ],
+                alignment=ft.MainAxisAlignment.START,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10,
+            ),
             ft.Divider(height=1, color="#3b3b3b"),
             # Buttons
             control_buttons,
