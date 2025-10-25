@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 import sys
 
-def get_last_10_numbers():
+def get_last_6_numbers():
     json_file_path = os.path.join(os.getcwd(), "loteka_numbers.json")
     if not os.path.exists(json_file_path):
         return "No data file found."
@@ -20,8 +20,8 @@ def get_last_10_numbers():
         if not data or not isinstance(data, list):
             return "No numbers in data file."
         
-        last_10 = data[-10:]
-        return ", ".join(map(str, last_10))
+        last_6 = data[-6:]
+        return ", ".join(map(str, last_6))
     except Exception as e:
         return f"Error reading numbers: {str(e)}"
 
@@ -69,7 +69,7 @@ def main(page: ft.Page):
         weight=ft.FontWeight.W_500,
     )
     last_numbers_label = ft.Text(
-        f"Ultimos: {get_last_10_numbers()}",
+        f"Ultimos: {get_last_6_numbers()}",
         color="white",
         size=14,
         weight=ft.FontWeight.W_500,
@@ -106,7 +106,7 @@ def main(page: ft.Page):
         }
         status_dot.bgcolor = dot_colors.get(color, color)
         status_text.value = message
-        last_numbers_label.value = f"Ultimos: {get_last_10_numbers()}"
+        last_numbers_label.value = f"Ultimos: {get_last_6_numbers()}"
         page.update()
     
     def append_output(text, color="#00ff00"):
@@ -194,7 +194,7 @@ def main(page: ft.Page):
             append_output(f"❌ Error modifying data file: {str(ex)}", "#ff4444")
 
         # Update the UI
-        last_numbers_label.value = f"Ultimos: {get_last_10_numbers()}"
+        last_numbers_label.value = f"Ultimos: {get_last_6_numbers()}"
         page.update()
     
 
