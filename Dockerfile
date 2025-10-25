@@ -31,16 +31,16 @@ RUN mkdir -p assets && \
 USER loteka
 
 # Expose port for Flet web interface
-EXPOSE 8550
+EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV FLET_SERVER_PORT=8550
+ENV FLET_SERVER_PORT=8080
 ENV FLET_SERVER_HOST=0.0.0.0
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8550/ || exit 1
+  CMD curl -f http://localhost:8080/ || exit 1
 
 # Run the startup script
 CMD ["./start.sh"]

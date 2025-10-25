@@ -302,7 +302,7 @@ if __name__ == "__main__":
     # Run as mobile-optimized web application
     ft.app(
         target=main,
-        port=8550,
+        port=8080,
         view=ft.AppView.WEB_BROWSER,
         assets_dir="assets",
     )
