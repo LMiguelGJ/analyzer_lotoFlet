@@ -1,13 +1,14 @@
 #!c:/Users/LMiguelGJ/Desktop/LotePy/.venv/Scripts/python.exe
+from dotenv import load_dotenv, set_key, find_dotenv
+import os
+import json
+from datetime import datetime, timedelta
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
-from datetime import datetime, timedelta
-import json
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import os
-from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
@@ -73,6 +74,8 @@ def get_existing_numbers():
         return []
 
 def main():
+    dotenv_path = find_dotenv()
+    load_dotenv(dotenv_path)
     # Get existing numbers
     reference_numbers = get_existing_numbers()
     all_existing_numbers = []
@@ -123,15 +126,19 @@ def main():
     # Combine existing numbers with new ones
     todos_resultados = all_existing_numbers + nuevos_resultados
 
-    # Update the last processed date in .env
-    with open('.env', 'w') as env_file:
-        env_file.write(f'LAST_PROCESSED_DATE={fecha_hoy.strftime("%d/%m/%Y")}')
-
-    # Guardar resultados en archivo JSON
+    # Guardar los resultados combinados en el archivo JSON
     with open('loteka_numbers.json', 'w') as f:
         json.dump(todos_resultados, f, indent=4)
 
-    print(f"\nResultados guardados. {len(nuevos_resultados)} nuevos numeros agregado.")
+    if len(nuevos_resultados) > 0:
+        print(f"Resultados guardados. {len(nuevos_resultados)} nuevos numeros agregado.")
+    else:
+        print("Resultados guardados. 0 nuevos numeros agregado.")
+
+    # Actualizar LAST_PROCESSED_DATE en el archivo .env
+    set_key(dotenv_path, 'LAST_PROCESSED_DATE', (fecha_actual - timedelta(days=1)).strftime('%d/%m/%Y'))
+
+    print("✅ Database Update completed successfully!")
     return nuevos_resultados
 
 if __name__ == "__main__":
