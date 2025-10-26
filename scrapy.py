@@ -86,8 +86,16 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError):
         all_existing_numbers = []
 
-    # Get the last processed date from .env or use default
-    last_date = os.getenv('LAST_PROCESSED_DATE', '15/10/2019')
+    # Encontrar la fecha más reciente en lugar de usar .env
+    # Por defecto usar 15/10/2019 si no hay datos
+    last_date = '15/10/2019'
+    
+    # Si hay datos existentes, usar la fecha de hoy como punto de partida
+    # para asegurar que siempre busque los números más recientes
+    if all_existing_numbers:
+        # Siempre iniciar desde la fecha actual para obtener los números más recientes
+        last_date = datetime.now().strftime('%d/%m/%Y')
+    
     fecha = last_date
     print(f"Iniciando desde {last_date}")
 
@@ -135,8 +143,18 @@ def main():
     else:
         print("Resultados guardados. 0 nuevos numeros agregado.")
 
-    # Actualizar LAST_PROCESSED_DATE en el archivo .env
-    set_key(dotenv_path, 'LAST_PROCESSED_DATE', (fecha_actual - timedelta(days=1)).strftime('%d/%m/%Y'))
+    # Actualizar LAST_PROCESSED_DATE en el archivo .env manualmente
+    updated_date_str = fecha_hoy.strftime('%d/%m/%Y')
+    
+    with open(dotenv_path, 'r') as f:
+        lines = f.readlines()
+
+    with open(dotenv_path, 'w') as f:
+        for line in lines:
+            if line.startswith('LAST_PROCESSED_DATE='):
+                f.write(f"LAST_PROCESSED_DATE='{updated_date_str}'\n")
+            else:
+                f.write(line)
 
     print("✅ Database Update completed successfully!")
     return nuevos_resultados
