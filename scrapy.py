@@ -90,10 +90,12 @@ def main():
     # Por defecto usar 15/10/2019 si no hay datos
     last_date = '15/10/2019'
     
-    # Si hay datos existentes, usar la fecha de hoy como punto de partida
-    # para asegurar que siempre busque los números más recientes
-    if all_existing_numbers:
-        # Siempre iniciar desde la fecha actual para obtener los números más recientes
+    # Usar LAST_PROCESSED_DATE del archivo .env si existe
+    env_last_date = os.getenv('LAST_PROCESSED_DATE')
+    if env_last_date:
+        last_date = env_last_date
+    elif all_existing_numbers:
+        # Si no hay fecha en .env pero hay datos, usar la fecha actual
         last_date = datetime.now().strftime('%d/%m/%Y')
     
     fecha = last_date
@@ -144,7 +146,8 @@ def main():
         print("Resultados guardados. 0 nuevos numeros agregado.")
 
     # Actualizar LAST_PROCESSED_DATE en el archivo .env manualmente
-    updated_date_str = fecha_hoy.strftime('%d/%m/%Y')
+    # Usar la última fecha procesada (fecha_actual - 1 día) en lugar de fecha_hoy
+    updated_date_str = (fecha_actual - timedelta(days=1)).strftime('%d/%m/%Y')
     
     with open(dotenv_path, 'r') as f:
         lines = f.readlines()
