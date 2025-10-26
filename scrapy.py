@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-import os
+import pytz
 
 # Load environment variables
 load_dotenv()
@@ -86,6 +86,10 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError):
         all_existing_numbers = []
 
+    # Usar zona horaria de RD (UTC-4) en lugar del servidor
+    rd_tz = pytz.timezone('America/Santo_Domingo')
+    fecha_rd = datetime.now(rd_tz)
+    
     # Encontrar la fecha más reciente en lugar de usar .env
     # Por defecto usar 15/10/2019 si no hay datos
     last_date = '15/10/2019'
@@ -95,15 +99,15 @@ def main():
     if env_last_date:
         last_date = env_last_date
     elif all_existing_numbers:
-        # Si no hay fecha en .env pero hay datos, usar la fecha actual
-        last_date = datetime.now().strftime('%d/%m/%Y')
+        # Si no hay fecha en .env pero hay datos, usar la fecha actual de RD
+        last_date = fecha_rd.strftime('%d/%m/%Y')
     
     fecha = last_date
     print(f"Iniciando desde {last_date}")
 
     # Convertir la fecha inicial a objeto datetime
     fecha_actual = datetime.strptime(fecha, '%d/%m/%Y')
-    fecha_hoy = datetime.now()
+    fecha_hoy = fecha_rd  # Usar fecha de RD en lugar de fecha del servidor
 
     # Lista para almacenar los nuevos resultados
     nuevos_resultados = []
