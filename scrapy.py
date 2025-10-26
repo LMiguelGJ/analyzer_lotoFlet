@@ -107,7 +107,7 @@ def main():
 
     # Convertir la fecha inicial a objeto datetime
     fecha_actual = datetime.strptime(fecha, '%d/%m/%Y')
-    fecha_hoy = fecha_rd  # Usar fecha de RD en lugar de fecha del servidor
+    fecha_hoy = fecha_rd.replace(tzinfo=None)
 
     # Lista para almacenar los nuevos resultados
     nuevos_resultados = []
