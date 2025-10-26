@@ -334,17 +334,12 @@ def main(page: ft.Page):
     
     # Welcome message - Mobile optimized
     append_output("🎯 LOTeka Analyzer v2.0", "#6366f1")
-    append_output("━" * 30, "#3b3b3b")
+    append_output("━" * 20, "#3b3b3b")
     append_output("")
     append_output("✨ Lottery Prediction System", "#a3e635")
     append_output("📊 Markov Chain Analysis", "#94a3b8")
     append_output("")
-    append_output("💡 Quick Start:", "#fbbf24")
-    append_output("1. Update Database", "#94a3b8")
-    append_output("2. Run Analysis", "#94a3b8")
-    append_output("3. Export Results", "#94a3b8")
-    append_output("")
-    append_output("━" * 30, "#3b3b3b")
+    append_output("━" * 20, "#3b3b3b")
 
 if __name__ == "__main__":
     # Run as mobile-optimized web application
