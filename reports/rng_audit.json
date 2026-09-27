@@ -1,0 +1,3431 @@
+{
+ "Loteka": {
+  "draws": 105426,
+  "days": 566,
+  "lottery": [
+   {
+    "id": "B1a",
+    "name": "Sesgo de módulo, fuente de 8 bits (00-55)",
+    "p": 0.8045166907560741,
+    "detail": "observado 0.56017, justo 0.56000, con sesgo sería 0.65625 (z=+0.25)",
+    "p_holm": 1.0,
+    "p_bh": 0.8715597483190803,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B1b",
+    "name": "Sesgo de módulo, fuente de 16 bits (00-35)",
+    "p": 0.4745664253034939,
+    "detail": "observado 0.36047, justo 0.36000, con sesgo sería 0.36035 (z=+0.72)",
+    "p_holm": 1.0,
+    "p_bh": 0.7070942236527509,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.1",
+    "name": "Uniformidad globo 1",
+    "p": 0.43074741385022264,
+    "detail": "chi²=100.8 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.7070942236527509,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.2",
+    "name": "Uniformidad globo 2",
+    "p": 0.26922704983750473,
+    "detail": "chi²=107.2 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.3",
+    "name": "Uniformidad globo 3",
+    "p": 0.28767502369288067,
+    "detail": "chi²=106.4 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.4",
+    "name": "Uniformidad globo 4",
+    "p": 0.3009784219218137,
+    "detail": "chi²=105.8 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.5",
+    "name": "Uniformidad globo 5",
+    "p": 0.5191109241233729,
+    "detail": "chi²=97.7 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.7295612987679835,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.g",
+    "name": "Uniformidad global",
+    "p": 0.18702050410930396,
+    "detail": "chi²=111.3 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B3a",
+    "name": "Sorteo N → N+1, globo 1 (100×100)",
+    "p": 0.0450369315559432,
+    "detail": "chi²=10040 (gl=9801), 104860 pares",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B3b",
+    "name": "Sorteo N → N+1, 5 globos juntos",
+    "p": 0.3700017105074789,
+    "detail": "chi²=9847 (gl=9801), 524300 pares",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B3c",
+    "name": "Paridad N → N+1, globo 1 (tu Markov orden 1)",
+    "p": 0.15959756799802682,
+    "detail": "chi²=1.98 (gl=1)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.12",
+    "name": "Globo 1 vs globo 2",
+    "p": 0.4818593403858742,
+    "detail": "chi²=9807 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.7070942236527509,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.13",
+    "name": "Globo 1 vs globo 3",
+    "p": 0.723041640516717,
+    "detail": "chi²=9718 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.8700371385083746,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.14",
+    "name": "Globo 1 vs globo 4",
+    "p": 0.25738372223181827,
+    "detail": "chi²=9892 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.15",
+    "name": "Globo 1 vs globo 5",
+    "p": 0.7529843944553447,
+    "detail": "chi²=9705 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.8700371385083746,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.23",
+    "name": "Globo 2 vs globo 3",
+    "p": 0.1152926572878687,
+    "detail": "chi²=9969 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.24",
+    "name": "Globo 2 vs globo 4",
+    "p": 0.27037107836165847,
+    "detail": "chi²=9886 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.25",
+    "name": "Globo 2 vs globo 5",
+    "p": 0.15434957634482158,
+    "detail": "chi²=9944 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.34",
+    "name": "Globo 3 vs globo 4",
+    "p": 0.3561797172762978,
+    "detail": "chi²=9852 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.35",
+    "name": "Globo 3 vs globo 5",
+    "p": 0.6038979708634846,
+    "detail": "chi²=9763 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.8051972944846462,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.45",
+    "name": "Globo 4 vs globo 5",
+    "p": 0.8018031946493868,
+    "detail": "chi²=9682 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.8715597483190803,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1d",
+    "name": "Decenas globo 1",
+    "p": 0.6679374558793791,
+    "detail": "chi²=6.7",
+    "p_holm": 1.0,
+    "p_bh": 0.8269701834697075,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1u",
+    "name": "Unidades globo 1",
+    "p": 0.37570496868125247,
+    "detail": "chi²=9.7",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1i",
+    "name": "Decena vs unidad globo 1",
+    "p": 0.3765192132240437,
+    "detail": "chi²=84.4",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2d",
+    "name": "Decenas globo 2",
+    "p": 0.31257143450209085,
+    "detail": "chi²=10.5",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2u",
+    "name": "Unidades globo 2",
+    "p": 0.20894306509540003,
+    "detail": "chi²=12.1",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2i",
+    "name": "Decena vs unidad globo 2",
+    "p": 0.3606467661786956,
+    "detail": "chi²=84.9",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3d",
+    "name": "Decenas globo 3",
+    "p": 0.39639192428779435,
+    "detail": "chi²=9.5",
+    "p_holm": 1.0,
+    "p_bh": 0.6870793354321769,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3u",
+    "name": "Unidades globo 3",
+    "p": 0.38194763077882293,
+    "detail": "chi²=9.6",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3i",
+    "name": "Decena vs unidad globo 3",
+    "p": 0.2937850254270996,
+    "detail": "chi²=87.4",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4d",
+    "name": "Decenas globo 4",
+    "p": 0.019515664902311925,
+    "detail": "chi²=19.8",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4u",
+    "name": "Unidades globo 4",
+    "p": 0.09936027857197186,
+    "detail": "chi²=14.7",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4i",
+    "name": "Decena vs unidad globo 4",
+    "p": 0.7696482379112544,
+    "detail": "chi²=71.3",
+    "p_holm": 1.0,
+    "p_bh": 0.8700371385083746,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5d",
+    "name": "Decenas globo 5",
+    "p": 0.19632671465576731,
+    "detail": "chi²=12.3",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5u",
+    "name": "Unidades globo 5",
+    "p": 0.44093335802052824,
+    "detail": "chi²=9.0",
+    "p_holm": 1.0,
+    "p_bh": 0.7070942236527509,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5i",
+    "name": "Decena vs unidad globo 5",
+    "p": 0.6258960072960578,
+    "detail": "chi²=76.3",
+    "p_holm": 1.0,
+    "p_bh": 0.8136648094848751,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B6",
+    "name": "Tiempo de retorno de cada número (gaps)",
+    "p": 0.4895267702211352,
+    "detail": "chi²=18.5 (gl=19), 526630 gaps, media 99.91 (justa 100)",
+    "p_holm": 1.0,
+    "p_bh": 0.7070942236527509,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.1",
+    "name": "Memoria a 1-185 sorteos, globo 1",
+    "p": 0.21911387220230352,
+    "detail": "Q=199.6 (gl=185); lag más extremo 172 (z=-3.05)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.2",
+    "name": "Memoria a 1-185 sorteos, globo 2",
+    "p": 0.259309781691196,
+    "detail": "Q=197.0 (gl=185); lag más extremo 174 (z=+3.06)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.3",
+    "name": "Memoria a 1-185 sorteos, globo 3",
+    "p": 0.06897964532341747,
+    "detail": "Q=214.3 (gl=185); lag más extremo 72 (z=-3.17)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.4",
+    "name": "Memoria a 1-185 sorteos, globo 4",
+    "p": 0.11277381285635403,
+    "detail": "Q=208.6 (gl=185); lag más extremo 3 (z=+2.79)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.5",
+    "name": "Memoria a 1-185 sorteos, globo 5",
+    "p": 0.6654934636815699,
+    "detail": "Q=176.2 (gl=185); lag más extremo 99 (z=-2.83)",
+    "p_holm": 1.0,
+    "p_bh": 0.8269701834697075,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.p",
+    "name": "Memoria de la paridad a 1-185 sorteos, globo 1",
+    "p": 0.7404483852054169,
+    "detail": "Q=172.2 (gl=185); lag más extremo 162 (z=-2.83)",
+    "p_holm": 1.0,
+    "p_bh": 0.8700371385083746,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B8a",
+    "name": "Misma hora, días consecutivos (coincidencias)",
+    "p": 0.9213466646031437,
+    "detail": "5198 coincidencias en 520575 comparaciones, esperadas 5206",
+    "p_holm": 1.0,
+    "p_bh": 0.9777556440686423,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B8b",
+    "name": "¿Cada horario tiene números propios? (horario × número)",
+    "p": 0.26636381957333843,
+    "detail": "chi²=18533 (gl=18414)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B9a",
+    "name": "Sorteos completos repetidos (5 números iguales)",
+    "p": 1.0,
+    "detail": "0 repetidos, esperados 0.56",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B9b",
+    "name": "Secuencia repetida más larga (globo 1)",
+    "p": 1.0,
+    "detail": "la más larga mide 4 sorteos; con azar lo típico es 4.9",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B10a",
+    "name": "Fórmula lineal entre sorteos (x' = a·x + c mod 100)",
+    "p": 1.0,
+    "detail": "peor a=54, p corregido por 100 pruebas",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B10b",
+    "name": "Fórmula lineal entre globos del mismo sorteo",
+    "p": 0.11573303110666182,
+    "detail": "peor a=50, p corregido por 100 pruebas",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11a",
+    "name": "Hora del día × número",
+    "p": 0.5359925857345909,
+    "detail": "chi²=1578 (gl=1584)",
+    "p_holm": 1.0,
+    "p_bh": 0.7334635383736506,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11b",
+    "name": "Día de la semana × número",
+    "p": 0.47663761754374256,
+    "detail": "chi²=595 (gl=594)",
+    "p_holm": 1.0,
+    "p_bh": 0.7070942236527509,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11c",
+    "name": "Mes × número",
+    "p": 0.3221320140173794,
+    "detail": "chi²=1110 (gl=1089)",
+    "p_holm": 1.0,
+    "p_bh": 0.6848716138103031,
+    "verdict": "PASA"
+   }
+  ],
+  "nist": {
+   "bits_6": {
+    "frequency": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "block_frequency": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "longest_run": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "binary_matrix_rank": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 20,
+     "passed": 19,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "non_overlapping_template": {
+     "m": 2960,
+     "passed": 2919,
+     "bound": 0.9845135301557968,
+     "uniform_p": 0.7351753974201107,
+     "verdict": "PASA"
+    },
+    "overlapping_template": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "universal": {
+     "m": 2,
+     "passed": 2,
+     "bound": 0.7789312908079457,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "linear_complexity": {
+     "m": 20,
+     "passed": 19,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "serial": {
+     "m": 40,
+     "passed": 40,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "approximate_entropy": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "cumulative_sums": {
+     "m": 40,
+     "passed": 40,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions": {
+     "m": 16,
+     "passed": 16,
+     "bound": 0.9153759422170035,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions_variant": {
+     "m": 36,
+     "passed": 36,
+     "bound": 0.940250628144669,
+     "uniform_p": null,
+     "verdict": "PASA"
+    }
+   },
+   "bits_6_count": 2024286,
+   "parity": {
+    "frequency": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "block_frequency": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "longest_run": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "binary_matrix_rank": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "non_overlapping_template": {
+     "m": 740,
+     "passed": 731,
+     "bound": 0.9790270603115936,
+     "uniform_p": 0.5341462169096916,
+     "verdict": "PASA"
+    },
+    "overlapping_template": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "universal": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "linear_complexity": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "serial": {
+     "m": 10,
+     "passed": 10,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "approximate_entropy": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "cumulative_sums": {
+     "m": 10,
+     "passed": 10,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions": {
+     "m": 8,
+     "passed": 8,
+     "bound": 0.8844656454039728,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions_variant": {
+     "m": 18,
+     "passed": 18,
+     "bound": 0.9196437636026485,
+     "uniform_p": null,
+     "verdict": "PASA"
+    }
+   }
+  }
+ },
+ "sano (SHA-256)": {
+  "draws": 105426,
+  "days": 566,
+  "lottery": [
+   {
+    "id": "B1a",
+    "name": "Sesgo de módulo, fuente de 8 bits (00-55)",
+    "p": 0.8161322898944734,
+    "detail": "observado 0.55984, justo 0.56000, con sesgo sería 0.65625 (z=-0.23)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B1b",
+    "name": "Sesgo de módulo, fuente de 16 bits (00-35)",
+    "p": 0.2384884149712353,
+    "detail": "observado 0.35922, justo 0.36000, con sesgo sería 0.36035 (z=-1.18)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.1",
+    "name": "Uniformidad globo 1",
+    "p": 0.38085684074052173,
+    "detail": "chi²=102.6 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.2",
+    "name": "Uniformidad globo 2",
+    "p": 0.8343578847346684,
+    "detail": "chi²=85.3 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.3",
+    "name": "Uniformidad globo 3",
+    "p": 0.6129262621864229,
+    "detail": "chi²=94.4 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.4",
+    "name": "Uniformidad globo 4",
+    "p": 0.9863335716427056,
+    "detail": "chi²=70.6 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.5",
+    "name": "Uniformidad globo 5",
+    "p": 0.4880989835975641,
+    "detail": "chi²=98.8 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.g",
+    "name": "Uniformidad global",
+    "p": 0.3377127074093258,
+    "detail": "chi²=104.3 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B3a",
+    "name": "Sorteo N → N+1, globo 1 (100×100)",
+    "p": 0.46865595872362315,
+    "detail": "chi²=9811 (gl=9801), 104860 pares",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B3b",
+    "name": "Sorteo N → N+1, 5 globos juntos",
+    "p": 0.7275930569768169,
+    "detail": "chi²=9716 (gl=9801), 524300 pares",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B3c",
+    "name": "Paridad N → N+1, globo 1 (tu Markov orden 1)",
+    "p": 0.6432168609590798,
+    "detail": "chi²=0.21 (gl=1)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.12",
+    "name": "Globo 1 vs globo 2",
+    "p": 0.6017007805946207,
+    "detail": "chi²=9764 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.13",
+    "name": "Globo 1 vs globo 3",
+    "p": 0.7592421016723138,
+    "detail": "chi²=9702 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.14",
+    "name": "Globo 1 vs globo 4",
+    "p": 0.9923502058752801,
+    "detail": "chi²=9465 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.15",
+    "name": "Globo 1 vs globo 5",
+    "p": 0.7063954613252883,
+    "detail": "chi²=9725 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.23",
+    "name": "Globo 2 vs globo 3",
+    "p": 0.24145044270277208,
+    "detail": "chi²=9899 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.24",
+    "name": "Globo 2 vs globo 4",
+    "p": 0.25907875132191827,
+    "detail": "chi²=9891 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.25",
+    "name": "Globo 2 vs globo 5",
+    "p": 0.41328004170082777,
+    "detail": "chi²=9831 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.34",
+    "name": "Globo 3 vs globo 4",
+    "p": 0.22114114215533534,
+    "detail": "chi²=9908 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.35",
+    "name": "Globo 3 vs globo 5",
+    "p": 0.2970661079192998,
+    "detail": "chi²=9875 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.45",
+    "name": "Globo 4 vs globo 5",
+    "p": 0.5492163922063079,
+    "detail": "chi²=9783 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1d",
+    "name": "Decenas globo 1",
+    "p": 0.060374694031409944,
+    "detail": "chi²=16.3",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1u",
+    "name": "Unidades globo 1",
+    "p": 0.5285012101856018,
+    "detail": "chi²=8.1",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1i",
+    "name": "Decena vs unidad globo 1",
+    "p": 0.5656171752950773,
+    "detail": "chi²=78.3",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2d",
+    "name": "Decenas globo 2",
+    "p": 0.5695172217319149,
+    "detail": "chi²=7.7",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2u",
+    "name": "Unidades globo 2",
+    "p": 0.6112607352473207,
+    "detail": "chi²=7.2",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2i",
+    "name": "Decena vs unidad globo 2",
+    "p": 0.7991925976436618,
+    "detail": "chi²=70.2",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3d",
+    "name": "Decenas globo 3",
+    "p": 0.3782460308419178,
+    "detail": "chi²=9.7",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3u",
+    "name": "Unidades globo 3",
+    "p": 0.40476464222832936,
+    "detail": "chi²=9.4",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3i",
+    "name": "Decena vs unidad globo 3",
+    "p": 0.6663438723521046,
+    "detail": "chi²=75.0",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4d",
+    "name": "Decenas globo 4",
+    "p": 0.5485883042700104,
+    "detail": "chi²=7.9",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4u",
+    "name": "Unidades globo 4",
+    "p": 0.34618388641873665,
+    "detail": "chi²=10.1",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4i",
+    "name": "Decena vs unidad globo 4",
+    "p": 0.9935372518084608,
+    "detail": "chi²=52.8",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5d",
+    "name": "Decenas globo 5",
+    "p": 0.2940418742234423,
+    "detail": "chi²=10.7",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5u",
+    "name": "Unidades globo 5",
+    "p": 0.7927247214712039,
+    "detail": "chi²=5.5",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5i",
+    "name": "Decena vs unidad globo 5",
+    "p": 0.43042144987935094,
+    "detail": "chi²=82.6",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B6",
+    "name": "Tiempo de retorno de cada número (gaps)",
+    "p": 0.7750188461066827,
+    "detail": "chi²=14.1 (gl=19), 526630 gaps, media 99.91 (justa 100)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.1",
+    "name": "Memoria a 1-185 sorteos, globo 1",
+    "p": 0.6134357863063894,
+    "detail": "Q=178.9 (gl=185); lag más extremo 171 (z=+3.09)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.2",
+    "name": "Memoria a 1-185 sorteos, globo 2",
+    "p": 0.47104516591705314,
+    "detail": "Q=185.7 (gl=185); lag más extremo 142 (z=-2.75)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.3",
+    "name": "Memoria a 1-185 sorteos, globo 3",
+    "p": 0.012534275499445087,
+    "detail": "Q=230.7 (gl=185); lag más extremo 76 (z=+3.27)",
+    "p_holm": 0.6517823259711445,
+    "p_bh": 0.6517823259711445,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.4",
+    "name": "Memoria a 1-185 sorteos, globo 4",
+    "p": 0.1543735127761684,
+    "detail": "Q=204.6 (gl=185); lag más extremo 111 (z=+3.34)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.5",
+    "name": "Memoria a 1-185 sorteos, globo 5",
+    "p": 0.7531399694173756,
+    "detail": "Q=171.5 (gl=185); lag más extremo 25 (z=-2.56)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.p",
+    "name": "Memoria de la paridad a 1-185 sorteos, globo 1",
+    "p": 0.6176375590154819,
+    "detail": "Q=178.6 (gl=185); lag más extremo 147 (z=+3.10)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B8a",
+    "name": "Misma hora, días consecutivos (coincidencias)",
+    "p": 0.9565328256849011,
+    "detail": "5210 coincidencias en 520575 comparaciones, esperadas 5206",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B8b",
+    "name": "¿Cada horario tiene números propios? (horario × número)",
+    "p": 0.7282730882146438,
+    "detail": "chi²=18297 (gl=18414)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B9a",
+    "name": "Sorteos completos repetidos (5 números iguales)",
+    "p": 1.0,
+    "detail": "0 repetidos, esperados 0.56",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B9b",
+    "name": "Secuencia repetida más larga (globo 1)",
+    "p": 1.0,
+    "detail": "la más larga mide 4 sorteos; con azar lo típico es 4.9",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B10a",
+    "name": "Fórmula lineal entre sorteos (x' = a·x + c mod 100)",
+    "p": 1.0,
+    "detail": "peor a=43, p corregido por 100 pruebas",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B10b",
+    "name": "Fórmula lineal entre globos del mismo sorteo",
+    "p": 1.0,
+    "detail": "peor a=86, p corregido por 100 pruebas",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11a",
+    "name": "Hora del día × número",
+    "p": 0.6999641904480923,
+    "detail": "chi²=1554 (gl=1584)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11b",
+    "name": "Día de la semana × número",
+    "p": 0.05867981383934154,
+    "detail": "chi²=649 (gl=594)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11c",
+    "name": "Mes × número",
+    "p": 0.48150020892286227,
+    "detail": "chi²=1090 (gl=1089)",
+    "p_holm": 1.0,
+    "p_bh": 0.9860593183227899,
+    "verdict": "PASA"
+   }
+  ],
+  "nist": {
+   "bits_6": {
+    "frequency": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "block_frequency": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "longest_run": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "binary_matrix_rank": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "non_overlapping_template": {
+     "m": 2960,
+     "passed": 2924,
+     "bound": 0.9845135301557968,
+     "uniform_p": 0.13882808853600118,
+     "verdict": "PASA"
+    },
+    "overlapping_template": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "universal": {
+     "m": 2,
+     "passed": 2,
+     "bound": 0.7789312908079457,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "linear_complexity": {
+     "m": 20,
+     "passed": 19,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "serial": {
+     "m": 40,
+     "passed": 40,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "approximate_entropy": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "cumulative_sums": {
+     "m": 40,
+     "passed": 40,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions": {
+     "m": 8,
+     "passed": 8,
+     "bound": 0.8844656454039728,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions_variant": {
+     "m": 18,
+     "passed": 18,
+     "bound": 0.9196437636026485,
+     "uniform_p": null,
+     "verdict": "PASA"
+    }
+   },
+   "bits_6_count": 2023422,
+   "parity": {
+    "frequency": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "block_frequency": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "longest_run": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "binary_matrix_rank": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "non_overlapping_template": {
+     "m": 740,
+     "passed": 733,
+     "bound": 0.9790270603115936,
+     "uniform_p": 0.929868517030959,
+     "verdict": "PASA"
+    },
+    "overlapping_template": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "universal": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "linear_complexity": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "serial": {
+     "m": 10,
+     "passed": 10,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "approximate_entropy": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "cumulative_sums": {
+     "m": 10,
+     "passed": 10,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions": {
+     "m": 8,
+     "passed": 8,
+     "bound": 0.8844656454039728,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions_variant": {
+     "m": 18,
+     "passed": 18,
+     "bound": 0.9196437636026485,
+     "uniform_p": null,
+     "verdict": "PASA"
+    }
+   }
+  }
+ },
+ "LCG bits bajos": {
+  "draws": 105426,
+  "days": 566,
+  "lottery": [
+   {
+    "id": "B1a",
+    "name": "Sesgo de módulo, fuente de 8 bits (00-55)",
+    "p": 0.8529529653481837,
+    "detail": "observado 0.55987, justo 0.56000, con sesgo sería 0.65625 (z=-0.19)",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B1b",
+    "name": "Sesgo de módulo, fuente de 16 bits (00-35)",
+    "p": 0.3210713785161533,
+    "detail": "observado 0.35934, justo 0.36000, con sesgo sería 0.36035 (z=-0.99)",
+    "p_holm": 1.0,
+    "p_bh": 0.618359691957036,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.1",
+    "name": "Uniformidad globo 1",
+    "p": 0.48309773280927626,
+    "detail": "chi²=98.9 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.7983688510652059,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.2",
+    "name": "Uniformidad globo 2",
+    "p": 0.949484880585302,
+    "detail": "chi²=77.1 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.9999350244440074,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.3",
+    "name": "Uniformidad globo 3",
+    "p": 0.19862116518847614,
+    "detail": "chi²=110.7 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.4490565473826417,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.4",
+    "name": "Uniformidad globo 4",
+    "p": 0.7942992738228295,
+    "detail": "chi²=87.3 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.5",
+    "name": "Uniformidad globo 5",
+    "p": 0.8115967408261093,
+    "detail": "chi²=86.5 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B2.g",
+    "name": "Uniformidad global",
+    "p": 0.06515540265762203,
+    "detail": "chi²=121.1 (gl=99)",
+    "p_holm": 1.0,
+    "p_bh": 0.16133718753315932,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B3a",
+    "name": "Sorteo N → N+1, globo 1 (100×100)",
+    "p": 0.0,
+    "detail": "chi²=323626 (gl=9801), 104860 pares",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B3b",
+    "name": "Sorteo N → N+1, 5 globos juntos",
+    "p": 0.0,
+    "detail": "chi²=1581793 (gl=9801), 524300 pares",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B3c",
+    "name": "Paridad N → N+1, globo 1 (tu Markov orden 1)",
+    "p": 0.0,
+    "detail": "chi²=104860.00 (gl=1)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.12",
+    "name": "Globo 1 vs globo 2",
+    "p": 0.0,
+    "detail": "chi²=325470 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.13",
+    "name": "Globo 1 vs globo 3",
+    "p": 0.0,
+    "detail": "chi²=325454 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.14",
+    "name": "Globo 1 vs globo 4",
+    "p": 0.0,
+    "detail": "chi²=325733 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.15",
+    "name": "Globo 1 vs globo 5",
+    "p": 0.0,
+    "detail": "chi²=326046 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.23",
+    "name": "Globo 2 vs globo 3",
+    "p": 0.0,
+    "detail": "chi²=325450 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.24",
+    "name": "Globo 2 vs globo 4",
+    "p": 0.0,
+    "detail": "chi²=325781 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.25",
+    "name": "Globo 2 vs globo 5",
+    "p": 0.0,
+    "detail": "chi²=325819 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.34",
+    "name": "Globo 3 vs globo 4",
+    "p": 0.0,
+    "detail": "chi²=325386 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.35",
+    "name": "Globo 3 vs globo 5",
+    "p": 0.0,
+    "detail": "chi²=325692 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.45",
+    "name": "Globo 4 vs globo 5",
+    "p": 0.0,
+    "detail": "chi²=325553 (gl=9801)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.1d",
+    "name": "Decenas globo 1",
+    "p": 0.34754151223471536,
+    "detail": "chi²=10.0",
+    "p_holm": 1.0,
+    "p_bh": 0.6231778840070759,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1u",
+    "name": "Unidades globo 1",
+    "p": 0.9628310459848541,
+    "detail": "chi²=3.0",
+    "p_holm": 1.0,
+    "p_bh": 0.9999350244440074,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1i",
+    "name": "Decena vs unidad globo 1",
+    "p": 0.3435463014835921,
+    "detail": "chi²=85.5",
+    "p_holm": 1.0,
+    "p_bh": 0.6231778840070759,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2d",
+    "name": "Decenas globo 2",
+    "p": 0.8667515688337896,
+    "detail": "chi²=4.6",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2u",
+    "name": "Unidades globo 2",
+    "p": 0.9954985049198409,
+    "detail": "chi²=1.7",
+    "p_holm": 1.0,
+    "p_bh": 0.9999350244440074,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.2i",
+    "name": "Decena vs unidad globo 2",
+    "p": 0.7862282381569212,
+    "detail": "chi²=70.7",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3d",
+    "name": "Decenas globo 3",
+    "p": 0.08723823772449898,
+    "detail": "chi²=15.1",
+    "p_holm": 1.0,
+    "p_bh": 0.20619947098517943,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3u",
+    "name": "Unidades globo 3",
+    "p": 0.787989581374898,
+    "detail": "chi²=5.5",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.3i",
+    "name": "Decena vs unidad globo 3",
+    "p": 0.23010679851876886,
+    "detail": "chi²=90.1",
+    "p_holm": 1.0,
+    "p_bh": 0.4786221409190392,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4d",
+    "name": "Decenas globo 4",
+    "p": 0.9637714703348141,
+    "detail": "chi²=3.0",
+    "p_holm": 1.0,
+    "p_bh": 0.9999350244440074,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4u",
+    "name": "Unidades globo 4",
+    "p": 0.29031274886181846,
+    "detail": "chi²=10.8",
+    "p_holm": 1.0,
+    "p_bh": 0.5806254977236369,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.4i",
+    "name": "Decena vs unidad globo 4",
+    "p": 0.7153087756669678,
+    "detail": "chi²=73.3",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5d",
+    "name": "Decenas globo 5",
+    "p": 0.22030005024093716,
+    "detail": "chi²=11.9",
+    "p_holm": 1.0,
+    "p_bh": 0.4773167755220305,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5u",
+    "name": "Unidades globo 5",
+    "p": 0.529168081542811,
+    "detail": "chi²=8.0",
+    "p_holm": 1.0,
+    "p_bh": 0.8093158894184169,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.5i",
+    "name": "Decena vs unidad globo 5",
+    "p": 0.8766170188027083,
+    "detail": "chi²=66.5",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B6",
+    "name": "Tiempo de retorno de cada número (gaps)",
+    "p": 0.0,
+    "detail": "chi²=24185.4 (gl=19), 526630 gaps, media 99.91 (justa 100)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B7.1",
+    "name": "Memoria a 1-185 sorteos, globo 1",
+    "p": 0.49130390834781906,
+    "detail": "Q=184.8 (gl=185); lag más extremo 74 (z=+3.25)",
+    "p_holm": 1.0,
+    "p_bh": 0.7983688510652059,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.2",
+    "name": "Memoria a 1-185 sorteos, globo 2",
+    "p": 0.9129666202751201,
+    "detail": "Q=159.5 (gl=185); lag más extremo 152 (z=+2.47)",
+    "p_holm": 1.0,
+    "p_bh": 0.9999350244440074,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.3",
+    "name": "Memoria a 1-185 sorteos, globo 3",
+    "p": 0.5257523725781836,
+    "detail": "Q=183.1 (gl=185); lag más extremo 182 (z=+2.87)",
+    "p_holm": 1.0,
+    "p_bh": 0.8093158894184169,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.4",
+    "name": "Memoria a 1-185 sorteos, globo 4",
+    "p": 0.834758105251378,
+    "detail": "Q=166.3 (gl=185); lag más extremo 69 (z=-2.93)",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.5",
+    "name": "Memoria a 1-185 sorteos, globo 5",
+    "p": 0.6852840475147447,
+    "detail": "Q=175.2 (gl=185); lag más extremo 126 (z=+2.40)",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.p",
+    "name": "Memoria de la paridad a 1-185 sorteos, globo 1",
+    "p": 0.0,
+    "detail": "Q=9774592.0 (gl=185); lag más extremo 1 (z=-323.82)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B8a",
+    "name": "Misma hora, días consecutivos (coincidencias)",
+    "p": 0.0,
+    "detail": "180 coincidencias en 520575 comparaciones, esperadas 5206",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B8b",
+    "name": "¿Cada horario tiene números propios? (horario × número)",
+    "p": 0.9999350244440074,
+    "detail": "chi²=17689 (gl=18414)",
+    "p_holm": 1.0,
+    "p_bh": 0.9999350244440074,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B9a",
+    "name": "Sorteos completos repetidos (5 números iguales)",
+    "p": 3.9096384729668096e-297,
+    "detail": "148 repetidos, esperados 0.56",
+    "p_holm": 1.3292770808087152e-295,
+    "p_bh": 1.0700063189172321e-296,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B9b",
+    "name": "Secuencia repetida más larga (globo 1)",
+    "p": 0.005541383200217544,
+    "detail": "la más larga mide 6 sorteos; con azar lo típico es 4.9",
+    "p_holm": 0.18286564560717897,
+    "p_bh": 0.014407596320565616,
+    "verdict": "SOSPECHOSA"
+   },
+   {
+    "id": "B10a",
+    "name": "Fórmula lineal entre sorteos (x' = a·x + c mod 100)",
+    "p": 0.0,
+    "detail": "peor a=1, p corregido por 100 pruebas",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B10b",
+    "name": "Fórmula lineal entre globos del mismo sorteo",
+    "p": 0.0,
+    "detail": "peor a=1, p corregido por 100 pruebas",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B11a",
+    "name": "Hora del día × número",
+    "p": 0.877416176066737,
+    "detail": "chi²=1519 (gl=1584)",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11b",
+    "name": "Día de la semana × número",
+    "p": 0.8335525429791756,
+    "detail": "chi²=561 (gl=594)",
+    "p_holm": 1.0,
+    "p_bh": 0.9918617642493549,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11c",
+    "name": "Mes × número",
+    "p": 0.41898288207646284,
+    "detail": "chi²=1098 (gl=1089)",
+    "p_holm": 1.0,
+    "p_bh": 0.7262369955992022,
+    "verdict": "PASA"
+   }
+  ],
+  "nist": {
+   "bits_6": {
+    "frequency": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "block_frequency": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "longest_run": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "binary_matrix_rank": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 20,
+     "passed": 8,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "non_overlapping_template": {
+     "m": 2960,
+     "passed": 2028,
+     "bound": 0.9845135301557968,
+     "uniform_p": 0.0,
+     "verdict": "FALLA"
+    },
+    "overlapping_template": {
+     "m": 20,
+     "passed": 5,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "universal": {
+     "m": 2,
+     "passed": 0,
+     "bound": 0.7789312908079457,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "linear_complexity": {
+     "m": 20,
+     "passed": 19,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "serial": {
+     "m": 40,
+     "passed": 0,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "approximate_entropy": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "cumulative_sums": {
+     "m": 40,
+     "passed": 40,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "random_excursions_variant": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    }
+   },
+   "bits_6_count": 2026632,
+   "parity": {
+    "frequency": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "block_frequency": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "longest_run": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "binary_matrix_rank": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "dft": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "non_overlapping_template": {
+     "m": 740,
+     "passed": 0,
+     "bound": 0.9790270603115936,
+     "uniform_p": 0.0,
+     "verdict": "FALLA"
+    },
+    "overlapping_template": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "universal": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "linear_complexity": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "serial": {
+     "m": 10,
+     "passed": 0,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "approximate_entropy": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "cumulative_sums": {
+     "m": 10,
+     "passed": 10,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions": {
+     "m": 40,
+     "passed": 0,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "random_excursions_variant": {
+     "m": 90,
+     "passed": 5,
+     "bound": 0.9585357345548955,
+     "uniform_p": 3.1285657537134776e-148,
+     "verdict": "FALLA"
+    }
+   }
+  }
+ },
+ "sesgo módulo 8 bits": {
+  "draws": 105426,
+  "days": 566,
+  "lottery": [
+   {
+    "id": "B1a",
+    "name": "Sesgo de módulo, fuente de 8 bits (00-55)",
+    "p": 0.0,
+    "detail": "observado 0.65634, justo 0.56000, con sesgo sería 0.65625 (z=+140.91)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B1b",
+    "name": "Sesgo de módulo, fuente de 16 bits (00-35)",
+    "p": 0.0,
+    "detail": "observado 0.42119, justo 0.36000, con sesgo sería 0.36035 (z=+92.55)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.1",
+    "name": "Uniformidad globo 1",
+    "p": 0.0,
+    "detail": "chi²=4211.2 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.2",
+    "name": "Uniformidad globo 2",
+    "p": 0.0,
+    "detail": "chi²=4279.7 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.3",
+    "name": "Uniformidad globo 3",
+    "p": 0.0,
+    "detail": "chi²=4028.6 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.4",
+    "name": "Uniformidad globo 4",
+    "p": 0.0,
+    "detail": "chi²=3913.8 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.5",
+    "name": "Uniformidad globo 5",
+    "p": 0.0,
+    "detail": "chi²=3930.7 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.g",
+    "name": "Uniformidad global",
+    "p": 0.0,
+    "detail": "chi²=19950.7 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B3a",
+    "name": "Sorteo N → N+1, globo 1 (100×100)",
+    "p": 0.00672474013439935,
+    "detail": "chi²=10150 (gl=9801), 104860 pares",
+    "p_holm": 0.16811850335998374,
+    "p_bh": 0.01248880310674165,
+    "verdict": "SOSPECHOSA"
+   },
+   {
+    "id": "B3b",
+    "name": "Sorteo N → N+1, 5 globos juntos",
+    "p": 0.45362723566680113,
+    "detail": "chi²=9817 (gl=9801), 524300 pares",
+    "p_holm": 1.0,
+    "p_bh": 0.5891018934898313,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B3c",
+    "name": "Paridad N → N+1, globo 1 (tu Markov orden 1)",
+    "p": 0.795317603854673,
+    "detail": "chi²=0.07 (gl=1)",
+    "p_holm": 1.0,
+    "p_bh": 0.8718208989766668,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.12",
+    "name": "Globo 1 vs globo 2",
+    "p": 0.01301774920792036,
+    "detail": "chi²=10115 (gl=9801)",
+    "p_holm": 0.31242598099008867,
+    "p_bh": 0.02334217099351237,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.13",
+    "name": "Globo 1 vs globo 3",
+    "p": 0.44672171574090647,
+    "detail": "chi²=9819 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.5891018934898313,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.14",
+    "name": "Globo 1 vs globo 4",
+    "p": 0.9813876131499606,
+    "detail": "chi²=9512 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.15",
+    "name": "Globo 1 vs globo 5",
+    "p": 0.5306435770824192,
+    "detail": "chi²=9790 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.6569872859115665,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.23",
+    "name": "Globo 2 vs globo 3",
+    "p": 0.6847573498810019,
+    "detail": "chi²=9733 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.8280786556700488,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.24",
+    "name": "Globo 2 vs globo 4",
+    "p": 0.17700004258538574,
+    "detail": "chi²=9931 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.2707059474835311,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.25",
+    "name": "Globo 2 vs globo 5",
+    "p": 0.11442199865972257,
+    "detail": "chi²=9970 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.18593574782204916,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.34",
+    "name": "Globo 3 vs globo 4",
+    "p": 0.07373025935444112,
+    "detail": "chi²=10005 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.12367656407841737,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.35",
+    "name": "Globo 3 vs globo 5",
+    "p": 0.9816756386846852,
+    "detail": "chi²=9511 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B4.45",
+    "name": "Globo 4 vs globo 5",
+    "p": 0.7966204346454758,
+    "detail": "chi²=9685 (gl=9801)",
+    "p_holm": 1.0,
+    "p_bh": 0.8718208989766668,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B5.1d",
+    "name": "Decenas globo 1",
+    "p": 0.0,
+    "detail": "chi²=3677.2",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.1u",
+    "name": "Unidades globo 1",
+    "p": 5.557251607245115e-07,
+    "detail": "chi²=46.2",
+    "p_holm": 1.6671754821735345e-05,
+    "p_bh": 1.2564221025075911e-06,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.1i",
+    "name": "Decena vs unidad globo 1",
+    "p": 1.107981424211723e-57,
+    "detail": "chi²=478.4",
+    "p_holm": 3.8779349847410305e-56,
+    "p_bh": 3.200835225500533e-57,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.2d",
+    "name": "Decenas globo 2",
+    "p": 0.0,
+    "detail": "chi²=3702.5",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.2u",
+    "name": "Unidades globo 2",
+    "p": 6.960755029620287e-06,
+    "detail": "chi²=40.2",
+    "p_holm": 0.00019490114082936803,
+    "p_bh": 1.4478370461610196e-05,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.2i",
+    "name": "Decena vs unidad globo 2",
+    "p": 6.67593919832176e-66,
+    "detail": "chi²=523.3",
+    "p_holm": 2.4033381113958336e-64,
+    "p_bh": 2.0420519900748915e-65,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.3d",
+    "name": "Decenas globo 3",
+    "p": 0.0,
+    "detail": "chi²=3534.0",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.3u",
+    "name": "Unidades globo 3",
+    "p": 2.5042046277553382e-12,
+    "detail": "chi²=74.0",
+    "p_holm": 7.763034346041548e-11,
+    "p_bh": 5.9190291201489815e-12,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.3i",
+    "name": "Decena vs unidad globo 3",
+    "p": 6.375031260639243e-47,
+    "detail": "chi²=418.3",
+    "p_holm": 2.10376031601095e-45,
+    "p_bh": 1.6575081277662032e-46,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.4d",
+    "name": "Decenas globo 4",
+    "p": 0.0,
+    "detail": "chi²=3507.7",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.4u",
+    "name": "Unidades globo 4",
+    "p": 6.306456623638599e-05,
+    "detail": "chi²=34.9",
+    "p_holm": 0.0017027432883824217,
+    "p_bh": 0.00012612913247277198,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.4i",
+    "name": "Decena vs unidad globo 4",
+    "p": 2.2155732218927454e-38,
+    "detail": "chi²=369.2",
+    "p_holm": 7.089834310056785e-37,
+    "p_bh": 5.486181311353464e-38,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.5d",
+    "name": "Decenas globo 5",
+    "p": 0.0,
+    "detail": "chi²=3465.9",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.5u",
+    "name": "Unidades globo 5",
+    "p": 0.0015730558561755552,
+    "detail": "chi²=26.7",
+    "p_holm": 0.040899452260564434,
+    "p_bh": 0.003029589056338106,
+    "verdict": "SOSPECHOSA"
+   },
+   {
+    "id": "B5.5i",
+    "name": "Decena vs unidad globo 5",
+    "p": 4.2265198034527975e-50,
+    "detail": "chi²=436.2",
+    "p_holm": 1.437016733173951e-48,
+    "p_bh": 1.1567317356818182e-49,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B6",
+    "name": "Tiempo de retorno de cada número (gaps)",
+    "p": 1.8648040834430053e-68,
+    "detail": "chi²=377.7 (gl=19), 526630 gaps, media 99.90 (justa 100)",
+    "p_holm": 6.89977510873912e-67,
+    "p_bh": 6.0606132711897674e-68,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B7.1",
+    "name": "Memoria a 1-185 sorteos, globo 1",
+    "p": 0.8219291339131374,
+    "detail": "Q=167.2 (gl=185); lag más extremo 124 (z=-2.33)",
+    "p_holm": 1.0,
+    "p_bh": 0.8722513257853702,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.2",
+    "name": "Memoria a 1-185 sorteos, globo 2",
+    "p": 0.8047577529015385,
+    "detail": "Q=168.3 (gl=185); lag más extremo 68 (z=-2.99)",
+    "p_holm": 1.0,
+    "p_bh": 0.8718208989766668,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.3",
+    "name": "Memoria a 1-185 sorteos, globo 3",
+    "p": 0.46448418525159774,
+    "detail": "Q=186.1 (gl=185); lag más extremo 179 (z=+3.48)",
+    "p_holm": 1.0,
+    "p_bh": 0.5891018934898313,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.4",
+    "name": "Memoria a 1-185 sorteos, globo 4",
+    "p": 0.4466430237158595,
+    "detail": "Q=186.9 (gl=185); lag más extremo 60 (z=+3.28)",
+    "p_holm": 1.0,
+    "p_bh": 0.5891018934898313,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.5",
+    "name": "Memoria a 1-185 sorteos, globo 5",
+    "p": 0.7868565765240265,
+    "detail": "Q=169.5 (gl=185); lag más extremo 98 (z=+2.68)",
+    "p_holm": 1.0,
+    "p_bh": 0.8718208989766668,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B7.p",
+    "name": "Memoria de la paridad a 1-185 sorteos, globo 1",
+    "p": 0.2407633951005136,
+    "detail": "Q=198.2 (gl=185); lag más extremo 102 (z=+3.15)",
+    "p_holm": 1.0,
+    "p_bh": 0.35770561557790587,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B8a",
+    "name": "Misma hora, días consecutivos (coincidencias)",
+    "p": 3.6449233641365994e-06,
+    "detail": "5542 coincidencias en 520575 comparaciones, esperadas 5206",
+    "p_holm": 0.00010570277755996138,
+    "p_bh": 7.897333955629298e-06,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B8b",
+    "name": "¿Cada horario tiene números propios? (horario × número)",
+    "p": 0.14915651370318309,
+    "detail": "chi²=18614 (gl=18414)",
+    "p_holm": 1.0,
+    "p_bh": 0.2350345064413794,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B9a",
+    "name": "Sorteos completos repetidos (5 números iguales)",
+    "p": 0.01896765025043893,
+    "detail": "3 repetidos, esperados 0.56",
+    "p_holm": 0.43625595576009535,
+    "p_bh": 0.03287726043409414,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B9b",
+    "name": "Secuencia repetida más larga (globo 1)",
+    "p": 1.0,
+    "detail": "la más larga mide 4 sorteos; con azar lo típico es 4.9",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B10a",
+    "name": "Fórmula lineal entre sorteos (x' = a·x + c mod 100)",
+    "p": 0.0,
+    "detail": "peor a=0, p corregido por 100 pruebas",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B10b",
+    "name": "Fórmula lineal entre globos del mismo sorteo",
+    "p": 0.0,
+    "detail": "peor a=0, p corregido por 100 pruebas",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B11a",
+    "name": "Hora del día × número",
+    "p": 0.25313112629617934,
+    "detail": "chi²=1621 (gl=1584)",
+    "p_holm": 1.0,
+    "p_bh": 0.36563384909448127,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11b",
+    "name": "Día de la semana × número",
+    "p": 0.7890322898412564,
+    "detail": "chi²=566 (gl=594)",
+    "p_holm": 1.0,
+    "p_bh": 0.8718208989766668,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11c",
+    "name": "Mes × número",
+    "p": 0.4020395515703539,
+    "detail": "chi²=1100 (gl=1089)",
+    "p_holm": 1.0,
+    "p_bh": 0.5650285589637407,
+    "verdict": "PASA"
+   }
+  ],
+  "nist": {
+   "bits_6": {
+    "frequency": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "block_frequency": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "longest_run": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "binary_matrix_rank": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 20,
+     "passed": 19,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "non_overlapping_template": {
+     "m": 2960,
+     "passed": 2842,
+     "bound": 0.9845135301557968,
+     "uniform_p": 5.256300093117213e-61,
+     "verdict": "FALLA"
+    },
+    "overlapping_template": {
+     "m": 20,
+     "passed": 9,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "universal": {
+     "m": 2,
+     "passed": 2,
+     "bound": 0.7789312908079457,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "linear_complexity": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "serial": {
+     "m": 40,
+     "passed": 38,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "approximate_entropy": {
+     "m": 20,
+     "passed": 8,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "cumulative_sums": {
+     "m": 40,
+     "passed": 0,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "random_excursions": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "random_excursions_variant": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    }
+   },
+   "bits_6_count": 2272206,
+   "parity": {
+    "frequency": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "block_frequency": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "longest_run": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "binary_matrix_rank": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "non_overlapping_template": {
+     "m": 740,
+     "passed": 732,
+     "bound": 0.9790270603115936,
+     "uniform_p": 0.49122175082598485,
+     "verdict": "PASA"
+    },
+    "overlapping_template": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "universal": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "linear_complexity": {
+     "m": 5,
+     "passed": 4,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "serial": {
+     "m": 10,
+     "passed": 10,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "approximate_entropy": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "cumulative_sums": {
+     "m": 10,
+     "passed": 10,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions": {
+     "m": 16,
+     "passed": 15,
+     "bound": 0.9153759422170035,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "random_excursions_variant": {
+     "m": 36,
+     "passed": 36,
+     "bound": 0.940250628144669,
+     "uniform_p": null,
+     "verdict": "PASA"
+    }
+   }
+  }
+ },
+ "semilla por hora": {
+  "draws": 105426,
+  "days": 566,
+  "lottery": [
+   {
+    "id": "B1a",
+    "name": "Sesgo de módulo, fuente de 8 bits (00-55)",
+    "p": 8.650318409870598e-08,
+    "detail": "observado 0.56366, justo 0.56000, con sesgo sería 0.65625 (z=+5.35)",
+    "p_holm": 2.5950955229611794e-07,
+    "p_bh": 8.996331146265421e-08,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B1b",
+    "name": "Sesgo de módulo, fuente de 16 bits (00-35)",
+    "p": 2.2102462498921805e-54,
+    "detail": "observado 0.34973, justo 0.36000, con sesgo sería 0.36035 (z=-15.53)",
+    "p_holm": 8.840984999568722e-54,
+    "p_bh": 2.3455674488651712e-54,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.1",
+    "name": "Uniformidad globo 1",
+    "p": 0.0,
+    "detail": "chi²=43803.7 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.2",
+    "name": "Uniformidad globo 2",
+    "p": 0.0,
+    "detail": "chi²=46235.7 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.3",
+    "name": "Uniformidad globo 3",
+    "p": 0.0,
+    "detail": "chi²=61886.9 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.4",
+    "name": "Uniformidad globo 4",
+    "p": 0.0,
+    "detail": "chi²=55893.0 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.5",
+    "name": "Uniformidad globo 5",
+    "p": 0.0,
+    "detail": "chi²=58862.2 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B2.g",
+    "name": "Uniformidad global",
+    "p": 0.0,
+    "detail": "chi²=61905.3 (gl=99)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B3a",
+    "name": "Sorteo N → N+1, globo 1 (100×100)",
+    "p": 0.0,
+    "detail": "chi²=3828164 (gl=6889), 104860 pares",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B3b",
+    "name": "Sorteo N → N+1, 5 globos juntos",
+    "p": 0.0,
+    "detail": "chi²=5534710 (gl=9801), 524300 pares",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B3c",
+    "name": "Paridad N → N+1, globo 1 (tu Markov orden 1)",
+    "p": 2.913779099980067e-295,
+    "detail": "chi²=1348.73 (gl=1)",
+    "p_holm": 1.7482674599880404e-294,
+    "p_bh": 3.2237555999779465e-295,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.12",
+    "name": "Globo 1 vs globo 2",
+    "p": 0.0,
+    "detail": "chi²=3875214 (gl=7221)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.13",
+    "name": "Globo 1 vs globo 3",
+    "p": 0.0,
+    "detail": "chi²=4120219 (gl=7055)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.14",
+    "name": "Globo 1 vs globo 4",
+    "p": 0.0,
+    "detail": "chi²=4018208 (gl=6972)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.15",
+    "name": "Globo 1 vs globo 5",
+    "p": 0.0,
+    "detail": "chi²=3820844 (gl=6889)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.23",
+    "name": "Globo 2 vs globo 3",
+    "p": 0.0,
+    "detail": "chi²=4112735 (gl=7395)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.24",
+    "name": "Globo 2 vs globo 4",
+    "p": 0.0,
+    "detail": "chi²=4124472 (gl=7308)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.25",
+    "name": "Globo 2 vs globo 5",
+    "p": 0.0,
+    "detail": "chi²=4145675 (gl=7221)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.34",
+    "name": "Globo 3 vs globo 4",
+    "p": 0.0,
+    "detail": "chi²=4204641 (gl=7140)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.35",
+    "name": "Globo 3 vs globo 5",
+    "p": 0.0,
+    "detail": "chi²=3886862 (gl=7055)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B4.45",
+    "name": "Globo 4 vs globo 5",
+    "p": 0.0,
+    "detail": "chi²=3958361 (gl=6972)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.1d",
+    "name": "Decenas globo 1",
+    "p": 0.0,
+    "detail": "chi²=4350.6",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.1u",
+    "name": "Unidades globo 1",
+    "p": 0.0,
+    "detail": "chi²=5489.4",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.1i",
+    "name": "Decena vs unidad globo 1",
+    "p": 0.0,
+    "detail": "chi²=39854.0",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.2d",
+    "name": "Decenas globo 2",
+    "p": 3.971669021659353e-190,
+    "detail": "chi²=910.2",
+    "p_holm": 1.9858345108296767e-189,
+    "p_bh": 4.302641440130966e-190,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.2u",
+    "name": "Unidades globo 2",
+    "p": 0.0,
+    "detail": "chi²=6639.7",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.2i",
+    "name": "Decena vs unidad globo 2",
+    "p": 0.0,
+    "detail": "chi²=40724.0",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.3d",
+    "name": "Decenas globo 3",
+    "p": 0.0,
+    "detail": "chi²=7119.8",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.3u",
+    "name": "Unidades globo 3",
+    "p": 0.0,
+    "detail": "chi²=6820.0",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.3i",
+    "name": "Decena vs unidad globo 3",
+    "p": 0.0,
+    "detail": "chi²=46477.9",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.4d",
+    "name": "Decenas globo 4",
+    "p": 0.0,
+    "detail": "chi²=4589.1",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.4u",
+    "name": "Unidades globo 4",
+    "p": 0.0,
+    "detail": "chi²=5851.7",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.4i",
+    "name": "Decena vs unidad globo 4",
+    "p": 0.0,
+    "detail": "chi²=48086.9",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.5d",
+    "name": "Decenas globo 5",
+    "p": 0.0,
+    "detail": "chi²=9448.7",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.5u",
+    "name": "Unidades globo 5",
+    "p": 0.0,
+    "detail": "chi²=6751.0",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B5.5i",
+    "name": "Decena vs unidad globo 5",
+    "p": 0.0,
+    "detail": "chi²=44356.7",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B6",
+    "name": "Tiempo de retorno de cada número (gaps)",
+    "p": 0.0,
+    "detail": "chi²=360932.8 (gl=19), 526703 gaps, media 85.36 (justa 100)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B7.1",
+    "name": "Memoria a 1-185 sorteos, globo 1",
+    "p": 0.0,
+    "detail": "Q=92492.1 (gl=185); lag más extremo 13 (z=+72.04)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B7.2",
+    "name": "Memoria a 1-185 sorteos, globo 2",
+    "p": 0.0,
+    "detail": "Q=83643.2 (gl=185); lag más extremo 27 (z=+67.85)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B7.3",
+    "name": "Memoria a 1-185 sorteos, globo 3",
+    "p": 0.0,
+    "detail": "Q=110177.9 (gl=185); lag más extremo 124 (z=+80.97)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B7.4",
+    "name": "Memoria a 1-185 sorteos, globo 4",
+    "p": 0.0,
+    "detail": "Q=107836.9 (gl=185); lag más extremo 19 (z=+69.58)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B7.5",
+    "name": "Memoria a 1-185 sorteos, globo 5",
+    "p": 0.0,
+    "detail": "Q=98024.7 (gl=185); lag más extremo 126 (z=+65.25)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B7.p",
+    "name": "Memoria de la paridad a 1-185 sorteos, globo 1",
+    "p": 0.0,
+    "detail": "Q=97778.3 (gl=185); lag más extremo 119 (z=-68.15)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B8a",
+    "name": "Misma hora, días consecutivos (coincidencias)",
+    "p": 0.0,
+    "detail": "520575 coincidencias en 520575 comparaciones, esperadas 5206",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B8b",
+    "name": "¿Cada horario tiene números propios? (horario × número)",
+    "p": 0.0,
+    "detail": "chi²=10505430 (gl=18414)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B9a",
+    "name": "Sorteos completos repetidos (5 números iguales)",
+    "p": 0.0,
+    "detail": "105239 repetidos, esperados 0.56",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B9b",
+    "name": "Secuencia repetida más larga (globo 1)",
+    "p": 0.0,
+    "detail": "la más larga mide 199 sorteos; con azar lo típico es 4.9",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B10a",
+    "name": "Fórmula lineal entre sorteos (x' = a·x + c mod 100)",
+    "p": 0.0,
+    "detail": "peor a=0, p corregido por 100 pruebas",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B10b",
+    "name": "Fórmula lineal entre globos del mismo sorteo",
+    "p": 0.0,
+    "detail": "peor a=0, p corregido por 100 pruebas",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B11a",
+    "name": "Hora del día × número",
+    "p": 0.0,
+    "detail": "chi²=873652 (gl=1584)",
+    "p_holm": 0.0,
+    "p_bh": 0.0,
+    "verdict": "FALLA"
+   },
+   {
+    "id": "B11b",
+    "name": "Día de la semana × número",
+    "p": 1.0,
+    "detail": "chi²=2 (gl=594)",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   },
+   {
+    "id": "B11c",
+    "name": "Mes × número",
+    "p": 1.0,
+    "detail": "chi²=5 (gl=1089)",
+    "p_holm": 1.0,
+    "p_bh": 1.0,
+    "verdict": "PASA"
+   }
+  ],
+  "nist": {
+   "bits_6": {
+    "frequency": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "block_frequency": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "runs": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "longest_run": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "binary_matrix_rank": {
+     "m": 20,
+     "passed": 19,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "non_overlapping_template": {
+     "m": 2960,
+     "passed": 1869,
+     "bound": 0.9845135301557968,
+     "uniform_p": 0.0,
+     "verdict": "FALLA"
+    },
+    "overlapping_template": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "universal": {
+     "m": 2,
+     "passed": 0,
+     "bound": 0.7789312908079457,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "linear_complexity": {
+     "m": 20,
+     "passed": 20,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "serial": {
+     "m": 40,
+     "passed": 0,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "approximate_entropy": {
+     "m": 20,
+     "passed": 0,
+     "bound": 0.923254213616139,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "cumulative_sums": {
+     "m": 40,
+     "passed": 0,
+     "bound": 0.9428036018323431,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "random_excursions": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "random_excursions_variant": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    }
+   },
+   "bits_6_count": 2070282,
+   "parity": {
+    "frequency": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "block_frequency": {
+     "m": 5,
+     "passed": 3,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "runs": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "longest_run": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "binary_matrix_rank": {
+     "m": 5,
+     "passed": 5,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "PASA"
+    },
+    "dft": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "non_overlapping_template": {
+     "m": 740,
+     "passed": 0,
+     "bound": 0.9790270603115936,
+     "uniform_p": 0.0,
+     "verdict": "FALLA"
+    },
+    "overlapping_template": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "universal": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "linear_complexity": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "serial": {
+     "m": 10,
+     "passed": 0,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "approximate_entropy": {
+     "m": 5,
+     "passed": 0,
+     "bound": 0.856508427232278,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "cumulative_sums": {
+     "m": 10,
+     "passed": 0,
+     "bound": 0.8956072036646864,
+     "uniform_p": null,
+     "verdict": "FALLA"
+    },
+    "random_excursions": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    },
+    "random_excursions_variant": {
+     "m": 0,
+     "passed": 0,
+     "verdict": "N/A"
+    }
+   }
+  }
+ }
+}

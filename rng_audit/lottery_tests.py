@@ -135,26 +135,29 @@ def gaps(d):
 
 def _ljung_box(series, d):
     z = (series - series.mean()) / series.std()
-    q, worst = 0.0, (0, 0.0)
+    q, worst, used = 0.0, (0, 0.0), 0
     for lag in range(1, LAGS + 1):
         idx = _same_day_pairs(d, lag)
+        if len(idx) < 1000:
+            continue
+        used += 1
         r = float(np.mean(z[idx] * z[idx + lag]))
         score = r * math.sqrt(len(idx))
         q += score ** 2
         if abs(score) > abs(worst[1]):
             worst = (lag, score)
-    return chi2.sf(q, LAGS), q, worst
+    return chi2.sf(q, used), q, worst, used
 
 
 def autocorrelation(d):
     out = []
     for pos in range(5):
-        p, q, (lag, score) = _ljung_box(d.nums[:, pos].astype(float), d)
-        out.append(_result(f"B7.{pos + 1}", f"Memoria a 1-{LAGS} sorteos, globo {pos + 1}", p,
-                           f"Q={q:.1f} (gl={LAGS}); lag más extremo {lag} (z={score:+.2f})"))
-    p, q, (lag, score) = _ljung_box((d.nums[:, 0] % 2).astype(float), d)
-    out.append(_result("B7.p", f"Memoria de la paridad a 1-{LAGS} sorteos, globo 1", p,
-                       f"Q={q:.1f} (gl={LAGS}); lag más extremo {lag} (z={score:+.2f})"))
+        p, q, (lag, score), used = _ljung_box(d.nums[:, pos].astype(float), d)
+        out.append(_result(f"B7.{pos + 1}", f"Memoria a 1-{used} sorteos, globo {pos + 1}", p,
+                           f"Q={q:.1f} (gl={used}); lag más extremo {lag} (z={score:+.2f})"))
+    p, q, (lag, score), used = _ljung_box((d.nums[:, 0] % 2).astype(float), d)
+    out.append(_result("B7.p", f"Memoria de la paridad a 1-{used} sorteos, globo 1", p,
+                       f"Q={q:.1f} (gl={used}); lag más extremo {lag} (z={score:+.2f})"))
     return out
 
 
@@ -194,8 +197,8 @@ def repeats(d):
         if len(np.unique(exact)) == len(exact):
             break
         longest = length
-    pairs = (n - longest + 1) ** 2 / 2
-    p = -math.expm1(-pairs / 100.0 ** longest)
+    log_rate = math.log((n - longest + 1) ** 2 / 2) - longest * math.log(100)
+    p = -math.expm1(-math.exp(log_rate))
     out.append(_result("B9b", "Secuencia repetida más larga (globo 1)", p,
                        f"la más larga mide {longest} sorteos; "
                        f"con azar lo típico es {math.log(n * n / 2, 100):.1f}"))

@@ -27,7 +27,10 @@ ALPHA = 0.01
 
 
 def load_draws(path):
-    data = json.loads(Path(path).read_text(encoding="utf-8"))["sorteos_por_fecha"]
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))["sorteos_por_fecha"]
+    except (OSError, ValueError, KeyError) as exc:
+        raise SystemExit(f"Cannot read draw history from {path}: {exc}") from exc
     rows = []
     for key in sorted(data):
         day = date.fromisoformat(key)
@@ -66,10 +69,12 @@ def run_nist(bits, seq_len, count, only=None):
     collected = {}
     for i in range(min(count, len(bits) // seq_len)):
         chunk = bits[i * seq_len : (i + 1) * seq_len]
-        tests = only or [name for name in nist_sp800_22.run_suite.__code__.co_names
-                         if name in NIST_NAMES]
-        for name in tests:
-            collected.setdefault(name, []).extend(getattr(nist_sp800_22, name)(chunk))
+        if only:
+            results = {name: getattr(nist_sp800_22, name)(chunk) for name in only}
+        else:
+            results = nist_sp800_22.run_suite(chunk)
+        for name, pvals in results.items():
+            collected.setdefault(name, []).extend(pvals)
     return collected
 
 
