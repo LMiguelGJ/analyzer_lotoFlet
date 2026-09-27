@@ -1,0 +1,206 @@
+{
+  "meta": {
+    "days": 566,
+    "test_from": "2026-02-10",
+    "train_share": 0.6,
+    "bootstrap_reps": 2000,
+    "bootstrap_seed": 7,
+    "expected_return": 0.85
+  },
+  "original_e5": {
+    "policy": "par/impar tras ≥3",
+    "ret": 0.8360172753732044,
+    "lo": 0.8237359254225359,
+    "hi": 0.8487129656823009,
+    "criterion_met": false
+  },
+  "records": [
+    {
+      "seed": "E5-healthy-cal-v1-001",
+      "policy": "par/impar tras ≥4",
+      "train_ret": 0.8605952690408111,
+      "ret": 0.8437311703360371,
+      "lo": 0.8236943816382784,
+      "hi": 0.8663480269055591,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-002",
+      "policy": "bajo/alto tras ≥4",
+      "train_ret": 0.8471826466435631,
+      "ret": 0.8460956573944367,
+      "lo": 0.8275096897714435,
+      "hi": 0.8656005243409631,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-003",
+      "policy": "par/impar tras ≥8",
+      "train_ret": 0.8979591836734694,
+      "ret": 0.8957246376811594,
+      "lo": 0.8136446978386188,
+      "hi": 0.9941883116883117,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-004",
+      "policy": "par/impar tras ≥8",
+      "train_ret": 0.8784265010351967,
+      "ret": 0.8059627329192547,
+      "lo": 0.7432294607151259,
+      "hi": 0.8821848983830292,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-005",
+      "policy": "par/impar tras ≥8",
+      "train_ret": 0.8769406392694064,
+      "ret": 0.8732326283987916,
+      "lo": 0.8056179047301799,
+      "hi": 0.9455192332747052,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-006",
+      "policy": "bajo/alto tras ≥6",
+      "train_ret": 0.8722358175750834,
+      "ret": 0.8588897700237906,
+      "lo": 0.8205124325979332,
+      "hi": 0.8983365713139827,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-007",
+      "policy": "par/impar tras ≥8",
+      "train_ret": 0.8658167330677291,
+      "ret": 0.8891875,
+      "lo": 0.8236970691143727,
+      "hi": 0.9630779661016949,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-008",
+      "policy": "bajo/alto tras ≥6",
+      "train_ret": 0.8735005574136009,
+      "ret": 0.8610419906687403,
+      "lo": 0.8193910131490559,
+      "hi": 0.9071737556097016,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-009",
+      "policy": "bajo/alto tras ≥8",
+      "train_ret": 0.8558898305084746,
+      "ret": 0.8045930232558139,
+      "lo": 0.7290347495716797,
+      "hi": 0.895259853249476,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-010",
+      "policy": "par/impar tras ≥8",
+      "train_ret": 0.865579399141631,
+      "ret": 0.8716551724137931,
+      "lo": 0.7962685435734183,
+      "hi": 0.9602137428422695,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-011",
+      "policy": "bajo/alto tras ≥4",
+      "train_ret": 0.8496303875175854,
+      "ret": 0.8567534992223951,
+      "lo": 0.8396989508219012,
+      "hi": 0.8744567948141461,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-012",
+      "policy": "bajo/alto tras ≥6",
+      "train_ret": 0.8570600203458799,
+      "ret": 0.8377549523110785,
+      "lo": 0.8067492523928118,
+      "hi": 0.8732085953944866,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-013",
+      "policy": "par/impar tras ≥7",
+      "train_ret": 0.8836457260556128,
+      "ret": 0.8174091627172196,
+      "lo": 0.7690251608751609,
+      "hi": 0.8665299913144181,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-014",
+      "policy": "bajo/alto tras ≥8",
+      "train_ret": 0.8927069351230426,
+      "ret": 0.7901278772378517,
+      "lo": 0.7230902333264505,
+      "hi": 0.8606178829488739,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-015",
+      "policy": "par/impar tras ≥8",
+      "train_ret": 0.8860975609756098,
+      "ret": 0.8057142857142857,
+      "lo": 0.7251793546993067,
+      "hi": 0.9005791785701479,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-016",
+      "policy": "par/impar tras ≥8",
+      "train_ret": 0.8704237288135593,
+      "ret": 0.8274193548387097,
+      "lo": 0.7639763079415338,
+      "hi": 0.9024215336284448,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-017",
+      "policy": "par/impar tras ≥7",
+      "train_ret": 0.8728997867803838,
+      "ret": 0.9096632996632996,
+      "lo": 0.8549355272596844,
+      "hi": 0.9696292857453249,
+      "covered": false
+    },
+    {
+      "seed": "E5-healthy-cal-v1-018",
+      "policy": "bajo/alto tras ≥8",
+      "train_ret": 0.8954285714285715,
+      "ret": 0.8381521739130435,
+      "lo": 0.7695606202162169,
+      "hi": 0.9214717878493388,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-019",
+      "policy": "bajo/alto tras ≥8",
+      "train_ret": 0.8693706293706294,
+      "ret": 0.853476923076923,
+      "lo": 0.7811936016567139,
+      "hi": 0.9360122475052308,
+      "covered": true
+    },
+    {
+      "seed": "E5-healthy-cal-v1-020",
+      "policy": "par/impar tras ≥8",
+      "train_ret": 0.8851025056947608,
+      "ret": 0.8328070175438597,
+      "lo": 0.7674089306216172,
+      "hi": 0.9119217344253947,
+      "covered": true
+    }
+  ],
+  "aggregate": {
+    "covered": 19,
+    "total": 20,
+    "threshold": 18,
+    "pass": true
+  },
+  "elapsed_seconds": 10.523930899995321
+}
