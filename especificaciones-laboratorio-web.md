@@ -209,7 +209,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX15] En el asistente de nuevo experimento, el formulario principal convive con un panel de resumen fijo de ~300px de ancho.
 
-[UX16] Puntos de quiebre: por debajo de ~1100px, el resumen del asistente pasa de estar al costado a apilarse debajo del formulario. Por debajo de ~800px, la barra lateral se colapsa detrás de un control explícito (no se oculta sin indicación visible).
+[UX16] Puntos de quiebre: por debajo de ~1100px, el resumen del asistente pasa de estar al costado a mostrarse compacto y expandible antes del formulario, según [UX53]. Por debajo de ~800px, la barra lateral se colapsa detrás de un control explícito (no se oculta sin indicación visible).
 
 [UX17] La interfaz debe seguir siendo utilizable con zoom de navegador hasta 200% y con navegación completa por teclado, sin recortar contenido ni dejar controles inalcanzables.
 
@@ -237,7 +237,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX26] Paso 1 — Condiciones: nombre del experimento, sorteo inicial (fecha/hora, solo opciones con ranking disponible), capital, meta (aclarando que representa saldo final, no ganancia adicional, ver [F6]), pagos acumulados o solo mejor premio, límites (máximo de apuestas, de tiempo histórico o ambos) y semilla de azar compartida entre variantes de la comparación (ver [F16]). Información del juego fija y de solo lectura; no hay editor de juego en el MVP.
 
-[UX27] Paso 2 — Estrategias: hasta 5 configuraciones, cada una en un acordeón (una sola expandida a la vez). Tipos disponibles: individual (13 sistemas), azar, par/impar (cobertura fija 50) y mezcla personalizada con pesos 100→1 que deben sumar 100%. Azar y par/impar quedan fuera de la mezcla personalizada. Ante empate de pesos, se aplica la prioridad fija y reproducible de [F3]; no se consulta el resultado futuro.
+[UX27] Paso 2 — Estrategias: hasta 5 configuraciones, cada una en un acordeón (una sola expandida a la vez). Tipos disponibles: individual (13 sistemas), azar, par/impar (cobertura fija 50) y mezcla personalizada que asigna 100→1 puntos según la posición del ranking y combina esos puntos mediante pesos porcentuales que deben sumar 100%. Azar y par/impar quedan fuera de la mezcla personalizada. Ante empate de puntuaciones combinadas, se aplica la prioridad fija y reproducible de [F3]; no se consulta el resultado futuro.
 
 [UX28] Selector de cobertura (1/5/10/20/25/30/40/50) y de tipo de apuesta (plana/escalera/audaz), con textos de ayuda breves por opción.
 
@@ -247,7 +247,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 ### Pantalla 3 — Detalle de experimento
 
-[UX31] Misma pantalla para los estados en ejecución y completado, sin cambiar de URL al finalizar. Cada configuración conserva su propio estado (en curso, completada, cancelada); cancelar una no altera el estado de las ya finalizadas, y ninguna configuración parcial se presenta como completa.
+[UX31] Misma pantalla para los estados en ejecución y completado, sin cambiar de URL al finalizar. Cada configuración conserva su propio estado (pendiente, en curso, completada, cancelada, no ejecutada por cancelación, interrumpida o error); cancelar el experimento conserva las configuraciones ya finalizadas, descarta el resultado de la que estaba calculándose y deja las restantes como no ejecutadas por cancelación, y ninguna configuración parcial se presenta como completa.
 
 [UX32] Métricas de resultado en línea (saldo final, delta, apuestas realizadas, motivo de cierre) como texto o tabla simple, no como tarjetas de color tipo panel de indicadores.
 
@@ -257,9 +257,9 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX35] Reproducción histórica con anterior/reproducir/pausar/siguiente y control de velocidad; el sorteo mostrado durante la reproducción se distingue visualmente de las métricas finales del experimento, para no confundir un estado intermedio con el resultado definitivo.
 
-[UX36] Tabla de apuestas paginada y expandible: fecha/hora, números elegidos (con formato consistente, dos dígitos), apuesta por número, gasto total, los cinco premios posibles, cobro y saldo resultante. Puede incluir una traza ilustrativa de una transición conocida, siempre marcada como ejemplo, nunca presentada como dato real fabricado.
+[UX36] Tabla de apuestas paginada y expandible: fecha/hora, números elegidos (con formato consistente, dos dígitos), apuesta por número, gasto total, los cinco números sorteados en sus respectivas posiciones, cobro y saldo resultante. Puede incluir una traza ilustrativa de una transición conocida, siempre marcada como ejemplo, nunca presentada como dato real fabricado.
 
-[UX37] Se distingue visualmente el estado de ejecución (en curso/cancelado/completado/historial agotado) del resultado financiero (meta alcanzada/quiebre/sin definir); no se combinan en una sola etiqueta.
+[UX37] Se distingue visualmente el estado de ejecución (pendiente/en curso/cancelado/interrumpido/error/completado) del desenlace de la sesión (meta alcanzada/quiebre/límite de sesión/historial agotado); no se combinan en una sola etiqueta.
 
 ### Pantalla 4 — Comparación
 
@@ -269,7 +269,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX40] Control para mostrar/ocultar series individuales. Enlace desde cada fila hacia el detalle de esa configuración.
 
-[UX41] Si hay menos de 5 configuraciones completas, se muestra un aviso "N/5" explícito. Los valores faltantes se representan con guion, nunca con cero. No se calcula ni sugiere una "mejor estrategia" ni una probabilidad de éxito. Sin exportación en el MVP (ver [U6]).
+[UX41] Si el experimento está incompleto, se muestra "Comparación incompleta · N/M terminadas", donde M es la cantidad de configuraciones solicitadas (1–5) y N la cantidad terminada. Una comparación de dos configuraciones terminadas muestra 2/2 y está completa. Los valores faltantes se representan con guion, nunca con cero. No se calcula ni sugiere una "mejor estrategia" ni una probabilidad de éxito. Sin exportación en el MVP (ver [U6]).
 
 ### Pantalla 5 — Configuraciones (biblioteca)
 
@@ -279,7 +279,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 ### Pantalla 6 — Ajustes
 
-[UX44] Almacenamiento: espacio utilizado sobre el presupuesto configurable (5 GB por defecto, ver [D6]/[D7]), con advertencias explícitas al acercarse al límite. Se distingue visualmente espacio en disco, presupuesto configurado y espacio recuperable al compactar SQLite; no hay borrado automático, solo acciones manuales explícitas.
+[UX44] Almacenamiento: espacio utilizado sobre el presupuesto configurable (5 GB por defecto, ver [D6]/[D7]), con advertencias explícitas al acercarse al límite. Se distingue visualmente espacio en disco, presupuesto configurado y tamaño físico de SQLite; borrar registros no garantiza reducir inmediatamente ese archivo. No se promete una estimación de espacio recuperable ni se agrega un control de compactación al MVP. No hay borrado automático.
 
 [UX45] Datos de origen (universo/fuente, período, hashes, versión de código) en una sección de solo lectura, expandible para ver detalle. Sin opción de importar datos ni agregar juegos en el MVP.
 
@@ -299,6 +299,68 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX52] Las confirmaciones exitosas se muestran como aviso breve y transitorio; los errores persistentes se muestran en línea, junto al control afectado, no solo como notificación flotante. No se usan modales para la edición ordinaria de campos.
 
+### Esquemas de distribución
+
+Esquemas de posición, no ilustraciones de bordes obligatorios. Se evitan cajas anidadas; el espacio y los separadores sutiles organizan el contenido.
+
+```text
+ESTRUCTURA DE ESCRITORIO
+Laboratorio         | Título de pantalla                         Cola (2)
+Experimentos        | Contenido principal
+Configuraciones     | Una acción primaria y detalles bajo demanda
+Ajustes             |
+
+EXPERIMENTOS
+Experimentos                                    [Nuevo experimento]
+En ejecución: nombre · configuración 2 de 3     [Abrir] [Cancelar]
+Buscar…                         Estado ▾        Orden ▾
+Nombre                  Configs.    Creado       Estado       Abrir / ⋯
+
+NUEVO EXPERIMENTO
+1 Condiciones → 2 Estrategias → 3 Revisar
+Formulario del paso                     | Resumen
+Campos agrupados, ayudas desplegables    | Inicio / Capital / Meta
+                                        | Límites / Configuraciones
+[Salir]                                 [Atrás] [Continuar]
+Paso 3 sustituye Continuar por [Agregar a la cola].
+
+DETALLE
+← Experimentos         Nombre · Estado                [Usar como base]
+Saldo inicial / Saldo final / Diferencia / Apuestas / Desenlace
+Resultado | Apuestas | Parámetros y datos
+Gráfico de saldo y referencia de meta
+[Anterior] [Reproducir/Pausar] [Siguiente]       Apuesta n/N · Velocidad
+Sorteo mostrado: fecha, seleccionados, resultados, gasto, cobro, saldo
+
+COMPARACIÓN
+← Experimentos         Nombre · Estado
+Condiciones comunes · Si está incompleta: N/M terminadas
+Configuración         Saldo final   Diferencia   Apuestas   Desenlace
+Gráfico por fecha/hora histórica; leyenda con series activables
+Abrir una configuración → detalle individual → volver a comparación
+
+CONFIGURACIONES
+Configuraciones                                 [Nueva configuración]
+Buscar…                                         Método ▾
+Nombre                 Selección     Cobertura   Apuesta    Usar / ⋯
+Editar abre el mismo editor de estrategias, sin ejecutar cálculos.
+
+AJUSTES
+Almacenamiento: usado / presupuesto              [Guardar presupuesto]
+Advertencia si corresponde                      [Administrar experimentos]
+Datos originales                                [Ver detalles técnicos]
+Aplicación local: conexión, versión y guía del lanzador
+
+COLA — PANEL LATERAL BAJO DEMANDA
+Cola                                             [Cerrar]
+Activo: nombre · estado                           Abrir / Cancelar
+Pendientes: lista ordenada                        Abrir / Cancelar
+```
+
+[UX53] En escritorio el resumen permanece visible sin tapar campos. En pantallas angostas, un resumen compacto expandible precede al formulario y reemplaza la columna lateral; no se exige mantener un panel de 300px fijo ni hacer doble desplazamiento. Este comportamiento precisa [UX16].
+
+[UX54] Se mantiene una acción primaria por pantalla y se reservan los contornos de mayor contraste para controles y foco. Los separadores decorativos son discretos; no se convierte cada dato en una tarjeta. El estado activo de navegación se señala con texto y una línea azul fina. No se copia el logotipo de Pi ni se inventa una identidad gráfica definitiva.
+
 ### Checklist de aceptación (verificación visual pendiente en navegador)
 
 Esta sección es una especificación de diseño, no una interfaz terminada. Cada punto queda pendiente de comprobación en la implementación real:
@@ -308,8 +370,8 @@ Esta sección es una especificación de diseño, no una interfaz terminada. Cada
 - [ ] Layout responsivo ([UX12]–[UX18]) probado en escritorio, en los puntos de quiebre declarados y con zoom 200%.
 - [ ] Pantalla de Experimentos ([UX20]–[UX24]): estados vacío, cargando, sin resultados, desconectado y error se ven y se distinguen entre sí.
 - [ ] Asistente de nuevo experimento ([UX25]–[UX30]): validaciones bloquean el avance, la advertencia de pérdida de cambios funciona, el resumen se mantiene visible.
-- [ ] Detalle de experimento ([UX31]–[UX37]): estado de ejecución y resultado financiero no se confunden; la reproducción histórica no se muestra como resultado final.
-- [ ] Comparación ([UX38]–[UX41]): aviso "N/5" visible cuando corresponde, valores faltantes con guion, sin exportación.
+- [ ] Detalle de experimento ([UX31]–[UX37]): estado de ejecución y desenlace de la sesión no se confunden; la reproducción histórica no se muestra como resultado final.
+- [ ] Comparación ([UX38]–[UX41]): aviso "N/M terminadas" visible cuando corresponde, valores faltantes con guion, sin exportación.
 - [ ] Configuraciones ([UX42]–[UX43]): eliminar una configuración no borra resultados de experimentos anteriores.
 - [ ] Ajustes ([UX44]–[UX46]): estado de almacenamiento, advertencias y guía de detención visibles y correctos.
 - [ ] Cola global ([UX47]–[UX52]): cancelación, reinicio explícito, aviso de desconexión y confirmaciones destructivas funcionan con foco y teclado correctos.
