@@ -409,6 +409,39 @@ def historical_rows(history, path, context, capital=CAPITAL, goal=GOAL):
     return records
 
 
+def historical_scenario(history, path, system, k, style, mode="all", context=None,
+                        capital=CAPITAL, goal=GOAL):
+    """Replay one archived selector (or parity at k=50) on selected history rows.
+
+    A supplied context is expected to come from ranking_context. Gaps and folds
+    consume no bets; parity still observes every earlier history draw.
+    """
+    _validate(style, k, capital, goal)
+    if system not in SYSTEMS and system != "parity":
+        raise ValueError(f"unavailable ranking system: {system}")
+    if k not in ((50,) if system == "parity" else K_VALUES):
+        raise ValueError(f"unsupported k for {system}: {k}")
+    if mode not in _MODES:
+        raise ValueError(f"unknown settlement mode: {mode}")
+    if _next_unaffordable(style, k, capital, 0, goal):
+        raise ValueError("initial stake is unaffordable")
+
+    if context is None:
+        context = ranking_context(history, path)
+    row_ids = context.row_ids
+    nums = history.nums[row_ids]
+    if system == "parity":
+        parity = consensus_parity(history.nums[:, 0])[row_ids]
+        even = np.arange(0, 100, 2, dtype=np.uint8)
+        odd = np.arange(1, 100, 2, dtype=np.uint8)
+        ranks = np.where(parity[:, None] == 0, np.r_[even, odd], np.r_[odd, even])
+    else:
+        ranks = ranking_family(path, system, context)
+    payments, first_hits = selected_payments(nums, ranks, k, mode)
+    sessions = replay(style, k, payments, first_hits, capital, goal)
+    return _record("history", system, k, style, mode, sessions, capital)
+
+
 def _sha256(path):
     digest = hashlib.sha256()
     with Path(path).open("rb") as source:
