@@ -140,11 +140,11 @@
 
 [A8] Tu ejemplo de tres posiciones, pagos 60/10/5 y JSON propio pertenece a la primera ampliación. La mezcla transición 60% + fríos 40%, cobertura 10 y límite de 12 apuestas sí entra en el MVP, usando el juego Q80 existente.
 
-# 🎨 Especificación de UI/UX — laboratorio web (MVP)
+## 🎨 Especificación de UI/UX — laboratorio web (MVP)
 
 Esta sección documenta la propuesta visual y de interacción ya aceptada, en un mismo nivel de detalle que las decisiones anteriores. Es documentación pasiva que consolida una propuesta de interfaz aprobada; no implementa la interfaz ni fija código de aplicación.
 
-## Estado de la referencia visual
+### Estado de la referencia visual
 
 [UX1] Se inspeccionaron cuatro capturas de https://pi.dev/ (portada, catálogo de paquetes, tabla de modelos, documentación). Las capturas fueron archivos temporales externos y no se copian ni se anexan a este documento. Se registra evidencia observada, sin extraer CSS ni fuentes exactas. Los valores de esta sección se dividen en dos categorías, distinguidas en cada punto:
 
@@ -154,7 +154,7 @@ Esta sección documenta la propuesta visual y de interacción ya aceptada, en un
 No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como referencia de estilo visual general.
 
 | Observado en pi.dev (aproximado) | Descripción |
-|---|---|
+| --- | --- |
 | Fondo | Azul-carbón oscuro |
 | Textura de fondo | Grilla tenue tipo papel cuadriculado |
 | Paneles | Planos, con bordes finos, esquinas casi rectas |
@@ -163,12 +163,12 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 | Navegación y tablas | Monoespaciada, compacta, mayúsculas en etiquetas cortas |
 | Documentación | Navegación lateral izquierda y panel de contexto a la derecha |
 
-## Paleta de color (tokens propuestos)
+### Paleta de color (tokens propuestos)
 
 [UX2] Paleta oscura provisional para el MVP:
 
 | Token | Valor | Uso |
-|---|---|---|
+| --- | --- | --- |
 | Fondo | `#171e26` | Fondo general de la aplicación |
 | Superficie | `#222830` | Paneles y secciones |
 | Campo | `#242f3b` | Inputs, celdas editables |
@@ -181,7 +181,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX4] Tema único oscuro para el MVP. No se agrega alternancia claro/oscuro; no fue solicitada.
 
-## Tipografía
+### Tipografía
 
 [UX5] Encabezados editoriales: familia serif itálica (aproximación con Georgia itálica disponible en sistema; no es la fuente exacta de pi.dev, que no fue extraída). Tamaño 32–40px en escritorio, 26–30px en pantallas chicas.
 
@@ -189,7 +189,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX7] Texto de lectura (descripciones, ayudas, mensajes de estado): tipografía de cuerpo estándar del sistema, 16px, sin itálica ni monoespaciado.
 
-## Espaciado, bordes y ritmo visual
+### Espaciado, bordes y ritmo visual
 
 [UX8] Márgenes de página 24–32px; separación entre secciones 24px. El contenido se organiza en secciones simples, no en tarjetas anidadas superpuestas.
 
@@ -199,7 +199,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX11] Grilla tenue de fondo, estática, únicamente detrás del contenido y sin animarse. No se agregan gráficos decorativos ni visualizaciones ambientales ajenas a los datos reales del experimento.
 
-## Layout global
+### Layout global
 
 [UX12] Barra lateral fija en escritorio, ancho 200–220px, con únicamente tres accesos: Experimentos, Configuraciones, Ajustes. Se conserva esta barra lateral ya aceptada; no se reemplaza por la navegación superior observada en pi.dev.
 
@@ -215,11 +215,11 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX18] Las tablas anchas (comparación de configuraciones, detalle de apuestas) se desplazan horizontalmente dentro de una región propia y con etiqueta, sin forzar el desplazamiento de toda la página.
 
-## Movimiento
+### Movimiento
 
 [UX19] Transiciones discretas de 120–180ms para foco, apertura de menús y cambios de estado. Se respeta la preferencia de reducción de movimiento del sistema, desactivando animaciones no esenciales.
 
-## Pantalla 1 — Experimentos (listado)
+### Pantalla 1 — Experimentos (listado)
 
 [UX20] Vista por defecto: listado de experimentos, no un panel de indicadores ni una pantalla de presentación. Título "Experimentos" y acción primaria "Nuevo experimento".
 
@@ -231,7 +231,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX24] Estados a cubrir, cada uno con su propia presentación: vacío (sin experimentos), cargando, sin resultados de búsqueda, servidor desconectado, error genérico. No se combinan ni se sustituyen entre sí.
 
-## Pantalla 2 — Nuevo experimento (asistente de 3 pasos)
+### Pantalla 2 — Nuevo experimento (asistente de 3 pasos)
 
 [UX25] Resumen persistente visible en los tres pasos: sorteo inicial, capital, meta, límites y cantidad de configuraciones cargadas.
 
@@ -245,7 +245,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX30] Paso 3 — Revisión: tabla de condiciones comunes con enlaces "editar" hacia el paso correspondiente, listado de configuraciones y acción "Agregar a la cola". Si el formulario fue modificado y el usuario intenta salir, se muestra una advertencia de pérdida de cambios; no se promete guardado automático de borradores. Cancelar la vista del asistente no cancela un cálculo que ya fue encolado.
 
-## Pantalla 3 — Detalle de experimento
+### Pantalla 3 — Detalle de experimento
 
 [UX31] Misma pantalla para los estados en ejecución y completado, sin cambiar de URL al finalizar. Cada configuración conserva su propio estado (en curso, completada, cancelada); cancelar una no altera el estado de las ya finalizadas, y ninguna configuración parcial se presenta como completa.
 
@@ -261,7 +261,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX37] Se distingue visualmente el estado de ejecución (en curso/cancelado/completado/historial agotado) del resultado financiero (meta alcanzada/quiebre/sin definir); no se combinan en una sola etiqueta.
 
-## Pantalla 4 — Comparación
+### Pantalla 4 — Comparación
 
 [UX38] Hasta 5 configuraciones con las mismas condiciones comunes. Tabla final con saldo, delta, apuestas realizadas y motivo de cierre por configuración.
 
@@ -271,13 +271,13 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX41] Si hay menos de 5 configuraciones completas, se muestra un aviso "N/5" explícito. Los valores faltantes se representan con guion, nunca con cero. No se calcula ni sugiere una "mejor estrategia" ni una probabilidad de éxito. Sin exportación en el MVP (ver [U6]).
 
-## Pantalla 5 — Configuraciones (biblioteca)
+### Pantalla 5 — Configuraciones (biblioteca)
 
 [UX42] Listado con búsqueda/filtro y acciones "nueva", "usar", "editar", "eliminar" (con confirmación explícita). Reutiliza el mismo editor de estrategias del paso 2 del asistente.
 
 [UX43] Eliminar una configuración no elimina los resultados de experimentos ya ejecutados con ella (ver [D5]). "Usar" abre el asistente precargado con esos parámetros.
 
-## Pantalla 6 — Ajustes
+### Pantalla 6 — Ajustes
 
 [UX44] Almacenamiento: espacio utilizado sobre el presupuesto configurable (5 GB por defecto, ver [D6]/[D7]), con advertencias explícitas al acercarse al límite. Se distingue visualmente espacio en disco, presupuesto configurado y espacio recuperable al compactar SQLite; no hay borrado automático, solo acciones manuales explícitas.
 
@@ -285,7 +285,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX46] Información de conexión local (estado del servidor, versión) y guía para detener la aplicación desde el lanzador (ver [T3]/[NF6]); no se presenta como un servicio administrable.
 
-## Cola global de experimentos
+### Cola global de experimentos
 
 [UX47] Se presenta como un cajón (drawer) que se abre bajo demanda, no como un panel permanente en pantalla.
 
@@ -299,7 +299,7 @@ No se copian logo, marca ni contenido editorial de pi.dev; solo se toma como ref
 
 [UX52] Las confirmaciones exitosas se muestran como aviso breve y transitorio; los errores persistentes se muestran en línea, junto al control afectado, no solo como notificación flotante. No se usan modales para la edición ordinaria de campos.
 
-## Checklist de aceptación (verificación visual pendiente en navegador)
+### Checklist de aceptación (verificación visual pendiente en navegador)
 
 Esta sección es una especificación de diseño, no una interfaz terminada. Cada punto queda pendiente de comprobación en la implementación real:
 

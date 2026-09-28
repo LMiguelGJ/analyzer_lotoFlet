@@ -59,6 +59,12 @@ logs/
 .tmp/
 # Local Pi runtime state
 .atl/
+
+# Tooling caches
+.codegraph/
+.playwright-mcp/
+.pytest_cache/
+.ruff_cache/
 # Reference repositories (cloned for study, not part of this project)
 repo_ref/backtrader-mcp/
 repo_ref/MCP-backtesting-tool/
