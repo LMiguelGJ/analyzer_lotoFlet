@@ -243,10 +243,10 @@ SYSTEMS = ("freq_hist", "freq_recent", "decay", "cold", "notebook", "mix",
            "transition", "carry", "doubles", "category", "time", "ensemble",
            "select_interpretable")
 EXCLUDED = ("logistic", "tree", "select_all")
-RANKINGS = Path(__file__).resolve().parent / (
+RANKINGS = Path(__file__).resolve().parent.parent / (
     "repo_ref/reports/chance_rank_v1/predictions/pos1.npz"
 )
-INPUT = Path(__file__).resolve().parent / "chance_express_history.json"
+INPUT = Path(__file__).resolve().parent.parent / "chance_express_history.json"
 
 
 @dataclass(frozen=True)

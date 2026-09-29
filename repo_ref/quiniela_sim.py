@@ -32,7 +32,7 @@ _STRATEGIES = ("flat", "ladder", "bold")
 
 def load_validated_history(path):
     """Delegate chronology and SHA validation to repo_ref without editing it."""
-    repo_ref = str(Path(__file__).resolve().parent / "repo_ref")
+    repo_ref = str(Path(__file__).resolve().parent.parent / "repo_ref")
     if repo_ref not in sys.path:
         sys.path.insert(0, repo_ref)
     data = importlib.import_module("chance_rank.data")
@@ -484,7 +484,7 @@ def render_report(results, capital=CAPITAL, goal=GOAL, history_count=0):
 
 def _report_destination(path, input_path):
     """Validate an unused destination before running expensive computations."""
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parent.parent
     protected = tuple(root / name for name in ("lagacy_loto", "repo_ref", ".pi", "odd", ".git"))
     try:
         # Check the entry itself before resolve: dangling symlinks have exists() == False.
@@ -511,7 +511,7 @@ def main(argv=None):
     parser.add_argument("--meta", type=int, default=GOAL)
     parser.add_argument("--mc-sessions", type=int, default=MC_SESSIONS)
     parser.add_argument("--input", type=Path,
-                        default=Path(__file__).resolve().parent / "chance_express_history.json")
+                        default=Path(__file__).resolve().parent.parent / "chance_express_history.json")
     parser.add_argument("--report", type=Path)
     args = parser.parse_args(argv)
     if args.capital <= 0 or args.mc_sessions <= 0 or args.meta <= args.capital:

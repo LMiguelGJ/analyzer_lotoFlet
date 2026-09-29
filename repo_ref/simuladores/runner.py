@@ -5,6 +5,7 @@ import hashlib
 import sys
 from pathlib import Path
 
+# simuladores/__init__.py puts main/ on sys.path before these imports run.
 from quiniela_compare import historical_scenario, ranking_context
 from quiniela_sim import load_validated_history
 

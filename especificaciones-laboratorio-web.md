@@ -376,3 +376,115 @@ Esta sección es una especificación de diseño, no una interfaz terminada. Cada
 - [ ] Ajustes ([UX44]–[UX46]): estado de almacenamiento, advertencias y guía de detención visibles y correctos.
 - [ ] Cola global ([UX47]–[UX52]): cancelación, reinicio explícito, aviso de desconexión y confirmaciones destructivas funcionan con foco y teclado correctos.
 - [ ] Accesibilidad transversal: navegación completa por teclado, foco visible, estados no dependientes exclusivamente del color (ver [U4]).
+
+## 🏗️ Arquitectura y estructura del proyecto
+
+Estructura aprobada para implementar el MVP. Precisa las rutas propuestas en el plan ODD `odd/tasks/laboratorio-web.md`; no cambia el alcance funcional.
+
+### Flujo general
+
+```text
+Navegador (React)
+      │  solo muestra datos y envía acciones
+      ▼
+Servidor local FastAPI (127.0.0.1)
+      │
+      ├── Cola serial ──► Proceso de cálculo aislado
+      │                          │
+      │                          ▼
+      │                   Adaptador del motor ──► main/ + repo_ref/ (motor existente)
+      │
+      └── SQLite (en la carpeta del usuario, fuera del repositorio)
+```
+
+[AR1] El navegador nunca calcula importes ni resultados; solo presenta lo que devuelve el servidor (ver [T1], [T5]).
+
+[AR2] Un único módulo, `engine/adapter.py`, importa el motor existente de `main/` y `repo_ref/`. Cualquier cambio en el motor se absorbe en ese punto.
+
+[AR3] El cálculo se ejecuta en un proceso separado del servidor, para que la interfaz siga respondiendo y la cancelación entre pasos funcione durante sesiones largas (ver [F15], [NF1]).
+
+[AR4] `domain/` contiene reglas puras, sin HTTP ni base de datos: mezclas, semillas, reloj histórico y límites se prueban de forma aislada.
+
+[AR5] Toda la web vive en `webapp/`. La investigación existente (`main/`, `repo_ref/`, `simuladores/`, JSON y rankings) permanece fuera y no se reorganiza.
+
+[AR6] La base de datos se guarda en `%LOCALAPPDATA%\LaboratorioQuiniela\`, fuera del repositorio y de OneDrive, para evitar que la sincronización interfiera con escrituras de SQLite. La ubicación exacta y sus permisos se validan en LW01.
+
+[AR7] El editor de estrategias se implementa una vez en el frontend y se reutiliza en el asistente y en la biblioteca de configuraciones (ver [UX42]).
+
+### Directorio
+
+```text
+analyzer_lotoFlet/
+├── iniciar-laboratorio.bat          # Doble clic: inicia el servidor y abre el navegador
+│
+├── chance_express_history.json      # EXISTENTE · solo lectura
+├── main/                            # EXISTENTE · motor financiero
+├── repo_ref/                        # EXISTENTE · reglas y rankings NPZ
+├── simuladores/                     # EXISTENTE · 14 referencias de regresión
+│
+└── webapp/                          # NUEVO: todo lo de la web vive aquí
+    ├── README.md                    # Preparación, uso y comandos (en español)
+    │
+    ├── backend/
+    │   ├── pyproject.toml           # Dependencias y configuración de pytest/ruff
+    │   ├── laboratorio/
+    │   │   ├── app.py               # Crea FastAPI y sirve el frontend compilado
+    │   │   ├── settings.py          # Puerto, loopback, ubicación de datos
+    │   │   │
+    │   │   ├── domain/              # Reglas puras, sin HTTP ni base de datos
+    │   │   │   ├── contracts.py     # Condiciones, estrategias, estados, desenlaces
+    │   │   │   ├── selection.py     # Rankings, mezclas ponderadas, azar, par/impar
+    │   │   │   └── session.py       # Una sesión: reloj, límites, meta, quiebre
+    │   │   │
+    │   │   ├── engine/
+    │   │   │   └── adapter.py       # ÚNICO punto que importa main/ y repo_ref/
+    │   │   │
+    │   │   ├── storage/
+    │   │   │   ├── database.py      # Conexión SQLite, transacciones
+    │   │   │   ├── repository.py    # Guardar/leer experimentos y configuraciones
+    │   │   │   ├── quota.py         # Presupuesto 5 GB y espacio en disco
+    │   │   │   └── migrations/
+    │   │   │       └── 0001_initial.sql
+    │   │   │
+    │   │   ├── jobs/
+    │   │   │   ├── queue.py         # Cola serial, cancelación, estado tras reinicio
+    │   │   │   └── worker.py        # Proceso aislado que ejecuta las sesiones
+    │   │   │
+    │   │   └── api/
+    │   │       ├── catalog.py       # Métodos, sorteos iniciales, juego, fuentes
+    │   │       ├── experiments.py   # Crear, listar, detalle, apuestas, cancelar
+    │   │       ├── configurations.py
+    │   │       ├── queue.py
+    │   │       └── settings.py      # Almacenamiento y datos de origen
+    │   │
+    │   └── tests/                   # Un archivo de pruebas por módulo
+    │
+    └── frontend/
+        ├── package.json · vite.config.ts · tsconfig.json · index.html
+        ├── src/
+        │   ├── main.tsx · App.tsx   # Arranque y rutas
+        │   ├── api/                 # Cliente HTTP y tipos compartidos
+        │   ├── styles/tokens.css    # Paleta, tipografía, espaciado (UX2–UX11)
+        │   │
+        │   ├── components/          # Piezas reutilizables
+        │   │   ├── Shell.tsx        # Barra lateral + encabezado
+        │   │   ├── QueueDrawer.tsx  # Cola bajo demanda
+        │   │   ├── ConfirmDialog.tsx
+        │   │   ├── DataTable.tsx
+        │   │   ├── BalanceChart.tsx
+        │   │   └── StatusLabel.tsx  # Estado ≠ desenlace, nunca solo por color
+        │   │
+        │   └── pages/               # Una carpeta por pantalla
+        │       ├── experiments/     # Listado, detalle con replay, comparación
+        │       ├── new-experiment/  # Asistente de 3 pasos + editor de estrategia
+        │       ├── configurations/  # Biblioteca de configuraciones
+        │       └── settings/        # Almacenamiento y datos
+        │
+        └── dist/                    # Generado al compilar · ignorado por Git
+
+%LOCALAPPDATA%\LaboratorioQuiniela\  # FUERA del repositorio y de OneDrive
+├── laboratorio.db                   # Experimentos y configuraciones
+└── logs/
+```
+
+[AR8] Los nombres de archivos internos pueden subdividirse durante la implementación si un módulo crece demasiado, siempre dentro de la carpeta de su capa y sin romper [AR1]–[AR5]. Cualquier cambio de capa o de ubicación de datos se documenta aquí y en el plan ODD.

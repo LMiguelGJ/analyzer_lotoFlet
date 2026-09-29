@@ -15,7 +15,7 @@ import pytest
 
 import quiniela_compare as compare
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 SIMULATORS = ROOT / "simuladores"
 # Frozen rows from docs/resumen_resultados_quiniela.md, not inputs to the runner.
 EXPECTED = (
