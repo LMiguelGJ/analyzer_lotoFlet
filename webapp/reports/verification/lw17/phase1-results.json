@@ -1,0 +1,50 @@
+[
+  {
+    "name": "backend-pytest",
+    "cwd": "webapp/backend",
+    "command": "py -3 -B -m pytest tests -q -p no:cacheprovider",
+    "exit": 1,
+    "elapsed_ms": 61170.356,
+    "log": "backend-pytest.log"
+  },
+  {
+    "name": "backend-ruff",
+    "cwd": "webapp/backend",
+    "command": "py -3 -B -m ruff check --no-cache .",
+    "exit": 0,
+    "elapsed_ms": 127.534,
+    "log": "backend-ruff.log"
+  },
+  {
+    "name": "frontend-test",
+    "cwd": "webapp/frontend",
+    "command": "npm test -- --run",
+    "exit": 0,
+    "elapsed_ms": 33601.419,
+    "log": "frontend-test.log"
+  },
+  {
+    "name": "frontend-typecheck",
+    "cwd": "webapp/frontend",
+    "command": "npm run typecheck",
+    "exit": 0,
+    "elapsed_ms": 5896.552,
+    "log": "frontend-typecheck.log"
+  },
+  {
+    "name": "frontend-build",
+    "cwd": "webapp/frontend",
+    "command": "npm run build",
+    "exit": 0,
+    "elapsed_ms": 5287.641,
+    "log": "frontend-build.log"
+  },
+  {
+    "name": "frontend-audit",
+    "cwd": "webapp/frontend",
+    "command": "npm audit --json",
+    "exit": 0,
+    "elapsed_ms": 2233.222,
+    "log": "frontend-audit.log"
+  }
+]

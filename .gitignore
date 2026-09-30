@@ -43,6 +43,8 @@ desktop.ini
 
 # Logs
 *.log
+# Selected redacted verification logs are durable evidence, not runtime logs.
+!webapp/reports/verification/**/*.log
 logs/
 
 # Data files (optional - comment out if you want to track them)
@@ -60,9 +62,24 @@ logs/
 # Local Pi runtime state
 .atl/
 
+# Dependencies and generated test/cache output (never source tests)
+node_modules/
+.vitest/
+.vite/
+coverage/
+.playwright/
+playwright-report/
+test-results/
+
+# Local acceptance harnesses: runtime databases, browser profiles and evidence.
+# Durable reports selected for delivery must live outside these scratch folders.
+webapp/.lw*-acceptance/
+webapp/.lw17-regression/
+
 # Tooling caches
 .codegraph/
 .playwright-mcp/
+.playwright-cli/
 .pytest_cache/
 .ruff_cache/
 # Reference repositories (cloned for study, not part of this project)

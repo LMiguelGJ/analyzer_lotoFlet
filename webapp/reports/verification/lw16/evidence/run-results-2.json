@@ -1,0 +1,66 @@
+{
+  "setup": {
+    "launcher": "<repo>\\webapp\\.lw16-windows-acceptance\\Launcher con espacios\\iniciar-laboratorio.bat",
+    "unrelated_cwd": "<repo>\\webapp\\.lw16-windows-acceptance\\evidence",
+    "port": 18766,
+    "browser": "BROWSER-instrumented cmd stub; not a real browser opening",
+    "history_before": "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711",
+    "rankings_before": "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d"
+  },
+  "signal_probe": {
+    "ownership": {
+      "host_pid": 2284,
+      "group_pid": 1984,
+      "command": [
+        "C:\\Python314\\python.exe",
+        "-B",
+        "<repo>\\webapp\\.lw16-windows-acceptance\\signal_probe.py"
+      ],
+      "cwd": "<repo>\\webapp\\.lw16-windows-acceptance\\evidence",
+      "mode": "probe"
+    },
+    "control": {
+      "event": "CTRL_BREAK_EVENT (1), not CTRL_C_EVENT",
+      "target_group_pid": 1984,
+      "console_process_ids_at_send": [
+        25500,
+        1984,
+        2284
+      ]
+    },
+    "exit": {
+      "host_exit": 0,
+      "exit_code": 0,
+      "pid": 1984,
+      "stdout": "probe pid=1984 ready\n",
+      "stderr": ""
+    }
+  },
+  "missing_index": {
+    "ownership": {
+      "host_pid": 15248,
+      "group_pid": 25204,
+      "command": [
+        "cmd.exe",
+        "/d",
+        "/c",
+        "<repo>\\webapp\\.lw16-windows-acceptance\\Launcher con espacios\\iniciar-laboratorio.bat"
+      ],
+      "cwd": "<repo>\\webapp\\.lw16-windows-acceptance\\evidence",
+      "mode": "launcher"
+    },
+    "exit": {
+      "host_exit": 0,
+      "exit_code": 1,
+      "pid": 25204,
+      "stdout": "Falta el frontend compilado. En webapp\\frontend ejecuta npm ci y npm run build.\nConsulta el error anterior y webapp\\README.md antes de reintentar.\nPresione una tecla para continuar . . . \n",
+      "stderr": ""
+    }
+  },
+  "final": {
+    "port_free": true,
+    "copied_index_restored": true,
+    "history_after": "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711",
+    "rankings_after": "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d"
+  }
+}

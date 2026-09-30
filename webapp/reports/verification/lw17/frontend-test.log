@@ -1,0 +1,60 @@
+
+> laboratorio-frontend@0.1.0 test
+> vitest --run
+
+
+ RUN  v5.0.2 <repo>/webapp/frontend
+
+Error: Uncaught [Error: unknown execution status value: bogus]
+    at reportException (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\helpers\runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:353:9)
+    at invokeEventListeners (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\generated\EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:4213:16)
+    at invokeGuardedCallback (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:4277:31)
+    at beginWork$1 (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:27490:7)
+    at performUnitOfWork (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:26599:12) Error: unknown execution status value: bogus
+    at StatusLabel (<repo>/webapp/frontend/src/components/StatusLabel.tsx:65:11)
+    at renderWithHooks (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:350:25)
+    at invokeEventListeners (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:104:17)
+Error: Uncaught [Error: unknown execution status value: bogus]
+    at reportException (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\helpers\runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:353:9)
+    at invokeEventListeners (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\generated\EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:4213:16)
+    at invokeGuardedCallback (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:4277:31)
+    at beginWork$1 (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:27490:7)
+    at performUnitOfWork (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:26599:12) Error: unknown execution status value: bogus
+    at StatusLabel (<repo>/webapp/frontend/src/components/StatusLabel.tsx:65:11)
+    at renderWithHooks (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (<repo>\webapp\frontend\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\generated\EventListener.js:26:30)
+    at innerInvokeEventListeners (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:350:25)
+    at invokeEventListeners (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (<repo>\webapp\frontend\node_modules\jsdom\lib\jsdom\living\events\EventTarget-impl.js:104:17)
+
+ Test Files  24 passed (24)
+      Tests  251 passed (251)
+   Start at  07:44:48
+   Duration  30.85s (tests 46%, environment 30%, setup 10%, import 8%, transform 6%)
+
+npm notice
+npm notice New minor version of npm available! 11.9.0 -> 11.20.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.20.0
+npm notice To update run: npm install -g npm@11.20.0
+npm notice

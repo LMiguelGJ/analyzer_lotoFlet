@@ -1,0 +1,63 @@
+{
+  "method": "GET",
+  "path": "/experiments/75ec032f9e5d4ae0b7f174a2fa50b996",
+  "status": 200,
+  "body": {
+    "id": "75ec032f9e5d4ae0b7f174a2fa50b996",
+    "status": "interrupted",
+    "created_at": "2026-09-30T09:25:09.599245Z",
+    "request": {
+      "name": "LW15 prepared abandoned running",
+      "conditions": {
+        "start_draw": "2025-09-02 05:10",
+        "capital": 1000,
+        "goal": 2000,
+        "settlement": "all",
+        "max_bets": 50,
+        "max_minutes": null,
+        "seed": 42
+      },
+      "strategies": [
+        {
+          "name": "Flat K1",
+          "selector": "system",
+          "system": "cold",
+          "components": null,
+          "coverage": 1,
+          "staking": "flat"
+        },
+        {
+          "name": "Flat K1 alternate",
+          "selector": "system",
+          "system": "freq_recent",
+          "components": null,
+          "coverage": 1,
+          "staking": "flat"
+        }
+      ]
+    },
+    "sources": {
+      "history_id": "chance_express_history.json",
+      "history_sha256": "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711",
+      "rankings_id": "pos1.npz",
+      "rankings_sha256": "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d",
+      "code_version": "0.1.0"
+    },
+    "runs": [
+      {
+        "ordinal": 0,
+        "configuration_id": null,
+        "status": "interrupted",
+        "result": null,
+        "bets_count": 0
+      },
+      {
+        "ordinal": 1,
+        "configuration_id": null,
+        "status": "not_run",
+        "result": null,
+        "bets_count": 0
+      }
+    ]
+  }
+}

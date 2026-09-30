@@ -1,0 +1,69 @@
+/*
+ * Design tokens (spec especificaciones-laboratorio-web.md, UX2-UX11).
+ * --color-border-control is an addition on top of the spec's UX2 table: the
+ * spec's single "Separador" token (#3b4652) measures ~1.4-1.75:1 against the
+ * surfaces it separates, which is correct for a decorative panel divider but
+ * fails the UX3 3:1 target for functional UI-component borders (inputs,
+ * buttons, dialog panels). --color-border-control (#6c7f92) is the smallest
+ * adjustment that clears 3:1 against bg/surface/field while staying in the
+ * same blue-gray family. Measured ratios (src/lib/tokens.test.ts, WCAG
+ * relative-luminance formula):
+ *   text/bg 11.27  text/surface 9.96  text/field 9.12
+ *   secondary/bg 8.11  secondary/surface 7.17  secondary/field 6.56
+ *   accent/bg 7.48  accent/surface 6.61  accent/field 6.05
+ *   border-control/bg 4.07  border-control/surface 3.60  border-control/field 3.29
+ * --color-border (decorative separators) is exempt from the 3:1 rule and
+ * keeps the spec's exact value. The visible focus ring itself
+ * (:focus-visible in index.css) uses --color-accent, not this token; this
+ * token only covers static borders on fields/buttons/dialog panels.
+ */
+:root {
+  --color-bg: #171e26;
+  --color-surface: #222830;
+  --color-field: #242f3b;
+  --color-text: #d0d4d8;
+  --color-text-secondary: #adb5bf;
+  --color-accent: #7eb3da;
+  --color-border: #3b4652;
+  --color-border-control: #6c7f92;
+
+  --font-heading: Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, Consolas, "SFMono-Regular", Menlo, monospace;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --space-page-margin: 28px;
+  --space-section-gap: 24px;
+  --radius-control: 4px;
+  --control-height: 42px;
+
+  --motion-fast: 150ms;
+  --motion-easing: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+
+/* Faint, static graph-paper texture (UX11): a measuring-tool grid, not a decorative
+   gradient. Kept at very low opacity and only on the page background, never animated. */
+body {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(59, 70, 82, 0.35) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(90deg, rgba(59, 70, 82, 0.35) 0 1px, transparent 1px 32px);
+  background-blend-mode: normal;
+}

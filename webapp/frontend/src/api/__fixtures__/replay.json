@@ -1,0 +1,16 @@
+{
+  "total": 1,
+  "offset": 0,
+  "limit": 20,
+  "items": [
+    {
+      "label": "2025-01-01 05:10",
+      "numbers": [7],
+      "per_number": 1,
+      "wagered": 1,
+      "results": [7, 8, 9, 10, 11],
+      "paid": 80,
+      "balance": 179
+    }
+  ]
+}

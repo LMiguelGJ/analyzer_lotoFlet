@@ -1,0 +1,49 @@
+{
+  "id": "db2b35a1b9644a8aa34ae1e93f4c3852",
+  "status": "completed",
+  "request": {
+    "name": "Trial",
+    "conditions": {
+      "start_draw": "2025-01-01 05:10",
+      "capital": 100,
+      "goal": 200,
+      "settlement": "all",
+      "max_bets": null,
+      "max_minutes": null,
+      "seed": 42
+    },
+    "strategies": [
+      {
+        "name": "Cold",
+        "selector": "system",
+        "system": "cold",
+        "components": null,
+        "coverage": 1,
+        "staking": "flat"
+      }
+    ]
+  },
+  "sources": {
+    "history_id": "history",
+    "history_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "rankings_id": "rankings",
+    "rankings_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "code_version": "v1"
+  },
+  "runs": [
+    {
+      "ordinal": 0,
+      "configuration_id": null,
+      "status": "completed",
+      "result": {
+        "outcome": "goal",
+        "bets_count": 1,
+        "wagered": 1,
+        "paid": 80,
+        "final_balance": 179,
+        "delta": 79
+      },
+      "bets_count": 1
+    }
+  ]
+}

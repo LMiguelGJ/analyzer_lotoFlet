@@ -1,0 +1,74 @@
+{
+  "command": [
+    "C:\\Python314\\python.exe",
+    "-B",
+    "<repo>\\webapp\\.lw16-windows-acceptance\\console_host.py",
+    "live-4",
+    "launcher"
+  ],
+  "cwd": "<repo>\\webapp\\.lw16-windows-acceptance\\evidence",
+  "browser": "instrumented BROWSER override; not real opening",
+  "ownership": {
+    "host_pid": 2144,
+    "group_pid": 15524,
+    "command": [
+      "cmd.exe",
+      "/d",
+      "/c",
+      "<repo>\\webapp\\.lw16-windows-acceptance\\Launcher con espacios\\iniciar-laboratorio.bat"
+    ],
+    "cwd": "<repo>\\webapp\\.lw16-windows-acceptance\\evidence",
+    "mode": "launcher"
+  },
+  "http": [
+    {
+      "path": "/",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "length": 408,
+      "prefix": "<!doctype html>\n<html lang=\"es\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-w"
+    },
+    {
+      "path": "/experimentos/nuevo",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "length": 408,
+      "prefix": "<!doctype html>\n<html lang=\"es\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-w"
+    },
+    {
+      "path": "/api/v1/queue",
+      "status": 200,
+      "content_type": "application/json",
+      "length": 165,
+      "prefix": "{\"active_id\":null,\"pending\":{\"total\":0,\"offset\":0,\"limit\":20,\"count\":0,\"items\":[]},\"held\":{\"total\":0,\"offset\":0,\"limit\":"
+    },
+    {
+      "path": "/api/v1/catalog",
+      "status": 200,
+      "content_type": "application/json",
+      "length": 2828,
+      "prefix": "{\"game\":{\"name\":\"Quiniela 80\",\"numbers\":100,\"positions\":5,\"prizes\":[80,8,4,2,1],\"allows_repeats\":true},\"systems\":{\"freq_"
+    }
+  ],
+  "browser_stub_new_lines": "http://127.0.0.1:18766/\n",
+  "control": {
+    "event": "CTRL_BREAK_EVENT (1), not CTRL_C_EVENT",
+    "group_pid": 15524,
+    "console_process_ids_at_send": [
+      9108,
+      10280,
+      11652,
+      15524,
+      2144
+    ]
+  },
+  "stdin_answer": "S\\r\\n\\r\\n injected via owned console_host stdin pipe after event",
+  "host_exit": 0,
+  "launcher_exit": {
+    "exit_code": 255,
+    "pid": 15524
+  },
+  "port_free_after": true,
+  "inputs_unchanged": true,
+  "copied_index_present": true
+}

@@ -1,0 +1,4472 @@
+{
+ "history_rows": 105426,
+ "ranked_rows": 65235,
+ "first_ranked": "2025-09-02 05:10",
+ "last_ranked": "2026-09-25 18:20",
+ "cases": [
+  {
+   "system": "freq_hist",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 18100,
+     "final": 0,
+     "wagered": 18100,
+     "paid": 16100,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-12-18 05:10",
+     "bets": 31609,
+     "final": 0,
+     "wagered": 31609,
+     "paid": 29609,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-06-26 12:10",
+     "bets": 8892,
+     "final": 0,
+     "wagered": 8892,
+     "paid": 6892,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_hist",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 18100,
+     "final": 0,
+     "wagered": 18100,
+     "paid": 16100,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-12-18 05:10",
+     "bets": 31609,
+     "final": 0,
+     "wagered": 31609,
+     "paid": 29609,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-06-26 12:10",
+     "bets": 8892,
+     "final": 0,
+     "wagered": 8892,
+     "paid": 6892,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_hist",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 86,
+     "final": 2828,
+     "wagered": 1329,
+     "paid": 2157,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 13:40",
+     "bets": 74,
+     "final": 2818,
+     "wagered": 1266,
+     "paid": 2084,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 21:10",
+     "bets": 1,
+     "final": 2869,
+     "wagered": 11,
+     "paid": 880,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "freq_hist",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2598,
+     "final": 2,
+     "wagered": 25980,
+     "paid": 23982,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-17 10:15",
+     "bets": 849,
+     "final": 8,
+     "wagered": 8490,
+     "paid": 6498,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-22 10:10",
+     "bets": 2808,
+     "final": 3,
+     "wagered": 28080,
+     "paid": 26083,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_hist",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 313,
+     "final": 2837,
+     "wagered": 3680,
+     "paid": 4517,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 19:25",
+     "bets": 2025,
+     "final": 7,
+     "wagered": 24310,
+     "paid": 22317,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-15 17:50",
+     "bets": 956,
+     "final": 9,
+     "wagered": 11660,
+     "paid": 9669,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_hist",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 21,
+     "final": 5,
+     "wagered": 4390,
+     "paid": 2395,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:15",
+     "bets": 10,
+     "final": 6,
+     "wagered": 2200,
+     "paid": 206,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 08:15",
+     "bets": 12,
+     "final": 0,
+     "wagered": 2400,
+     "paid": 400,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_hist",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 705,
+     "final": 23,
+     "wagered": 35250,
+     "paid": 33273,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-06 07:35",
+     "bets": 546,
+     "final": 43,
+     "wagered": 27300,
+     "paid": 25343,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-09 11:15",
+     "bets": 461,
+     "final": 2801,
+     "wagered": 23050,
+     "paid": 23851,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "freq_hist",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 10,
+     "final": 1208,
+     "wagered": 1650,
+     "paid": 858,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:10",
+     "bets": 9,
+     "final": 1106,
+     "wagered": 2550,
+     "paid": 1656,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:55",
+     "bets": 24,
+     "final": 2807,
+     "wagered": 3550,
+     "paid": 4357,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "freq_hist",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3215,
+     "wagered": 1350,
+     "paid": 2565,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 7,
+     "final": 18,
+     "wagered": 6150,
+     "paid": 4168,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:50",
+     "bets": 5,
+     "final": 45,
+     "wagered": 3250,
+     "paid": 1295,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 5111,
+     "final": 2874,
+     "wagered": 5111,
+     "paid": 5985,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-10-02 06:30",
+     "bets": 25311,
+     "final": 0,
+     "wagered": 25311,
+     "paid": 23311,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-03-02 17:20",
+     "bets": 34813,
+     "final": 1432,
+     "wagered": 34813,
+     "paid": 34245,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 5111,
+     "final": 2874,
+     "wagered": 5111,
+     "paid": 5985,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-10-02 06:30",
+     "bets": 25311,
+     "final": 0,
+     "wagered": 25311,
+     "paid": 23311,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-03-02 17:20",
+     "bets": 34813,
+     "final": 1432,
+     "wagered": 34813,
+     "paid": 34245,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2,
+     "final": 2858,
+     "wagered": 22,
+     "paid": 880,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 48,
+     "final": 2813,
+     "wagered": 679,
+     "paid": 1492,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 10:10",
+     "bets": 5,
+     "final": 2834,
+     "wagered": 54,
+     "paid": 888,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 307,
+     "final": 2827,
+     "wagered": 3070,
+     "paid": 3897,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 18:45",
+     "bets": 1550,
+     "final": 2,
+     "wagered": 15500,
+     "paid": 13502,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-12 20:45",
+     "bets": 2837,
+     "final": 4,
+     "wagered": 28370,
+     "paid": 26374,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1864,
+     "final": 3,
+     "wagered": 22240,
+     "paid": 20243,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-12 21:30",
+     "bets": 2693,
+     "final": 6,
+     "wagered": 32130,
+     "paid": 30136,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-28 19:10",
+     "bets": 1739,
+     "final": 17,
+     "wagered": 20930,
+     "paid": 18947,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2,
+     "final": 2816,
+     "wagered": 240,
+     "paid": 1056,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 8,
+     "final": 3213,
+     "wagered": 1570,
+     "paid": 2783,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:10",
+     "bets": 1,
+     "final": 2840,
+     "wagered": 120,
+     "paid": 960,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 120,
+     "final": 2815,
+     "wagered": 6000,
+     "paid": 6815,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 17:10",
+     "bets": 598,
+     "final": 33,
+     "wagered": 29900,
+     "paid": 27933,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-06 08:50",
+     "bets": 450,
+     "final": 9,
+     "wagered": 22500,
+     "paid": 20509,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 34,
+     "final": 2842,
+     "wagered": 2750,
+     "paid": 3592,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 08:30",
+     "bets": 25,
+     "final": 2821,
+     "wagered": 2800,
+     "paid": 3621,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 10:55",
+     "bets": 25,
+     "final": 1533,
+     "wagered": 3450,
+     "paid": 2983,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "freq_recent",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 3,
+     "final": 22,
+     "wagered": 3850,
+     "paid": 1872,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:25",
+     "bets": 8,
+     "final": 2818,
+     "wagered": 9050,
+     "paid": 9868,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:15",
+     "bets": 1,
+     "final": 2945,
+     "wagered": 1350,
+     "paid": 2295,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 30938,
+     "final": 0,
+     "wagered": 30938,
+     "paid": 28938,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-03-05 17:50",
+     "bets": 32420,
+     "final": 0,
+     "wagered": 32420,
+     "paid": 30420,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-09-14 17:40",
+     "bets": 1877,
+     "final": 1884,
+     "wagered": 1877,
+     "paid": 1761,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 30938,
+     "final": 0,
+     "wagered": 30938,
+     "paid": 28938,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-03-05 17:50",
+     "bets": 32420,
+     "final": 0,
+     "wagered": 32420,
+     "paid": 30420,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-09-14 17:40",
+     "bets": 1877,
+     "final": 1884,
+     "wagered": 1877,
+     "paid": 1761,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 106,
+     "final": 0,
+     "wagered": 2128,
+     "paid": 128,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 15:40",
+     "bets": 12,
+     "final": 2823,
+     "wagered": 137,
+     "paid": 960,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 16:50",
+     "bets": 72,
+     "final": 2839,
+     "wagered": 1221,
+     "paid": 2060,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2113,
+     "final": 5,
+     "wagered": 21130,
+     "paid": 19135,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-14 12:25",
+     "bets": 2454,
+     "final": 0,
+     "wagered": 24540,
+     "paid": 22540,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-28 20:10",
+     "bets": 1465,
+     "final": 2848,
+     "wagered": 14650,
+     "paid": 15498,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1462,
+     "final": 16,
+     "wagered": 17610,
+     "paid": 15626,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-10 15:20",
+     "bets": 915,
+     "final": 16,
+     "wagered": 11120,
+     "paid": 9136,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-15 21:45",
+     "bets": 2576,
+     "final": 5,
+     "wagered": 31110,
+     "paid": 29115,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 15,
+     "final": 2866,
+     "wagered": 2690,
+     "paid": 3556,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:35",
+     "bets": 2,
+     "final": 2802,
+     "wagered": 250,
+     "paid": 1052,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:45",
+     "bets": 12,
+     "final": 2,
+     "wagered": 2470,
+     "paid": 472,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 490,
+     "final": 38,
+     "wagered": 24500,
+     "paid": 22538,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-04 20:10",
+     "bets": 745,
+     "final": 49,
+     "wagered": 37250,
+     "paid": 35299,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-09 09:35",
+     "bets": 620,
+     "final": 12,
+     "wagered": 31000,
+     "paid": 29012,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 21,
+     "final": 2802,
+     "wagered": 3850,
+     "paid": 4652,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 07:15",
+     "bets": 22,
+     "final": 1427,
+     "wagered": 2400,
+     "paid": 1827,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 09:25",
+     "bets": 16,
+     "final": 1407,
+     "wagered": 2500,
+     "paid": 1907,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "decay",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 7,
+     "final": 46,
+     "wagered": 4900,
+     "paid": 2946,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:45",
+     "bets": 6,
+     "final": 22,
+     "wagered": 3300,
+     "paid": 1322,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:25",
+     "bets": 1,
+     "final": 2837,
+     "wagered": 1350,
+     "paid": 2187,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 65235,
+     "final": 1642,
+     "wagered": 65235,
+     "paid": 64877,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 65235,
+     "final": 1642,
+     "wagered": 65235,
+     "paid": 64877,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 3,
+     "final": 2847,
+     "wagered": 33,
+     "paid": 880,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:25",
+     "bets": 80,
+     "final": 2821,
+     "wagered": 1315,
+     "paid": 2136,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 13:25",
+     "bets": 72,
+     "final": 2861,
+     "wagered": 1105,
+     "paid": 1966,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 4636,
+     "final": 8,
+     "wagered": 46360,
+     "paid": 44368,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-29 09:55",
+     "bets": 3762,
+     "final": 6,
+     "wagered": 37620,
+     "paid": 35626,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-21 18:50",
+     "bets": 2004,
+     "final": 7,
+     "wagered": 20040,
+     "paid": 18047,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 3932,
+     "final": 7,
+     "wagered": 47170,
+     "paid": 45177,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-25 07:35",
+     "bets": 248,
+     "final": 2866,
+     "wagered": 2850,
+     "paid": 3716,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-26 15:25",
+     "bets": 1195,
+     "final": 8,
+     "wagered": 14380,
+     "paid": 12388,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 3,
+     "final": 2876,
+     "wagered": 420,
+     "paid": 1296,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:25",
+     "bets": 12,
+     "final": 4,
+     "wagered": 2330,
+     "paid": 334,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:35",
+     "bets": 12,
+     "final": 7,
+     "wagered": 2500,
+     "paid": 507,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1011,
+     "final": 27,
+     "wagered": 50550,
+     "paid": 48577,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-07 21:15",
+     "bets": 2497,
+     "final": 3,
+     "wagered": 124850,
+     "paid": 122853,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-22 16:15",
+     "bets": 952,
+     "final": 43,
+     "wagered": 47600,
+     "paid": 45643,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 25,
+     "final": 1506,
+     "wagered": 2850,
+     "paid": 2356,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:35",
+     "bets": 4,
+     "final": 854,
+     "wagered": 1250,
+     "paid": 104,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:55",
+     "bets": 5,
+     "final": 939,
+     "wagered": 1300,
+     "paid": 239,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 2918,
+     "wagered": 1350,
+     "paid": 2268,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 1,
+     "final": 2891,
+     "wagered": 1350,
+     "paid": 2241,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 1,
+     "final": 2837,
+     "wagered": 1350,
+     "paid": 2187,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 23945,
+     "final": 0,
+     "wagered": 23945,
+     "paid": 21945,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-01-23 15:30",
+     "bets": 9972,
+     "final": 0,
+     "wagered": 9972,
+     "paid": 7972,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-03-23 09:45",
+     "bets": 11788,
+     "final": 0,
+     "wagered": 11788,
+     "paid": 9788,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 23945,
+     "final": 0,
+     "wagered": 23945,
+     "paid": 21945,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-01-23 15:30",
+     "bets": 9972,
+     "final": 0,
+     "wagered": 9972,
+     "paid": 7972,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-03-23 09:45",
+     "bets": 11788,
+     "final": 0,
+     "wagered": 11788,
+     "paid": 9788,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 11,
+     "final": 2854,
+     "wagered": 114,
+     "paid": 968,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:15",
+     "bets": 77,
+     "final": 2852,
+     "wagered": 1244,
+     "paid": 2096,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 13:50",
+     "bets": 129,
+     "final": 0,
+     "wagered": 2563,
+     "paid": 563,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2652,
+     "final": 1,
+     "wagered": 26520,
+     "paid": 24521,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-17 15:35",
+     "bets": 1454,
+     "final": 5,
+     "wagered": 14540,
+     "paid": 12545,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-26 07:55",
+     "bets": 3240,
+     "final": 4,
+     "wagered": 32400,
+     "paid": 30404,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1751,
+     "final": 2871,
+     "wagered": 20960,
+     "paid": 21831,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-12 10:15",
+     "bets": 779,
+     "final": 19,
+     "wagered": 9400,
+     "paid": 7419,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-16 20:25",
+     "bets": 1347,
+     "final": 1,
+     "wagered": 16270,
+     "paid": 14271,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 11,
+     "final": 2858,
+     "wagered": 2410,
+     "paid": 3268,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:15",
+     "bets": 4,
+     "final": 2802,
+     "wagered": 530,
+     "paid": 1332,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:35",
+     "bets": 13,
+     "final": 4,
+     "wagered": 2360,
+     "paid": 364,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 308,
+     "final": 2808,
+     "wagered": 15400,
+     "paid": 16208,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 18:50",
+     "bets": 599,
+     "final": 36,
+     "wagered": 29950,
+     "paid": 27986,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-07 10:45",
+     "bets": 310,
+     "final": 13,
+     "wagered": 15500,
+     "paid": 13513,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 25,
+     "final": 1692,
+     "wagered": 3300,
+     "paid": 2992,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:35",
+     "bets": 14,
+     "final": 1185,
+     "wagered": 1950,
+     "paid": 1135,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 08:55",
+     "bets": 28,
+     "final": 2822,
+     "wagered": 2550,
+     "paid": 3372,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "notebook",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3188,
+     "wagered": 1350,
+     "paid": 2538,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 1,
+     "final": 2837,
+     "wagered": 1350,
+     "paid": 2187,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 1,
+     "final": 2945,
+     "wagered": 1350,
+     "paid": 2295,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2488,
+     "final": 2808,
+     "wagered": 2488,
+     "paid": 3296,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-16 16:15",
+     "bets": 41525,
+     "final": 0,
+     "wagered": 41525,
+     "paid": 39525,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-05-22 16:35",
+     "bets": 21222,
+     "final": 2031,
+     "wagered": 21222,
+     "paid": 21253,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2488,
+     "final": 2808,
+     "wagered": 2488,
+     "paid": 3296,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-16 16:15",
+     "bets": 41525,
+     "final": 0,
+     "wagered": 41525,
+     "paid": 39525,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-05-22 16:35",
+     "bets": 21222,
+     "final": 2031,
+     "wagered": 21222,
+     "paid": 21253,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 11,
+     "final": 2854,
+     "wagered": 114,
+     "paid": 968,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:15",
+     "bets": 77,
+     "final": 2852,
+     "wagered": 1244,
+     "paid": 2096,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 13:50",
+     "bets": 129,
+     "final": 0,
+     "wagered": 2563,
+     "paid": 563,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 310,
+     "final": 2820,
+     "wagered": 3100,
+     "paid": 3920,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 19:10",
+     "bets": 1795,
+     "final": 9,
+     "wagered": 17950,
+     "paid": 15959,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-14 11:35",
+     "bets": 1704,
+     "final": 8,
+     "wagered": 17040,
+     "paid": 15048,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 221,
+     "final": 2830,
+     "wagered": 2520,
+     "paid": 3350,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 10:15",
+     "bets": 1209,
+     "final": 1,
+     "wagered": 14580,
+     "paid": 12581,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-10 12:10",
+     "bets": 400,
+     "final": 2828,
+     "wagered": 4690,
+     "paid": 5518,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 13,
+     "final": 3,
+     "wagered": 2700,
+     "paid": 703,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:25",
+     "bets": 2,
+     "final": 2816,
+     "wagered": 240,
+     "paid": 1056,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:35",
+     "bets": 13,
+     "final": 9,
+     "wagered": 2370,
+     "paid": 379,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 706,
+     "final": 31,
+     "wagered": 35300,
+     "paid": 33331,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-06 07:40",
+     "bets": 543,
+     "final": 47,
+     "wagered": 27150,
+     "paid": 25197,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-09 10:55",
+     "bets": 1035,
+     "final": 22,
+     "wagered": 51750,
+     "paid": 49772,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 10,
+     "final": 1189,
+     "wagered": 1900,
+     "paid": 1089,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:10",
+     "bets": 25,
+     "final": 2823,
+     "wagered": 3400,
+     "paid": 4223,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 08:35",
+     "bets": 29,
+     "final": 2919,
+     "wagered": 3400,
+     "paid": 4319,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "mix",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3188,
+     "wagered": 1350,
+     "paid": 2538,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 3,
+     "final": 32,
+     "wagered": 3100,
+     "paid": 1132,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:30",
+     "bets": 4,
+     "final": 30,
+     "wagered": 3450,
+     "paid": 1480,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2189,
+     "final": 2862,
+     "wagered": 2189,
+     "paid": 3051,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-14 19:55",
+     "bets": 26367,
+     "final": 0,
+     "wagered": 26367,
+     "paid": 24367,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-02-19 17:40",
+     "bets": 36679,
+     "final": 2468,
+     "wagered": 36679,
+     "paid": 37147,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2189,
+     "final": 2862,
+     "wagered": 2189,
+     "paid": 3051,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-14 19:55",
+     "bets": 26367,
+     "final": 0,
+     "wagered": 26367,
+     "paid": 24367,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-02-19 17:40",
+     "bets": 36679,
+     "final": 2468,
+     "wagered": 36679,
+     "paid": 37147,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 60,
+     "final": 2802,
+     "wagered": 822,
+     "paid": 1624,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 11:10",
+     "bets": 33,
+     "final": 2816,
+     "wagered": 392,
+     "paid": 1208,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 14:25",
+     "bets": 12,
+     "final": 2873,
+     "wagered": 133,
+     "paid": 1006,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2711,
+     "final": 7,
+     "wagered": 27110,
+     "paid": 25117,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-17 21:30",
+     "bets": 2276,
+     "final": 0,
+     "wagered": 22760,
+     "paid": 20760,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-01 11:10",
+     "bets": 1870,
+     "final": 5,
+     "wagered": 18700,
+     "paid": 16705,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1205,
+     "final": 2815,
+     "wagered": 14380,
+     "paid": 15195,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-09 06:35",
+     "bets": 762,
+     "final": 7,
+     "wagered": 9190,
+     "paid": 7197,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-13 14:45",
+     "bets": 260,
+     "final": 2818,
+     "wagered": 3040,
+     "paid": 3858,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 7,
+     "final": 2924,
+     "wagered": 1060,
+     "paid": 1984,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:45",
+     "bets": 9,
+     "final": 2837,
+     "wagered": 1540,
+     "paid": 2377,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:40",
+     "bets": 2,
+     "final": 2860,
+     "wagered": 260,
+     "paid": 1120,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 202,
+     "final": 39,
+     "wagered": 10100,
+     "paid": 8139,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-03 08:20",
+     "bets": 786,
+     "final": 34,
+     "wagered": 39300,
+     "paid": 37334,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-07 18:50",
+     "bets": 1709,
+     "final": 22,
+     "wagered": 85450,
+     "paid": 83472,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 22,
+     "final": 1621,
+     "wagered": 4400,
+     "paid": 4021,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:20",
+     "bets": 26,
+     "final": 1844,
+     "wagered": 4900,
+     "paid": 4744,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 09:50",
+     "bets": 6,
+     "final": 876,
+     "wagered": 1350,
+     "paid": 226,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3161,
+     "wagered": 1350,
+     "paid": 2511,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 5,
+     "final": 12,
+     "wagered": 2350,
+     "paid": 362,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:40",
+     "bets": 1,
+     "final": 2945,
+     "wagered": 1350,
+     "paid": 2295,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2189,
+     "final": 2862,
+     "wagered": 2189,
+     "paid": 3051,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-14 19:55",
+     "bets": 14589,
+     "final": 0,
+     "wagered": 14589,
+     "paid": 12589,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-12-10 08:50",
+     "bets": 37052,
+     "final": 0,
+     "wagered": 37052,
+     "paid": 35052,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2189,
+     "final": 2862,
+     "wagered": 2189,
+     "paid": 3051,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-14 19:55",
+     "bets": 14589,
+     "final": 0,
+     "wagered": 14589,
+     "paid": 12589,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-12-10 08:50",
+     "bets": 37052,
+     "final": 0,
+     "wagered": 37052,
+     "paid": 35052,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 60,
+     "final": 2802,
+     "wagered": 822,
+     "paid": 1624,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 11:10",
+     "bets": 33,
+     "final": 2816,
+     "wagered": 392,
+     "paid": 1208,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 14:25",
+     "bets": 12,
+     "final": 2873,
+     "wagered": 133,
+     "paid": 1006,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2711,
+     "final": 7,
+     "wagered": 27110,
+     "paid": 25117,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-17 21:30",
+     "bets": 2276,
+     "final": 0,
+     "wagered": 22760,
+     "paid": 20760,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-01 11:10",
+     "bets": 1870,
+     "final": 5,
+     "wagered": 18700,
+     "paid": 16705,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1205,
+     "final": 2815,
+     "wagered": 14380,
+     "paid": 15195,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-09 06:35",
+     "bets": 762,
+     "final": 7,
+     "wagered": 9190,
+     "paid": 7197,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-13 14:45",
+     "bets": 260,
+     "final": 2818,
+     "wagered": 3040,
+     "paid": 3858,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 7,
+     "final": 2924,
+     "wagered": 1060,
+     "paid": 1984,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:45",
+     "bets": 9,
+     "final": 2837,
+     "wagered": 1540,
+     "paid": 2377,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:40",
+     "bets": 2,
+     "final": 2860,
+     "wagered": 260,
+     "paid": 1120,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 202,
+     "final": 39,
+     "wagered": 10100,
+     "paid": 8139,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-03 08:20",
+     "bets": 786,
+     "final": 34,
+     "wagered": 39300,
+     "paid": 37334,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-07 18:50",
+     "bets": 1709,
+     "final": 22,
+     "wagered": 85450,
+     "paid": 83472,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 22,
+     "final": 1621,
+     "wagered": 4400,
+     "paid": 4021,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:20",
+     "bets": 26,
+     "final": 1844,
+     "wagered": 4900,
+     "paid": 4744,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 09:50",
+     "bets": 6,
+     "final": 876,
+     "wagered": 1350,
+     "paid": 226,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "carry",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3161,
+     "wagered": 1350,
+     "paid": 2511,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 5,
+     "final": 12,
+     "wagered": 2350,
+     "paid": 362,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:40",
+     "bets": 1,
+     "final": 2945,
+     "wagered": 1350,
+     "paid": 2295,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 50697,
+     "final": 0,
+     "wagered": 50697,
+     "paid": 48697,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-07-02 09:35",
+     "bets": 14538,
+     "final": 2129,
+     "wagered": 14538,
+     "paid": 14667,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 50697,
+     "final": 0,
+     "wagered": 50697,
+     "paid": 48697,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-07-02 09:35",
+     "bets": 14538,
+     "final": 2129,
+     "wagered": 14538,
+     "paid": 14667,
+     "outcome": "open"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 40,
+     "final": 2848,
+     "wagered": 475,
+     "paid": 1323,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 09:10",
+     "bets": 46,
+     "final": 2822,
+     "wagered": 644,
+     "paid": 1466,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 13:40",
+     "bets": 74,
+     "final": 2818,
+     "wagered": 1266,
+     "paid": 2084,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 314,
+     "final": 2812,
+     "wagered": 3140,
+     "paid": 3952,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 19:30",
+     "bets": 3563,
+     "final": 5,
+     "wagered": 35630,
+     "paid": 33635,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-24 19:10",
+     "bets": 1300,
+     "final": 2820,
+     "wagered": 13000,
+     "paid": 13820,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 251,
+     "final": 2831,
+     "wagered": 2920,
+     "paid": 3751,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 13:15",
+     "bets": 5732,
+     "final": 4,
+     "wagered": 68620,
+     "paid": 66624,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-07 15:25",
+     "bets": 948,
+     "final": 11,
+     "wagered": 11510,
+     "paid": 9521,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 11,
+     "final": 2,
+     "wagered": 2150,
+     "paid": 152,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:15",
+     "bets": 12,
+     "final": 8,
+     "wagered": 2430,
+     "paid": 438,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:25",
+     "bets": 11,
+     "final": 6,
+     "wagered": 2230,
+     "paid": 236,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1142,
+     "final": 32,
+     "wagered": 57100,
+     "paid": 55132,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-08 17:20",
+     "bets": 402,
+     "final": 9,
+     "wagered": 20100,
+     "paid": 18109,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-11 06:30",
+     "bets": 84,
+     "final": 2805,
+     "wagered": 4200,
+     "paid": 5005,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 10,
+     "final": 1245,
+     "wagered": 1900,
+     "paid": 1145,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:10",
+     "bets": 10,
+     "final": 1095,
+     "wagered": 1650,
+     "paid": 745,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:10",
+     "bets": 5,
+     "final": 1045,
+     "wagered": 1300,
+     "paid": 345,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "doubles",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 8,
+     "final": 27,
+     "wagered": 3350,
+     "paid": 1377,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:50",
+     "bets": 9,
+     "final": 48,
+     "wagered": 3550,
+     "paid": 1598,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:45",
+     "bets": 3,
+     "final": 20,
+     "wagered": 2250,
+     "paid": 270,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 27908,
+     "final": 0,
+     "wagered": 27908,
+     "paid": 25908,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-02-15 20:50",
+     "bets": 7618,
+     "final": 2803,
+     "wagered": 7618,
+     "paid": 8421,
+     "outcome": "goal"
+    },
+    {
+     "start": "2026-04-01 17:40",
+     "bets": 12416,
+     "final": 0,
+     "wagered": 12416,
+     "paid": 10416,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 27908,
+     "final": 0,
+     "wagered": 27908,
+     "paid": 25908,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-02-15 20:50",
+     "bets": 7618,
+     "final": 2803,
+     "wagered": 7618,
+     "paid": 8421,
+     "outcome": "goal"
+    },
+    {
+     "start": "2026-04-01 17:40",
+     "bets": 12416,
+     "final": 0,
+     "wagered": 12416,
+     "paid": 10416,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 52,
+     "final": 2818,
+     "wagered": 662,
+     "paid": 1480,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 10:20",
+     "bets": 108,
+     "final": 2875,
+     "wagered": 1703,
+     "paid": 2578,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 21:10",
+     "bets": 1,
+     "final": 2869,
+     "wagered": 11,
+     "paid": 880,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1409,
+     "final": 7,
+     "wagered": 14090,
+     "paid": 12097,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-10 09:55",
+     "bets": 2585,
+     "final": 8,
+     "wagered": 25850,
+     "paid": 23858,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-25 13:45",
+     "bets": 2473,
+     "final": 9,
+     "wagered": 24730,
+     "paid": 22739,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1228,
+     "final": 8,
+     "wagered": 14870,
+     "paid": 12878,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-09 08:50",
+     "bets": 1113,
+     "final": 0,
+     "wagered": 13490,
+     "paid": 11490,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-15 18:15",
+     "bets": 159,
+     "final": 2803,
+     "wagered": 1820,
+     "paid": 2623,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 11,
+     "final": 2897,
+     "wagered": 2530,
+     "paid": 3427,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:15",
+     "bets": 12,
+     "final": 5,
+     "wagered": 2560,
+     "paid": 565,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:25",
+     "bets": 12,
+     "final": 4,
+     "wagered": 2210,
+     "paid": 214,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 869,
+     "final": 36,
+     "wagered": 43450,
+     "paid": 41486,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-07 06:55",
+     "bets": 506,
+     "final": 25,
+     "wagered": 25300,
+     "paid": 23325,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-10 06:35",
+     "bets": 732,
+     "final": 24,
+     "wagered": 36600,
+     "paid": 34624,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 10,
+     "final": 1194,
+     "wagered": 2150,
+     "paid": 1344,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:10",
+     "bets": 16,
+     "final": 1491,
+     "wagered": 3250,
+     "paid": 2741,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:40",
+     "bets": 10,
+     "final": 1178,
+     "wagered": 1900,
+     "paid": 1078,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "category",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 7,
+     "final": 48,
+     "wagered": 2900,
+     "paid": 948,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:45",
+     "bets": 3,
+     "final": 27,
+     "wagered": 2300,
+     "paid": 327,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:10",
+     "bets": 1,
+     "final": 3107,
+     "wagered": 1350,
+     "paid": 2457,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 46492,
+     "final": 0,
+     "wagered": 46492,
+     "paid": 44492,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-06-06 09:40",
+     "bets": 7533,
+     "final": 2835,
+     "wagered": 7533,
+     "paid": 8368,
+     "outcome": "goal"
+    },
+    {
+     "start": "2026-07-21 19:25",
+     "bets": 11039,
+     "final": 0,
+     "wagered": 11039,
+     "paid": 9039,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 46492,
+     "final": 0,
+     "wagered": 46492,
+     "paid": 44492,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-06-06 09:40",
+     "bets": 7533,
+     "final": 2835,
+     "wagered": 7533,
+     "paid": 8368,
+     "outcome": "goal"
+    },
+    {
+     "start": "2026-07-21 19:25",
+     "bets": 11039,
+     "final": 0,
+     "wagered": 11039,
+     "paid": 9039,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 83,
+     "final": 2853,
+     "wagered": 1483,
+     "paid": 2336,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 13:25",
+     "bets": 43,
+     "final": 2829,
+     "wagered": 591,
+     "paid": 1420,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 17:40",
+     "bets": 125,
+     "final": 0,
+     "wagered": 2553,
+     "paid": 553,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1643,
+     "final": 6,
+     "wagered": 16430,
+     "paid": 14436,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-11 16:25",
+     "bets": 1434,
+     "final": 0,
+     "wagered": 14340,
+     "paid": 12340,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-20 07:10",
+     "bets": 242,
+     "final": 2826,
+     "wagered": 2420,
+     "paid": 3246,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1494,
+     "final": 1,
+     "wagered": 18000,
+     "paid": 16001,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-10 18:30",
+     "bets": 945,
+     "final": 15,
+     "wagered": 11420,
+     "paid": 9435,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-16 10:55",
+     "bets": 1781,
+     "final": 17,
+     "wagered": 21380,
+     "paid": 19397,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 3,
+     "final": 2876,
+     "wagered": 420,
+     "paid": 1296,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:25",
+     "bets": 12,
+     "final": 0,
+     "wagered": 2410,
+     "paid": 410,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:35",
+     "bets": 13,
+     "final": 2,
+     "wagered": 2490,
+     "paid": 492,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 606,
+     "final": 24,
+     "wagered": 30300,
+     "paid": 28324,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-05 14:40",
+     "bets": 477,
+     "final": 41,
+     "wagered": 23850,
+     "paid": 21891,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-08 11:25",
+     "bets": 438,
+     "final": 48,
+     "wagered": 21900,
+     "paid": 19948,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 25,
+     "final": 1593,
+     "wagered": 4300,
+     "paid": 3893,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:35",
+     "bets": 24,
+     "final": 1697,
+     "wagered": 3800,
+     "paid": 3497,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 09:55",
+     "bets": 19,
+     "final": 1482,
+     "wagered": 2500,
+     "paid": 1982,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "time",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2,
+     "final": 0,
+     "wagered": 2000,
+     "paid": 0,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 1,
+     "final": 3161,
+     "wagered": 1350,
+     "paid": 2511,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:25",
+     "bets": 3,
+     "final": 45,
+     "wagered": 2150,
+     "paid": 195,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 26606,
+     "final": 0,
+     "wagered": 26606,
+     "paid": 24606,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-02-08 09:40",
+     "bets": 21610,
+     "final": 0,
+     "wagered": 21610,
+     "paid": 19610,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-06-16 20:20",
+     "bets": 2667,
+     "final": 2829,
+     "wagered": 2667,
+     "paid": 3496,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 26606,
+     "final": 0,
+     "wagered": 26606,
+     "paid": 24606,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-02-08 09:40",
+     "bets": 21610,
+     "final": 0,
+     "wagered": 21610,
+     "paid": 19610,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-06-16 20:20",
+     "bets": 2667,
+     "final": 2829,
+     "wagered": 2667,
+     "paid": 3496,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 119,
+     "final": 0,
+     "wagered": 2653,
+     "paid": 653,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 16:55",
+     "bets": 12,
+     "final": 2874,
+     "wagered": 134,
+     "paid": 1008,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 18:15",
+     "bets": 105,
+     "final": 0,
+     "wagered": 2128,
+     "paid": 128,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 4194,
+     "final": 7,
+     "wagered": 41940,
+     "paid": 39947,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-26 16:45",
+     "bets": 1676,
+     "final": 9,
+     "wagered": 16760,
+     "paid": 14769,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-06 21:10",
+     "bets": 3634,
+     "final": 2843,
+     "wagered": 36340,
+     "paid": 37183,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 4167,
+     "final": 18,
+     "wagered": 49980,
+     "paid": 47998,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-26 14:10",
+     "bets": 1120,
+     "final": 5,
+     "wagered": 13450,
+     "paid": 11455,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-03 07:10",
+     "bets": 1282,
+     "final": 8,
+     "wagered": 15500,
+     "paid": 13508,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 13,
+     "final": 8,
+     "wagered": 2520,
+     "paid": 528,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:25",
+     "bets": 11,
+     "final": 5,
+     "wagered": 2410,
+     "paid": 415,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:30",
+     "bets": 12,
+     "final": 5,
+     "wagered": 2420,
+     "paid": 425,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 907,
+     "final": 6,
+     "wagered": 45350,
+     "paid": 43356,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-07 10:45",
+     "bets": 607,
+     "final": 25,
+     "wagered": 30350,
+     "paid": 28375,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-10 20:30",
+     "bets": 78,
+     "final": 2807,
+     "wagered": 3900,
+     "paid": 4707,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 29,
+     "final": 1549,
+     "wagered": 4600,
+     "paid": 4149,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:55",
+     "bets": 10,
+     "final": 1379,
+     "wagered": 2600,
+     "paid": 1979,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 08:55",
+     "bets": 28,
+     "final": 2802,
+     "wagered": 2300,
+     "paid": 3102,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3188,
+     "wagered": 1350,
+     "paid": 2538,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 1,
+     "final": 2837,
+     "wagered": 1350,
+     "paid": 2187,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 1,
+     "final": 2945,
+     "wagered": 1350,
+     "paid": 2295,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 1,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2488,
+     "final": 2808,
+     "wagered": 2488,
+     "paid": 3296,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-16 16:15",
+     "bets": 8242,
+     "final": 0,
+     "wagered": 8242,
+     "paid": 6242,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-11-04 14:10",
+     "bets": 34247,
+     "final": 0,
+     "wagered": 34247,
+     "paid": 32247,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 1,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2488,
+     "final": 2808,
+     "wagered": 2488,
+     "paid": 3296,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-16 16:15",
+     "bets": 8242,
+     "final": 0,
+     "wagered": 8242,
+     "paid": 6242,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-11-04 14:10",
+     "bets": 34247,
+     "final": 0,
+     "wagered": 34247,
+     "paid": 32247,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 1,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 11,
+     "final": 2854,
+     "wagered": 114,
+     "paid": 968,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:15",
+     "bets": 77,
+     "final": 2852,
+     "wagered": 1244,
+     "paid": 2096,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 13:50",
+     "bets": 129,
+     "final": 0,
+     "wagered": 2563,
+     "paid": 563,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 10,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 310,
+     "final": 2820,
+     "wagered": 3100,
+     "paid": 3920,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 19:10",
+     "bets": 1795,
+     "final": 9,
+     "wagered": 17950,
+     "paid": 15959,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-14 11:35",
+     "bets": 1704,
+     "final": 8,
+     "wagered": 17040,
+     "paid": 15048,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 10,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 221,
+     "final": 2830,
+     "wagered": 2520,
+     "paid": 3350,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 10:15",
+     "bets": 1209,
+     "final": 1,
+     "wagered": 14580,
+     "paid": 12581,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-10 12:10",
+     "bets": 400,
+     "final": 2828,
+     "wagered": 4690,
+     "paid": 5518,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 10,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 13,
+     "final": 3,
+     "wagered": 2700,
+     "paid": 703,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:25",
+     "bets": 2,
+     "final": 2816,
+     "wagered": 240,
+     "paid": 1056,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:35",
+     "bets": 13,
+     "final": 9,
+     "wagered": 2370,
+     "paid": 379,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 706,
+     "final": 31,
+     "wagered": 35300,
+     "paid": 33331,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-06 07:40",
+     "bets": 543,
+     "final": 47,
+     "wagered": 27150,
+     "paid": 25197,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-09 10:55",
+     "bets": 1035,
+     "final": 22,
+     "wagered": 51750,
+     "paid": 49772,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 10,
+     "final": 1189,
+     "wagered": 1900,
+     "paid": 1089,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 06:10",
+     "bets": 25,
+     "final": 2823,
+     "wagered": 3400,
+     "paid": 4223,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 08:35",
+     "bets": 29,
+     "final": 2919,
+     "wagered": 3400,
+     "paid": 4319,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "select_interpretable",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3188,
+     "wagered": 1350,
+     "paid": 2538,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 3,
+     "final": 32,
+     "wagered": 3100,
+     "paid": 1132,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:30",
+     "bets": 4,
+     "final": 30,
+     "wagered": 3450,
+     "paid": 1480,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 5,
+   "staking": "flat",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 5093,
+     "final": 1,
+     "wagered": 25465,
+     "paid": 23466,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-01 21:40",
+     "bets": 21324,
+     "final": 1,
+     "wagered": 106620,
+     "paid": 104621,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-02-07 07:40",
+     "bets": 2730,
+     "final": 1,
+     "wagered": 13650,
+     "paid": 11651,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 5,
+   "staking": "ladder",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 5093,
+     "final": 1,
+     "wagered": 25465,
+     "paid": 23466,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-01 21:40",
+     "bets": 21324,
+     "final": 1,
+     "wagered": 106620,
+     "paid": 104621,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2026-02-07 07:40",
+     "bets": 2730,
+     "final": 1,
+     "wagered": 13650,
+     "paid": 11651,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 5,
+   "staking": "bold",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 18,
+     "final": 2807,
+     "wagered": 1580,
+     "paid": 2387,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:50",
+     "bets": 24,
+     "final": 2,
+     "wagered": 2680,
+     "paid": 682,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 09:20",
+     "bets": 18,
+     "final": 2805,
+     "wagered": 1355,
+     "paid": 2160,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 25,
+   "staking": "flat",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 2576,
+     "final": 21,
+     "wagered": 64400,
+     "paid": 62421,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-17 07:55",
+     "bets": 1029,
+     "final": 5,
+     "wagered": 25725,
+     "paid": 23730,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-23 08:50",
+     "bets": 2066,
+     "final": 24,
+     "wagered": 51650,
+     "paid": 49674,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 25,
+   "staking": "ladder",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 76,
+     "final": 268,
+     "wagered": 5425,
+     "paid": 3693,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 12:40",
+     "bets": 58,
+     "final": 352,
+     "wagered": 5575,
+     "paid": 3927,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 18:30",
+     "bets": 35,
+     "final": 2888,
+     "wagered": 2850,
+     "paid": 3738,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "transition",
+   "k": 25,
+   "staking": "bold",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 6,
+     "final": 1,
+     "wagered": 2800,
+     "paid": 801,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:40",
+     "bets": 1,
+     "final": 2885,
+     "wagered": 375,
+     "paid": 1260,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:45",
+     "bets": 5,
+     "final": 2912,
+     "wagered": 2500,
+     "paid": 3412,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 5,
+   "staking": "flat",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 5471,
+     "final": 3,
+     "wagered": 27355,
+     "paid": 25358,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-04 08:30",
+     "bets": 7102,
+     "final": 0,
+     "wagered": 35510,
+     "paid": 33510,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-11-15 11:25",
+     "bets": 4311,
+     "final": 4,
+     "wagered": 21555,
+     "paid": 19559,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 5,
+   "staking": "ladder",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 5471,
+     "final": 3,
+     "wagered": 27355,
+     "paid": 25358,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-04 08:30",
+     "bets": 7102,
+     "final": 0,
+     "wagered": 35510,
+     "paid": 33510,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-11-15 11:25",
+     "bets": 4311,
+     "final": 4,
+     "wagered": 21555,
+     "paid": 19559,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 5,
+   "staking": "bold",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 3,
+     "final": 2860,
+     "wagered": 180,
+     "paid": 1040,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:25",
+     "bets": 25,
+     "final": 4,
+     "wagered": 2550,
+     "paid": 554,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 07:50",
+     "bets": 22,
+     "final": 1,
+     "wagered": 2295,
+     "paid": 296,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 25,
+   "staking": "flat",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1038,
+     "final": 2,
+     "wagered": 25950,
+     "paid": 23952,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-08 06:50",
+     "bets": 4805,
+     "final": 20,
+     "wagered": 120125,
+     "paid": 118145,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-10-06 15:40",
+     "bets": 2454,
+     "final": 23,
+     "wagered": 61350,
+     "paid": 59373,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 25,
+   "staking": "ladder",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 37,
+     "final": 187,
+     "wagered": 3300,
+     "paid": 1487,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 08:45",
+     "bets": 37,
+     "final": 202,
+     "wagered": 3200,
+     "paid": 1402,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 12:30",
+     "bets": 40,
+     "final": 2915,
+     "wagered": 3150,
+     "paid": 4065,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "cold",
+   "k": 25,
+   "staking": "bold",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 2825,
+     "wagered": 375,
+     "paid": 1200,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 1,
+     "final": 2840,
+     "wagered": 375,
+     "paid": 1215,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 1,
+     "final": 2840,
+     "wagered": 375,
+     "paid": 1215,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 5,
+   "staking": "flat",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 14018,
+     "final": 4,
+     "wagered": 70090,
+     "paid": 68094,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-11-23 19:50",
+     "bets": 3317,
+     "final": 0,
+     "wagered": 16585,
+     "paid": 14585,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-12-13 13:35",
+     "bets": 11296,
+     "final": 0,
+     "wagered": 56480,
+     "paid": 54480,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 5,
+   "staking": "ladder",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 14018,
+     "final": 4,
+     "wagered": 70090,
+     "paid": 68094,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-11-23 19:50",
+     "bets": 3317,
+     "final": 0,
+     "wagered": 16585,
+     "paid": 14585,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-12-13 13:35",
+     "bets": 11296,
+     "final": 0,
+     "wagered": 56480,
+     "paid": 54480,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 5,
+   "staking": "bold",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 11,
+     "final": 2843,
+     "wagered": 850,
+     "paid": 1693,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 06:15",
+     "bets": 20,
+     "final": 2,
+     "wagered": 2055,
+     "paid": 57,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 08:15",
+     "bets": 12,
+     "final": 2831,
+     "wagered": 955,
+     "paid": 1786,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 25,
+   "staking": "flat",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1512,
+     "final": 23,
+     "wagered": 37800,
+     "paid": 35823,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-10 20:20",
+     "bets": 242,
+     "final": 2811,
+     "wagered": 6050,
+     "paid": 6861,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-12 10:30",
+     "bets": 1716,
+     "final": 13,
+     "wagered": 42900,
+     "paid": 40913,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 25,
+   "staking": "ladder",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 121,
+     "final": 122,
+     "wagered": 9250,
+     "paid": 7372,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 17:15",
+     "bets": 52,
+     "final": 2847,
+     "wagered": 2225,
+     "paid": 3072,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-03 05:25",
+     "bets": 31,
+     "final": 172,
+     "wagered": 2725,
+     "paid": 897,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "ensemble",
+   "k": 25,
+   "staking": "bold",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 2945,
+     "wagered": 375,
+     "paid": 1320,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 5,
+     "final": 16,
+     "wagered": 2050,
+     "paid": 66,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 05:40",
+     "bets": 4,
+     "final": 1,
+     "wagered": 2350,
+     "paid": 351,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "parity",
+   "k": 50,
+   "staking": "flat",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 345,
+     "final": 27,
+     "wagered": 17250,
+     "paid": 15277,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-04 05:35",
+     "bets": 543,
+     "final": 45,
+     "wagered": 27150,
+     "paid": 25195,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-07 08:50",
+     "bets": 1040,
+     "final": 44,
+     "wagered": 52000,
+     "paid": 50044,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "parity",
+   "k": 50,
+   "staking": "flat",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 344,
+     "final": 10,
+     "wagered": 17200,
+     "paid": 15210,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-04 05:30",
+     "bets": 512,
+     "final": 14,
+     "wagered": 25600,
+     "paid": 23614,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-07 05:40",
+     "bets": 1060,
+     "final": 23,
+     "wagered": 53000,
+     "paid": 51023,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "parity",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 30,
+     "final": 2894,
+     "wagered": 4150,
+     "paid": 5044,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 08:10",
+     "bets": 30,
+     "final": 1790,
+     "wagered": 4750,
+     "paid": 4540,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 11:10",
+     "bets": 16,
+     "final": 1149,
+     "wagered": 2350,
+     "paid": 1499,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "parity",
+   "k": 50,
+   "staking": "ladder",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 30,
+     "final": 2881,
+     "wagered": 4150,
+     "paid": 5031,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 08:10",
+     "bets": 30,
+     "final": 1788,
+     "wagered": 4750,
+     "paid": 4538,
+     "outcome": "ruin"
+    },
+    {
+     "start": "2025-09-02 11:10",
+     "bets": 16,
+     "final": 1132,
+     "wagered": 2350,
+     "paid": 1482,
+     "outcome": "ruin"
+    }
+   ]
+  },
+  {
+   "system": "parity",
+   "k": 50,
+   "staking": "bold",
+   "mode": "all",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3188,
+     "wagered": 1350,
+     "paid": 2538,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 1,
+     "final": 2918,
+     "wagered": 1350,
+     "paid": 2268,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 1,
+     "final": 3053,
+     "wagered": 1350,
+     "paid": 2403,
+     "outcome": "goal"
+    }
+   ]
+  },
+  {
+   "system": "parity",
+   "k": 50,
+   "staking": "bold",
+   "mode": "best",
+   "sessions": [
+    {
+     "start": "2025-09-02 05:10",
+     "bets": 1,
+     "final": 3080,
+     "wagered": 1350,
+     "paid": 2430,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:15",
+     "bets": 1,
+     "final": 2918,
+     "wagered": 1350,
+     "paid": 2268,
+     "outcome": "goal"
+    },
+    {
+     "start": "2025-09-02 05:20",
+     "bets": 1,
+     "final": 3053,
+     "wagered": 1350,
+     "paid": 2403,
+     "outcome": "goal"
+    }
+   ]
+  }
+ ]
+}

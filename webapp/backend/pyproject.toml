@@ -1,0 +1,37 @@
+[project]
+name = "laboratorio"
+version = "0.1.0"
+description = "Local web lab for exploring historical Quiniela 80 strategies."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.135",
+    "uvicorn>=0.42",
+    "pydantic>=2.12",
+    "numpy>=2.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1",
+    "httpx>=0.28",
+    "ruff>=0.9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-p no:cacheprovider"
+markers = [
+    "real_data: uses the frozen history JSON and ranking NPZ (slower)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+cache-dir = "../../.ruff_cache"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["laboratorio"]

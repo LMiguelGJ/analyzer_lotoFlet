@@ -1,0 +1,6 @@
+Iniciando en 127.0.0.1. Para detener el servidor presiona Ctrl+C en esta ventana.
+INFO:     127.0.0.1:62050 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:30923 - "GET /experimentos/nuevo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:30924 - "GET /api/v1/queue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:30925 - "GET /api/v1/catalog HTTP/1.1" 200 OK
+¿Desea terminar el trabajo por lotes (S/N)? S

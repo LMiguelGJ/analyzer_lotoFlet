@@ -1,0 +1,33 @@
+{
+  "preparation": "offline repository rows only; prepared recovery, not observed process crash",
+  "database_path": "<repo>\\webapp\\.lw15-live-acceptance\\data\\laboratorio.db",
+  "verified_start_draw": "2025-09-02 05:10",
+  "held_initially_pending_ids": [
+    "6f97bb0c442c4a0ba2645eb4733aa3a4",
+    "210212be0e034b0098b59728b111d875",
+    "638a37c5574a4f58bf9b595ff6d17b5e",
+    "789531fc1dce4fb192d39f9821405867",
+    "023fac6158914d12aef9787dc1741d31",
+    "841685629045465a834a4f14d9288c3c",
+    "e2b052edd1d144db9667a25c168a4f1b",
+    "08bcbafec4624e1cb644dc627c70e542",
+    "1fcb7718381c47cca1813118f0c574a0",
+    "2eab1b2b693f4038ac108f100d1f49df",
+    "b7928441983b45c4940df87b7d5a3485",
+    "f9a23ad55e6b4f3aaf7002463685af9e",
+    "c343e42a32494c399c76fe051abc1c16",
+    "2a3cb0b2184548e9a737db43efff7758",
+    "96070a009d8f4468b606b27da5747be0",
+    "a9e911c175c24ace86c026f035bc4f68",
+    "a47aaff4b17e413cba87353d1431386b",
+    "0a79d08bfc98406489b81e0977a38f9a",
+    "0d9e41574f2e4f30a98a20f3662c5d7c",
+    "871789c2eda94da6ad6f3062af781c4a",
+    "8e30d7b69cbd44ca9f1d75f9f5e9acb5",
+    "8505aaf69984413db83785fbe595cdfd",
+    "2ce66d381d73434ca1244e2140430087",
+    "3c129958df1047da804d57fb498a81ea",
+    "8da80e1391644a00a035eb5d04a209ca"
+  ],
+  "prepared_abandoned_running_id": "75ec032f9e5d4ae0b7f174a2fa50b996"
+}

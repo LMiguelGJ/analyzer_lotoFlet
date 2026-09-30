@@ -1,0 +1,50 @@
+{
+  "id": "761dad99c19745fca98da6ba346edde3",
+  "fixture": "PREPARED persisted fixture, not an observed interruption or partial live run",
+  "preparation": "original immutable request and frozen provenance reused; ordinal 0 recomputed by calculate_run, repository start_run/complete_run/finish_incomplete; ordinal 1 never computed",
+  "source_experiment_id": "fdcc470fe4e74f4599e837f352d1b1eb",
+  "request": {
+    "name": "LW18 Prepared Incomplete Comparison",
+    "conditions": {
+      "start_draw": "2025-09-02 05:10",
+      "capital": 1000,
+      "goal": 100000,
+      "settlement": "all",
+      "max_bets": 3,
+      "max_minutes": null,
+      "seed": 42
+    },
+    "strategies": [
+      {
+        "name": "LW18 Synthetic Cold",
+        "selector": "system",
+        "system": "cold",
+        "components": null,
+        "coverage": 1,
+        "staking": "flat"
+      },
+      {
+        "name": "LW18 Synthetic Recent",
+        "selector": "system",
+        "system": "freq_recent",
+        "components": null,
+        "coverage": 1,
+        "staking": "flat"
+      }
+    ]
+  },
+  "sources": {
+    "history_id": "chance_express_history.json",
+    "history_sha256": "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711",
+    "rankings_id": "pos1.npz",
+    "rankings_sha256": "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d",
+    "code_version": "0.1.0"
+  },
+  "persisted_status": "interrupted",
+  "run_statuses": [
+    "completed",
+    "not_run"
+  ],
+  "completed_bets": 3,
+  "second_result": null
+}

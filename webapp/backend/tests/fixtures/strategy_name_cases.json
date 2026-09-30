@@ -1,0 +1,86 @@
+[
+  {
+    "category": "german-eszett",
+    "a": "Straße",
+    "b": "STRASSE",
+    "duplicate": true,
+    "note": "ß upper-cases to SS in both Python str.upper() and JS toUpperCase(); casefold()/toLocaleLowerCase() disagree on this, which was the original LW09 bug."
+  },
+  {
+    "category": "turkish-dotted-capital-i",
+    "a": "İstanbul",
+    "b": "istanbul",
+    "duplicate": false,
+    "note": "U+0130 (dotted capital I) upper/lowers to 'i' + combining dot above (U+0307) under non-locale casing in both languages, not plain 'i'."
+  },
+  {
+    "category": "turkish-dotless-small-i",
+    "a": "Iowa",
+    "b": "ıowa",
+    "duplicate": true,
+    "note": "U+0131 (dotless small i) upper-cases to plain 'I' in both languages under non-locale casing."
+  },
+  {
+    "category": "ligature-fi",
+    "a": "ﬁle",
+    "b": "file",
+    "duplicate": true,
+    "note": "U+FB01 (ﬁ ligature) has a compatibility decomposition to 'fi' applied by NFKC in both languages."
+  },
+  {
+    "category": "fullwidth-latin",
+    "a": "ＡＢＣ",
+    "b": "ABC",
+    "duplicate": true,
+    "note": "Fullwidth Latin letters (U+FF21...) decompose to ASCII under NFKC in both languages."
+  },
+  {
+    "category": "combining-vs-precomposed",
+    "a": "e\u0301clair",
+    "b": "\u00e9clair",
+    "duplicate": true,
+    "note": "'e' + combining acute (U+0301) composes to precomposed 'é' (U+00E9) under NFKC in both languages."
+  },
+  {
+    "category": "unicode-space-trim",
+    "a": "\u00a0Name\u00a0",
+    "b": " Name ",
+    "duplicate": true,
+    "note": "Leading/trailing NBSP (U+00A0) and ASCII space are both in the shared explicit trim character set."
+  },
+  {
+    "category": "greek-final-sigma",
+    "a": "ΛΟΓΟΣ",
+    "b": "λογος",
+    "duplicate": true,
+    "note": "Python str.lower()/upper() and JS toLowerCase()/toUpperCase() apply the same context-sensitive Greek sigma casing, so both round-trip to the same form."
+  },
+  {
+    "category": "zero-width-space-not-trimmed",
+    "a": "Name\u200b",
+    "b": "Name",
+    "duplicate": false,
+    "note": "U+200B (zero-width space) is category Cf, not Zs, and is deliberately excluded from the shared trim character set in both languages, so it is not silently discarded."
+  },
+  {
+    "category": "bom-not-trimmed",
+    "a": "\ufeffName",
+    "b": "Name",
+    "duplicate": false,
+    "note": "U+FEFF (BOM/ZWNBSP) is deliberately excluded from the shared trim character set in both languages; JS's built-in trim() removes it but Python's strip() does not, which is exactly the asymmetry this fixture guards against. Using the shared explicit charset on both sides keeps this a consistent non-match instead of a silent divergence."
+  },
+  {
+    "category": "nel-not-trimmed",
+    "a": "\u0085Name",
+    "b": "Name",
+    "duplicate": false,
+    "note": "U+0085 (NEL) is deliberately excluded from the shared trim character set in both languages; Python's built-in strip() removes it but JS's trim() does not. Using the shared explicit charset on both sides keeps this a consistent non-match instead of a silent divergence."
+  },
+  {
+    "category": "tab-trimmed",
+    "a": "\tName\t",
+    "b": "Name",
+    "duplicate": true,
+    "note": "ASCII tab is in the shared explicit trim character set in both languages, so leading/trailing tabs are discarded identically."
+  }
+]

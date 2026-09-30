@@ -2,7 +2,7 @@
 
 ## MVP: laboratorio web local
 
-[A1] Web para explorar estrategias históricas con el motor existente. No realiza apuestas ni predice sorteos en vivo.
+[A1] Web para explorar estrategias históricas con un motor nuevo e independiente escrito en `webapp/`; el código anterior se consulta solo como referencia de lectura. No realiza apuestas ni predice sorteos en vivo.
 
 [A2] El MVP mantiene el juego actual: números 00–99, cinco posiciones, repeticiones permitidas y premios 80/8/4/2/1. Permite pagos acumulados o solo el mejor premio por número.
 
@@ -62,7 +62,7 @@
 
 [NF3] No se promete una duración de cálculo sin medirla. La implementación deberá comprobar respuesta de la interfaz, cancelación y consumo de recursos.
 
-[T1] Se reutiliza el motor Python probado y se conservan los 14 ejecutables como referencias de regresión. No se copian sus cálculos financieros en el navegador.
+[T1] Se escribe un motor Python nuevo e independiente en `webapp/`; el código anterior y los 14 ejecutables se consultan solo como referencias de lectura y regresión, sin importarlos en ejecución. No se copian sus cálculos financieros en el navegador.
 
 [T2] Propuesta técnica para el MVP: backend Python, frontend web y almacenamiento local SQLite. La elección concreta del framework web queda definida en [T4]; no cambia el alcance funcional.
 
@@ -86,7 +86,7 @@
 
 ## Azar reproducible
 
-[F16] Semilla configurable y registrada, compartida entre las variantes de azar de una comparación.
+[F16] Semilla configurable y registrada, compartida entre las variantes de azar de una comparación. Rango entero de 0 a 9.007.199.254.740.991 (2⁵³ − 1), el máximo que el navegador representa sin redondeo; así la semilla mostrada coincide siempre con la registrada. Decisión técnica de LW09 (2026-09-29), tras detectar que una semilla de 64 bits se redondeaba al volver del backend.
 
 [F17] Cada sorteo tiene una permutación reproducible de los 100 números. Una cobertura de 5 toma los primeros cinco; una de 10, los primeros diez.
 
@@ -392,20 +392,20 @@ Servidor local FastAPI (127.0.0.1)
       ├── Cola serial ──► Proceso de cálculo aislado
       │                          │
       │                          ▼
-      │                   Adaptador del motor ──► main/ + repo_ref/ (motor existente)
+      │                   Adaptador de datos ──► JSON + NPZ congelados (solo lectura)
       │
       └── SQLite (en la carpeta del usuario, fuera del repositorio)
 ```
 
 [AR1] El navegador nunca calcula importes ni resultados; solo presenta lo que devuelve el servidor (ver [T1], [T5]).
 
-[AR2] Un único módulo, `engine/adapter.py`, importa el motor existente de `main/` y `repo_ref/`. Cualquier cambio en el motor se absorbe en ese punto.
+[AR2] Motor propio escrito desde cero dentro de `webapp/backend/`. La web **no importa** código anterior (`repo_ref/`, antiguo `main/`, simuladores). Un único módulo, `engine/adapter.py`, lee los datos congelados de solo lectura: el JSON del historial y el NPZ de rankings, verificando su SHA-256. Decisión del usuario (2026-09-29).
 
 [AR3] El cálculo se ejecuta en un proceso separado del servidor, para que la interfaz siga respondiendo y la cancelación entre pasos funcione durante sesiones largas (ver [F15], [NF1]).
 
 [AR4] `domain/` contiene reglas puras, sin HTTP ni base de datos: mezclas, semillas, reloj histórico y límites se prueban de forma aislada.
 
-[AR5] Toda la web vive en `webapp/`. La investigación existente (`main/`, `repo_ref/`, `simuladores/`, JSON y rankings) permanece fuera y no se reorganiza.
+[AR5] Toda la web vive en `webapp/`. El trabajo anterior fue archivado por el usuario en `repo_ref/` (incluidos los antiguos `main/` y `simuladores/`) y sirve **solo como referencia**: se lee para entender reglas y como oráculo de pruebas, nunca como dependencia en ejecución.
 
 [AR6] La base de datos se guarda en `%LOCALAPPDATA%\LaboratorioQuiniela\`, fuera del repositorio y de OneDrive, para evitar que la sincronización interfiera con escrituras de SQLite. La ubicación exacta y sus permisos se validan en LW01.
 
@@ -418,9 +418,7 @@ analyzer_lotoFlet/
 ├── iniciar-laboratorio.bat          # Doble clic: inicia el servidor y abre el navegador
 │
 ├── chance_express_history.json      # EXISTENTE · solo lectura
-├── main/                            # EXISTENTE · motor financiero
-├── repo_ref/                        # EXISTENTE · reglas y rankings NPZ
-├── simuladores/                     # EXISTENTE · 14 referencias de regresión
+├── repo_ref/                        # EXISTENTE · código anterior (main/ y simuladores/) y rankings NPZ; solo referencia
 │
 └── webapp/                          # NUEVO: todo lo de la web vive aquí
     ├── README.md                    # Preparación, uso y comandos (en español)
@@ -437,7 +435,7 @@ analyzer_lotoFlet/
     │   │   │   └── session.py       # Una sesión: reloj, límites, meta, quiebre
     │   │   │
     │   │   ├── engine/
-    │   │   │   └── adapter.py       # ÚNICO punto que importa main/ y repo_ref/
+    │   │   │   └── adapter.py       # ÚNICO punto que lee JSON y NPZ congelados (no importa código anterior)
     │   │   │
     │   │   ├── storage/
     │   │   │   ├── database.py      # Conexión SQLite, transacciones
@@ -488,3 +486,5 @@ analyzer_lotoFlet/
 ```
 
 [AR8] Los nombres de archivos internos pueden subdividirse durante la implementación si un módulo crece demasiado, siempre dentro de la carpeta de su capa y sin romper [AR1]–[AR5]. Cualquier cambio de capa o de ubicación de datos se documenta aquí y en el plan ODD.
+
+[AR9] La equivalencia con el trabajo anterior se comprueba con un oráculo congelado: `webapp/backend/tests/fixtures/reference_sessions.json`, generado una sola vez desde `repo_ref/` (141 combinaciones de sistema, cobertura, apuesta y modo de pago; primeras sesiones de cada una). Las pruebas del motor nuevo deben reproducirlo exactamente. Regenerarlo requiere autorización explícita.

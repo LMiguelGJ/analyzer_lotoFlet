@@ -1,0 +1,30 @@
+{
+  "storage": {
+    "limit_bytes": 5368709120,
+    "logical_used_bytes": 1024,
+    "logical_used_bytes_exact": "1024",
+    "logical_margin_bytes": 1048576,
+    "free_disk_bytes": 987654321,
+    "disk_margin_bytes": 67108864,
+    "database_bytes": 8192,
+    "wal_bytes": 4096,
+    "shm_bytes": 32768,
+    "temp_bytes": 0,
+    "sqlite_bytes": 45056,
+    "warning": false
+  },
+  "quota": {
+    "effective_bytes": "5368709120",
+    "persisted_bytes": null,
+    "source": "default",
+    "writable": true
+  },
+  "sources": {
+    "history_id": "chance_express_history.json",
+    "history_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "rankings_id": "pos1.npz",
+    "rankings_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "code_version": "0.1.0"
+  },
+  "connection": { "host": "127.0.0.1", "port": 8765, "version": "0.1.0" }
+}

@@ -1,0 +1,44 @@
+{
+  "method": "GET",
+  "path": "/queue?offset=0&limit=20",
+  "status": 200,
+  "body": {
+    "active_id": null,
+    "pending": {
+      "total": 0,
+      "offset": 0,
+      "limit": 20,
+      "count": 0,
+      "items": []
+    },
+    "held": {
+      "total": 23,
+      "offset": 0,
+      "limit": 20,
+      "count": 20,
+      "items": [
+        "638a37c5574a4f58bf9b595ff6d17b5e",
+        "789531fc1dce4fb192d39f9821405867",
+        "023fac6158914d12aef9787dc1741d31",
+        "841685629045465a834a4f14d9288c3c",
+        "e2b052edd1d144db9667a25c168a4f1b",
+        "08bcbafec4624e1cb644dc627c70e542",
+        "1fcb7718381c47cca1813118f0c574a0",
+        "2eab1b2b693f4038ac108f100d1f49df",
+        "b7928441983b45c4940df87b7d5a3485",
+        "f9a23ad55e6b4f3aaf7002463685af9e",
+        "c343e42a32494c399c76fe051abc1c16",
+        "2a3cb0b2184548e9a737db43efff7758",
+        "96070a009d8f4468b606b27da5747be0",
+        "a9e911c175c24ace86c026f035bc4f68",
+        "a47aaff4b17e413cba87353d1431386b",
+        "0a79d08bfc98406489b81e0977a38f9a",
+        "0d9e41574f2e4f30a98a20f3662c5d7c",
+        "871789c2eda94da6ad6f3062af781c4a",
+        "8e30d7b69cbd44ca9f1d75f9f5e9acb5",
+        "8505aaf69984413db83785fbe595cdfd"
+      ]
+    },
+    "last_failure": null
+  }
+}

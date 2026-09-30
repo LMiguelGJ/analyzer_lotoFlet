@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.local
+.vite/
+coverage/
+
+# The repo root .gitignore has a Python-template `lib/` rule that also
+# matches this project's src/lib/ (formatters/contrast utilities); un-ignore
+# it explicitly. The directory itself must be negated before its contents,
+# since git will not look inside an already-excluded directory.
+!src/lib/
+!src/lib/**

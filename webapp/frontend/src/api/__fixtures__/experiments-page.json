@@ -1,0 +1,75 @@
+{
+  "total": 2,
+  "offset": 0,
+  "limit": 20,
+  "items": [
+    {
+      "id": "exp-completed-1",
+      "created_at": "2026-09-29T12:30:00Z",
+      "status": "completed",
+      "request": {
+        "name": "Fríos K1",
+        "conditions": {
+          "start_draw": "2025-09-02 05:10",
+          "capital": 2000,
+          "goal": 2800,
+          "settlement": "all",
+          "max_bets": 12,
+          "max_minutes": null,
+          "seed": 42
+        },
+        "strategies": [
+          { "name": "Fríos", "selector": "system", "system": "cold", "components": null, "coverage": 1, "staking": "flat" }
+        ]
+      },
+      "sources": {
+        "history_id": "history",
+        "history_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "rankings_id": "rankings",
+        "rankings_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "code_version": "v1"
+      },
+      "runs": [
+        {
+          "ordinal": 0,
+          "configuration_id": null,
+          "status": "completed",
+          "result": { "outcome": "goal", "bets_count": 3, "wagered": 3, "paid": 240, "final_balance": 2837, "delta": 837 },
+          "bets_count": 3
+        }
+      ]
+    },
+    {
+      "id": "exp-running-2",
+      "created_at": null,
+      "status": "running",
+      "request": {
+        "name": "Comparación mezcla",
+        "conditions": {
+          "start_draw": "2025-09-01 05:10",
+          "capital": 5000,
+          "goal": 6000,
+          "settlement": "best",
+          "max_bets": null,
+          "max_minutes": 600,
+          "seed": 7
+        },
+        "strategies": [
+          { "name": "Transición", "selector": "system", "system": "transition", "components": null, "coverage": 10, "staking": "ladder" },
+          { "name": "Fríos", "selector": "system", "system": "cold", "components": null, "coverage": 10, "staking": "ladder" }
+        ]
+      },
+      "sources": {
+        "history_id": "history",
+        "history_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "rankings_id": "rankings",
+        "rankings_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "code_version": "v1"
+      },
+      "runs": [
+        { "ordinal": 0, "configuration_id": null, "status": "running", "result": null, "bets_count": 0 },
+        { "ordinal": 1, "configuration_id": null, "status": "pending", "result": null, "bets_count": 0 }
+      ]
+    }
+  ]
+}

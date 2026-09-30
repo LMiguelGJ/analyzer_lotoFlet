@@ -1,0 +1,59 @@
+{
+  "browser": "installed Google Chrome, Playwright Python, headless isolated owned profile",
+  "zoom_200": "not measured: browser UI zoom cannot be safely set by this harness; prior LW08 manual acceptance is contextual only",
+  "coverage_limit": "bounded sample, not WCAG certification or exhaustive state coverage",
+  "port": 35911,
+  "empty": {
+    "status": [
+      "Todavía no hay experimentos. Creá el primero."
+    ],
+    "overflow": false
+  },
+  "fixture": {
+    "configuration_http": 201,
+    "draw_ranked": "2025-09-02 05:10",
+    "mode": "real API and worker, bounded max_bets=3; no simulated outcomes",
+    "experiment_http": 201,
+    "id": "fdcc470fe4e74f4599e837f352d1b1eb",
+    "terminal_status": "completed",
+    "runs": [
+      {
+        "status": "completed",
+        "bets": 3
+      },
+      {
+        "status": "completed",
+        "bets": 3
+      }
+    ],
+    "comparison_kind": "real completed"
+  },
+  "motion_default": {
+    "replay_enabled": true,
+    "transition": "0s"
+  },
+  "motion_reduced": {
+    "media": true,
+    "replay_disabled": true,
+    "notice": 1,
+    "transition": "1e-05s",
+    "animation": "1e-05s"
+  },
+  "injected_network_failure": {
+    "instrumented": true,
+    "alert": [
+      "No se pudo contactar al servidor local. Reintentar"
+    ]
+  },
+  "console": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    }
+  ],
+  "owned_server_exit": 0,
+  "port_free_after": true,
+  "source_unchanged": true,
+  "source_count": 93,
+  "changed_source_paths": []
+}
