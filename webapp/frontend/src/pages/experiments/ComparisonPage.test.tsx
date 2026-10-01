@@ -39,7 +39,7 @@ describe("LW12 comparison", () => {
     expect(await screen.findByText("Comparación incompleta · 1/2 terminadas")).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     const rows = within(table).getAllByRole("row");
-    expect(rows[1]).toHaveTextContent(/Primera.*Completado.*RD\$150.*RD\$50.*2.*Meta alcanzada/);
+    expect(rows[1]).toHaveTextContent(/Primera.*Ejecución completada.*RD\$150.*RD\$50.*2.*Meta alcanzada/);
     expect(rows[2]).toHaveTextContent(/Segunda.*En curso.*—.*—.*—.*—/);
     expect(within(rows[2]).queryByText("Meta alcanzada")).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Comparación de ejecuciones" })).toHaveClass("overflow-x-auto");
@@ -48,6 +48,13 @@ describe("LW12 comparison", () => {
     expect(document.body.textContent).not.toMatch(/mejor estrategia|probabilidad de éxito|exportar/i);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     expect(apiClient.getReplay).not.toHaveBeenCalledWith("exp", 1, 0, 100);
+  });
+  it("labels the delta column and places the historical-simulation caveat near the table", async () => {
+    setup();
+    const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
+    expect(within(table).getByRole("columnheader", { name: "Cambio respecto del inicio" })).toBeInTheDocument();
+    expect(screen.getByText(/Simulación con datos históricos: no predice resultados futuros/)).toBeInTheDocument();
+    expect(screen.getByText(/Resultados históricos sobre datos ya investigados/)).toBeInTheDocument();
   });
   it("treats two completed runs as complete, preserving requested order rather than ranking", async () => {
     const second = { ...runs[1], status: "completed" as const, result: { ...runs[0].result!, delta: -10, final_balance: 90, outcome: "limit" as const } };

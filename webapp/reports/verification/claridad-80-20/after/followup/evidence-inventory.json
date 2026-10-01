@@ -1,0 +1,58 @@
+{
+  "pngCount": 10,
+  "pngBytes": 586611,
+  "allFilesCountIncludingInventory": 28,
+  "allBytesBeforeInventory": 643135,
+  "png": [
+    {
+      "name": "comparison-1280.png",
+      "bytes": 133353,
+      "sha256": "2480a64eb0e4d3543b4350d2c2658467a2731cefbc3c6bd96dcd5539fca1f8d2"
+    },
+    {
+      "name": "comparison-390.png",
+      "bytes": 97840,
+      "sha256": "bded583bb8920c47b70b64162fdab6f326616c83de034c4eef8e34ebf692c335"
+    },
+    {
+      "name": "experiments-1280-action-focused.png",
+      "bytes": 41628,
+      "sha256": "0846b7592a543e5e05cb9c6876cf7933f52451960faf3c33728edd8682a2a0f3"
+    },
+    {
+      "name": "experiments-1280.png",
+      "bytes": 41342,
+      "sha256": "10521bd217c304f7e231a2641e7f84248c553e6392619511205544ff0200fb88"
+    },
+    {
+      "name": "experiments-390-action-focused.png",
+      "bytes": 26720,
+      "sha256": "26015e2851f022457a408dccde6c1a0300b9f823218addb21a0bf07aabdd07ad"
+    },
+    {
+      "name": "experiments-390.png",
+      "bytes": 25593,
+      "sha256": "70ebd85ea5328b2b76ee8c4315bc4abbd70956635d1e25677281db59de7b760f"
+    },
+    {
+      "name": "library-1280.png",
+      "bytes": 43004,
+      "sha256": "867032bb89470f2e7cc86355866b4e8604483381ba8175f5962283c513711b81"
+    },
+    {
+      "name": "library-390.png",
+      "bytes": 37239,
+      "sha256": "6b7f2ecfcb02c890182f9de689a96b1ca47cdc9551ddd29802f7d9a188ced765"
+    },
+    {
+      "name": "library-draft-1280.png",
+      "bytes": 73689,
+      "sha256": "7decf513e7a3405adf6acda79e370daf99ee97279db54f68fd6220dc8ff78d8a"
+    },
+    {
+      "name": "library-draft-390.png",
+      "bytes": 66203,
+      "sha256": "7837b2bb258caa3c24397d41828ab24a48811568fe4d4f041272fa0c98bc5619"
+    }
+  ]
+}

@@ -16,15 +16,15 @@ const EXECUTION_VALUES: (ExperimentStatus | RunStatus)[] = [
 const OUTCOME_VALUES: Outcome[] = ["goal", "ruin", "limit", "history_exhausted"];
 
 describe("StatusLabel", () => {
-  it("renders execution status text in Spanish", () => {
+  it("renders execution status text in Spanish, distinct from whether a goal was reached", () => {
     render(<StatusLabel kind="execution" value="completed" />);
-    expect(screen.getByText("Completado")).toBeInTheDocument();
+    expect(screen.getByText("Ejecución completada")).toBeInTheDocument();
   });
 
   it("renders outcome text in Spanish, using different vocabulary than execution status", () => {
     render(<StatusLabel kind="outcome" value="goal" />);
     expect(screen.getByText("Meta alcanzada")).toBeInTheDocument();
-    expect(screen.queryByText("Completado")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ejecución completada")).not.toBeInTheDocument();
   });
 
   it("never uses the same label for an execution status and an outcome", () => {
@@ -34,7 +34,7 @@ describe("StatusLabel", () => {
         <StatusLabel kind="outcome" value="goal" />
       </>,
     );
-    const completed = screen.getByText("Completado");
+    const completed = screen.getByText("Ejecución completada");
     const goal = screen.getByText("Meta alcanzada");
     expect(completed.textContent).not.toBe(goal.textContent);
   });

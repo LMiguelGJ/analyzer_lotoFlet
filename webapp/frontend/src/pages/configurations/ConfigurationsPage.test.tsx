@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
@@ -29,48 +30,76 @@ it("shows empty, disconnected and retry states honestly", async () => {
   const { user } = setup();
   expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor local/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
-  expect(await screen.findByText(/Todavía no hay configuraciones guardadas/)).toBeInTheDocument();
+  expect(await screen.findByText(/Todavía no hay estrategias guardadas/)).toBeInTheDocument();
 });
+it("keeps page-local search distinct from an empty library", async () => {
+  const { user } = setup();
+  await screen.findByText("Mi plantilla");
+  const search = screen.getByRole("textbox", { name: "Buscar plantilla por nombre en esta página" });
+  await user.type(search, "sin coincidencia");
+  expect(screen.getByRole("status")).toHaveTextContent(/Sin coincidencias en esta página/);
+  expect(screen.queryByText(/Todavía no hay estrategias guardadas/)).not.toBeInTheDocument();
+  expect(apiClient.listConfigurations).toHaveBeenCalledWith(0, 20);
+  expect(apiClient.listConfigurations).toHaveBeenCalledTimes(1);
+});
+
 it("does not discard a dirty edit on cancel or navigation without confirmation", async () => {
   const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
   const { user, router } = setup();
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Editar/ }));
-  await user.type(screen.getByRole("textbox", { name: "Nombre de la biblioteca" }), " editada");
+  await user.type(screen.getByRole("textbox", { name: "Nombre de la plantilla" }), " editada");
   await user.click(screen.getByRole("button", { name: "Cancelar edición" }));
-  expect(screen.getByRole("textbox", { name: "Nombre de la biblioteca" })).toHaveValue("Mi plantilla editada");
+  expect(screen.getByRole("textbox", { name: "Nombre de la plantilla" })).toHaveValue("Mi plantilla editada");
   await user.click(screen.getByRole("link", { name: "Ajustes" }));
   expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/configuraciones");
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Seguir editando" }));
-  expect(screen.getByRole("textbox", { name: "Nombre de la biblioteca" })).toHaveValue("Mi plantilla editada");
+  expect(screen.getByRole("textbox", { name: "Nombre de la plantilla" })).toHaveValue("Mi plantilla editada");
   confirm.mockRestore();
 });
+it("keeps saved data and actions in DOM order with a full-width data row and wrapping actions", async () => {
+  setup();
+  const template = await screen.findByText("Mi plantilla");
+  const row = template.closest("li")!;
+  expect(row).toHaveClass("saved-strategy-row");
+  expect(within(row).getAllByRole("link")).toHaveLength(1);
+  expect(within(row).getAllByRole("button").map((button) => button.textContent)).toEqual(["Editar Mi plantilla", "Eliminar Mi plantilla"]);
+  const css = readFileSync("src/styles/index.css", "utf8");
+  expect(css).toMatch(/\.saved-strategy-row\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s);
+  expect(css).toMatch(/\.saved-strategy-row \.btn\s*\{[^}]*max-width:\s*100%;/s);
+});
+
 it("lists a bounded page, offers use and edit, and preserves distinct library and strategy names", async () => {
   const { user } = setup();
   expect(await screen.findByText("Mi plantilla")).toBeInTheDocument();
   expect(apiClient.listConfigurations).toHaveBeenCalledWith(0, 20);
   expect(screen.getByRole("link", { name: /Usar/ })).toHaveAttribute("href", "/experimentos/nuevo?configuration=cfg-1");
+  expect(screen.getByText("Un sistema de selección")).toBeInTheDocument();
+  expect(screen.getByText("Plana")).toBeInTheDocument();
+  expect(screen.getByText("Fríos", { selector: "dd" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: /Editar/ }));
-  expect(screen.getByRole("textbox", { name: "Nombre de la biblioteca" })).toHaveValue("Mi plantilla");
-  expect(screen.getByRole("textbox", { name: "Nombre de la configuración 1" })).toHaveValue("Fríos");
+  const templateName = screen.getByRole("textbox", { name: "Nombre de la plantilla" });
+  expect(templateName).toHaveValue("Mi plantilla");
+  expect(templateName).toHaveAccessibleDescription(/la estrategia tiene su propio nombre/i);
+  expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Fríos");
   await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
   await waitFor(() => expect(apiClient.updateConfiguration).toHaveBeenCalledWith("cfg-1", "Mi plantilla", strategy));
 });
 it("rejects invalid drafts locally and maps server 422 fields without losing the draft", async () => {
   const { user } = setup();
   await screen.findByText("Mi plantilla");
-  await user.click(screen.getByRole("button", { name: "Nueva configuración" }));
-  await user.click(screen.getByRole("button", { name: "Guardar configuración" }));
+  await user.click(screen.getByRole("button", { name: "Nueva estrategia guardada" }));
+  await user.click(screen.getByRole("button", { name: "Guardar estrategia" }));
   expect(apiClient.createConfiguration).not.toHaveBeenCalled();
-  await user.type(screen.getByRole("textbox", { name: "Nombre de la biblioteca" }), "Nueva biblioteca");
-  await user.type(screen.getByRole("textbox", { name: "Nombre de la configuración 1" }), "Otra");
+  await user.type(screen.getByRole("textbox", { name: "Nombre de la plantilla" }), "Nueva biblioteca");
+  await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Otra");
   await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "cold");
   vi.mocked(apiClient.createConfiguration).mockRejectedValueOnce(new ApiError(422, "invalid", [{ loc: ["body", "strategy", "name"], msg: "server detail", type: "value_error" }]));
-  await user.click(screen.getByRole("button", { name: "Guardar configuración" }));
+  await user.click(screen.getByRole("button", { name: "Guardar estrategia" }));
   expect(await screen.findByText("server detail")).toBeInTheDocument();
-  expect(screen.getByRole("textbox", { name: "Nombre de la configuración 1" })).toHaveValue("Otra");
-  expect(screen.getByRole("textbox", { name: "Nombre de la configuración 1" })).toHaveAttribute("aria-invalid", "true");
+  expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Otra");
+  expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveAttribute("aria-invalid", "true");
 });
 it("prevents a second save and changes during an in-flight request", async () => {
   let resolveSave!: (value: typeof item) => void;
@@ -80,7 +109,7 @@ it("prevents a second save and changes during an in-flight request", async () =>
   await user.click(screen.getByRole("button", { name: /Editar/ }));
   await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
   expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
-  expect(screen.getByRole("textbox", { name: "Nombre de la biblioteca" })).toBeDisabled();
+  expect(screen.getByRole("textbox", { name: "Nombre de la plantilla" })).toBeDisabled();
   expect(apiClient.updateConfiguration).toHaveBeenCalledTimes(1);
   resolveSave(item);
   expect(await screen.findByRole("status")).toHaveTextContent(/actualizada/);
@@ -90,20 +119,21 @@ it("deletes only after confirmation with exact ID; missing row refreshes, and ne
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   const dialog = screen.getByRole("alertdialog");
-  expect(dialog).toHaveTextContent(/no elimina los resultados/);
+  expect(dialog).toHaveAccessibleName("¿Eliminar la plantilla «Mi plantilla»?");
+  expect(dialog).toHaveTextContent(/resultados de experimentos anteriores se conservan/);
   await user.keyboard("{Escape}");
   expect(apiClient.deleteConfiguration).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: /Eliminar Mi plantilla/ })).toHaveFocus();
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   vi.mocked(apiClient.deleteConfiguration).mockRejectedValueOnce(new NetworkError());
-  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar configuración" }));
+  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar plantilla" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor/);
-  expect(screen.queryByText(/Configuración eliminada/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Estrategia guardada eliminada/)).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   vi.mocked(apiClient.deleteConfiguration).mockRejectedValueOnce(new ApiError(404, "missing"));
-  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar configuración" }));
+  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar plantilla" }));
   await waitFor(() => expect(apiClient.deleteConfiguration).toHaveBeenLastCalledWith("cfg-1", "cfg-1"));
-  expect(screen.queryByText(/Configuración eliminada/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Estrategia guardada eliminada/)).not.toBeInTheDocument();
 });
 it("keeps focus on the success status after the deleted row is removed asynchronously", async () => {
   let resolveReload!: (value: { total: number; offset: number; limit: number; items: typeof item[] }) => void;
@@ -112,13 +142,13 @@ it("keeps focus on the success status after the deleted row is removed asynchron
   const { user } = setup();
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
-  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar configuración" }));
-  const status = await screen.findByText("Configuración eliminada. Los resultados históricos se conservan.");
+  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar plantilla" }));
+  const status = await screen.findByText("Estrategia guardada eliminada. Los resultados históricos se conservan.");
   expect(status).toHaveAttribute("role", "status");
   expect(status).toHaveFocus();
   await waitFor(() => expect(apiClient.listConfigurations).toHaveBeenCalledTimes(2));
   resolveReload({ total: 0, offset: 0, limit: 20, items: [] });
-  expect(await screen.findByText(/Todavía no hay configuraciones guardadas/)).toBeInTheDocument();
+  expect(await screen.findByText(/Todavía no hay estrategias guardadas/)).toBeInTheDocument();
   expect(screen.queryByText("Mi plantilla")).not.toBeInTheDocument();
   expect(status).toHaveFocus();
   expect(document.activeElement).not.toBe(document.body);
@@ -136,8 +166,8 @@ it("keeps success focus through asynchronous last-page recovery after deletion",
   await user.click(screen.getByRole("button", { name: "Siguiente" }));
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
-  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar configuración" }));
-  const status = await screen.findByText("Configuración eliminada. Los resultados históricos se conservan.");
+  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar plantilla" }));
+  const status = await screen.findByText("Estrategia guardada eliminada. Los resultados históricos se conservan.");
   expect(status).toHaveFocus();
   await waitFor(() => expect(apiClient.listConfigurations).toHaveBeenCalledWith(20, 20));
   resolveEmpty({ total: 20, offset: 20, limit: 20, items: [] });

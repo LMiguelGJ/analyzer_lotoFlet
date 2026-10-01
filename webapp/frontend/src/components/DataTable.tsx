@@ -34,9 +34,9 @@ export function DataTable<T>({ caption, columns, rows, getRowKey }: DataTablePro
       role="region"
       aria-label={caption}
       tabIndex={0}
-      className="overflow-x-auto rounded-control border border-border-control"
+      className="data-table-region overflow-x-auto rounded-control border border-border-control"
     >
-      <table className="w-full min-w-[640px] border-collapse text-left font-mono text-sm">
+      <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b border-border">

@@ -4,11 +4,12 @@ import { ApiError, apiClient, NetworkError } from "../../api/client";
 import type { Catalog, ConfigurationSummary, Page } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { StrategyEditor } from "../../components/StrategyEditor";
+import { SELECTOR_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 import { buildStrategy, diffStrategyKey, draftFromStrategy, errorDetail, errorMessage, newStrategy, trimName, validateStrategies } from "../new-experiment/model";
 import type { Errors, StrategyDraft } from "../new-experiment/model";
 
-const control = "h-control w-full rounded-control border border-border-control bg-field px-3 font-mono text-sm text-text";
-const action = "min-h-control rounded-control border border-border-control px-4 font-mono text-sm hover:bg-field disabled:opacity-50";
+const control = "control";
+const action = "btn btn-secondary disabled:opacity-50";
 const pageSize = 20;
 type Editor = { id: string | null; name: string; strategy: StrategyDraft; dirty: boolean };
 
@@ -20,7 +21,7 @@ function validationErrors(error: ApiError): Errors {
     const path = body < 0 ? loc : loc.slice(body + 1);
     const key = path[0] === "name" && path.length === 1 ? "libraryName"
       : path[0] === "strategy" ? path.length === 1 ? "strategies.0" : `strategies.0.${path.slice(1).join(".")}` : "form";
-    mapped[key] = { message: key === "libraryName" ? "El servidor rechazó el nombre de la biblioteca." : key === "form" ? "El servidor rechazó la solicitud." : "El servidor rechazó este valor de la configuración.", detail: entry.msg };
+    mapped[key] = { message: key === "libraryName" ? "El servidor rechazó el nombre de la plantilla." : key === "form" ? "El servidor rechazó la solicitud." : "El servidor rechazó este valor de la estrategia.", detail: entry.msg };
   }
   return mapped;
 }
@@ -64,7 +65,7 @@ export function ConfigurationsPage() {
       if (offset > 0 && value.items.length === 0 && value.total <= offset) { setOffset(Math.max(0, Math.ceil(value.total / pageSize) - 1) * pageSize); return; }
       setPage(value);
     }).catch((error: unknown) => {
-      if (live) setListError(error instanceof NetworkError ? "No se pudo contactar al servidor local. Reintentá cargar la biblioteca." : "No se pudo cargar el listado de configuraciones.");
+      if (live) setListError(error instanceof NetworkError ? "No se pudo contactar al servidor local. Reintentá cargar la biblioteca." : "No se pudo cargar el listado de estrategias guardadas.");
     });
     return () => { live = false; };
   }, [offset, retry]);
@@ -90,7 +91,7 @@ export function ConfigurationsPage() {
   }, [deleteFocus]);
 
   function discard(): boolean {
-    if (editor?.dirty && !window.confirm("¿Descartar los cambios de la configuración?")) return false;
+    if (editor?.dirty && !window.confirm("¿Descartar los cambios de la estrategia guardada?")) return false;
     editorRequest.current += 1;
     setEditor(null); setErrors({}); setMessage("");
     return true;
@@ -109,7 +110,7 @@ export function ConfigurationsPage() {
       setEditor({ id: saved.id, name: saved.name, strategy: draftFromStrategy(saved.strategy, 1), dirty: false });
     } catch (error) {
       if (request === editorRequest.current) {
-        setMessage(error instanceof ApiError && error.status === 404 ? "La configuración ya no existe. Actualizá el listado." : error instanceof NetworkError ? "No se pudo contactar al servidor local para editar la configuración." : "No se pudo cargar la configuración. Reintentá.");
+        setMessage(error instanceof ApiError && error.status === 404 ? "La plantilla ya no existe. Actualizá el listado." : error instanceof NetworkError ? "No se pudo contactar al servidor local para editar la plantilla." : "No se pudo cargar la plantilla. Reintentá.");
         if (error instanceof ApiError && error.status === 404) setRetry((value) => value + 1);
       }
     } finally { if (request === editorRequest.current) setEditorLoading(false); }
@@ -117,7 +118,7 @@ export function ConfigurationsPage() {
   async function save() {
     if (!editor || !catalog || saveRef.current) return;
     const found = validateStrategies([editor.strategy], catalog);
-    if (!trimName(editor.name) || trimName(editor.name).length > 80) found.libraryName = "Ingresá un nombre de biblioteca de 1 a 80 caracteres.";
+    if (!trimName(editor.name) || trimName(editor.name).length > 80) found.libraryName = "Ingresá un nombre de plantilla de 1 a 80 caracteres.";
     setErrors(found); setMessage("");
     if (Object.keys(found).length) return;
     saveRef.current = true; setEditorLoading(true);
@@ -126,13 +127,13 @@ export function ConfigurationsPage() {
       if (editor.id) await apiClient.updateConfiguration(editor.id, trimName(editor.name), strategy);
       else await apiClient.createConfiguration(trimName(editor.name), strategy);
       editorRequest.current += 1;
-      setEditor(null); setSuccess(editor.id ? "Configuración actualizada." : "Configuración guardada.");
+      setEditor(null); setSuccess(editor.id ? "Estrategia guardada actualizada." : "Estrategia guardada.");
       setRetry((value) => value + 1);
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
         const mapped = validationErrors(error); setErrors(mapped);
         setMessage("El servidor encontró errores. Revisá los campos señalados.");
-      } else setMessage(error instanceof ApiError && error.status === 404 ? "La configuración ya no existe. Tus cambios siguen aquí." : error instanceof NetworkError ? "No se pudo contactar al servidor local. La solicitud podría haber llegado; comprobá el listado antes de reintentar." : "No se pudo guardar la configuración. Tus cambios siguen aquí.");
+      } else setMessage(error instanceof ApiError && error.status === 404 ? "La plantilla ya no existe. Tus cambios siguen aquí." : error instanceof NetworkError ? "No se pudo contactar al servidor local. La solicitud podría haber llegado; comprobá el listado antes de reintentar." : "No se pudo guardar la estrategia. Tus cambios siguen aquí.");
     } finally { saveRef.current = false; setEditorLoading(false); }
   }
   async function remove() {
@@ -142,33 +143,34 @@ export function ConfigurationsPage() {
     try {
       await apiClient.deleteConfiguration(target.id, target.id);
       if (!mountedRef.current) return;
-      setDeleting(null); setSuccess("Configuración eliminada. Los resultados históricos se conservan.");
+      setDeleting(null); setSuccess("Estrategia guardada eliminada. Los resultados históricos se conservan.");
       setDeleteFocus((value) => value + 1);
       setRetry((value) => value + 1);
     } catch (error) {
       if (!mountedRef.current) return;
       setDeleting(null);
-      setMessage(error instanceof ApiError && error.status === 404 ? "La configuración ya no existe; se actualizó el listado." : error instanceof ApiError && error.status === 400 ? "La confirmación no coincidió; no se eliminó la configuración." : error instanceof NetworkError ? "No se pudo contactar al servidor local. Comprobá el listado antes de reintentar." : "No se pudo eliminar la configuración.");
+      setMessage(error instanceof ApiError && error.status === 404 ? "La plantilla ya no existe; se actualizó el listado." : error instanceof ApiError && error.status === 400 ? "La confirmación no coincidió; no se eliminó la plantilla." : error instanceof NetworkError ? "No se pudo contactar al servidor local. Comprobá el listado antes de reintentar." : "No se pudo eliminar la plantilla.");
       if (error instanceof ApiError && error.status === 404) setRetry((value) => value + 1);
     } finally { deleteRef.current = false; if (mountedRef.current) setDeletingBusy(false); }
   }
   const visible = page?.items.filter((item) => item.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())) ?? [];
   return <>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <p className="max-w-prose text-sm text-text-secondary">Guardá una estrategia para reutilizarla. El nombre de la biblioteca y el de la estrategia pueden ser distintos. Borrar una plantilla no elimina los resultados de experimentos anteriores.</p>
-      <button type="button" className={action} onClick={create}>Nueva configuración</button>
+      <p className="max-w-prose text-text-secondary">Reutilizá estrategias en nuevos experimentos. El nombre de la plantilla puede diferir del nombre de la estrategia.</p>
+      <button type="button" className="btn btn-primary" onClick={create}>Nueva estrategia guardada</button>
     </div>
     {success && <p ref={successRef} tabIndex={-1} role="status" className="mb-4 text-sm text-accent focus:outline-none" onBlur={() => setSuccess("")}>{success}</p>}
     {message && <p role="alert" className="mb-4 text-sm text-red-300">{message}</p>}
     {catalogError && <p role="alert" className="mb-4 text-sm text-red-300">{catalogError} <button type="button" className="text-accent underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
     {editorLoading && !editor && <p role="status">Cargando configuración…</p>}
-    {editor && <section aria-label="Editor de configuración" className="mb-8 max-w-2xl border-y border-border py-5">
-      <h2 className="mb-4 text-xl">{editor.id ? "Editar configuración" : "Nueva configuración"}</h2>
+    {editor && <section aria-label="Editor de estrategia guardada" className="mb-8 max-w-2xl border-t border-border pt-5">
+      <h2 className="section-header">{editor.id ? "Editar estrategia guardada" : "Nueva estrategia guardada"}</h2>
       <fieldset disabled={editorLoading}>
-      <label htmlFor="libraryName" className="mb-1 block font-mono text-sm">Nombre de la biblioteca</label>
-      <input id="libraryName" className={control} value={editor.name} maxLength={81} aria-invalid={!!errors.libraryName} aria-describedby={errors.libraryName ? "libraryName-error" : undefined} onChange={(event) => { setEditor({ ...editor, name: event.target.value, dirty: true }); setErrors((previous) => { const next = { ...previous }; delete next.libraryName; return next; }); setMessage(""); }} />
+      <label htmlFor="libraryName" className="field-label">Nombre de la plantilla</label>
+      <input id="libraryName" className={control} value={editor.name} maxLength={81} aria-invalid={!!errors.libraryName} aria-describedby={errors.libraryName ? "libraryName-help libraryName-error" : "libraryName-help"} onChange={(event) => { setEditor({ ...editor, name: event.target.value, dirty: true }); setErrors((previous) => { const next = { ...previous }; delete next.libraryName; return next; }); setMessage(""); }} />
+      <p id="libraryName-help" className="field-help">Identifica la plantilla en esta biblioteca; la estrategia tiene su propio nombre.</p>
       {errors.libraryName && <p id="libraryName-error" className="mt-1 text-sm text-red-300">{errorMessage(errors.libraryName)} <span className="text-xs text-text-secondary">{errorDetail(errors.libraryName)}</span></p>}
-      <div className="mt-5 border-t border-border pt-5">
+      <div className="mt-5 pt-5">
         {errors["strategies.0"] && <p className="mb-3 text-sm text-red-300">{errorMessage(errors["strategies.0"])} <span className="text-xs text-text-secondary">{errorDetail(errors["strategies.0"])}</span></p>}
         {catalog && <StrategyEditor value={editor.strategy} index={0} catalog={catalog} errors={errors} onChange={(value) => {
           const changed = diffStrategyKey(editor.strategy, value);
@@ -177,20 +179,20 @@ export function ConfigurationsPage() {
         }} />}
       </div>
       </fieldset>
-      <div className="flex flex-wrap gap-3"><button type="button" className={action} disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar configuración"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
+      <div className="flex flex-wrap gap-3"><button type="button" className="btn btn-primary disabled:opacity-50" disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar estrategia"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
     </section>}
-    <label htmlFor="configSearch" className="mb-1 block font-mono text-sm">Buscar por nombre en esta página</label>
+    <label htmlFor="configSearch" className="field-label">Buscar plantilla por nombre en esta página</label>
     <input id="configSearch" className={`${control} mb-4 max-w-md`} value={search} onChange={(event) => setSearch(event.target.value)} />
-    {!page && !listError && <p role="status">Cargando configuraciones…</p>}
+    {!page && !listError && <p role="status">Cargando estrategias guardadas…</p>}
     {listError && <p role="alert" className="text-red-300">{listError} <button type="button" className="text-accent underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
     {page && <>
-      {page.total === 0 ? <p>Todavía no hay configuraciones guardadas. Creá la primera para reutilizar una estrategia.</p> : visible.length === 0 ? <p>Sin coincidencias en esta página. Probá otra página o cambiá la búsqueda.</p> : <ul className="divide-y divide-border border-y border-border">{visible.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
-        <div><strong className="block">{item.name}</strong><span className="text-sm text-text-secondary">Estrategia: {item.strategy.name} · {item.strategy.selector}</span></div>
-        <div className="flex flex-wrap gap-3"><Link className={`${action} inline-flex items-center text-accent`} to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className={action} onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className={action} disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
+      {page.total === 0 ? <p role="status">Todavía no hay estrategias guardadas. Creá la primera para reutilizarla.</p> : visible.length === 0 ? <p role="status">Sin coincidencias en esta página. Probá otra página o cambiá la búsqueda.</p> : <ul className="divide-y divide-border border-t border-border">{visible.map((item) => <li key={item.id} className="saved-strategy-row border-b border-border py-4">
+        <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
+        <div className="flex flex-wrap gap-2"><Link className={action} to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className={action} onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-destructive disabled:opacity-50" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
       </li>)}</ul>}
-      <nav aria-label="Páginas de configuraciones" className="mt-4 flex items-center gap-4 font-mono text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {page.total} en total</span><button type="button" className={action} disabled={offset + pageSize >= page.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>
+      <nav aria-label="Páginas de configuraciones" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {page.total} en total</span><button type="button" className={action} disabled={offset + pageSize >= page.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>
     </>}
-    <ConfirmDialog open={!!deleting && !deletingBusy} title="¿Eliminar configuración?" description={`Eliminar ${deleting?.name ?? "esta configuración"} no elimina los resultados de experimentos anteriores. Esta acción no se puede deshacer.`} confirmLabel="Eliminar configuración" onCancel={() => setDeleting(null)} onConfirm={() => { void remove(); }} />
-    <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios de la configuración." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onCancel={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
+    <ConfirmDialog open={!!deleting && !deletingBusy} title={deleting ? `¿Eliminar la plantilla «${deleting.name}»?` : "¿Eliminar plantilla?"} description={`Se eliminará «${deleting?.name ?? "esta plantilla"}» de las estrategias guardadas. Los resultados de experimentos anteriores se conservan. Esta acción no se puede deshacer.`} confirmLabel="Eliminar plantilla" onCancel={() => setDeleting(null)} onConfirm={() => { void remove(); }} />
+    <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios de la estrategia guardada que aún no guardaste." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onCancel={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
   </>;
 }

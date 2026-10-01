@@ -1,0 +1,60 @@
+{
+  "390": {
+    "initial": {
+      "focus": "Experimentos",
+      "scroll": 0
+    },
+    "arrow": {
+      "scroll": 40,
+      "focus": "Experimentos"
+    },
+    "tab": {
+      "tag": "BUTTON",
+      "name": "Nombre",
+      "outline": "solid"
+    },
+    "focusAction": {
+      "scroll": 743,
+      "buttonVisible": true,
+      "buttonText": "Acciones",
+      "outline": "solid"
+    },
+    "opened": {
+      "menu": "Acciones de Prueba base 80-20",
+      "focus": "Usar como base"
+    },
+    "closed": {
+      "menu": false,
+      "focus": "Acciones de Prueba base 80-20"
+    }
+  },
+  "1280": {
+    "initial": {
+      "focus": "Experimentos",
+      "scroll": 0
+    },
+    "arrow": {
+      "scroll": 40,
+      "focus": "Experimentos"
+    },
+    "tab": {
+      "tag": "BUTTON",
+      "name": "Nombre",
+      "outline": "solid"
+    },
+    "focusAction": {
+      "scroll": 40,
+      "buttonVisible": false,
+      "buttonText": "Acciones",
+      "outline": "solid"
+    },
+    "opened": {
+      "menu": "Acciones de Prueba base 80-20",
+      "focus": "Usar como base"
+    },
+    "closed": {
+      "menu": false,
+      "focus": "Acciones de Prueba base 80-20"
+    }
+  }
+}

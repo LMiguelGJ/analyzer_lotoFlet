@@ -18,7 +18,7 @@ describe("routing", () => {
 
   it("renders a stable URL for each of the three nav destinations", () => {
     renderAt("/configuraciones");
-    expect(screen.getByRole("heading", { name: "Configuraciones" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Estrategias guardadas" })).toBeInTheDocument();
 
     renderAt("/ajustes");
     expect(screen.getByRole("heading", { name: "Ajustes" })).toBeInTheDocument();
@@ -30,11 +30,12 @@ describe("routing", () => {
   it("renders an honest not-found state for unknown paths", () => {
     renderAt("/algo-inexistente");
     expect(screen.getByRole("heading", { name: "Página no encontrada" })).toBeInTheDocument();
+    expect(screen.getByText(/Elegí una sección de la navegación/)).toBeInTheDocument();
   });
 
   it("marks the current nav destination as active", () => {
     renderAt("/configuraciones");
-    const link = screen.getByRole("link", { name: "Configuraciones" });
+    const link = screen.getByRole("link", { name: "Estrategias guardadas" });
     expect(link).toHaveAttribute("aria-current", "page");
   });
 });
@@ -61,7 +62,7 @@ describe("keyboard focus order", () => {
       "Saltar al contenido principal",
       "Abrir navegación",
       "Experimentos",
-      "Configuraciones",
+      "Estrategias guardadas",
       "Ajustes",
     ];
 

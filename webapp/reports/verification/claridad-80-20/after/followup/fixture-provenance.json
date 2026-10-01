@@ -1,0 +1,21 @@
+{
+  "copy": "OS_TEMP/ci-80-20-harness/followup-data",
+  "source": "OS_TEMP/ci-80-20-harness/data",
+  "copiedWhilePortFree": true,
+  "configurationCountBeforePost": 0,
+  "configurationCountAfterPost": 1,
+  "template": {
+    "id": "20a364e0547c41448138b62e6f6b3942",
+    "name": "Plantilla frío conservadora",
+    "strategy": {
+      "name": "Fríos plano",
+      "selector": "system",
+      "system": "cold",
+      "components": null,
+      "coverage": 20,
+      "staking": "flat"
+    }
+  },
+  "api": "POST /api/v1/configurations with same-origin Origin; one successful 201, earlier 403 rejected without mutation",
+  "baseMutated": false
+}

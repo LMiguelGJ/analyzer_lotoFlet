@@ -21,7 +21,10 @@ const EXECUTION_STATUS: Record<ExperimentStatus | RunStatus, StatusEntry> = {
   pending: { label: "Pendiente", shape: "circle", tone: "neutral" },
   held: { label: "Retenido", shape: "diamond", tone: "warning" },
   running: { label: "En curso", shape: "triangle", tone: "neutral" },
-  completed: { label: "Completado", shape: "check", tone: "positive" },
+  // Decision 8 (plan claridad-interfaz-80-20): "completed" is an execution
+  // state, not a claim that the run's goal was reached; the closing reason
+  // is presented separately via the outcome vocabulary below.
+  completed: { label: "Ejecución completada", shape: "check", tone: "positive" },
   cancelled: { label: "Cancelado", shape: "cross", tone: "warning" },
   not_run: { label: "No ejecutado", shape: "square", tone: "neutral" },
   interrupted: { label: "Interrumpido", shape: "hexagon", tone: "warning" },

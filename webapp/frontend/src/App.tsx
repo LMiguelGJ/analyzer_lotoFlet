@@ -47,7 +47,7 @@ export function App() {
       <Route
         path="/configuraciones"
         element={
-          <Shell key="configurations" title="Configuraciones">
+          <Shell key="configurations" title="Estrategias guardadas">
             <ConfigurationsPage />
           </Shell>
         }
@@ -64,7 +64,7 @@ export function App() {
         path="*"
         element={
           <Shell key="not-found" title="Página no encontrada">
-            <p>La dirección solicitada no existe en el laboratorio.</p>
+            <p className="max-w-prose text-text-secondary">Esta dirección no corresponde a una página del laboratorio. Elegí una sección de la navegación para continuar.</p>
           </Shell>
         }
       />

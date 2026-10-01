@@ -29,7 +29,7 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   expect(screen.getByRole("status")).toHaveTextContent(/Cargando ajustes/);
   resolve(base);
   expect(await screen.findByText(/Uso lógico/)).toBeInTheDocument();
-  expect(screen.getByText("5 GiB (5.368.709.120 bytes)")).toBeInTheDocument();
+  expect(screen.getByText("5 GiB (5,368,709,120 bytes)")).toBeInTheDocument();
   expect(screen.getByText(/SQLite y archivos locales \(total informado\)/)).toBeInTheDocument();
   expect(screen.getByText("Espacio en disco libre")).toBeInTheDocument();
   expect(screen.getByText(/JSON y rankings originales no se incluyen/i)).toBeInTheDocument();
@@ -53,13 +53,14 @@ it("distinguishes disconnected from generic errors and retries", async () => {
 
 it.each(["", "0", "01", " 5", "+5", "-1", "1.5", "1e3", "９", "9223372036854775808"])("rejects invalid byte input %j with focus and no PUT", async (value) => {
   const { user } = setup();
-  const input = await screen.findByRole("textbox", { name: /Presupuesto en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
   await user.clear(input);
   if (value) await user.type(input, value);
   await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
   expect(input).toHaveFocus();
   expect(input).toHaveAttribute("aria-invalid", "true");
-  expect(screen.getByText(/Ingresá un entero decimal ASCII/)).toBeInTheDocument();
+  expect(screen.getByText(/Ingresá un entero decimal ASCII/, { selector: "#quota-error" })).toBeInTheDocument();
+  expect(input).toHaveAccessibleDescription(/entero decimal ASCII positivo.*Ingresá un entero decimal ASCII/s);
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
 });
 
@@ -67,8 +68,9 @@ it("sends max int64 exactly as a string, disables duplicate saving, then trusts 
   let resolve!: (view: SettingsView) => void;
   vi.mocked(apiClient.updateSettings).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
   const { user } = setup();
-  const input = await screen.findByRole("textbox", { name: /Presupuesto en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
   await user.clear(input);
+  expect(input).toHaveAccessibleDescription(/entero decimal ASCII positivo.*9,223,372,036,854,775,807/i);
   await user.type(input, "9223372036854775807");
   await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
   expect(apiClient.updateSettings).toHaveBeenCalledWith("9223372036854775807");
@@ -76,7 +78,7 @@ it("sends max int64 exactly as a string, disables duplicate saving, then trusts 
   expect(input).toBeDisabled();
   expect(apiClient.updateSettings).toHaveBeenCalledTimes(1);
   resolve({ ...base, quota: { effective_bytes: "8000000000000000000", persisted_bytes: "8000000000000000000", source: "persisted", writable: true }, storage: { ...base.storage, limit_bytes: 8000000000000000000 } });
-  expect((await screen.findAllByText(/8.000.000.000.000.000.000 bytes/)).length).toBeGreaterThanOrEqual(2);
+  expect((await screen.findAllByText(/8,000,000,000,000,000,000 bytes/)).length).toBeGreaterThanOrEqual(2);
   expect(screen.getByText(/Guardado/)).toBeInTheDocument();
   expect(input).toHaveValue("8000000000000000000");
 });
@@ -87,7 +89,7 @@ it("keeps the draft after 422, 409 below usage, and network failure; 422 focuses
     .mockRejectedValueOnce(new ApiError(409, "quota cannot be below current logical usage"))
     .mockRejectedValueOnce(new NetworkError());
   const { user } = setup();
-  const input = await screen.findByRole("textbox", { name: /Presupuesto en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
   await user.clear(input); await user.type(input, "500");
   await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
   expect(await screen.findByText(/El servidor rechazó el presupuesto/)).toBeInTheDocument();
@@ -103,17 +105,29 @@ it("shows an environment quota as read-only, with persisted preference distinct"
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce({ ...base, quota: { effective_bytes: "9007199254740993", persisted_bytes: "2147483648", source: "environment", writable: false } });
   setup();
   expect(await screen.findByText(/Variable de entorno/)).toBeInTheDocument();
-  expect(screen.getByText(/2.147.483.648 bytes/)).toBeInTheDocument();
+  expect(screen.getByText(/2,147,483,648 bytes/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Guardar presupuesto" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("textbox", { name: /Presupuesto en bytes/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("textbox", { name: /Límite lógico en bytes/ })).not.toBeInTheDocument();
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
+});
+
+it("presents max int64 and logical usage exactly with es-DO grouping while keeping raw ASCII input", async () => {
+  vi.mocked(apiClient.getSettings).mockResolvedValueOnce({
+    ...base,
+    quota: { effective_bytes: "9223372036854775807", persisted_bytes: null, source: "default", writable: true },
+    storage: { ...base.storage, logical_used_bytes_exact: "9007199254740993" },
+  });
+  setup();
+  expect(await screen.findByText("9,223,372,036,854,775,807 bytes")).toBeInTheDocument();
+  expect(screen.getByText("9,007,199,254,740,993 bytes")).toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: /Límite lógico en bytes/ })).toHaveValue("9223372036854775807");
 });
 
 it("warns on the server's quota warning without confusing it with disk reclamation", async () => {
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce({ ...base, storage: { ...base.storage, warning: true, logical_used_bytes_exact: "9007199254740993" } });
   setup();
   expect(await screen.findByRole("alert")).toHaveTextContent(/límite o falta de disco/);
-  expect(screen.getByText(/9.007.199.254.740.993 bytes/)).toBeInTheDocument();
+  expect(screen.getByText(/9,007,199,254,740,993 bytes/)).toBeInTheDocument();
 });
 
 it("guards dirty navigation and unload while a refresh keeps the draft across server changes", async () => {
@@ -122,12 +136,12 @@ it("guards dirty navigation and unload while a refresh keeps the draft across se
   });
   const add = vi.spyOn(window, "addEventListener");
   const { user, router } = setup();
-  const input = await screen.findByRole("textbox", { name: /Presupuesto en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
   await user.clear(input); await user.type(input, "7000000000");
   expect(add.mock.calls.some(([name]) => name === "beforeunload")).toBe(true);
   await user.click(screen.getByRole("button", { name: "Actualizar estado" }));
   await waitFor(() => expect(apiClient.getSettings).toHaveBeenCalledTimes(2));
-  expect((await screen.findAllByText(/6.000.000.000 bytes/)).length).toBeGreaterThanOrEqual(2);
+  expect((await screen.findAllByText(/6,000,000,000 bytes/)).length).toBeGreaterThanOrEqual(2);
   expect(input).toHaveValue("7000000000");
   await user.click(screen.getByRole("link", { name: "Experimentos" }));
   expect(router.state.location.pathname).toBe("/ajustes");
@@ -144,7 +158,7 @@ it("preserves an unsaved draft when a refresh changes quota to environment read-
     ...base, quota: { effective_bytes: "6000000000", persisted_bytes: null, source: "environment", writable: false },
   });
   const { user, router } = setup();
-  const input = await screen.findByRole("textbox", { name: /Presupuesto en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
   await user.clear(input); await user.type(input, "7000000000");
   await user.click(screen.getByRole("button", { name: "Actualizar estado" }));
   expect(await screen.findByText(/Borrador no guardado:/)).toHaveTextContent("7000000000");
@@ -156,12 +170,12 @@ it("preserves an unsaved draft when a refresh changes quota to environment read-
 
 it("does not block clean navigation and explains 403 and a raced read-only 409 without losing the draft", async () => {
   const { user, router } = setup();
-  const input = await screen.findByRole("textbox", { name: /Presupuesto en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
   await user.click(screen.getByRole("link", { name: "Experimentos" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Ajustes" }));
-  const edited = await screen.findByRole("textbox", { name: /Presupuesto en bytes/ });
+  const edited = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
   await user.clear(edited); await user.type(edited, "7000000000");
   vi.mocked(apiClient.updateSettings).mockRejectedValueOnce(new ApiError(403, "forbidden")).mockRejectedValueOnce(new ApiError(409, "environment quota is read-only"));
   await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));

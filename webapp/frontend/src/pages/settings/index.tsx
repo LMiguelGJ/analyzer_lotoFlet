@@ -6,12 +6,12 @@ import { ConfirmDialog } from "../../components/ConfirmDialog";
 
 const MAX_QUOTA = 9223372036854775807n;
 const GIB = 1073741824n;
-const action = "min-h-control rounded-control border border-border-control px-4 font-mono text-sm hover:bg-field disabled:cursor-not-allowed disabled:opacity-50";
-const metric = "min-w-0 border-t border-border py-3";
+const action = "btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50";
+const metric = "metric-item";
 
 function grouped(value: bigint): string {
-  try { return new Intl.NumberFormat("es-AR", { useGrouping: true }).format(value); }
-  catch { return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  try { return new Intl.NumberFormat("es-DO", { useGrouping: true }).format(value); }
+  catch { return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
 }
 function bytes(value: string): string {
   // Exact string/BigInt path: do not round an int64 quota through Number.
@@ -26,11 +26,12 @@ function budget(value: string): string {
 function measured(value: number): string {
   // Physical and free-disk fields are legacy JSON numbers; unlike quota they
   // have no exact string representation from this API.
-  return `${new Intl.NumberFormat("es-AR").format(value)} bytes`;
+  try { return `${new Intl.NumberFormat("es-DO").format(value)} bytes`; }
+  catch { return `${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} bytes`; }
 }
 function validate(value: string): string | null {
   if (!/^[1-9][0-9]*$/.test(value) || value.length > 19 || BigInt(value) > MAX_QUOTA) {
-    return "Ingresá un entero decimal ASCII en bytes, entre 1 y 9.223.372.036.854.775.807, sin espacios ni ceros iniciales.";
+    return "Ingresá un entero decimal ASCII en bytes, entre 1 y 9,223,372,036,854,775,807, sin separadores, espacios ni ceros iniciales.";
   }
   return null;
 }
@@ -121,35 +122,35 @@ export function SettingsPage() {
 
   return <div className="max-w-5xl space-y-8">
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <p className="max-w-prose text-text-secondary">Controlá el presupuesto lógico de experimentos sin confundirlo con el espacio físico de SQLite ni con el disco libre.</p>
+      <p className="max-w-prose text-text-secondary">Límite y uso de las simulaciones, separados del tamaño de archivos y del espacio libre en disco.</p>
       {view && <button type="button" className={action} disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>}
     </div>
     {loading && <p role="status" className="border-y border-border py-5 text-text-secondary">Cargando ajustes…</p>}
     {loadError && <p role="alert" className="text-red-300">{loadError} <button type="button" className="text-accent underline" onClick={() => setRefresh((previous) => previous + 1)}>Reintentar</button></p>}
     {view && <>
       <section aria-labelledby="storage-heading" className="border-t border-border pt-5">
-        <h2 id="storage-heading" className="mb-4 text-2xl">Presupuesto y uso</h2>
-        <div className="grid gap-x-10 md:grid-cols-2">
-          <div className={metric}><h3 className="mb-1 text-lg">Uso lógico</h3><p className="break-words font-mono text-lg">{bytes(view.storage.logical_used_bytes_exact)}</p><p className="text-sm text-text-secondary">Bytes de experimentos y ejecuciones contabilizados por el servidor.</p></div>
-          <div className={metric}><h3 className="mb-1 text-lg">Presupuesto efectivo</h3><p className="break-words font-mono text-lg">{budget(view.quota.effective_bytes)}</p><p className="text-sm text-text-secondary">{view.quota.source === "environment" ? "Variable de entorno (prioridad máxima)" : view.quota.source === "persisted" ? "Preferencia guardada" : "Por defecto: 5 GiB"}</p></div>
+        <h2 id="storage-heading" className="section-header">Límite y uso lógico</h2>
+        <div className="metric-grid">
+          <div className={metric}><h3 className="field-label">Límite lógico efectivo</h3><p className="metric-value">{budget(view.quota.effective_bytes)}</p><p className="field-help">{view.quota.source === "environment" ? "Variable de entorno (prioridad máxima)" : view.quota.source === "persisted" ? "Preferencia guardada" : "Por defecto: 5 GiB"}</p></div>
+          <div className={metric}><h3 className="field-label">Uso lógico</h3><p className="metric-value">{bytes(view.storage.logical_used_bytes_exact)}</p><p className="field-help">Experimentos y ejecuciones contabilizados por el servidor; no equivale al tamaño de los archivos.</p></div>
         </div>
-        <p className="mt-3 text-sm text-text-secondary">Preferencia persistida: {view.quota.persisted_bytes === null ? "ninguna" : bytes(view.quota.persisted_bytes)}. {view.quota.source === "environment" ? "La variable de entorno prevalece sobre la preferencia persistida." : "Se conserva entre reinicios del servidor."}</p>
+        <p className="mt-4 text-sm text-text-secondary">Preferencia persistida: {view.quota.persisted_bytes === null ? "ninguna" : bytes(view.quota.persisted_bytes)}. {view.quota.source === "environment" ? "La variable de entorno prevalece sobre la preferencia persistida." : "Se conserva entre reinicios del servidor."}</p>
         {view.storage.warning && <p role="alert" className="mt-4 border border-border-control bg-field p-3 text-sm">Advertencia: el servidor señala proximidad al límite o falta de disco para nuevas escrituras. No se borra nada automáticamente.</p>}
         <p className="mt-4 max-w-prose text-sm text-text-secondary">El cambio se aplica en la próxima admisión o escritura; no cancela retroactivamente una ejecución activa. La cuota usa un margen para escrituras y metadatos. El servidor decide si hay capacidad suficiente; no se aumenta sola.</p>
-        {view.quota.writable ? <form onSubmit={(event) => { void save(event); }} noValidate className="mt-6 max-w-xl border-t border-border pt-5">
-          <label htmlFor="quota-bytes" className="mb-2 block font-mono text-sm">Presupuesto en bytes</label>
-          <input ref={inputRef} id="quota-bytes" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={draft ?? ""} disabled={saving} aria-invalid={!!fieldError} aria-describedby={fieldError ? "quota-help quota-error" : "quota-help"} onChange={(event) => { setDraft(event.target.value); setFieldError(""); setSaveError(""); setSaved(false); }} className="h-control w-full rounded-control border border-border-control bg-field px-3 font-mono text-sm text-text" />
-          <p id="quota-help" className="mt-2 text-sm text-text-secondary">Ingresá bytes enteros sin separadores. 1 GiB = 1.073.741.824 bytes; 5 GiB = 5.368.709.120 bytes.</p>
+        {view.quota.writable ? <form onSubmit={(event) => { void save(event); }} noValidate className="mt-6 max-w-xl">
+          <label htmlFor="quota-bytes" className="field-label">Límite lógico en bytes</label>
+          <input ref={inputRef} id="quota-bytes" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={draft ?? ""} disabled={saving} aria-invalid={!!fieldError} aria-describedby={fieldError ? "quota-help quota-error" : "quota-help"} onChange={(event) => { setDraft(event.target.value); setFieldError(""); setSaveError(""); setSaved(false); }} className="control font-mono tabular-nums" />
+          <p id="quota-help" className="field-help">Ingresá un entero decimal ASCII positivo en bytes (1 a 9,223,372,036,854,775,807), sin separadores, espacios ni ceros iniciales. 1 GiB = 1,073,741,824 bytes; 5 GiB = 5,368,709,120 bytes.</p>
           {fieldError && <p id="quota-error" className="mt-2 text-sm text-red-300">{fieldError}</p>}
           {saveError && <p role="alert" className="mt-2 text-sm text-red-300">{saveError}</p>}
           {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado. El presupuesto efectivo se actualizó con la respuesta del servidor.</p>}
-          <button type="submit" className={`${action} mt-4 bg-field`} disabled={saving}>{saving ? "Guardando…" : "Guardar presupuesto"}</button>
-        </form> : <div className="mt-6 max-w-prose border-t border-border pt-5 text-text-secondary"><p>La cuota está fijada por LABORATORIO_QUOTA_BYTES en el entorno del proceso. Esta pantalla es de solo lectura mientras esa variable tenga prioridad; cambiar la preferencia guardada aquí no tendría efecto.</p>{dirty && <p className="mt-2 break-words">Borrador no guardado: <span className="font-mono">{draft}</span> bytes. Copialo antes de salir si lo necesitás; no se envió al servidor.</p>}</div>}
+          <button type="submit" className="btn btn-primary mt-4 disabled:opacity-50" disabled={saving}>{saving ? "Guardando…" : "Guardar presupuesto"}</button>
+        </form> : <div className="mt-6 max-w-prose text-text-secondary"><p>La cuota está fijada por LABORATORIO_QUOTA_BYTES en el entorno del proceso. Esta pantalla es de solo lectura mientras esa variable tenga prioridad; cambiar la preferencia guardada aquí no tendría efecto.</p>{dirty && <p className="mt-2 break-words">Borrador no guardado: <span className="font-mono">{draft}</span> bytes. Copialo antes de salir si lo necesitás; no se envió al servidor.</p>}</div>}
       </section>
       <section aria-labelledby="physical-heading" className="border-t border-border pt-5">
-        <h2 id="physical-heading" className="mb-2 text-2xl">Archivos físicos y disco</h2>
+        <h2 id="physical-heading" className="section-header">Archivos físicos y disco</h2>
         <p className="mb-4 max-w-prose text-sm text-text-secondary">Estos tamaños son distintos del uso lógico. El disco libre corresponde al volumen de la base, no a espacio recuperable al borrar registros. Borrar registros no garantiza reducir inmediatamente el archivo SQLite. Los JSON y rankings originales no se incluyen.</p>
-        <dl className="grid gap-x-10 sm:grid-cols-2">
+        <dl className="metric-grid">
           <div className={metric}><dt>SQLite y archivos locales (total informado)</dt><dd className="break-words font-mono">{measured(view.storage.sqlite_bytes)}</dd></div>
           <div className={metric}><dt>Espacio en disco libre</dt><dd className="break-words font-mono">{measured(view.storage.free_disk_bytes)}</dd></div>
           <div className={metric}><dt>Base SQLite</dt><dd className="break-words font-mono">{measured(view.storage.database_bytes)}</dd></div>
@@ -160,9 +161,9 @@ export function SettingsPage() {
         <p className="mt-3 max-w-prose text-sm text-text-secondary">El total físico informado incluye los archivos locales conocidos; no mide temporales de SQLite administrados por el sistema operativo. No se estima espacio recuperable ni se compacta la base desde esta pantalla.</p>
       </section>
       <section aria-labelledby="sources-heading" className="border-t border-border pt-5">
-        <h2 id="sources-heading" className="mb-2 text-2xl">Datos de origen</h2>
+        <h2 id="sources-heading" className="section-header">Datos de origen</h2>
         <p className="max-w-prose text-sm text-text-secondary">Fuentes congeladas de solo lectura. La API no informa un período de cobertura; no se infiere a partir de los nombres. No se pueden importar datos ni agregar juegos aquí.</p>
-        <details className="mt-4 border-y border-border py-3"><summary className="cursor-pointer font-mono text-sm text-accent">Ver identificadores, huellas y versión</summary>
+        <details className="mt-4 border-y border-border py-3"><summary className="cursor-pointer text-sm text-accent">Ver identificadores, huellas y versión</summary>
           <dl className="mt-4 space-y-3 text-sm">
             <div><dt className="text-text-secondary">Historial · identificador</dt><dd className="break-all font-mono">{view.sources.history_id}</dd></div>
             <div><dt className="text-text-secondary">Historial · SHA-256</dt><dd className="break-all font-mono">{view.sources.history_sha256}</dd></div>
@@ -173,7 +174,7 @@ export function SettingsPage() {
         </details>
       </section>
       <section aria-labelledby="connection-heading" className="border-t border-border pt-5">
-        <h2 id="connection-heading" className="mb-2 text-2xl">Conexión local</h2>
+        <h2 id="connection-heading" className="section-header">Conexión local</h2>
         <p className="text-sm">Respuesta del servidor local: <span className="font-mono">{view.connection.host}:{view.connection.port}</span> · versión <span className="font-mono">{view.connection.version}</span>.</p>
         <p className="mt-3 max-w-prose text-sm text-text-secondary">Para detener la aplicación, cerrá el proceso del servidor con el que la iniciaste. El lanzador de Windows está pendiente (LW16); todavía no hay un control de detención desde esta web. Cerrar el navegador no detiene la cola.</p>
       </section>

@@ -1,0 +1,74 @@
+[
+  {
+    "name": "body",
+    "color": "rgb(208, 212, 216)",
+    "bg": "rgb(23, 30, 38)",
+    "ratio": 11.27,
+    "size": "16px",
+    "weight": "400",
+    "outline": "rgb(208, 212, 216)",
+    "outlineStyle": "none",
+    "outlineRatio": null,
+    "backgroundSource": "BODY"
+  },
+  {
+    "name": "heading",
+    "color": "rgb(208, 212, 216)",
+    "bg": "rgb(23, 30, 38)",
+    "ratio": 11.27,
+    "size": "36px",
+    "weight": "400",
+    "outline": "rgb(208, 212, 216)",
+    "outlineStyle": "none",
+    "outlineRatio": null,
+    "backgroundSource": "DIV"
+  },
+  {
+    "name": "primary",
+    "color": "rgb(23, 30, 38)",
+    "bg": "rgb(126, 179, 218)",
+    "ratio": 7.48,
+    "size": "14px",
+    "weight": "600",
+    "outline": "rgb(23, 30, 38)",
+    "outlineStyle": "none",
+    "outlineRatio": null,
+    "backgroundSource": "BUTTON"
+  },
+  {
+    "name": "help",
+    "color": "rgb(173, 181, 191)",
+    "bg": "rgb(23, 30, 38)",
+    "ratio": 8.11,
+    "size": "14px",
+    "weight": "400",
+    "outline": "rgb(173, 181, 191)",
+    "outlineStyle": "none",
+    "outlineRatio": null,
+    "backgroundSource": "DIV"
+  },
+  {
+    "name": "label",
+    "color": "rgb(208, 212, 216)",
+    "bg": "rgb(23, 30, 38)",
+    "ratio": 11.27,
+    "size": "14px",
+    "weight": "400",
+    "outline": "rgb(208, 212, 216)",
+    "outlineStyle": "none",
+    "outlineRatio": null,
+    "backgroundSource": "DIV"
+  },
+  {
+    "name": "focus",
+    "color": "rgb(208, 212, 216)",
+    "bg": "rgb(36, 47, 59)",
+    "ratio": 9.12,
+    "size": "14px",
+    "weight": "400",
+    "outline": "rgb(126, 179, 218)",
+    "outlineStyle": "solid",
+    "outlineRatio": 6.05,
+    "backgroundSource": "INPUT"
+  }
+]

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
@@ -41,6 +42,26 @@ describe("DataTable", () => {
     expect(within(table).getByText("Experimentos")).toBeInTheDocument(); // <caption>
     expect(within(table).getAllByRole("columnheader")).toHaveLength(2);
     expect(within(table).getAllByRole("row")).toHaveLength(3); // header + 2 rows
+  });
+
+  it("keeps long content in a labeled local scroll region without changing the cell", () => {
+    const longName = "Nombre de experimento ".repeat(12);
+    render(<DataTable caption="Experimentos" columns={columns(() => {})} rows={[{ id: "long", name: longName }]} getRowKey={(row) => row.id} />);
+    const region = screen.getByRole("region", { name: "Experimentos" });
+    expect(region).toHaveClass("data-table-region", "overflow-x-auto");
+    expect(within(region).getByRole("table")).toHaveClass("w-full");
+    expect(within(region).getByRole("table")).not.toHaveClass("min-w-max");
+    expect(within(region).getAllByRole("cell")[0]).toHaveTextContent(longName.trim());
+  });
+
+  it("lets the table flex to the region while preserving word-level wrapping and compact fields", () => {
+    const css = readFileSync("src/styles/index.css", "utf8");
+    const tableRules = css.slice(css.indexOf("  .data-table-region {"), css.indexOf("  @media (max-width: 799px)"));
+    expect(tableRules).toMatch(/\.data-table-region th\s*\{\s*white-space:\s*nowrap;/);
+    expect(tableRules).toMatch(/\.data-table-region td\s*\{[^}]*overflow-wrap:\s*break-word;/s);
+    expect(tableRules).toMatch(/\.table-date\s*\{[^}]*white-space:\s*nowrap;/s);
+    expect(tableRules).toMatch(/\.table-numeric\s*\{[^}]*white-space:\s*nowrap;/s);
+    expect(tableRules).not.toMatch(/overflow-wrap:\s*anywhere/);
   });
 
   it("renders each row's cells from the column render function", () => {

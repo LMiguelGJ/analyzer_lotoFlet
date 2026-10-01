@@ -34,3 +34,223 @@
   left: var(--space-page-margin);
   top: var(--space-page-margin);
 }
+
+/*
+ * Shared Operate-surface primitives (plan claridad-interfaz-80-20, decisions
+ * 10-11; Impeccable operate/layout/typeset/craft-floor). Defined here so
+ * later units can adopt them page by page; nothing in src/pages consumes
+ * these yet. Scoped to explicit class names only, never bare element
+ * selectors, so SVG/chart rendering (BalanceChart, ComparisonChart) is
+ * unaffected. Colors, radii, and heights all reference tokens.css; no new
+ * color, gradient, glass, or shadow values are introduced.
+ */
+@layer components {
+  .field {
+    margin-bottom: 1.25rem;
+  }
+
+  .field-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
+
+  .field-help {
+    margin-top: 0.25rem;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+  }
+
+  /* Body font for ordinary inputs/selects; use font-mono only where a value itself is technical (IDs, hashes, seeds). */
+  .control {
+    display: block;
+    width: 100%;
+    height: var(--control-height);
+    padding: 0 0.75rem;
+    border: 1px solid var(--color-border-control);
+    border-radius: var(--radius-control);
+    background-color: var(--color-field);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: var(--control-height);
+    padding: 0 1rem;
+    border-radius: var(--radius-control);
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+  }
+
+  /* Primary is distinguished by fill and weight together, not color alone (decision 11). */
+  .btn-primary {
+    border: 1px solid var(--color-accent);
+    background-color: var(--color-accent);
+    color: var(--color-bg);
+    font-weight: 600;
+  }
+
+  .btn-secondary {
+    border: 1px solid var(--color-border-control);
+    background-color: transparent;
+    color: var(--color-text);
+    font-weight: 400;
+  }
+
+  /* Destructive reads unambiguous from its own text/weight, never from color alone; the action word itself must name the consequence. */
+  .btn-destructive {
+    border: 1px solid var(--color-border-control);
+    background-color: transparent;
+    color: var(--color-text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .section-header {
+    margin-bottom: 0.75rem;
+    font-family: var(--font-heading);
+    font-style: italic;
+    font-size: 1.25rem;
+    color: var(--color-text);
+  }
+
+  /* Compact label/value grid for metrics and saved parameters (replaces repeated ad-hoc <dl> grids). */
+  .data-list {
+    display: grid;
+    grid-template-columns: minmax(180px, max-content) minmax(0, 1fr);
+    column-gap: 1.25rem;
+    row-gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .data-list dt {
+    color: var(--color-text-secondary);
+  }
+
+  .data-list dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+
+  /* Apply to a <dd> holding a monetary or count value: tabular figures, aligned right like a ledger column. */
+  .data-list dd.data-list-numeric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+  }
+
+  /* CI03: compact, content-led groups. Explicit classes avoid chart inheritance. */
+  .saved-strategy-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 1rem;
+  }
+
+  .saved-strategy-row .btn {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 2.5rem;
+    row-gap: 0.75rem;
+  }
+
+  .metric-item {
+    min-width: 0;
+    padding-block: 0.5rem;
+  }
+
+  .metric-item dt,
+  .metric-item .field-label {
+    color: var(--color-text-secondary);
+  }
+
+  .metric-item dd,
+  .metric-value {
+    margin-top: 0.25rem;
+    overflow-wrap: anywhere;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .queue-section + .queue-section {
+    border-top: 1px solid var(--color-border);
+    padding-top: 1.25rem;
+  }
+
+  .queue-row + .queue-row {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .data-table-region {
+    max-width: 100%;
+  }
+
+  .data-table-region th {
+    white-space: nowrap;
+  }
+
+  .data-table-region td {
+    max-width: 24rem;
+    overflow-wrap: break-word;
+  }
+
+  /* Preserve natural word breaks for names; keep compact data and actions together. */
+  .data-table-region .table-name {
+    min-width: 16rem;
+    max-width: 24rem;
+  }
+
+  .data-table-region .table-date {
+    min-width: 12rem;
+    white-space: nowrap;
+  }
+
+  .data-table-region .table-status {
+    min-width: 11rem;
+  }
+
+  .data-table-region .table-actions {
+    white-space: nowrap;
+  }
+
+  .data-table-region .table-numeric {
+    min-width: 7rem;
+    white-space: nowrap;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: 799px) {
+    .saved-strategy-row,
+    .metric-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

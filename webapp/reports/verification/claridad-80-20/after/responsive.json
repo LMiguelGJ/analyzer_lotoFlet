@@ -1,0 +1,154 @@
+{
+  "390": {
+    "experiments": {
+      "doc": 390,
+      "view": 390,
+      "overflow": false,
+      "heading": "Experimentos"
+    },
+    "wizard": {
+      "doc": 390,
+      "view": 390,
+      "overflow": false,
+      "heading": "Nuevo experimento"
+    },
+    "detail": {
+      "doc": 390,
+      "view": 390,
+      "overflow": false,
+      "heading": "Experimento"
+    },
+    "comparison": {
+      "doc": 390,
+      "view": 390,
+      "overflow": false,
+      "heading": "Comparación"
+    },
+    "library": {
+      "doc": 390,
+      "view": 390,
+      "overflow": false,
+      "heading": "Estrategias guardadas"
+    },
+    "settings": {
+      "doc": 390,
+      "view": 390,
+      "overflow": false,
+      "heading": "Ajustes"
+    }
+  },
+  "799": {
+    "experiments": {
+      "doc": 799,
+      "view": 799,
+      "overflow": false,
+      "heading": "Experimentos"
+    },
+    "wizard": {
+      "doc": 799,
+      "view": 799,
+      "overflow": false,
+      "heading": "Nuevo experimento"
+    },
+    "detail": {
+      "doc": 799,
+      "view": 799,
+      "overflow": false,
+      "heading": "Experimento"
+    },
+    "comparison": {
+      "doc": 799,
+      "view": 799,
+      "overflow": false,
+      "heading": "Comparación"
+    },
+    "library": {
+      "doc": 799,
+      "view": 799,
+      "overflow": false,
+      "heading": "Estrategias guardadas"
+    },
+    "settings": {
+      "doc": 799,
+      "view": 799,
+      "overflow": false,
+      "heading": "Ajustes"
+    }
+  },
+  "1100": {
+    "experiments": {
+      "doc": 1100,
+      "view": 1100,
+      "overflow": false,
+      "heading": "Experimentos"
+    },
+    "wizard": {
+      "doc": 1100,
+      "view": 1100,
+      "overflow": false,
+      "heading": "Nuevo experimento"
+    },
+    "detail": {
+      "doc": 1100,
+      "view": 1100,
+      "overflow": false,
+      "heading": "Experimento"
+    },
+    "comparison": {
+      "doc": 1100,
+      "view": 1100,
+      "overflow": false,
+      "heading": "Comparación"
+    },
+    "library": {
+      "doc": 1100,
+      "view": 1100,
+      "overflow": false,
+      "heading": "Estrategias guardadas"
+    },
+    "settings": {
+      "doc": 1100,
+      "view": 1100,
+      "overflow": false,
+      "heading": "Ajustes"
+    }
+  },
+  "1280": {
+    "experiments": {
+      "doc": 1280,
+      "view": 1280,
+      "overflow": false,
+      "heading": "Experimentos"
+    },
+    "wizard": {
+      "doc": 1280,
+      "view": 1280,
+      "overflow": false,
+      "heading": "Nuevo experimento"
+    },
+    "detail": {
+      "doc": 1280,
+      "view": 1280,
+      "overflow": false,
+      "heading": "Experimento"
+    },
+    "comparison": {
+      "doc": 1280,
+      "view": 1280,
+      "overflow": false,
+      "heading": "Comparación"
+    },
+    "library": {
+      "doc": 1280,
+      "view": 1280,
+      "overflow": false,
+      "heading": "Estrategias guardadas"
+    },
+    "settings": {
+      "doc": 1280,
+      "view": 1280,
+      "overflow": false,
+      "heading": "Ajustes"
+    }
+  }
+}

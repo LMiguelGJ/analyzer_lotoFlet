@@ -1,0 +1,101 @@
+### Result
+{"origin":"http://127.0.0.1:8791","browser":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36","time":"2026-09-30T21:06:31.344Z","routes":{"experiments":{"390":{"viewport":390,"document":390,"body":390,"contentOverflow":false,"offending":[],"heading":"Experimentos"},"799":{"viewport":799,"document":799,"body":799,"contentOverflow":false,"offending":[],"heading":"Experimentos"},"1100":{"viewport":1100,"document":1100,"body":1100,"contentOverflow":false,"offending":[],"heading":"Experimentos"},"1280":{"viewport":1280,"document":1280,"body":1280,"contentOverflow":false,"offending":[],"heading":"Experimentos"}},"detail":{"390":{"viewport":390,"document":390,"body":390,"contentOverflow":false,"offending":[],"heading":"Experimento"},"799":{"viewport":799,"document":799,"body":799,"contentOverflow":false,"offending":[],"heading":"Experimento"},"1100":{"viewport":1100,"document":1100,"body":1100,"contentOverflow":false,"offending":[],"heading":"Experimento"},"1280":{"viewport":1280,"document":1280,"body":1280,"contentOverflow":false,"offending":[],"heading":"Experimento"}},"comparison":{"390":{"viewport":390,"document":390,"body":390,"contentOverflow":false,"offending":[],"heading":"Comparación"},"799":{"viewport":799,"document":799,"body":799,"contentOverflow":false,"offending":[],"heading":"Comparación"},"1100":{"viewport":1100,"document":1100,"body":1100,"contentOverflow":false,"offending":[],"heading":"Comparación"},"1280":{"viewport":1280,"document":1280,"body":1280,"contentOverflow":false,"offending":[],"heading":"Comparación"}},"library":{"390":{"viewport":390,"document":390,"body":390,"contentOverflow":false,"offending":[],"heading":"Estrategias guardadas"},"799":{"viewport":799,"document":799,"body":799,"contentOverflow":false,"offending":[],"heading":"Estrategias guardadas"},"1100":{"viewport":1100,"document":1100,"body":1100,"contentOverflow":false,"offending":[],"heading":"Estrategias guardadas"},"1280":{"viewport":1280,"document":1280,"body":1280,"contentOverflow":false,"offending":[],"heading":"Estrategias guardadas"}},"settings":{"390":{"viewport":390,"document":390,"body":390,"contentOverflow":false,"offending":[],"heading":"Ajustes"},"799":{"viewport":799,"document":799,"body":799,"contentOverflow":false,"offending":[],"heading":"Ajustes"},"1100":{"viewport":1100,"document":1100,"body":1100,"contentOverflow":false,"offending":[],"heading":"Ajustes"},"1280":{"viewport":1280,"document":1280,"body":1280,"contentOverflow":false,"offending":[],"heading":"Ajustes"}},"notfound":{"390":{"viewport":390,"document":390,"body":390,"contentOverflow":false,"offending":[],"heading":null},"799":{"viewport":799,"document":799,"body":799,"contentOverflow":false,"offending":[],"heading":null},"1100":{"viewport":1100,"document":1100,"body":1100,"contentOverflow":false,"offending":[],"heading":null},"1280":{"viewport":1280,"document":1280,"body":1280,"contentOverflow":false,"offending":[],"heading":null}},"wizardConditions":{"390":{"viewport":390,"document":390,"body":390,"contentOverflow":false,"offending":[]},"799":{"viewport":799,"document":799,"body":799,"contentOverflow":false,"offending":[]},"1100":{"viewport":1100,"document":1100,"body":1100,"contentOverflow":false,"offending":[]},"1280":{"viewport":1280,"document":1280,"body":1280,"contentOverflow":false,"offending":[]}},"wizardStrategies":{"390":{"viewport":390,"document":390,"body":390,"contentOverflow":false,"offending":[]},"799":{"viewport":799,"document":799,"body":799,"contentOverflow":false,"offending":[]},"1100":{"viewport":1100,"document":1100,"body":1100,"contentOverflow":false,"offending":[]},"1280":{"viewport":1280,"document":1280,"body":1280,"contentOverflow":false,"offending":[]}}},"states":{"filtered":"Simulaciones históricas sobre datos congelados.\n\nNuevo experimento\nBuscar por nombre\nEstado de ejecución\nTodos\nPendiente\nRetenido\nEn curso\nEjecución completada\nCancelado\nInterrumpido\nError\n\nSin coincidencias para los filtros actuales. Cambiá el nombre o el estado para buscar de nuevo.","emptyInjected":"Simulaciones históricas sobre datos congelados.\n\nNuevo experimento\nBuscar por nombre\nEstado de ejecución\nTodos\nPendiente\nRetenido\nEn curso\nEjecución completada\nCancelado\nInterrumpido\nError\n\nTodavía no hay experimentos. Creá el primero.","errorInjected":"Simulaciones históricas sobre datos congelados.\n\nNuevo experimento\nBuscar por nombre\nEstado de ejecución\nTodos\nPendiente\nRetenido\nEn curso\nEjecución completada\nCancelado\nInterrumpido\nError\n\nNo se pudo cargar el listado de experimentos. Reintentar","loadingInjected":"Simulaciones históricas sobre datos congelados.\n\nNuevo experimento\nBuscar por nombre\nEstado de ejecución\nTodos\nPendiente\nRetenido\nEn curso\nEjecución completada\nCancelado\nInterrumpido\nError\n\nCargando experimentos…","wizardAfterNext":"lector interpretable\nCobertura de la estrategia 1\n1 números\n5 números\n10 números\n20 números\n25 números\n30 números\n40 números\n50 números\n\nCantidad de números seleccionados en cada sorteo con ranking.\n\nForma de ajustar la apuesta\nPlana\nEscalera\nAudaz\n\nImporte base constante por número.\n\nAgregar estrategia\nAgregar desde biblioteca\nNombre para guardar en biblioteca\n\nGuarda solo esta estrategia, no las condiciones comunes ni crea un experimento.\n\nGuardar estrategia en biblioteca\nSalir\nAtrás\nContinuar","review":"Volver a experimentos\n1 Condiciones\n2 Estrategias\n3 Revisar\nResumen\nInicio\n2025-09-02 05:10\nCapital\nRD$ 1,000\nMeta de saldo final\nRD$ 2,000\nLímites\nSin límite\nEstrategias\n1\nEstrategias\nRevisá los errores señalados junto a los campos antes de continuar.\n\nHasta cinco estrategias comparten las condiciones. Cada nombre debe ser único.\n\nEstrategia 1\nNombre de la estrategia 1\n\nIngresá un nombre de 1 a 80 caracteres.\n\nMétodo de la estrategia 1\nUn sistema de selección\nCombinación de sistemas\nSelección al azar reproducible\nSelección por paridad (par/impar)\nSistema de ranking\nElegí un sistema\nFrecuencia histórica\nFrecuencia reciente\nDecaimiento\nFríos\nCuaderno\nMezclas\nTransición\nArrastre\nDobles\nCategoría\nHorario\nEnsemble\nSelector interpretable\n\nElegí un sistema disponible.\n\nCobertura de la estrategia 1\n1 números\n5 números\n10 números\n20 números\n25 números\n30 números\n40 números\n50 números\n\nCantidad de números seleccionados en cada sorteo con ranking.\n\nForma de ajustar la apuesta\nPlana\nEscalera\nAudaz\n\nImporte base constante por número.\n\nAgregar estrategia\nAgregar desde biblioteca\nNombre para guardar en biblioteca\n\nGuarda solo esta estrategia, no las condiciones comunes ni crea un experimento.\n\nG","help":{"input":"capital","describedBy":"capital-help","help":[{"id":"capital-help","exists":true,"text":"Pesos enteros; mínimo RD$1."}]}},"keyboard":{"queueOpen":{"focus":"<div role=\"dialog\" aria-modal=\"true\" aria-labelledby=\":r2:\" tabindex=\"-1\" class=\"fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-bo","dialogs":[null]},"queueAfterEscape":{"focus":"Cola","dialogs":0},"actions":"nte\nRetenido\nEn curso\nEjecución completada\nCancelado\nInterrumpido\nError\nExperimentos\nNombre\tEstrategias\tCreado\tEstado\tAcciones\nExperimento con nombre deliberadamente muy largo para probar el limite visual d\t1\t30 sept de 2026, 03:43 p. m. GMT-4\t\nEjecución completada\tAcciones\nPrueba base 80-20\t2\t30 sept de 2026, 03:43 p. m. GMT-4\t\nEjecución completada\tAcciones\n\nMostrando 1–2 de 2\n\nAnterior\nSiguiente","tabSequence":[{"tag":"BUTTON","text":"Eliminar","outline":"solid"},{"tag":"A","text":"Usar como base","outline":"solid"}],"actionsAfterEscape":{"focus":"Acciones","dialogCount":0}},"contrast":[{"name":"body","tag":"BODY","color":"rgb(208, 212, 216)","background":"rgb(23, 30, 38)","contrast":11.27,"fontSize":"16px","fontWeight":"400","outlineColor":"rgb(208, 212, 216)","outlineStyle":"none","outlineWidth":"3px","backgroundSource":"BODY"},{"name":"heading","tag":"H1","color":"rgb(208, 212, 216)","background":"rgb(23, 30, 38)","contrast":11.27,"fontSize":"36px","fontWeight":"400","outlineColor":"rgb(208, 212, 216)","outlineStyle":"none","outlineWidth":"3px","backgroundSource":"DIV"},{"name":"primary","tag":"BUTTON","color":"rgb(23, 30, 38)","background":"rgb(126, 179, 218)","contrast":7.48,"fontSize":"14px","fontWeight":"600","outlineColor":"rgb(23, 30, 38)","outlineStyle":"none","outlineWidth":"3px","backgroundSource":"BUTTON"},{"name":"field-help","tag":"P","color":"rgb(173, 181, 191)","background":"rgb(23, 30, 38)","contrast":8.11,"fontSize":"14px","fontWeight":"400","outlineColor":"rgb(173, 181, 191)","outlineStyle":"none","outlineWidth":"3px","backgroundSource":"DIV"},{"name":"field-label","tag":"LABEL","color":"rgb(208, 212, 216)","background":"rgb(23, 30, 38)","contrast":11.27,"fontSize":"14px","fontWeight":"400","outlineColor":"rgb(208, 212, 216)","outlineStyle":"none","outlineWidth":"3px","backgroundSource":"DIV"},{"name":"focus","tag":"INPUT","color":"rgb(208, 212, 216)","background":"rgb(36, 47, 59)","contrast":9.12,"fontSize":"14px","fontWeight":"400","outlineColor":"rgb(126, 179, 218)","outlineStyle":"solid","outlineWidth":"2px","backgroundSource":"INPUT"}],"errors":[]}
+### Ran Playwright code
+```js
+await (async page => {
+  page.on('dialog', dialog => dialog.type() === 'beforeunload' ? dialog.accept() : dialog.dismiss());
+  const root = 'webapp/reports/verification/claridad-80-20/after/';
+  const base = 'http://127.0.0.1:8791';
+  const shortId = '96225a72d61e4b5da1288ecb1eeec451'; // GET /api/v1/experiments, observed at runtime
+  const routes = {experiments:'/experimentos', detail:`/experimentos/${shortId}`, comparison:`/experimentos/${shortId}/comparacion`, library:'/configuraciones', settings:'/ajustes', notfound:'/ruta-que-no-existe'};
+  const result = {origin:base, browser:await page.evaluate(() => navigator.userAgent), time:new Date().toISOString(), routes:{}, states:{}, keyboard:{}, contrast:{}, errors:[]};
+  const visit = async path => { await page.goto(base+path); await page.waitForLoadState('networkidle'); };
+  const bounds = async (target=page) => await target.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const offending = [...document.querySelectorAll('body *')].filter(el => {const r=el.getBoundingClientRect(); const s=getComputedStyle(el); return r.width && r.right > width+2 && s.position !== 'fixed' && !el.closest('table, svg, canvas, [role="table"]'); }).slice(0,8).map(el => ({tag:el.tagName, cls:String(el.className).slice(0,80), right:Math.round(el.getBoundingClientRect().right)}));
+    return {viewport:innerWidth, document:document.documentElement.scrollWidth, body:document.body.scrollWidth, contentOverflow:document.documentElement.scrollWidth > width+2, offending};
+  });
+  for (const width of [390,799,1100,1280]) {
+    await page.setViewportSize({width,height:900});
+    for (const [name,path] of Object.entries(routes)) {
+      await visit(path);
+      const metric = await bounds();
+      const heading = await page.locator('h1').first().textContent().catch(()=>null);
+      result.routes[name] ||= {};
+      result.routes[name][width] = {...metric, heading};
+      if (width===390 || width===1280) await page.screenshot({path:`${root}${name==='notfound'?'not-found':name}-${width}.png`, fullPage:true});
+    }
+  }
+  await page.setViewportSize({width:1280,height:900}); await visit('/experimentos');
+  // Actual API filtered state; no fixture mutation.
+  await page.getByRole('searchbox',{name:'Buscar por nombre'}).fill('sin-coincidencia-ci04');
+  await page.waitForTimeout(700); result.states.filtered = (await page.locator('main').innerText()).slice(0,500);
+  await page.screenshot({path:`${root}experiments-filtered-1280.png`,fullPage:true});
+  // Isolated GET injection, never presented as genuine empty or incident.
+  for (const width of [390,1280]) {
+    await page.setViewportSize({width,height:900});
+    await page.route('**/api/v1/experiments?*', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({total:0,offset:0,limit:20,items:[]})}));
+    await visit('/experimentos'); result.states.emptyInjected = (await page.locator('main').innerText()).slice(0,500);
+    await page.screenshot({path:`${root}experiments-empty-${width}.png`,fullPage:true}); await page.unroute('**/api/v1/experiments?*');
+  }
+  await page.route('**/api/v1/experiments?*', route => route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Fallo sintético de auditoría'})}));
+  await visit('/experimentos'); result.states.errorInjected=(await page.locator('main').innerText()).slice(0,500); await page.screenshot({path:`${root}experiments-error-injected-1280.png`,fullPage:true}); await page.unroute('**/api/v1/experiments?*');
+  // Delayed GET, screenshot while pending, then release response.
+  let release; const pending = new Promise(resolve => release=resolve);
+  await page.route('**/api/v1/experiments?*', async route => {await pending; await route.continue();});
+  await page.goto(base+'/experimentos',{waitUntil:'domcontentloaded'});
+  result.states.loadingInjected=(await page.locator('main').innerText()).slice(0,500);
+  await page.screenshot({path:`${root}experiments-loading-injected-1280.png`,fullPage:true}); release(); await page.waitForLoadState('networkidle'); await page.unroute('**/api/v1/experiments?*');
+  // Queue opened on actual data; close and check focus.
+  const trigger=page.getByRole('button',{name:'Cola'}); await trigger.focus(); await trigger.click();
+  result.keyboard.queueOpen = await page.evaluate(() => ({focus:document.activeElement?.outerHTML.slice(0,160),dialogs:[...document.querySelectorAll('[role="dialog"]')].map(x=>x.getAttribute('aria-label'))}));
+  for (const width of [390,1280]) {await page.setViewportSize({width,height:900}); await page.screenshot({path:`${root}queue-drawer-${width}.png`,fullPage:true});}
+  await page.keyboard.press('Escape'); result.keyboard.queueAfterEscape=await page.evaluate(()=>({focus:document.activeElement?.textContent?.trim(),dialogs:document.querySelectorAll('[role="dialog"]').length}));
+  await visit('/experimentos'); await page.getByRole('button',{name:/Acciones de Prueba base/}).click();
+  result.keyboard.actions = (await page.locator('main').innerText()).slice(-400);
+  result.keyboard.tabSequence = [];
+  await page.keyboard.press('Tab'); result.keyboard.tabSequence.push(await page.evaluate(()=>({tag:document.activeElement?.tagName,text:document.activeElement?.textContent?.trim().slice(0,70),outline:getComputedStyle(document.activeElement).outlineStyle})));
+  await page.keyboard.press('Shift+Tab'); result.keyboard.tabSequence.push(await page.evaluate(()=>({tag:document.activeElement?.tagName,text:document.activeElement?.textContent?.trim().slice(0,70),outline:getComputedStyle(document.activeElement).outlineStyle})));
+  await page.keyboard.press('Escape');
+  result.keyboard.actionsAfterEscape=await page.evaluate(()=>({focus:document.activeElement?.textContent?.trim().slice(0,80),dialogCount:document.querySelectorAll('[role="dialog"]').length}));
+  // Wizard state uses disposable pages; closing a dirty form bypasses beforeunload, never submits.
+  for (const width of [390,799,1100,1280]) {
+    const form=await page.context().newPage(); await form.setViewportSize({width,height:900});
+    await form.goto(base+'/experimentos/nuevo'); await form.waitForLoadState('networkidle');
+    result.routes.wizardConditions ||= {}; result.routes.wizardConditions[width]=await bounds(form);
+    if ([390,1280].includes(width)) await form.screenshot({path:`${root}wizard-conditions-${width}.png`,fullPage:true});
+    await form.getByRole('textbox',{name:'Nombre del experimento'}).fill('Auditoría sin enviar');
+    await form.getByRole('combobox',{name:'Sorteo inicial'}).selectOption({label:'2025-09-02 05:10'});
+    await form.getByRole('textbox',{name:'Capital inicial (RD$)'}).fill('1000');
+    await form.getByRole('textbox',{name:'Meta de saldo final (RD$)'}).fill('2000');
+    await form.getByRole('textbox',{name:'Código para repetir el azar (semilla)'}).fill('42');
+    await form.getByRole('button',{name:'Continuar'}).click();
+    result.routes.wizardStrategies ||= {}; result.routes.wizardStrategies[width]=await bounds(form);
+    if ([390,1280].includes(width)) await form.screenshot({path:`${root}wizard-strategies-${width}.png`,fullPage:true});
+    if (width===1280) {
+      result.states.wizardAfterNext = (await form.locator('main').innerText()).slice(-500);
+      const next=form.getByRole('button',{name:'Continuar'});
+      if (await next.isEnabled()) {await next.click(); result.states.review = (await form.locator('main').innerText()).slice(0,1200); await form.screenshot({path:`${root}wizard-review-1280.png`,fullPage:true});}
+    }
+    await form.close({runBeforeUnload:false});
+  }
+  // Measure computed color against solid backgrounds; alpha compositing captured separately as a limitation.
+  await visit('/experimentos/nuevo');
+  result.contrast = await page.evaluate(() => {
+    const samples=[['body','body'],['heading','h1'],['primary','.btn-primary'],['field-help','.field-help'],['field-label','.field-label'],['focus','input:focus-visible']];
+    const input=document.querySelector('input'); input?.focus();
+    const parse=s=>{const m=s.match(/[\d.]+/g); return m?m.slice(0,4).map(Number):[]};
+    const luminance=c=>{const v=c.slice(0,3).map(x=>x/255).map(x=>x<=0.04045?x/12.92:Math.pow((x+0.055)/1.055,2.4));return 0.2126*v[0]+0.7152*v[1]+0.0722*v[2]};
+    const ratio=(a,b)=>{let x=luminance(parse(a)),y=luminance(parse(b));return +((Math.max(x,y)+.05)/(Math.min(x,y)+.05)).toFixed(2)};
+    return samples.map(([name,selector])=>{const el=document.querySelector(selector); if(!el)return {name,missing:true}; const s=getComputedStyle(el); let bg=el, background='rgba(0, 0, 0, 0)'; while(bg){const b=getComputedStyle(bg).backgroundColor;if(parse(b)[3]===undefined || parse(b)[3]>0){background=b;break}bg=bg.parentElement} return {name,tag:el.tagName,color:s.color,background,contrast:ratio(s.color,background),fontSize:s.fontSize,fontWeight:s.fontWeight,outlineColor:s.outlineColor,outlineStyle:s.outlineStyle,outlineWidth:s.outlineWidth,backgroundSource:bg?.tagName};});
+  });
+  result.states.help=await page.evaluate(()=>{const el=document.querySelector('input[aria-describedby]');return el?{input:el.getAttribute('aria-label')||el.id, describedBy:el.getAttribute('aria-describedby'), help:el.getAttribute('aria-describedby')?.split(' ').map(id=>({id,exists:!!document.getElementById(id),text:document.getElementById(id)?.textContent?.slice(0,180)}))}:null});
+  return result;
+})(page);
+```
+### Page
+- Page URL: http://127.0.0.1:8791/experimentos/nuevo
+- Page Title: Laboratorio Quiniela 80
+- Console: 6 errors, 0 warnings
+### Events
+- New console entries: .playwright-cli\console-2026-09-30T21-05-58-970Z.log#L1-L6

@@ -49,8 +49,8 @@ describe("LW11 detail", () => {
     });
     setup();
     await screen.findByText("Prueba");
-    expect(screen.getByText("Delta").parentElement).toHaveTextContent(displayed);
-    expect(screen.getByText("Delta").parentElement).not.toHaveTextContent("No disponible");
+    expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).toHaveTextContent(displayed);
+    expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).not.toHaveTextContent("No disponible");
   });
 
   it("does not invent a delta for an incomplete run in a partially completed experiment", async () => {
@@ -59,7 +59,27 @@ describe("LW11 detail", () => {
     await user.click(screen.getByRole("button", { name: /Segunda/ }));
     const run = screen.getByRole("region", { name: "Ejecución 2" });
     expect(within(run).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
-    expect(within(run).queryByText("Delta")).not.toBeInTheDocument();
+    expect(within(run).queryByText("Cambio respecto del inicio")).not.toBeInTheDocument();
+  });
+
+  it("shows the delta help text and the historical-simulation caveat next to the result summary", async () => {
+    setup();
+    await screen.findByText("Prueba");
+    expect(screen.getByText("Diferencia entre el saldo final y el capital inicial")).toBeInTheDocument();
+    expect(screen.getByText(/Simulación con datos históricos: no predice resultados futuros/)).toBeInTheDocument();
+  });
+
+  it("maps saved selector and staking to plain labels in Parámetros, never the raw enum keys", async () => {
+    const { user } = setup();
+    await screen.findByText("Prueba");
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    expect(screen.getByText("Un sistema de selección")).toBeInTheDocument();
+    expect(screen.getByText("Plana")).toBeInTheDocument();
+    expect(screen.getByText("Sumar los premios")).toBeInTheDocument();
+    expect(screen.queryByText("Todas las posiciones")).not.toBeInTheDocument();
+    expect(screen.queryByText("system")).not.toBeInTheDocument();
+    expect(screen.queryByText("flat")).not.toBeInTheDocument();
+    expect(screen.queryByText("all")).not.toBeInTheDocument();
   });
   it("keeps the stable URL, separates execution from outcome, and never assigns an outcome to a null run", async () => {
     const { router, user } = setup();

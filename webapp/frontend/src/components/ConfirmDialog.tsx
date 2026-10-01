@@ -108,24 +108,24 @@ export function ConfirmDialog({
         aria-describedby={descriptionId}
         className="w-full max-w-md rounded-control border border-border-control bg-surface p-6 text-text"
       >
-        <h2 id={titleId} className="mb-2 text-xl">
+        <h2 id={titleId} className="section-header break-words">
           {title}
         </h2>
-        <p id={descriptionId} className="mb-6 text-sm text-text-secondary">
+        <p id={descriptionId} className="mb-6 break-words text-sm leading-relaxed text-text-secondary">
           {description}
         </p>
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="h-control rounded-control border border-border-control px-4 font-mono text-sm"
+            className="btn btn-secondary"
           >
             {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="h-control rounded-control border border-border-control bg-field px-4 font-mono text-sm text-text"
+            className="btn btn-destructive"
           >
             {confirmLabel}
           </button>

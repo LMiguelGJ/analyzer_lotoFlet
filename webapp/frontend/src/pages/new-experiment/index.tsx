@@ -7,10 +7,11 @@ import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { StrategyEditor } from "../../components/StrategyEditor";
 import { buildRequest, buildStrategy, diffStrategyKey, draftFromRequest, draftFromStrategy, errorDetail, errorMessage, initialConditions, newStrategy, trimName, validateConditions, validateStrategies } from "./model";
 import type { ConditionsDraft, Errors, StrategyDraft } from "./model";
+import { FIELD_HELP_SEED, FIELD_LABEL_SEED, FIELD_LABEL_SETTLEMENT, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 
-const control = "h-control w-full rounded-control border border-border-control bg-field px-3 font-mono text-sm text-text";
-const secondary = "h-control rounded-control border border-border-control px-4 font-mono text-sm hover:bg-field disabled:opacity-50";
-const primary = "h-control rounded-control border border-border-control bg-field px-5 font-mono text-sm text-text hover:border-accent disabled:opacity-50";
+const control = "control";
+const secondary = "btn btn-secondary hover:bg-field disabled:opacity-50";
+const primary = "btn btn-primary disabled:opacity-50";
 const labels = ["Condiciones", "Estrategias", "Revisar"];
 const money = (value: string) => {
   if (!value) return "—";
@@ -40,7 +41,7 @@ function serverErrors(entries: ApiFieldError[]): Errors {
     } else if (path[0] === "strategies" && /^\d+$/.test(path[1] ?? "")) {
       const index = path[1];
       if (path.length === 2) {
-        errors[`strategies.${index}`] = { message: "El servidor rechazó esta configuración; revisá sus valores.", detail: entry.msg };
+        errors[`strategies.${index}`] = { message: "El servidor rechazó esta estrategia; revisá sus valores.", detail: entry.msg };
       } else {
         const field = path.slice(2).join(".");
         errors[`strategies.${index}.${field}`] = { message: "El servidor rechazó este campo; revisá el valor.", detail: entry.msg };
@@ -227,7 +228,7 @@ export function NewExperimentPage() {
 
   async function appendConfiguration(id: string) {
     if (libraryRef.current || !catalog) return;
-    if (strategies.length >= 5) { setLibraryError("Se permiten hasta cinco configuraciones."); return; }
+    if (strategies.length >= 5) { setLibraryError("Se permiten hasta cinco estrategias."); return; }
     libraryRef.current = true; setLibraryBusy(true); setLibraryError("");
     try {
       const saved = await apiClient.getConfiguration(id);
@@ -235,7 +236,7 @@ export function NewExperimentPage() {
       const validation = validateStrategies([...strategies, draft], catalog);
       // Do not append invalid or duplicate catalog data, nor discard the current draft.
       if (Object.keys(validation).length && (validation[`strategies.${strategies.length}.name`] || Object.keys(validateStrategies([draft], catalog)).length)) {
-        setLibraryError(validation[`strategies.${strategies.length}.name`] ? "El nombre debe ser único entre las configuraciones." : "La configuración guardada ya no coincide con el catálogo o contiene parámetros inválidos."); return;
+        setLibraryError(validation[`strategies.${strategies.length}.name`] ? "El nombre debe ser único entre las estrategias." : "La configuración guardada ya no coincide con el catálogo o contiene parámetros inválidos."); return;
       }
       nextId.current += 1; setStrategies((previous) => [...previous, draft]); setActive(strategies.length); setDirty(true); setLibraryOpen(false); setErrors({}); setNotice("");
     } catch (error) {
@@ -317,19 +318,20 @@ export function NewExperimentPage() {
   function next() { if (check(step)) setStep(step + 1); }
   function field(key: keyof ConditionsDraft, label: string, element: React.ReactNode, help?: string) {
     const entry = errors[key];
-    return <div className="mb-5" key={key}>
-      <label htmlFor={key} className="mb-1 block font-mono text-sm">{label}</label>
+    return <div className="field" key={key}>
+      <label htmlFor={key} className="field-label">{label}</label>
       {element}
-      {help && <p className="mt-1 text-sm text-text-secondary">{help}</p>}
+      {help && <p id={`${key}-help`} className="field-help">{help}</p>}
       {entry && <p id={`${key}-error`} className="mt-1 text-sm text-red-300">{errorMessage(entry)}</p>}
       {errorDetail(entry) && <p className="mt-1 text-xs text-text-secondary">{errorDetail(entry)}</p>}
     </div>;
   }
-  function attrs(key: keyof ConditionsDraft) {
-    return { id: key, "aria-invalid": !!errors[key], "aria-describedby": errors[key] ? `${key}-error` : undefined } as const;
+  function attrs(key: keyof ConditionsDraft, hasHelp = false) {
+    const description = [hasHelp && `${key}-help`, errors[key] && `${key}-error`].filter(Boolean).join(" ");
+    return { id: key, "aria-invalid": !!errors[key], "aria-describedby": description || undefined } as const;
   }
   function input(key: keyof ConditionsDraft, label: string, help?: string) {
-    return field(key, label, <input {...attrs(key)} className={control} value={conditions[key]} inputMode={key === "name" ? "text" : "numeric"} onChange={(event) => editCondition(key, event.target.value)} />, help);
+    return field(key, label, <input {...attrs(key, !!help)} className={control} value={conditions[key]} inputMode={key === "name" ? "text" : "numeric"} onChange={(event) => editCondition(key, event.target.value)} />, help);
   }
   async function submit() {
     if (postingRef.current || !catalog || baseId && configurationId || baseId && baseState !== "ready" || configurationId && configurationState !== "ready" || catalogError) return;
@@ -368,15 +370,15 @@ export function NewExperimentPage() {
 
   return <>
     <Link to="/experimentos" className="mb-4 inline-block text-accent underline">Volver a experimentos</Link>
-    <nav aria-label="Pasos del asistente" className="mb-6 flex flex-wrap gap-3 border-b border-border pb-4 font-mono text-sm">
-      {labels.map((label, i) => <span key={label} aria-current={step === i ? "step" : undefined} className={step === i ? "text-accent" : "text-text-secondary"}>{i + 1} {label}</span>)}
+    <nav aria-label="Pasos del asistente" className="mb-6 flex flex-wrap gap-3 border-b border-border pb-4 text-sm">
+      {labels.map((label, i) => <span key={label} aria-current={step === i ? "step" : undefined} className={step === i ? "font-semibold text-accent" : "text-text-secondary"}>{i + 1} {label}</span>)}
     </nav>
     <div className="wide:grid wide:grid-cols-[minmax(0,1fr)_300px] wide:gap-8">
       <aside aria-label="Resumen del experimento" className="mb-6 min-w-0 wide:order-2 wide:mb-0">
         <div className="hidden border-t border-border pt-3 wide:block wide:sticky wide:top-6">
-          <h2 className="mb-3 text-xl">Resumen</h2><Summary conditions={conditions} count={strategies.length} />
+          <h2 className="section-header">Resumen</h2><Summary conditions={conditions} count={strategies.length} />
         </div>
-        <details className="border-y border-border py-3 wide:hidden"><summary className="cursor-pointer font-mono text-sm">Resumen · {strategies.length} configuraciones</summary><div className="pt-3"><Summary conditions={conditions} count={strategies.length} /></div></details>
+        <details className="border-y border-border py-3 wide:hidden"><summary className="cursor-pointer text-sm">Resumen · {strategies.length} estrategias</summary><div className="pt-3"><Summary conditions={conditions} count={strategies.length} /></div></details>
       </aside>
       <div className="min-w-0 wide:order-1">
         <h2 ref={headingRef} tabIndex={-1} className="mb-5 text-2xl focus:outline-none">{labels[step]}</h2>
@@ -390,45 +392,51 @@ export function NewExperimentPage() {
           {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="text-accent underline" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
           {catalog && !loading && draws.length === 0 && <p role="status" className="mb-4">No hay sorteos iniciales con ranking disponible.</p>}
           {input("name", "Nombre del experimento")}
-          {field("start_draw", "Sorteo inicial", <select {...attrs("start_draw")} className={control} value={conditions.start_draw} disabled={!catalog || !draws.length} onChange={(event) => editCondition("start_draw", event.target.value)}>
+          {field("start_draw", "Sorteo inicial", <select {...attrs("start_draw", true)} className={control} value={conditions.start_draw} disabled={!catalog || !draws.length} onChange={(event) => editCondition("start_draw", event.target.value)}>
             <option value="">Elegí un sorteo disponible</option>{draws.map((draw) => <option key={draw} value={draw}>{draw}</option>)}
           </select>, "Solo se ofrecen sorteos históricos con ranking disponible.")}
           {draws.length < total && <button type="button" className={`${secondary} mb-5`} disabled={drawLoading} onClick={loadDraws}>{drawLoading ? "Cargando sorteos…" : "Cargar más sorteos"}</button>}
-          {input("capital", "Capital inicial (RD$)", "Pesos enteros; mínimo RD$1.")}
-          {input("goal", "Meta de saldo final (RD$)", "La meta es el saldo final, no ganancia adicional: capital RD$2.000 y meta RD$2.800 buscan +RD$800.")}
-          {field("settlement", "Liquidación de premios", <select {...attrs("settlement")} className={control} value={conditions.settlement} onChange={(event) => editCondition("settlement", event.target.value)}><option value="all">Pagos acumulados</option><option value="best">Solo mejor premio por número</option></select>)}
-          {input("max_bets", "Máximo de apuestas", "Opcional: de 1 a 10.000.000; con otro límite se detiene al alcanzar el primero.")}
-          {input("max_minutes", "Máximo de minutos históricos", "Opcional: de 1 a 100.000.000; se excluye el sorteo en la hora límite.")}
-          {input("seed", "Semilla compartida", "Entero de 0 a 9.007.199.254.740.991; azar usa la misma semilla por sorteo en todas las configuraciones.")}
+          {/* Capital and goal are the two amounts that define success; grouped together at sm+. */}
+          <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
+            {input("capital", "Capital inicial (RD$)", "Pesos enteros; mínimo RD$1.")}
+            {input("goal", "Meta de saldo final (RD$)", "La meta es el saldo final, no ganancia adicional: capital RD$2.000 y meta RD$2.800 buscan +RD$800.")}
+          </div>
+          {field("settlement", FIELD_LABEL_SETTLEMENT, <select {...attrs("settlement")} className={control} value={conditions.settlement} onChange={(event) => editCondition("settlement", event.target.value)}>{(Object.keys(SETTLEMENT_LABELS) as (keyof typeof SETTLEMENT_LABELS)[]).map((key) => <option value={key} key={key}>{SETTLEMENT_LABELS[key]}</option>)}</select>)}
+          {/* Stop limits retain their original keyboard order before the seed. */}
+          <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
+            {input("max_bets", "Máximo de apuestas", "Opcional: de 1 a 10.000.000; con otro límite se detiene al alcanzar el primero.")}
+            {input("max_minutes", "Máximo de minutos históricos", "Opcional: de 1 a 100.000.000; se excluye el sorteo en la hora límite.")}
+          </div>
+          {input("seed", FIELD_LABEL_SEED, FIELD_HELP_SEED)}
           {catalog && <p className="border-t border-border pt-4 text-sm text-text-secondary">Juego fijo: {catalog.game.name}, números 00–99, cinco posiciones con repetición; premios {catalog.game.prizes.join("/")}. No se editan en este MVP.</p>}
         </section>}
-        {step === 1 && catalog && <section aria-label="Configuraciones">
-          <p className="mb-5 text-text-secondary">Hasta cinco configuraciones comparten las condiciones. Cada nombre debe ser único.</p>
+        {step === 1 && catalog && <section aria-label="Estrategias">
+          <p className="mb-5 text-text-secondary">Hasta cinco estrategias comparten las condiciones. Cada nombre debe ser único.</p>
           {strategies.map((strategy, i) => <section key={strategy.id} className="mb-4 border-b border-border pb-4">
-            <div className="flex items-center gap-3"><button type="button" aria-expanded={active === i} className="min-h-control flex-1 text-left font-mono text-sm text-accent" onClick={() => setActive(i)}>Configuración {i + 1}{strategy.name ? ` · ${trimName(strategy.name)}` : ""}</button>
-              {strategies.length > 1 && <button type="button" className="font-mono text-sm text-accent" onClick={() => { setStrategies((previous) => previous.filter((item) => item.id !== strategy.id)); setActive(0); setDirty(true); }}>Quitar {i + 1}</button>}</div>
+            <div className="flex items-center gap-3"><button type="button" aria-expanded={active === i} className="min-h-control flex-1 text-left text-sm text-accent" onClick={() => setActive(i)}>Estrategia {i + 1}{strategy.name ? ` · ${trimName(strategy.name)}` : ""}</button>
+              {strategies.length > 1 && <button type="button" className="text-sm text-accent" onClick={() => { setStrategies((previous) => previous.filter((item) => item.id !== strategy.id)); setActive(0); setDirty(true); }}>Quitar {i + 1}</button>}</div>
             {active === i && <div className="pt-4">
               {errors[`strategies.${i}`] && <p className="mb-4 text-sm text-red-300">{errorMessage(errors[`strategies.${i}`])}{errorDetail(errors[`strategies.${i}`]) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors[`strategies.${i}`])}</span>}</p>}
               <StrategyEditor value={strategy} index={i} catalog={catalog} errors={errors} onChange={(value) => editStrategy(i, value)} />
             </div>}
           </section>)}
-          <div className="flex flex-wrap gap-3"><button type="button" disabled={strategies.length >= 5} className={secondary} onClick={() => { setStrategies((previous) => [...previous, newStrategy(nextId.current++)]); setActive(strategies.length); setDirty(true); }}>Agregar configuración</button>
+          <div className="flex flex-wrap gap-3"><button type="button" disabled={strategies.length >= 5} className={secondary} onClick={() => { setStrategies((previous) => [...previous, newStrategy(nextId.current++)]); setActive(strategies.length); setDirty(true); }}>Agregar estrategia</button>
           <button type="button" disabled={strategies.length >= 5} className={secondary} onClick={() => setLibraryOpen((value) => !value)}>Agregar desde biblioteca</button></div>
           {libraryOpen && <section aria-label="Seleccionar de biblioteca" className="mt-5 border-t border-border pt-4">
-            <h3 className="mb-3 text-xl">Biblioteca de estrategias</h3>
+            <h3 className="section-header">Biblioteca de estrategias</h3>
             {libraryError && <p role="alert" className="mb-3 text-sm text-red-300">{libraryError} <button type="button" className="text-accent underline" onClick={() => setLibraryRetry((value) => value + 1)}>Reintentar</button></p>}
             {!libraryPage && !libraryError && <p role="status">Cargando biblioteca…</p>}
             {libraryPage && <>{libraryPage.total === 0 ? <p>No hay estrategias guardadas todavía.</p> : <ul className="divide-y divide-border">{libraryPage.items.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-2"><span>{item.name} · {item.strategy.name}</span><button type="button" className={secondary} disabled={libraryBusy || strategies.length >= 5} onClick={() => { void appendConfiguration(item.id); }}>Añadir {item.name}</button></li>)}</ul>}
               <nav aria-label="Páginas de biblioteca" className="mt-3 flex items-center gap-3"><button type="button" className={secondary} disabled={libraryOffset === 0} onClick={() => setLibraryOffset(Math.max(0, libraryOffset - 20))}>Anterior</button><span>{Math.floor(libraryOffset / 20) + 1} · {libraryPage.total}</span><button type="button" className={secondary} disabled={libraryOffset + 20 >= libraryPage.total} onClick={() => setLibraryOffset(libraryOffset + 20)}>Siguiente</button></nav></>}
           </section>}
-          <div className="mt-6 border-t border-border pt-4"><label htmlFor="libraryName" className="mb-1 block font-mono text-sm">Nombre para guardar en biblioteca</label><input id="libraryName" className={`${control} max-w-md`} value={libraryName} aria-invalid={!!libraryNameError} aria-describedby={libraryNameError ? "libraryName-error" : undefined} onChange={(event) => { setLibraryName(event.target.value); setLibraryNameError(undefined); setDirty(true); }} />{libraryNameError && <p id="libraryName-error" className="mt-1 text-sm text-red-300">{errorMessage(libraryNameError)} <span className="text-xs text-text-secondary">{errorDetail(libraryNameError)}</span></p>}<p className="my-2 text-sm text-text-secondary">Guarda solo esta estrategia, no las condiciones comunes ni crea un experimento.</p><button type="button" className={secondary} disabled={savingStrategy} onClick={() => { void saveToLibrary(); }}>{savingStrategy ? "Guardando…" : "Guardar estrategia en biblioteca"}</button></div>
+          <div className="mt-6 border-t border-border pt-4"><label htmlFor="libraryName" className="field-label">Nombre para guardar en biblioteca</label><input id="libraryName" className={`${control} max-w-md`} value={libraryName} aria-invalid={!!libraryNameError} aria-describedby={libraryNameError ? "libraryName-error" : undefined} onChange={(event) => { setLibraryName(event.target.value); setLibraryNameError(undefined); setDirty(true); }} />{libraryNameError && <p id="libraryName-error" className="mt-1 text-sm text-red-300">{errorMessage(libraryNameError)} <span className="text-xs text-text-secondary">{errorDetail(libraryNameError)}</span></p>}<p className="field-help my-2">Guarda solo esta estrategia, no las condiciones comunes ni crea un experimento.</p><button type="button" className={secondary} disabled={savingStrategy} onClick={() => { void saveToLibrary(); }}>{savingStrategy ? "Guardando…" : "Guardar estrategia en biblioteca"}</button></div>
         </section>}
         {step === 2 && <section aria-label="Revisión">
           <p className="mb-5 text-text-secondary">Revisá los parámetros antes de agregar el experimento a la cola. Los importes y resultados se calculan solo en el servidor.</p>
-          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="text-xl">Condiciones comunes</h3><button type="button" className="text-accent underline" onClick={() => setStep(0)}>Editar condiciones</button></div>
-          <dl className="grid grid-cols-2 gap-2 py-4 text-sm"><dt>Nombre</dt><dd>{trimName(conditions.name)}</dd><dt>Sorteo inicial</dt><dd>{conditions.start_draw}</dd><dt>Capital</dt><dd>{money(conditions.capital)}</dd><dt>Meta de saldo final</dt><dd>{money(conditions.goal)}</dd><dt>Liquidación</dt><dd>{conditions.settlement === "all" ? "Pagos acumulados" : "Mejor premio"}</dd><dt>Límite de apuestas</dt><dd>{conditions.max_bets || "Sin límite"}</dd><dt>Minutos históricos</dt><dd>{conditions.max_minutes || "Sin límite"}</dd><dt>Semilla compartida</dt><dd>{conditions.seed}</dd></dl>
-          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="text-xl">Configuraciones</h3><button type="button" className="text-accent underline" onClick={() => setStep(1)}>Editar estrategias</button></div>
-          <ul className="divide-y divide-border">{strategies.map((strategy) => <li key={strategy.id} className="py-3"><strong>{trimName(strategy.name)}</strong> · {strategy.selector === "parity" ? "Par/impar" : strategy.selector === "blend" ? `Mezcla: ${strategy.components.map((c) => `${catalog?.systems[c.system] ?? c.system} ${c.weight}%`).join(" + ")}` : strategy.selector === "random" ? "Azar" : catalog?.systems[strategy.system]} · cobertura {strategy.selector === "parity" ? 50 : strategy.coverage} · {({ flat: "Plana", ladder: "Escalera", bold: "Audaz" })[strategy.staking]}</li>)}</ul>
+          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Condiciones comunes</h3><button type="button" className="text-accent underline" onClick={() => setStep(0)}>Editar condiciones</button></div>
+          <dl className="data-list py-4"><dt>Nombre</dt><dd>{trimName(conditions.name)}</dd><dt>Sorteo inicial</dt><dd>{conditions.start_draw}</dd><dt>Capital</dt><dd className="data-list-numeric">{money(conditions.capital)}</dd><dt>Meta de saldo final</dt><dd className="data-list-numeric">{money(conditions.goal)}</dd><dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd><dt>Límite de apuestas</dt><dd>{conditions.max_bets || "Sin límite"}</dd><dt>Minutos históricos</dt><dd>{conditions.max_minutes || "Sin límite"}</dd><dt>Semilla</dt><dd>{conditions.seed}</dd></dl>
+          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Estrategias</h3><button type="button" className="text-accent underline" onClick={() => setStep(1)}>Editar estrategias</button></div>
+          <ul className="divide-y divide-border">{strategies.map((strategy) => <li key={strategy.id} className="py-3"><strong>{trimName(strategy.name)}</strong> · {SELECTOR_LABELS[strategy.selector]}{strategy.selector === "system" ? `: ${catalog?.systems[strategy.system] ?? strategy.system}` : strategy.selector === "blend" ? `: ${strategy.components.map((c) => `${catalog?.systems[c.system] ?? c.system} ${c.weight}%`).join(" + ")}` : ""} · cobertura {strategy.selector === "parity" ? 50 : strategy.coverage} · {STAKING_LABELS[strategy.staking]}</li>)}</ul>
         </section>}
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
           <button type="button" className={secondary} onClick={() => navigate("/experimentos")}>Salir</button>
@@ -443,5 +451,11 @@ export function NewExperimentPage() {
 }
 
 function Summary({ conditions, count }: { conditions: ConditionsDraft; count: number }) {
-  return <dl className="grid grid-cols-2 gap-x-2 gap-y-3 text-sm wide:grid-cols-1"><dt className="text-text-secondary">Inicio</dt><dd className="break-words font-mono">{conditions.start_draw || "Sin elegir"}</dd><dt className="text-text-secondary">Capital</dt><dd className="break-words font-mono">{money(conditions.capital)}</dd><dt className="text-text-secondary">Meta de saldo final</dt><dd className="break-words font-mono">{money(conditions.goal)}</dd><dt className="text-text-secondary">Límites</dt><dd className="break-words font-mono">{[conditions.max_bets && `${conditions.max_bets} apuestas`, conditions.max_minutes && `${conditions.max_minutes} min`].filter(Boolean).join(" · ") || "Sin límite"}</dd><dt className="text-text-secondary">Configuraciones</dt><dd className="font-mono">{count}</dd></dl>;
+  return <dl className="data-list">
+    <dt>Inicio</dt><dd className="break-words">{conditions.start_draw || "Sin elegir"}</dd>
+    <dt>Capital</dt><dd className="data-list-numeric break-words">{money(conditions.capital)}</dd>
+    <dt>Meta de saldo final</dt><dd className="data-list-numeric break-words">{money(conditions.goal)}</dd>
+    <dt>Límites</dt><dd className="break-words">{[conditions.max_bets && `${conditions.max_bets} apuestas`, conditions.max_minutes && `${conditions.max_minutes} min`].filter(Boolean).join(" · ") || "Sin límite"}</dd>
+    <dt>Estrategias</dt><dd className="data-list-numeric">{count}</dd>
+  </dl>;
 }

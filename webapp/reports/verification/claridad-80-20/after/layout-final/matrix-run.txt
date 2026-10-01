@@ -1,0 +1,89 @@
+### Result
+{"390":{"experiments":{"document":{"client":390,"scroll":390},"region":{"client":332,"scroll":921,"scrollLeft":0,"ariaLabel":"Experimentos","tabIndex":0,"rect":{"left":28,"right":362,"width":334}},"table":{"width":921},"headers":[{"text":"Nombre","lines":1,"width":256,"whiteSpace":"nowrap"},{"text":"Estrategias","lines":1,"width":117,"whiteSpace":"nowrap"},{"text":"Creado","lines":1,"width":251,"whiteSpace":"nowrap"},{"text":"Estado","lines":1,"width":176,"whiteSpace":"nowrap"},{"text":"Acciones","lines":1,"width":121,"whiteSpace":"nowrap"}],"date":{"text":"30 sept de 2026, 03:43 p. m. GMT-4","lines":1,"width":251,"whiteSpace":"nowrap"},"longName":{"text":"Experimento con nombre deliberadamente muy largo para probar el limite visual d","lines":3,"width":256,"overflowWrap":"break-word"},"action":{"rect":{"left":845,"right":934,"width":89},"visibleAtZero":false},"library":null,"keyboard":{"arrowScrollLeft":40,"tabsToAction":7,"focused":{"scrollLeft":589,"name":"Acciones de Prueba base 80-20","visible":true},"menuOpen":1,"restored":true}},"comparison":{"document":{"client":390,"scroll":390},"region":{"client":332,"scroll":881,"scrollLeft":0,"ariaLabel":"Comparación de ejecuciones","tabIndex":0,"rect":{"left":28,"right":362,"width":334}},"table":{"width":881},"headers":[{"text":"Estrategia","lines":1,"width":110,"whiteSpace":"nowrap"},{"text":"Estado de ejecución","lines":1,"width":162,"whiteSpace":"nowrap"},{"text":"Saldo final","lines":1,"width":102,"whiteSpace":"nowrap"},{"text":"Cambio respecto del inicio","lines":1,"width":206,"whiteSpace":"nowrap"},{"text":"Apuestas realizadas","lines":1,"width":161,"whiteSpace":"nowrap"},{"text":"Motivo de cierre","lines":1,"width":140,"whiteSpace":"nowrap"}],"date":null,"longName":null,"action":null,"library":null},"library":{"document":{"client":390,"scroll":390},"region":null,"table":null,"headers":[],"date":null,"longName":null,"action":null,"library":{"count":1,"row":{"left":28,"right":362,"width":334},"list":{"left":28,"right":362,"width":334},"values":[{"text":"Fríos plano","width":134,"lines":1},{"text":"Un sistema de selección","width":134,"lines":2},{"text":"Plana","width":134,"lines":1}],"actions":[{"text":"Usar Plantilla frío conservadora","rect":{"left":28,"right":253,"width":225},"visible":true},{"text":"Editar Plantilla frío conservadora","rect":{"left":28,"right":261,"width":233},"visible":true},{"text":"Eliminar Plantilla frío conservadora","rect":{"left":28,"right":283,"width":255},"visible":true}]}}},"799":{"experiments":{"document":{"client":799,"scroll":799},"region":{"client":741,"scroll":921,"scrollLeft":0,"ariaLabel":"Experimentos","tabIndex":0,"rect":{"left":28,"right":771,"width":743}},"table":{"width":921},"headers":[{"text":"Nombre","lines":1,"width":256,"whiteSpace":"nowrap"},{"text":"Estrategias","lines":1,"width":117,"whiteSpace":"nowrap"},{"text":"Creado","lines":1,"width":251,"whiteSpace":"nowrap"},{"text":"Estado","lines":1,"width":176,"whiteSpace":"nowrap"},{"text":"Acciones","lines":1,"width":121,"whiteSpace":"nowrap"}],"date":{"text":"30 sept de 2026, 03:43 p. m. GMT-4","lines":1,"width":251,"whiteSpace":"nowrap"},"longName":{"text":"Experimento con nombre deliberadamente muy largo para probar el limite visual d","lines":3,"width":256,"overflowWrap":"break-word"},"action":{"rect":{"left":845,"right":934,"width":89},"visibleAtZero":false},"library":null},"comparison":{"document":{"client":799,"scroll":799},"region":{"client":741,"scroll":881,"scrollLeft":0,"ariaLabel":"Comparación de ejecuciones","tabIndex":0,"rect":{"left":28,"right":771,"width":743}},"table":{"width":881},"headers":[{"text":"Estrategia","lines":1,"width":110,"whiteSpace":"nowrap"},{"text":"Estado de ejecución","lines":1,"width":162,"whiteSpace":"nowrap"},{"text":"Saldo final","lines":1,"width":102,"whiteSpace":"nowrap"},{"text":"Cambio respecto del inicio","lines":1,"width":206,"whiteSpace":"nowrap"},{"text":"Apuestas realizadas","lines":1,"width":161,"whiteSpace":"nowrap"},{"text":"Motivo de cierre","lines":1,"width":140,"whiteSpace":"nowrap"}],"date":null,"longName":null,"action":null,"library":null},"library":{"document":{"client":799,"scroll":799},"region":null,"table":null,"headers":[],"date":null,"longName":null,"action":null,"library":{"count":1,"row":{"left":28,"right":771,"width":743},"list":{"left":28,"right":771,"width":743},"values":[{"text":"Fríos plano","width":543,"lines":1},{"text":"Un sistema de selección","width":543,"lines":1},{"text":"Plana","width":543,"lines":1}],"actions":[{"text":"Usar Plantilla frío conservadora","rect":{"left":28,"right":253,"width":225},"visible":true},{"text":"Editar Plantilla frío conservadora","rect":{"left":261,"right":494,"width":233},"visible":true},{"text":"Eliminar Plantilla frío conservadora","rect":{"left":502,"right":758,"width":255},"visible":true}]}}},"1100":{"experiments":{"document":{"client":1100,"scroll":1100},"region":{"client":832,"scroll":921,"scrollLeft":0,"ariaLabel":"Experimentos","tabIndex":0,"rect":{"left":238,"right":1072,"width":834}},"table":{"width":921},"headers":[{"text":"Nombre","lines":1,"width":256,"whiteSpace":"nowrap"},{"text":"Estrategias","lines":1,"width":117,"whiteSpace":"nowrap"},{"text":"Creado","lines":1,"width":251,"whiteSpace":"nowrap"},{"text":"Estado","lines":1,"width":176,"whiteSpace":"nowrap"},{"text":"Acciones","lines":1,"width":121,"whiteSpace":"nowrap"}],"date":{"text":"30 sept de 2026, 03:43 p. m. GMT-4","lines":1,"width":251,"whiteSpace":"nowrap"},"longName":{"text":"Experimento con nombre deliberadamente muy largo para probar el limite visual d","lines":3,"width":256,"overflowWrap":"break-word"},"action":{"rect":{"left":1055,"right":1144,"width":89},"visibleAtZero":false},"library":null},"comparison":{"document":{"client":1100,"scroll":1100},"region":{"client":832,"scroll":881,"scrollLeft":0,"ariaLabel":"Comparación de ejecuciones","tabIndex":0,"rect":{"left":238,"right":1072,"width":834}},"table":{"width":881},"headers":[{"text":"Estrategia","lines":1,"width":110,"whiteSpace":"nowrap"},{"text":"Estado de ejecución","lines":1,"width":162,"whiteSpace":"nowrap"},{"text":"Saldo final","lines":1,"width":102,"whiteSpace":"nowrap"},{"text":"Cambio respecto del inicio","lines":1,"width":206,"whiteSpace":"nowrap"},{"text":"Apuestas realizadas","lines":1,"width":161,"whiteSpace":"nowrap"},{"text":"Motivo de cierre","lines":1,"width":140,"whiteSpace":"nowrap"}],"date":null,"longName":null,"action":null,"library":null},"library":{"document":{"client":1100,"scroll":1100},"region":null,"table":null,"headers":[],"date":null,"longName":null,"action":null,"library":{"count":1,"row":{"left":238,"right":1072,"width":834},"list":{"left":238,"right":1072,"width":834},"values":[{"text":"Fríos plano","width":634,"lines":1},{"text":"Un sistema de selección","width":634,"lines":1},{"text":"Plana","width":634,"lines":1}],"actions":[{"text":"Usar Plantilla frío conservadora","rect":{"left":238,"right":463,"width":225},"visible":true},{"text":"Editar Plantilla frío conservadora","rect":{"left":471,"right":704,"width":233},"visible":true},{"text":"Eliminar Plantilla frío conservadora","rect":{"left":712,"right":968,"width":255},"visible":true}]}}},"1280":{"experiments":{"document":{"client":1280,"scroll":1280},"region":{"client":1012,"scroll":1012,"scrollLeft":0,"ariaLabel":"Experimentos","tabIndex":0,"rect":{"left":238,"right":1252,"width":1014}},"table":{"width":1012},"headers":[{"text":"Nombre","lines":1,"width":332,"whiteSpace":"nowrap"},{"text":"Estrategias","lines":1,"width":117,"whiteSpace":"nowrap"},{"text":"Creado","lines":1,"width":251,"whiteSpace":"nowrap"},{"text":"Estado","lines":1,"width":191,"whiteSpace":"nowrap"},{"text":"Acciones","lines":1,"width":121,"whiteSpace":"nowrap"}],"date":{"text":"30 sept de 2026, 03:43 p. m. GMT-4","lines":1,"width":251,"whiteSpace":"nowrap"},"longName":{"text":"Experimento con nombre deliberadamente muy largo para probar el limite visual d","lines":2,"width":332,"overflowWrap":"break-word"},"action":{"rect":{"left":1146,"right":1235,"width":89},"visibleAtZero":true},"library":null,"keyboard":{"arrowScrollLeft":0,"tabsToAction":7,"focused":{"scrollLeft":0,"name":"Acciones de Prueba base 80-20","visible":true},"menuOpen":1,"restored":true}},"comparison":{"document":{"client":1280,"scroll":1280},"region":{"client":1012,"scroll":1012,"scrollLeft":0,"ariaLabel":"Comparación de ejecuciones","tabIndex":0,"rect":{"left":238,"right":1252,"width":1014}},"table":{"width":1012},"headers":[{"text":"Estrategia","lines":1,"width":182,"whiteSpace":"nowrap"},{"text":"Estado de ejecución","lines":1,"width":196,"whiteSpace":"nowrap"},{"text":"Saldo final","lines":1,"width":102,"whiteSpace":"nowrap"},{"text":"Cambio respecto del inicio","lines":1,"width":206,"whiteSpace":"nowrap"},{"text":"Apuestas realizadas","lines":1,"width":161,"whiteSpace":"nowrap"},{"text":"Motivo de cierre","lines":1,"width":166,"whiteSpace":"nowrap"}],"date":null,"longName":null,"action":null,"library":null},"library":{"document":{"client":1280,"scroll":1280},"region":null,"table":null,"headers":[],"date":null,"longName":null,"action":null,"library":{"count":1,"row":{"left":238,"right":1252,"width":1014},"list":{"left":238,"right":1252,"width":1014},"values":[{"text":"Fríos plano","width":814,"lines":1},{"text":"Un sistema de selección","width":814,"lines":1},{"text":"Plana","width":814,"lines":1}],"actions":[{"text":"Usar Plantilla frío conservadora","rect":{"left":238,"right":463,"width":225},"visible":true},{"text":"Editar Plantilla frío conservadora","rect":{"left":471,"right":704,"width":233},"visible":true},{"text":"Eliminar Plantilla frío conservadora","rect":{"left":712,"right":968,"width":255},"visible":true}]}}}}
+### Ran Playwright code
+```js
+await (async page => {
+  const base = 'http://127.0.0.1:8791';
+  const dir = 'webapp/reports/verification/claridad-80-20/after/layout-final/';
+  const paths = {
+    experiments: '/experimentos',
+    comparison: '/experimentos/96225a72d61e4b5da1288ecb1eeec451/comparacion',
+    library: '/configuraciones'
+  };
+  const result = {};
+  for (const width of [390, 799, 1100, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    result[width] = {};
+    for (const [surface, path] of Object.entries(paths)) {
+      await page.goto(base + path);
+      await page.waitForLoadState('networkidle');
+      result[width][surface] = await page.evaluate(() => {
+        const rect = element => { const r = element.getBoundingClientRect(); return { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) }; };
+        const lines = element => {
+          if (!element) return null;
+          const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+          const tops = [];
+          let node;
+          while ((node = walker.nextNode())) {
+            const range = document.createRange(); range.selectNodeContents(node);
+            tops.push(...Array.from(range.getClientRects()).filter(r => r.width > 0).map(r => Math.round(r.top)));
+          }
+          return new Set(tops).size;
+        };
+        const region = document.querySelector('.data-table-region');
+        const table = region?.querySelector('table');
+        const action = region?.querySelector('td.table-actions button');
+        const date = region?.querySelector('td.table-date');
+        const name = region?.querySelector('td.table-name');
+        const saved = document.querySelector('.saved-strategy-row');
+        const list = saved?.querySelector('.data-list');
+        const values = saved ? Array.from(saved.querySelectorAll('dd')) : [];
+        const buttons = saved ? Array.from(saved.querySelectorAll('a.btn, button.btn')) : [];
+        return {
+          document: { client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth },
+          region: region ? { client: region.clientWidth, scroll: region.scrollWidth, scrollLeft: region.scrollLeft, ariaLabel: region.getAttribute('aria-label'), tabIndex: region.tabIndex, rect: rect(region) } : null,
+          table: table ? { width: Math.round(table.getBoundingClientRect().width) } : null,
+          headers: region ? Array.from(region.querySelectorAll('th')).map(h => ({ text: h.textContent.trim(), lines: lines(h), width: rect(h).width, whiteSpace: getComputedStyle(h).whiteSpace })) : [],
+          date: date ? { text: date.textContent.trim(), lines: lines(date), width: rect(date).width, whiteSpace: getComputedStyle(date).whiteSpace } : null,
+          longName: name ? { text: name.textContent.trim(), lines: lines(name), width: rect(name).width, overflowWrap: getComputedStyle(name).overflowWrap } : null,
+          action: action ? { rect: rect(action), visibleAtZero: rect(action).left >= rect(region).left && rect(action).right <= rect(region).right } : null,
+          library: saved ? {
+            count: document.querySelectorAll('.saved-strategy-row').length,
+            row: rect(saved), list: rect(list),
+            values: values.map(v => ({ text: v.textContent.trim(), width: rect(v).width, lines: lines(v) })),
+            actions: buttons.map(b => ({ text: b.textContent.trim(), rect: rect(b), visible: rect(b).left >= 0 && rect(b).right <= document.documentElement.clientWidth }))
+          } : null
+        };
+      });
+      await page.screenshot({ path: `${dir}${surface}-${width}.png`, fullPage: true });
+      if (surface === 'experiments' && (width === 390 || width === 1280)) {
+        const region = page.locator('.data-table-region');
+        await region.focus();
+        await page.keyboard.press('ArrowRight');
+        const arrow = await region.evaluate(el => el.scrollLeft);
+        let tabs = 0;
+        while (tabs < 12) {
+          await page.keyboard.press('Tab'); tabs++;
+          if (await page.getByRole('button', { name: 'Acciones de Prueba base 80-20' }).evaluate(el => el === document.activeElement)) break;
+        }
+        const focused = await page.evaluate(() => {
+          const region = document.querySelector('.data-table-region');
+          const button = document.activeElement;
+          const br = button.getBoundingClientRect(), rr = region.getBoundingClientRect();
+          return { scrollLeft: region.scrollLeft, name: button.getAttribute('aria-label'), visible: br.left >= rr.left && br.right <= rr.right };
+        });
+        await page.keyboard.press('Enter');
+        const menuOpen = await page.getByRole('menu', { name: 'Acciones de Prueba base 80-20' }).count();
+        await page.keyboard.press('Escape');
+        const restored = await page.getByRole('button', { name: 'Acciones de Prueba base 80-20' }).evaluate(el => el === document.activeElement);
+        result[width].experiments.keyboard = { arrowScrollLeft: arrow, tabsToAction: tabs, focused, menuOpen, restored };
+      }
+    }
+  }
+  return result;
+})(page);
+```
+### Page
+- Page URL: http://127.0.0.1:8791/configuraciones
+- Page Title: Laboratorio Quiniela 80
+- Console: 1 errors, 0 warnings

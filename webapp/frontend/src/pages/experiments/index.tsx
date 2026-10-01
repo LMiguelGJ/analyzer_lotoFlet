@@ -11,9 +11,9 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { StatusLabel } from "../../components/StatusLabel";
 
 const PAGE_SIZE = 20;
-const secondary = "h-control rounded-control border border-border-control px-3 font-mono text-sm hover:bg-field disabled:opacity-50";
+const secondary = "btn btn-secondary disabled:opacity-50";
 const statuses: ExperimentStatus[] = ["pending", "held", "running", "completed", "cancelled", "interrupted", "failed"];
-const statusNames: Record<ExperimentStatus, string> = { pending: "Pendiente", held: "Retenido", running: "En curso", completed: "Completado", cancelled: "Cancelado", interrupted: "Interrumpido", failed: "Error" };
+const statusNames: Record<ExperimentStatus, string> = { pending: "Pendiente", held: "Retenido", running: "En curso", completed: "Ejecución completada", cancelled: "Cancelado", interrupted: "Interrumpido", failed: "Error" };
 type Sort = "created_at" | "name" | "status";
 type Order = "asc" | "desc";
 type ListState = "loading" | "network-error" | "server-error" | "ready";
@@ -69,7 +69,7 @@ function RowActions({ row, onDelete }: { row: ExperimentSummary; onDelete: () =>
       if (!open) { const rect = trigger.current!.getBoundingClientRect(); setPosition({ top: Math.min(rect.bottom, window.innerHeight - 100), left: Math.max(0, rect.right - 180) }); }
       setOpen(!open);
     }}>Acciones</button>
-    {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${row.request.name}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 font-mono text-sm">
+    {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${row.request.name}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
       <Link ref={first} role="menuitem" className="block px-3 py-2 text-accent hover:bg-field" to={`/experimentos/nuevo?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>
       <button role="menuitem" type="button" className="block w-full px-3 py-2 text-left hover:bg-field" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
     </div>, document.body)}
@@ -166,42 +166,43 @@ export function ExperimentsPage() {
   }
 
   function sortable(sort: Sort, header: string): DataTableColumn<ExperimentSummary> {
-    return { key: sort, header, sort: query.sort === sort ? query.order === "asc" ? "ascending" : "descending" : "none",
+    return { key: sort, header, headerClassName: `table-${sort === "created_at" ? "date" : sort}`, cellClassName: `table-${sort === "created_at" ? "date" : sort}`,
+      sort: query.sort === sort ? query.order === "asc" ? "ascending" : "descending" : "none",
       onSort: () => update({ sort, order: query.sort === sort && query.order === "asc" ? "desc" : "asc", page: 1 }),
       render: (row) => sort === "name" ? <Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="text-accent underline">{row.request.name}</Link>
         : sort === "status" ? <StatusLabel kind="execution" value={row.status} /> : <span title={row.created_at ?? "Fecha no registrada"}>{createdAt(row.created_at)}</span> };
   }
   const columns: DataTableColumn<ExperimentSummary>[] = [
     sortable("name", "Nombre"),
-    { key: "count", header: "Configuraciones", render: (row) => row.request.strategies.length },
+    { key: "count", header: "Estrategias", headerClassName: "table-numeric", cellClassName: "table-numeric", render: (row) => row.request.strategies.length },
     sortable("created_at", "Creado"),
     sortable("status", "Estado"),
-    { key: "actions", header: "Acciones", render: (row) => <RowActions row={row} onDelete={() => { setRowError(""); setDeleteTarget(row); }} /> },
+    { key: "actions", header: "Acciones", headerClassName: "table-actions", cellClassName: "table-actions", render: (row) => <RowActions row={row} onDelete={() => { setRowError(""); setDeleteTarget(row); }} /> },
   ];
   const hasFilters = !!(query.name || query.status);
   return <div>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <p className="text-text-secondary">Historial de experimentos calculados sobre datos históricos congelados.</p>
-      <Link to="/experimentos/nuevo" className="inline-flex h-control items-center rounded-control border border-border-control bg-field px-5 font-mono text-sm text-text hover:border-accent">Nuevo experimento</Link>
+      <p className="max-w-prose text-text-secondary">Simulaciones históricas sobre datos congelados.</p>
+      <Link to="/experimentos/nuevo" className="btn btn-primary">Nuevo experimento</Link>
     </div>
     {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">Activo en la última consulta{queueError ? " (estado no actualizado; puede haber cambiado)" : ""}: <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id)?.request.name ?? queue.active_id}</Link></p>}
     {notice && <p ref={noticeRef} tabIndex={-1} role="status" className="mb-4 border border-border-control p-3 text-sm text-accent focus:outline-none">{notice}</p>}
     {rowError && <p role="alert" className="mb-4 border border-border-control p-3 text-sm text-text">{rowError}</p>}
-    <div className="mb-4 flex flex-wrap gap-4">
-      <div><label htmlFor="experiment-name" className="mb-1 block font-mono text-sm">Buscar por nombre</label><input id="experiment-name" type="search" maxLength={80} className="h-control w-full rounded-control border border-border-control bg-field px-3 font-mono text-sm text-text" value={text} onChange={(event) => setText(event.target.value)} /></div>
-      <div><label htmlFor="experiment-status" className="mb-1 block font-mono text-sm">Estado</label><select id="experiment-status" className="h-control rounded-control border border-border-control bg-field px-3 font-mono text-sm" value={query.status ?? ""} onChange={(event) => update({ status: statuses.find((value) => value === event.target.value), page: 1 })}><option value="">Todos</option>{statuses.map((status) => <option key={status} value={status}>{statusNames[status]}</option>)}</select></div>
+    <div className="mb-5 flex flex-wrap items-end gap-4" role="group" aria-label="Filtros de experimentos">
+      <div className="min-w-[220px] flex-1 sm:max-w-sm"><label htmlFor="experiment-name" className="field-label">Buscar por nombre</label><input id="experiment-name" type="search" maxLength={80} className="control" value={text} onChange={(event) => setText(event.target.value)} /></div>
+      <div className="min-w-[180px]"><label htmlFor="experiment-status" className="field-label">Estado de ejecución</label><select id="experiment-status" className="control" value={query.status ?? ""} onChange={(event) => update({ status: statuses.find((value) => value === event.target.value), page: 1 })}><option value="">Todos</option>{statuses.map((status) => <option key={status} value={status}>{statusNames[status]}</option>)}</select></div>
     </div>
-    {state === "loading" && <p role="status">Cargando experimentos…</p>}
+    {state === "loading" && <p role="status" className="text-text-secondary">Cargando experimentos…</p>}
     {state === "network-error" && <p role="alert">No se pudo contactar al servidor local. <button type="button" className="text-accent underline" onClick={() => load(query, offset)}>Reintentar</button></p>}
     {state === "server-error" && <p role="alert">No se pudo cargar el listado de experimentos. <button type="button" className="text-accent underline" onClick={() => load(query, offset)}>Reintentar</button></p>}
     {state === "ready" && total === 0 && (hasFilters ? <p role="status">Sin coincidencias para los filtros actuales. Cambiá el nombre o el estado para buscar de nuevo.</p> : <p role="status">Todavía no hay experimentos. <Link to="/experimentos/nuevo" className="text-accent underline">Creá el primero</Link>.</p>)}
     {state === "ready" && total > 0 && <>
       <DataTable caption="Experimentos" columns={columns} rows={items} getRowKey={(row) => row.id} />
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 font-mono text-sm">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
         <p className="text-text-secondary">Mostrando {offset + 1}–{offset + items.length} de {total}</p>
         <div className="flex gap-3"><button type="button" className={secondary} disabled={offset === 0} onClick={() => update({ page: query.page - 1 })}>Anterior</button><button type="button" className={secondary} disabled={offset + PAGE_SIZE >= total} onClick={() => update({ page: query.page + 1 })}>Siguiente</button></div>
       </div>
     </>}
-    <ConfirmDialog open={!!deleteTarget} title="¿Eliminar experimento?" description={deleteTarget ? `Se eliminará "${deleteTarget.request.name}" de forma permanente. Esta acción no se puede deshacer.` : ""} confirmLabel={deleting ? "Eliminando…" : "Eliminar"} onConfirm={confirmDelete} onCancel={() => { setDeleteTarget(null); setRowError(""); }} />
+    <ConfirmDialog open={!!deleteTarget} title={deleteTarget ? `¿Eliminar el experimento «${deleteTarget.request.name}»?` : "¿Eliminar experimento?"} description={deleteTarget ? `Se eliminará «${deleteTarget.request.name}» de forma permanente. Esta acción no se puede deshacer.` : ""} confirmLabel={deleting ? "Eliminando…" : "Eliminar experimento"} onConfirm={confirmDelete} onCancel={() => { setDeleteTarget(null); setRowError(""); }} />
   </div>;
 }

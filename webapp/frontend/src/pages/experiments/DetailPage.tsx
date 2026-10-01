@@ -8,9 +8,10 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StatusLabel } from "../../components/StatusLabel";
 import { formatDOP, formatTwoDigit } from "../../lib/format";
+import { FIELD_HELP_DELTA, FIELD_LABEL_DELTA, HISTORICAL_CAVEAT, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 import { PAGE_SIZE, pageOffset, replayIndex } from "./replay";
 
-const button = "min-h-control rounded-control border border-border-control px-3 font-mono text-sm hover:bg-field focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50";
+const button = "btn btn-secondary hover:bg-field disabled:opacity-50";
 const tabs = ["Resultado", "Apuestas", "Parámetros y datos"] as const;
 type Tab = typeof tabs[number];
 const numberList = (values: number[]) => values.map(formatTwoDigit).join(", ");
@@ -34,13 +35,13 @@ function BetDetails({ bet }: { bet: Bet }) {
   const [open, setOpen] = useState(false);
   return <div>
     <button type="button" className="text-accent underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ocultar detalle" : "Detalle"}</button>
-    {open && <dl className="mt-2 min-w-[220px] space-y-1 text-sm">
-      <div><dt>Fecha y hora</dt><dd>{storedDate(bet.label)}</dd></div>
-      <div><dt>Números elegidos</dt><dd>{numberList(bet.numbers)}</dd></div>
-      <div><dt>Apuesta por número</dt><dd>{formatDOP(bet.per_number)}</dd></div>
-      <div><dt>Resultados (posiciones 1 a 5)</dt><dd>{numberList(bet.results)}</dd></div>
-      <div><dt>Cobro</dt><dd>{formatDOP(bet.paid)}</dd></div>
-      <div><dt>Saldo resultante</dt><dd>{formatDOP(bet.balance)}</dd></div>
+    {open && <dl className="data-list mt-2 min-w-[220px]">
+      <dt>Fecha y hora</dt><dd>{storedDate(bet.label)}</dd>
+      <dt>Números elegidos</dt><dd>{numberList(bet.numbers)}</dd>
+      <dt>Apuesta por número</dt><dd className="data-list-numeric">{formatDOP(bet.per_number)}</dd>
+      <dt>Resultados (posiciones 1 a 5)</dt><dd>{numberList(bet.results)}</dd>
+      <dt>Cobro</dt><dd className="data-list-numeric">{formatDOP(bet.paid)}</dd>
+      <dt>Saldo resultante</dt><dd className="data-list-numeric">{formatDOP(bet.balance)}</dd>
     </dl>}
   </div>;
 }
@@ -59,26 +60,28 @@ const columns: DataTableColumn<Bet>[] = [
 function Parameters({ data, run }: { data: ExperimentSummary; run: RunSummary }) {
   const conditions = data.request.conditions;
   const strategy = data.request.strategies[run.ordinal];
-  return <div className="space-y-5 text-sm">
-    <dl className="grid gap-x-5 gap-y-2 sm:grid-cols-[minmax(180px,max-content)_1fr]">
+  return <div className="space-y-6 text-sm">
+    <dl className="data-list">
       <dt>Sorteo inicial</dt><dd>{storedDate(conditions.start_draw)}</dd>
-      <dt>Capital</dt><dd>{formatDOP(conditions.capital)}</dd>
-      <dt>Meta</dt><dd>{formatDOP(conditions.goal)}</dd>
+      <dt>Capital</dt><dd className="data-list-numeric">{formatDOP(conditions.capital)}</dd>
+      <dt>Meta</dt><dd className="data-list-numeric">{formatDOP(conditions.goal)}</dd>
       <dt>Límite de apuestas</dt><dd>{conditions.max_bets ?? "Sin límite"}</dd>
       <dt>Límite de minutos históricos</dt><dd>{conditions.max_minutes ?? "Sin límite"}</dd>
-      <dt>Liquidación</dt><dd>{conditions.settlement === "all" ? "Todas las posiciones" : "Mejor posición"}</dd>
+      <dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd>
       <dt>Semilla guardada</dt><dd>{conditions.seed}</dd>
-      <dt>Configuración asociada</dt><dd>{run.configuration_id ?? "Sin configuración asociada"}</dd>
+      <dt>Configuración asociada</dt><dd className={run.configuration_id ? "font-mono" : undefined}>{run.configuration_id ?? "Sin configuración asociada"}</dd>
       <dt>Estrategia</dt><dd>{strategy?.name ?? "No registrada"}</dd>
-      {strategy && <><dt>Selector</dt><dd>{strategy.selector}</dd><dt>Sistema</dt><dd>{strategy.system ?? "—"}</dd><dt>Cobertura</dt><dd>{strategy.coverage}</dd><dt>Apuesta</dt><dd>{strategy.staking}</dd>
+      {strategy && <><dt>Selector</dt><dd>{SELECTOR_LABELS[strategy.selector]}</dd><dt>Sistema</dt><dd>{strategy.system ?? "—"}</dd><dt>Cobertura</dt><dd>{strategy.coverage}</dd><dt>Apuesta</dt><dd>{STAKING_LABELS[strategy.staking]}</dd>
         {strategy.components && <><dt>Componentes guardados</dt><dd>{strategy.components.map((component) => `${component.system}: ${component.weight}`).join(", ")}</dd></>}</>}
     </dl>
-    <h3 className="font-heading text-xl">Datos de origen</h3>
-    <dl className="grid gap-x-5 gap-y-2 break-all sm:grid-cols-[minmax(180px,max-content)_1fr]">
-      <dt>Historial</dt><dd>{data.sources.history_id}</dd><dt>SHA-256 historial</dt><dd>{data.sources.history_sha256}</dd>
-      <dt>Rankings</dt><dd>{data.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd>{data.sources.rankings_sha256}</dd>
-      <dt>Versión de código</dt><dd>{data.sources.code_version}</dd>
-    </dl>
+    <div>
+      <h3 className="section-header">Datos de origen</h3>
+      <dl className="data-list break-all">
+        <dt>Historial</dt><dd className="font-mono">{data.sources.history_id}</dd><dt>SHA-256 historial</dt><dd className="font-mono">{data.sources.history_sha256}</dd>
+        <dt>Rankings</dt><dd className="font-mono">{data.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd className="font-mono">{data.sources.rankings_sha256}</dd>
+        <dt>Versión de código</dt><dd className="font-mono">{data.sources.code_version}</dd>
+      </dl>
+    </div>
     <p className="text-text-secondary">Resultados sobre datos históricos ya investigados: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.</p>
   </div>;
 }
@@ -149,17 +152,19 @@ function RunView({ data, run }: { data: ExperimentSummary; run: RunSummary }) {
     <div role="tabpanel" id={`detail-panel-${tabs.indexOf(tab)}`} aria-labelledby={`detail-tab-${tabs.indexOf(tab)}`} tabIndex={0} className="pt-5">
       {tab === "Parámetros y datos" ? <Parameters data={data} run={run} /> : !run.result ? <p role="status">Esta ejecución no tiene un resultado completo guardado. No hay desenlace ni reproducción para mostrar.</p> : <>
         {tab === "Resultado" && <>
-          <dl className="flex flex-wrap gap-x-8 gap-y-3 border-b border-border pb-5 text-sm">
-            <div><dt className="text-text-secondary">Saldo final</dt><dd className="font-mono">{formatDOP(run.result.final_balance)}</dd></div>
-            <div><dt className="text-text-secondary">Delta</dt><dd className="font-mono">{formatDOP(run.result.delta)}</dd></div>
-            <div><dt className="text-text-secondary">Apuestas realizadas</dt><dd>{run.result.bets_count}</dd></div>
-            <div><dt className="text-text-secondary">Motivo de cierre</dt><dd><StatusLabel kind="outcome" value={run.result.outcome} /></dd></div>
+          <dl className="data-list border-b border-border pb-5">
+            <dt>Saldo final</dt><dd className="data-list-numeric">{formatDOP(run.result.final_balance)}</dd>
+            <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help">{formatDOP(run.result.delta)}</dd>
+            <dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd>
+            <dt>Motivo de cierre</dt><dd><StatusLabel kind="outcome" value={run.result.outcome} /></dd>
           </dl>
+          <p id="detail-delta-help" className="field-help mt-2">{FIELD_HELP_DELTA}</p>
+          <p className="mt-3 text-sm text-text-secondary">{HISTORICAL_CAVEAT}</p>
           <BalanceChart points={(visiblePage?.items ?? []).map((bet, index) => ({ ordinal: offset + index + 1, balance: bet.balance }))} goal={data.request.conditions.goal} total={total} />
           <div className="border-t border-border pt-5" aria-label="Reproducción visual">
-            <h3 className="font-heading text-xl">Reproducción visual</h3>
+            <h3 className="section-header">Reproducción visual</h3>
             <p className="mb-3 text-sm text-text-secondary">El sorteo mostrado es una posición de lectura; no cambia el resultado final guardado.</p>
-            <p aria-live="polite" className="mb-3 font-mono text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)} · saldo en ese sorteo ${formatDOP(current.balance)}` : ""}</p>
+            <p aria-live="polite" className="mb-3 text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)} · saldo en ese sorteo ${formatDOP(current.balance)}` : ""}</p>
             <div className="flex flex-wrap items-center gap-2">
               <button className={button} type="button" disabled={!total || cursor === 0} onClick={() => move(-1)}>Sorteo anterior</button>
               <button className={button} type="button" disabled={!total || cursor >= total - 1 || (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)} onClick={() => setPlaying(!playing)}>{playing ? "Pausar" : "Reproducir"}</button>
@@ -227,7 +232,7 @@ export function DetailPage() {
       </nav>
       {requestedRun !== null && !requested && <p role="status" className="mb-4">La ejecución solicitada no existe en este experimento; se muestra la primera disponible.</p>}
       <div className="flex flex-wrap items-center gap-4 border-b border-border pb-5"><h2 className="font-heading text-2xl">{data.request.name}</h2><StatusLabel kind="execution" value={data.status} /></div>
-      <p className="mt-3 text-sm text-text-secondary">ID: {data.id}. {data.status === "running" || data.status === "pending" || data.status === "held" ? "Consultando el progreso guardado; salir de esta página no cancela la ejecución." : "Estado guardado del experimento."}</p>
+      <p className="mt-3 text-sm text-text-secondary">ID: <span className="font-mono">{data.id}</span>. {data.status === "running" || data.status === "pending" || data.status === "held" ? "Consultando el progreso guardado; salir de esta página no cancela la ejecución." : "Estado guardado del experimento."}</p>
       <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
         {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {data.request.strategies[run.ordinal]?.name ?? "Estrategia"} · <StatusLabel kind="execution" value={run.status} /></button>)}
       </div>

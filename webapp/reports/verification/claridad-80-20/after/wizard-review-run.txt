@@ -1,0 +1,6 @@
+### Result
+{"text":"Volver a experimentos\n1 Condiciones\n2 Estrategias\n3 Revisar\nResumen\nInicio\n2025-09-02 05:10\nCapital\nRD$ 1,000\nMeta de saldo final\nRD$ 2,000\nLímites\nSin límite\nEstrategias\n1\nRevisar\n\nRevisá los parámetros antes de agregar el experimento a la cola. Los importes y resultados se calculan solo en el servidor.\n\nCondiciones comunes\nEditar condiciones\nNombre\nAuditoría sin enviar\nSorteo inicial\n2025-09-02 05:10\nCapital\nRD$ 1,000\nMeta de saldo final\nRD$ 2,000\nLiquidación\nSumar los premios\nLímite de apuestas\nSin límite\nMinutos históricos\nSin límite\nSemilla\n42\nEstrategias\nEditar estrategias\nFríos plano · Un sistema de selección: Fríos · cobertura 1 · Plana\nSalir\nAtrás\nAgregar a la cola","review":1}
+### Ran Playwright code
+```js
+await (async page => {await page.getByRole("textbox",{name:"Nombre de la estrategia 1"}).fill("Fríos plano"); await page.getByRole("combobox",{name:"Sistema de ranking"}).selectOption("cold"); await page.getByRole("button",{name:"Continuar"}).click(); const text=(await page.locator("main").innerText()).slice(0,1800); await page.screenshot({path:"webapp/reports/verification/claridad-80-20/after/wizard-review-1280.png",fullPage:true}); return {text,review:await page.getByRole("heading",{name:"Revisar"}).count()}})(page);
+```

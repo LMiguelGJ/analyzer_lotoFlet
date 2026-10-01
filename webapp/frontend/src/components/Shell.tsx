@@ -21,12 +21,12 @@ import { useQueue } from "./QueueProvider";
 
 const NAV_ITEMS = [
   { to: "/experimentos", label: "Experimentos" },
-  { to: "/configuraciones", label: "Configuraciones" },
+  { to: "/configuraciones", label: "Estrategias guardadas" },
   { to: "/ajustes", label: "Ajustes" },
 ] as const;
 
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
-  const base = "block border-l-2 px-4 py-2 font-mono text-sm";
+  const base = "block border-l-2 px-4 py-2 text-sm";
   return isActive
     ? `${base} border-accent text-text`
     : `${base} border-transparent text-text-secondary hover:text-text`;
@@ -77,7 +77,7 @@ export function Shell({ title, children }: ShellProps) {
         <button
           ref={toggleRef}
           type="button"
-          className="h-control rounded-control border border-border-control bg-surface px-3 font-mono text-sm"
+          className="btn btn-secondary"
           aria-expanded={navOpen}
           aria-controls="primary-navigation"
           onClick={() => setNavOpen((value) => !value)}
@@ -108,17 +108,17 @@ export function Shell({ title, children }: ShellProps) {
         </nav>
 
         <div className="min-w-0 flex-1">
-          <header className="flex items-center justify-between gap-3 border-b border-border px-page-margin py-4">
-            <h1 className="font-heading text-4xl italic">{title}</h1>
+          <header className="flex min-w-0 items-center justify-between gap-3 border-b border-border px-page-margin py-4">
+            <h1 className="min-w-0 break-words font-heading text-4xl italic">{title}</h1>
             <button
               ref={queueRef}
               type="button"
               aria-expanded={queueOpen}
               aria-haspopup="dialog"
-              className="h-control shrink-0 rounded-control border border-border-control px-3 font-mono text-sm text-text-secondary hover:bg-field"
+              className="btn btn-secondary shrink-0"
               onClick={() => { setNavOpen(false); setQueueOpen(true); }}
             >
-              Cola{status?.active_id ? " · Activo" : ""}{error ? error === "network" ? " · Sin conexión" : " · Sin datos recientes" : ""}
+              Cola{status?.active_id ? " · En curso" : ""}{error ? error === "network" ? " · Sin conexión" : " · Sin datos recientes" : ""}
             </button>
           </header>
 

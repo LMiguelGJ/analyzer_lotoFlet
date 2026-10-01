@@ -6,7 +6,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { useQueue } from "./QueueProvider";
 import type { QueueAction } from "./QueueProvider";
 
-const control = "h-control rounded-control border border-border-control px-3 font-mono text-sm hover:bg-field disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent";
+const control = "btn btn-secondary disabled:opacity-50";
 const focusable = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 type Confirmation = QueueAction & { repeat?: boolean };
@@ -97,9 +97,9 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
   if (!open) return null;
   const pageReady = status && status.pending.offset === offset && status.held.offset === offset;
   const row = (id: string, kind: "active" | "pending" | "held") => (
-    <li key={`${kind}-${id}`} className="border-t border-border py-3">
+    <li key={`${kind}-${id}`} className="queue-row py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link to={`/experimentos/${encodeURIComponent(id)}`} onClick={onClose} className="min-w-0 break-all text-accent underline" aria-label={`Inspeccionar ${id}`}>{id}</Link>
+        <Link to={`/experimentos/${encodeURIComponent(id)}`} onClick={onClose} className="min-w-0 break-all font-mono text-sm text-accent underline" aria-label={`Inspeccionar ${id}`}>{id}</Link>
         <div className="flex gap-2">
           {kind === "held" && <button className={control} type="button" disabled={!!busy || !!requests[id]} onClick={() => submit({ id, kind: "start" })} aria-label={`Iniciar ${id}`}>Iniciar</button>}
           <button className={control} type="button" disabled={!!busy || !!requests[id]} onClick={(event) => requestConfirmation(event, { id, kind: "cancel" })} aria-label={`Cancelar ${id}`}>Cancelar</button>
@@ -116,8 +116,8 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
       {errors[id] && <p role="alert" className="mt-1 text-sm text-text">{errors[id]}</p>}
     </li>
   );
-  const section = (name: string, page: QueuePage | undefined, kind: "pending" | "held") => <section className="mt-6" aria-label={name}>
-    <h3 className="text-lg font-semibold">{name} · {page?.total ?? "—"}</h3>
+  const section = (name: string, page: QueuePage | undefined, kind: "pending" | "held") => <section className="queue-section mt-6" aria-label={name}>
+    <h3 className="section-header">{name} · {page?.total ?? "—"}</h3>
     {page && page.offset === offset ? <>
       <p className="text-sm text-text-secondary">{page.count ? `${page.offset + 1}–${page.offset + page.count} de ${page.total}` : `No hay elementos en esta página (${page.total} en total).`}</p>
       <ul className="mt-2">{page.items.map((id) => row(id, kind))}</ul>
@@ -126,19 +126,19 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
 
   return createPortal(<>
     <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} aria-hidden="true" />
-    <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-border-control bg-surface p-6 text-text shadow-2xl focus:outline-none">
+    <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-border-control bg-surface p-6 text-text focus:outline-none">
       <div className="flex items-center justify-between gap-3"><h2 id={titleId} className="font-heading text-2xl italic">Cola de experimentos</h2><button type="button" className={control} onClick={onClose}>Cerrar cola</button></div>
-      <p className="mt-2 text-sm text-text-secondary">Un cálculo a la vez. La cola y los retenidos se consultan por páginas independientes; pueden cambiar entre consultas.</p>
+      <p className="mt-2 text-sm text-text-secondary">Un cálculo a la vez. Pendientes y retenidos se consultan por páginas independientes; su estado puede cambiar.</p>
       {error && <p role="status" className="mt-4 text-sm text-text-secondary">{error === "network" ? "No se pudo contactar al servidor local. El cálculo podría continuar; se muestra el último estado conocido." : "No se pudo actualizar la cola; se muestra el último estado conocido."}</p>}
       <button type="button" className={`${control} mt-3`} onClick={refresh}>Reintentar cola</button>
       {loading && !status && <p role="status" className="mt-4">Consultando cola…</p>}
       {notice && <p ref={noticeRef} tabIndex={-1} role="status" onBlur={() => { if (noticeExpired.current) setNotice(""); }} className="mt-4 text-sm text-accent focus:outline-none">{notice}</p>}
       {status?.last_failure && <p role="status" className="mt-4 text-sm text-text-secondary">Problema reciente en {status.last_failure.experiment_id}: {status.last_failure.persisted ? "El estado de fallo se guardó." : "El estado de fallo no se pudo confirmar en el almacenamiento."} Consultá el detalle al reconectar.</p>}
-      <section className="mt-6" aria-label="Activo"><h3 className="text-lg font-semibold">Activo</h3>{status?.active_id ? <ul>{row(status.active_id, "active")}</ul> : <p className="text-sm text-text-secondary">No hay experimento activo en la última consulta.</p>}</section>
+      <section className="queue-section mt-6" aria-label="En curso"><h3 className="section-header">En curso</h3>{status?.active_id ? <ul>{row(status.active_id, "active")}</ul> : <p className="text-sm text-text-secondary">No hay experimento activo en la última consulta.</p>}</section>
       {section("Pendientes", pageReady ? status.pending : undefined, "pending")}
       {section("Retenidos tras reinicio", pageReady ? status.held : undefined, "held")}
-      {status && <div className="mt-6 flex flex-wrap items-center gap-3 font-mono text-sm"><button type="button" className={control} disabled={offset === 0} onClick={() => setOffset(offset - 20)}>Anterior cola</button><span>Página {Math.floor(offset / 20) + 1}</span><button type="button" className={control} disabled={offset + 20 >= Math.max(status.pending.total, status.held.total)} onClick={() => setOffset(offset + 20)}>Siguiente cola</button></div>}
+      {status && <div className="mt-6 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={control} disabled={offset === 0} onClick={() => setOffset(offset - 20)}>Anterior cola</button><span>Página {Math.floor(offset / 20) + 1}</span><button type="button" className={control} disabled={offset + 20 >= Math.max(status.pending.total, status.held.total)} onClick={() => setOffset(offset + 20)}>Siguiente cola</button></div>}
     </div>
-    <ConfirmDialog open={!!confirm} restoreFocus={false} title={confirm?.repeat ? confirm.kind === "start" ? "¿Reintentar inicio?" : "¿Reenviar cancelación?" : "¿Cancelar experimento?"} description={confirm?.repeat ? confirm.kind === "start" ? "El estado retenido se comprobó. El servidor rechazará un inicio duplicado si el trabajo ya entró en la cola." : "La cancelación original no está confirmada. El estado aún admite cancelación; reenviarla puede devolver un conflicto si terminó entretanto." : "Se conservarán los resultados ya terminados. El cálculo actual no se guardará como completo y lo restante no se ejecutará. La cancelación se confirmará al actualizar el estado; este experimento no se puede reanudar."} confirmLabel={confirm?.repeat ? confirm.kind === "start" ? "Confirmar reintento" : "Confirmar reenvío" : "Confirmar cancelación"} onConfirm={() => { if (confirm) submit(confirm, !!confirm.repeat); }} onCancel={() => setConfirm(null)} />
+    <ConfirmDialog open={!!confirm} restoreFocus={false} title={confirm?.repeat ? confirm.kind === "start" ? `¿Reintentar el inicio de ${confirm.id}?` : `¿Reenviar la cancelación de ${confirm.id}?` : `¿Cancelar el experimento ${confirm?.id ?? ""}?`} description={confirm?.repeat ? confirm.kind === "start" ? `El estado retenido de ${confirm.id} se comprobó. El servidor rechazará un inicio duplicado si el trabajo ya entró en la cola; la respuesta aún no confirma que haya comenzado.` : `La cancelación original de ${confirm.id} no está confirmada. El estado aún admite cancelación; reenviarla puede devolver un conflicto si terminó entretanto.` : `Se conservarán los resultados ya terminados de ${confirm?.id ?? "este experimento"}. El cálculo actual no se guardará como completo y lo restante no se ejecutará. La cancelación se confirmará al actualizar el estado; este experimento no se puede reanudar.`} confirmLabel={confirm?.repeat ? confirm.kind === "start" ? "Confirmar reintento" : "Confirmar reenvío" : "Confirmar cancelación"} onConfirm={() => { if (confirm) submit(confirm, !!confirm.repeat); }} onCancel={() => setConfirm(null)} />
   </>, document.body);
 }

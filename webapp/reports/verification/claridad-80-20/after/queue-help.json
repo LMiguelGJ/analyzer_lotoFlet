@@ -1,0 +1,72 @@
+{
+  "opened": {
+    "focus": "Cola de experimentosCerrar colaUn cálculo a la vez. Pendientes y retenidos se consultan por páginas independientes; su estado puede cambiar.Reintentar colaEn cursoNo hay experimento activo en la última consulta.Pendientes · 0No hay elementos en esta página (0 en total).Retenidos tras reinicio · 0No hay elementos en esta página (0 en total).Anterior colaPágina 1Siguiente cola",
+    "dialog": null
+  },
+  "closed": {
+    "focus": "Cola",
+    "dialog": false
+  },
+  "help": [
+    {
+      "id": "start_draw",
+      "ids": "start_draw-help",
+      "references": [
+        {
+          "id": "start_draw-help",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "id": "capital",
+      "ids": "capital-help",
+      "references": [
+        {
+          "id": "capital-help",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "id": "goal",
+      "ids": "goal-help",
+      "references": [
+        {
+          "id": "goal-help",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "id": "max_bets",
+      "ids": "max_bets-help",
+      "references": [
+        {
+          "id": "max_bets-help",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "id": "max_minutes",
+      "ids": "max_minutes-help",
+      "references": [
+        {
+          "id": "max_minutes-help",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "id": "seed",
+      "ids": "seed-help",
+      "references": [
+        {
+          "id": "seed-help",
+          "exists": true
+        }
+      ]
+    }
+  ]
+}

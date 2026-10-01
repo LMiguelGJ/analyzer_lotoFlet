@@ -334,7 +334,8 @@ describe("LW15 queue drawer", () => {
     await screen.findByRole("link", { name: /run-1/ });
     const cancel = within(dialog).getByRole("button", { name: /Cancelar run-1/ });
     await user.click(cancel);
-    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    expect(screen.getByRole("alertdialog")).toHaveAccessibleName("¿Cancelar el experimento run-1?");
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(/resultados ya terminados de run-1/);
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(dialog).toBeInTheDocument();

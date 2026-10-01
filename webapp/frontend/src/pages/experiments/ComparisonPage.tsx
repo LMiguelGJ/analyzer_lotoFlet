@@ -8,6 +8,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StatusLabel } from "../../components/StatusLabel";
 import { formatDOP } from "../../lib/format";
+import { FIELD_LABEL_DELTA, HISTORICAL_CAVEAT } from "../../lib/ui-labels";
 
 const PAGE = 100;
 // Session context is bounded to five series of at most five pages, even if more pages are viewed.
@@ -74,7 +75,7 @@ function SeriesReplay({ id, run, name, saved, onPoints }: { id: string; run: Run
     <span>{name}: {points.length}/{total} cargadas</span>
     {loading && <span role="status">Cargando {name}…</span>}
     {error && <span role="alert" aria-label={`Error de ${name}`}>{error} <button type="button" className="text-accent underline" onClick={() => setRetry((n) => n + 1)}>Reintentar {name}</button></span>}
-    {!loading && !error && points.length < total && <button type="button" className="min-h-control rounded-control border border-border-control px-3 text-accent hover:bg-field focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" onClick={() => setRetry((n) => n + 1)}>Cargar más de {name}</button>}
+    {!loading && !error && points.length < total && <button type="button" className="btn btn-secondary hover:bg-field" onClick={() => setRetry((n) => n + 1)}>Cargar más de {name}</button>}
   </div>;
 }
 
@@ -111,7 +112,7 @@ export function ComparisonPage() {
     { key: "strategy", header: "Estrategia", render: (run) => <Link className="text-accent underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`} aria-label={`Detalle de ${names(run.ordinal)}`}>{names(run.ordinal)}</Link> },
     { key: "status", header: "Estado de ejecución", render: (run) => <StatusLabel kind="execution" value={run.status} /> },
     { key: "balance", header: "Saldo final", render: (run) => run.result ? formatDOP(run.result.final_balance) : "—" },
-    { key: "delta", header: "Delta", render: (run) => run.result ? formatDOP(run.result.delta) : "—" },
+    { key: "delta", header: FIELD_LABEL_DELTA, render: (run) => run.result ? formatDOP(run.result.delta) : "—" },
     { key: "bets", header: "Apuestas realizadas", render: (run) => run.result ? run.result.bets_count : "—" },
     { key: "outcome", header: "Motivo de cierre", render: (run) => run.result ? <StatusLabel kind="outcome" value={run.result.outcome} /> : "—" },
   ];
@@ -121,11 +122,12 @@ export function ComparisonPage() {
     {!data && !error && <p role="status">Cargando comparación…</p>}
     {error && <p role="alert">{error} <button type="button" className="text-accent underline" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></p>}
     {data && <>
-      <div className="border-b border-border pb-5"><h2 className="font-heading text-2xl">{data.detail.request.name}</h2><p className="mt-2 font-mono text-sm">{data.comparison.complete ? "Comparación completa" : "Comparación incompleta"} · {data.comparison.completed}/{data.comparison.requested} terminadas</p>
-        <p className="mt-2 text-sm text-text-secondary">ID: {id}. {nonterminal(data.comparison.status) ? "Consultando el progreso guardado; una desconexión no detiene la ejecución." : "Estado guardado del experimento."}</p>
+      <div className="border-b border-border pb-5"><h2 className="font-heading text-2xl">{data.detail.request.name}</h2><p className="mt-2 text-sm">{data.comparison.complete ? "Comparación completa" : "Comparación incompleta"} · {data.comparison.completed}/{data.comparison.requested} terminadas</p>
+        <p className="mt-2 text-sm text-text-secondary">ID: <span className="font-mono">{id}</span>. {nonterminal(data.comparison.status) ? "Consultando el progreso guardado; una desconexión no detiene la ejecución." : "Estado guardado del experimento."}</p>
       </div>
-      <section className="space-y-3"><h3 className="font-heading text-xl">Resultados guardados</h3>
+      <section className="space-y-3"><h3 className="section-header">Resultados guardados</h3>
         <DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} />
+        <p className="text-sm text-text-secondary">{HISTORICAL_CAVEAT}</p>
       </section>
       <section className="min-w-0 space-y-4"><ComparisonChart series={series} onToggle={(ordinal) => updateView({ ...view, hidden: view.hidden.includes(ordinal) ? view.hidden.filter((n) => n !== ordinal) : [...view.hidden, ordinal] })} />
         {runs.filter((run) => !!run.result).map((run) => <SeriesReplay key={`${id}:${run.ordinal}`} id={id} run={run} name={names(run.ordinal)} saved={view.series[run.ordinal] ?? []} onPoints={(ordinal, points) => setView((current) => {
@@ -133,14 +135,14 @@ export function ComparisonPage() {
           saveView(id, next); return next;
         })} />)}
       </section>
-      <section className="space-y-3 text-sm"><h3 className="font-heading text-xl">Condiciones y datos de origen</h3>
-        <dl className="grid gap-x-5 gap-y-2 break-all sm:grid-cols-[minmax(180px,max-content)_1fr]">
+      <section className="space-y-3 text-sm"><h3 className="section-header">Condiciones y datos de origen</h3>
+        <dl className="data-list break-all">
           <dt>Sorteo inicial</dt><dd>{data.detail.request.conditions.start_draw}</dd>
-          <dt>Capital</dt><dd>{formatDOP(data.detail.request.conditions.capital)}</dd>
-          <dt>Meta de referencia</dt><dd>{formatDOP(data.detail.request.conditions.goal)}</dd>
-          <dt>Historial</dt><dd>{data.detail.sources.history_id}</dd><dt>SHA-256 historial</dt><dd>{data.detail.sources.history_sha256}</dd>
-          <dt>Rankings</dt><dd>{data.detail.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd>{data.detail.sources.rankings_sha256}</dd>
-          <dt>Versión de código</dt><dd>{data.detail.sources.code_version}</dd>
+          <dt>Capital</dt><dd className="data-list-numeric">{formatDOP(data.detail.request.conditions.capital)}</dd>
+          <dt>Meta de referencia</dt><dd className="data-list-numeric">{formatDOP(data.detail.request.conditions.goal)}</dd>
+          <dt>Historial</dt><dd className="font-mono">{data.detail.sources.history_id}</dd><dt>SHA-256 historial</dt><dd className="font-mono">{data.detail.sources.history_sha256}</dd>
+          <dt>Rankings</dt><dd className="font-mono">{data.detail.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd className="font-mono">{data.detail.sources.rankings_sha256}</dd>
+          <dt>Versión de código</dt><dd className="font-mono">{data.detail.sources.code_version}</dd>
         </dl>
         <p className="text-text-secondary">Resultados históricos sobre datos ya investigados: no constituyen validación independiente de rentabilidad.</p>
       </section>

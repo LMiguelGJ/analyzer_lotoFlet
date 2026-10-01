@@ -115,9 +115,25 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(within(rows[1]).getByText("1")).toBeInTheDocument();
     expect(within(rows[2]).getByText("2")).toBeInTheDocument();
 
+    expect(screen.getByRole("columnheader", { name: "Estrategias" })).toHaveClass("table-numeric");
+    expect(within(rows[1]).getAllByRole("cell")[1]).toHaveClass("table-numeric");
     expect(screen.getByRole("columnheader", { name: /Creado/ })).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByRole("columnheader", { name: /Creado/ })).toHaveClass("table-date");
+    expect(within(rows[1]).getAllByRole("cell")[2]).toHaveClass("table-date");
+    expect(screen.getByRole("columnheader", { name: /Estado/ })).toHaveClass("table-status");
+    expect(screen.getByRole("columnheader", { name: "Acciones" })).toHaveClass("table-actions");
     expect(within(rows[1]).getByTitle("2026-09-29T12:30:00Z")).not.toHaveTextContent("—");
     expect(within(rows[2]).getByTitle("Fecha no registrada")).toHaveTextContent("—");
+  });
+
+  it("keeps a long experiment name intact in a word-wrapping column with local horizontal scroll", async () => {
+    const longName = "Experimento con nombre deliberadamente muy largo para probar el límite visual";
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ ...fixture, items: [{ ...fixture.items[0], request: { ...fixture.items[0].request, name: longName } }] });
+    setup();
+    const link = await screen.findByRole("link", { name: longName });
+    expect(link.closest("td")).toHaveClass("table-name");
+    expect(link).toHaveAttribute("href", `/experimentos/${fixture.items[0].id}`);
+    expect(screen.getByRole("region", { name: "Experimentos" })).toHaveClass("overflow-x-auto");
   });
 
   it("uses StatusLabel for execution status, never the session outcome vocabulary", async () => {
@@ -126,7 +142,7 @@ describe("LW10 experiments list · data and navigation", () => {
 
     await screen.findByText("Fríos K1");
     const table = screen.getByRole("table");
-    const completedStatus = within(table).getByText("Completado");
+    const completedStatus = within(table).getByText("Ejecución completada");
     expect(completedStatus.closest("span")).toHaveAttribute("data-status-kind", "execution");
     expect(within(table).getByText("En curso")).toBeInTheDocument();
     // The outcome vocabulary ("Meta alcanzada") must not appear as if it were the execution status.
@@ -174,7 +190,7 @@ describe("LW10 experiments list · data and navigation", () => {
     await screen.findByText("Fríos K1");
     expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 20, limit: 20, name_contains: "Fríos", status: "running", sort: "name", order: "asc" });
     expect(screen.getByRole("columnheader", { name: /Nombre/ })).toHaveAttribute("aria-sort", "ascending");
-    await user.selectOptions(screen.getByLabelText("Estado"), "completed");
+    await user.selectOptions(screen.getByLabelText("Estado de ejecución"), "completed");
     await waitFor(() => expect(router.state.location.search).toContain("status=completed"));
     expect(router.state.location.search).not.toContain("page=2");
   });
@@ -222,7 +238,7 @@ describe("LW10 experiments list · data and navigation", () => {
     await screen.findByText("Fríos K1");
     await user.click(screen.getByRole("button", { name: "Acciones de Fríos K1" }));
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
-    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar" }));
+    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar experimento" }));
     await waitFor(() => expect(router.state.location.search).not.toContain("page=2"));
     expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 0, limit: 20, sort: "created_at", order: "desc" });
   });
@@ -250,7 +266,9 @@ describe("LW10 deletion", () => {
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
 
     const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "Eliminar" }));
+    expect(dialog).toHaveAccessibleName("¿Eliminar el experimento «Fríos K1»?");
+    expect(dialog).toHaveTextContent(/forma permanente/);
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
 
     expect(apiClient.deleteExperiment).toHaveBeenCalledWith("exp-completed-1", "exp-completed-1");
     await waitFor(() => expect(screen.queryByText("Fríos K1")).not.toBeInTheDocument());
@@ -269,7 +287,7 @@ describe("LW10 deletion", () => {
     await user.click(within(row).getByRole("button", { name: /Acciones de/ }));
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "Eliminar" }));
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/activo o en cola/);
     expect(screen.getByText("Comparación mezcla")).toBeInTheDocument();
@@ -287,7 +305,7 @@ describe("LW10 deletion", () => {
     await user.click(within(row).getByRole("button", { name: /Acciones de/ }));
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "Eliminar" }));
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/ya no exist/);
     await waitFor(() => expect(screen.queryByText("Fríos K1")).not.toBeInTheDocument());
