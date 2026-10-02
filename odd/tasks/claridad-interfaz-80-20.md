@@ -143,4 +143,4 @@ NativeINSPECTfinal: detenido en intended_untracked_selection_required; no START/
 
 CI00–CI04 completadas funcionalmente, con aprobación visual del usuario y PASS técnico independiente final. Se conservan límites de muestreo, el timeout transitorio y defectos preexistentes fuera del alcance. La revisión nativa NO se completó: sigue detenida por selección untracked, sin lineage ni aprobación. No presentar el cierre ODD como aprobación nativa.
 
-No hay implementación pendiente dentro del alcance. No se hicieron commits ni push de esta entrega. Entregar resumen al usuario; cualquier entrega Git o ampliación requiere autorización separada.
+No hay implementación pendiente dentro del alcance. Entrega Git autorizada por el usuario: commit `1441337` publicado en `origin/stage` (141 archivos). Rutas personales redactadas antes del commit. Gitlink `lottery-predictability-monte-carlo` eliminado ajeno, sin stage.
