@@ -27,6 +27,12 @@ ODD-00 en curso: dos exploraciones concluidas y escritor documental `muoz0orw-6-
 - [ ] ODD-12 Constructor, asistente y mesa avanzada.
 - [ ] ODD-13 Aceptación integral y documentación honesta.
 
+## Entrega Git autorizada
+
+Usuario autorizó commit y push a `origin/stage`. Commit funcional acumulado: `62ef0e985eb1af8f693c950858f415cd69c83ef4` (perfiles locales configurables, importación, ejecución versionada y trayectorias/métricas). Es una entrega amplia de 104 archivos, no una revisión pequeña. Evidencia previa: 157 pruebas frontend focalizadas, typecheck/build y 79 backend de trayectorias/API; Ruff completo y `git diff --cached --check` aprobados antes de commit. No se repitieron suites completas ni se declaró aprobación nativa (binario de paquete no disponible).
+
+Commit `ae74ad0` ignora `/webapp/reports/` y retira 186 archivos del índice conservándolos localmente. Las referencias de informes en este documento son evidencia local/histórica, no archivos publicados en el árbol Git actual. La carpeta puede eliminarse sin afectar la aplicación, pero se perdería evidencia local no publicada. La eliminación previa de `lottery-predictability-monte-carlo` y el cambio de `odd/tasks/claridad-interfaz-80-20.md` quedaron fuera de esta entrega.
+
 ## Ruta y verificación
 
 Prioridad actual del usuario: avanzar con funcionalidad importante y agrupar unidades coherentes; dejar revisión visual, pulido y recorridos manuales no críticos al usuario con checklist. No repetir suites completas sin motivo. Conservar comprobaciones esenciales de cálculos, integridad, compatibilidad y tipos; verificaciones manuales pendientes no cuentan como aprobadas. Escritor de lecturaAPI/UI informado para evitar ampliaciones de pulido.
