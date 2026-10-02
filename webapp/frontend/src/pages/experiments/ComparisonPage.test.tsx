@@ -1,15 +1,15 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { Bet, CompareResult, ExperimentSummary, Page } from "../../api/types";
+import type { Bet, CompareResult, ExperimentSummary, Page, ProfileCompareResult, ProfileExperimentSummary, ReplayPage } from "../../api/types";
 
 vi.mock("../../api/client", async (original) => {
   const actual = await original<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getExperiment: vi.fn(), compareExperiment: vi.fn(), getReplay: vi.fn(), createExperiment: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getExperiment: vi.fn(), compareExperiment: vi.fn(), getReplay: vi.fn(), getTrajectory: vi.fn(), createExperiment: vi.fn() } };
 });
 const bet = (label: string, balance: number): Bet => ({ label, balance, numbers: [1], results: [1, 2, 3, 4, 5], per_number: 1, wagered: 1, paid: 0 });
 const runs: CompareResult["runs"] = [
@@ -21,6 +21,20 @@ const detail: ExperimentSummary = { id: "exp", status: "running", request: { nam
   { name: "Segunda", selector: "random", coverage: 1, staking: "flat" },
 ] }, sources: { history_id: "hist", history_sha256: "hash-h", rankings_id: "ranks", rankings_sha256: "hash-r", code_version: "v1" }, runs };
 const comparison: CompareResult = { id: "exp", status: "running", completed: 1, requested: 2, complete: false, runs };
+const profileDetail: ProfileExperimentSummary = {
+  id: "exp", status: "completed", request_kind: "profile", created_at: null,
+  request: { kind: "profile", schema_version: 1, name: "Perfil EUR", dataset_sha256: "a".repeat(64), profile_id: "test", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
+    conditions: { schema_version: 1, start_draw: "2025-01-01 10:00", capital: 10000, goal: 20000, settlement: "all", max_elapsed_draws: 3, max_bet_draws: 1, end_minute: null, duration_minutes: null },
+    selector: { schema_version: 1, capability: "static-numbers/v1", coverage: 1, numbers: [7], seed: null, algorithm_version: null },
+    staking: { schema_version: 1, capability: "flat-per-number/v1", per_number_stake: 100 } },
+  profile: { schema_version: 1, profile_id: "test", revision: 1, universe_size: 100, positions: 3, allows_repeats: true, multipliers: [80, 8, 4].map((numerator) => ({ numerator, denominator: 1 })), currency: "EUR", scale: 2, stake_increment: 1, minimum_stake: 1, maximum_stake: 100000, max_coverage: 10, max_exposure: 100000, best_rule: "maximum-payout/v1" },
+  display: { name: "Perfil EUR", currency: "EUR", scale: 2, capital: 10000, goal: 20000, selector_label: "static-numbers/v1", staking_label: "flat-per-number/v1" },
+  sources: { history_id: "a", history_sha256: "a", rankings_id: "", rankings_sha256: "", code_version: "profile-v1" },
+  runs: [{ ordinal: 0, configuration_id: null, status: "completed", result_kind: "profile", bets_count: 1,
+    result: { schema_version: 1, profile_id: "test", profile_revision: 1, outcome: "limit", collisions: ["max_bet_draws"], elapsed_draws: 3, bet_draws: 1, wagered: 100, paid: 0, final_balance: 9900, delta: -100 } }],
+};
+const profileCompare: ProfileCompareResult = { id: "exp", status: "completed", request_kind: "profile", completed: 1, requested: 1, complete: true, runs: profileDetail.runs };
+const profileReplay: ReplayPage = { result_kind: "profile", total: 1, offset: 0, limit: 100, items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] };
 const page = (ordinal: number, offset = 0): Page<Bet> => ({ offset, limit: 100, total: ordinal ? 1 : 101, items: offset ? [bet("2025-01-01 11:00", 150)] : ordinal ? [bet("2025-01-01 10:30", 110)] : Array.from({ length: 100 }, (_, i) => bet(`2025-01-01 10:${String(i % 60).padStart(2, "0")}`, 101 + i)) });
 function setup(path = "/experimentos/exp/comparacion") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
@@ -30,9 +44,111 @@ beforeEach(() => {
   sessionStorage.clear();
   vi.mocked(apiClient.getExperiment).mockReset().mockResolvedValue(detail);
   vi.mocked(apiClient.compareExperiment).mockReset().mockResolvedValue(comparison);
+  vi.mocked(apiClient.getTrajectory).mockReset().mockImplementation(async (_id, ordinal) => {
+    const latest = vi.mocked(apiClient.getExperiment).mock.results.at(-1);
+    const saved = await latest?.value;
+    const run = saved?.runs.find((r: { ordinal: number }) => r.ordinal === ordinal);
+    const total = run?.result?.bet_draws ?? run?.result?.bets_count ?? 0;
+    const capital = saved?.request.conditions.capital ?? 100;
+    const end = run?.result?.final_balance ?? capital;
+    return { initial_capital: capital, total, max_points: 500, reduction_method: "none",
+      minimum: { balance: Math.min(capital, end), source_index: null }, maximum: { balance: Math.max(capital, end), source_index: null },
+      points: Array.from({ length: Math.min(total, 500) }, (_, i) => ({ source_index: i, label: `2025-01-01 10:${String(i % 60).padStart(2, "0")}`, balance: end, replay: `replay?offset=${i}&limit=1` })) };
+  });
   vi.mocked(apiClient.getReplay).mockReset().mockImplementation(async (_id, ordinal, offset) => page(ordinal, offset));
   vi.mocked(apiClient.createExperiment).mockReset();
 });
+describe("profile comparison READ", () => {
+  it("compares completed cycling from schema-2 summaries and replay without flat-stake assumptions", async () => {
+    const cycling: ProfileExperimentSummary = {
+      ...profileDetail, status: "completed",
+      request: { ...profileDetail.request, schema_version: 2, staking: { schema_version: 1, capability: "q80-first-prize-cycling/v1" } },
+      display: { ...profileDetail.display, staking_label: "Escalera cíclica Q80 · apuesta dinámica por sorteo" },
+      runs: [{ ...profileDetail.runs[0], status: "completed", result: { ...profileDetail.runs[0].result!, schema_version: 2 } }],
+    };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(cycling);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...profileCompare, runs: cycling.runs });
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 2, total: 1, offset: 0, limit: 100, items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] });
+    setup();
+    const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*1.*3/);
+    expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
+    expect(screen.getByText("Datos de origen")).toBeInTheDocument();
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+  });
+  it("compares schema-3 Audaz with dynamic stake and completed replay", async () => {
+    const audaz: ProfileExperimentSummary = { ...profileDetail,
+      request: { ...profileDetail.request, schema_version: 3, staking: { schema_version: 1, capability: "profile-audaz/v1" } },
+      display: { ...profileDetail.display, staking_label: "Audaz · apuesta dinámica por sorteo" },
+      runs: [{ ...profileDetail.runs[0], result: { ...profileDetail.runs[0].result!, schema_version: 3 } }],
+    };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(audaz);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...profileCompare, runs: audaz.runs });
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 3, total: 1, offset: 0, limit: 100,
+      items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] });
+    setup();
+    const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*1.*3.*Límite de sesión/);
+    expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
+    expect(apiClient.getTrajectory).toHaveBeenCalledWith("exp", 0, 500);
+  });
+  it.each([["cycle", "Reiniciar la escalera"], ["stop", "Detener la sesión"]] as const)("compares schema-4 recovery with stored version and %s parameters", async (end_mode, ending) => {
+    const recovery: ProfileExperimentSummary = { ...profileDetail,
+      request: { ...profileDetail.request, schema_version: 4, staking: { schema_version: 1, target_margin: 500, rounds: 3, end_mode } },
+      display: { ...profileDetail.display, staking_label: "Escalera de recuperación · parámetros explícitos por perfil" },
+      runs: [{ ...profileDetail.runs[0], result: { ...profileDetail.runs[0].result!, schema_version: 4, collisions: ["recovery_round_limit"] } }],
+    };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(recovery);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...profileCompare, runs: recovery.runs });
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 4, total: 1, offset: 0, limit: 100,
+      items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] });
+    setup();
+    const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
+    expect(within(table).getByRole("columnheader", { name: "Versión del resultado" })).toBeInTheDocument();
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Perfil v4");
+    expect(await screen.findAllByText("Perfil v4")).toHaveLength(2);
+    expect(screen.getByText("EUR 5.00")).toBeInTheDocument();
+    expect(screen.getByText(ending)).toBeInTheDocument();
+    expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
+  });
+  it("uses neutral dataset language when profile source kind is unavailable", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(profileDetail);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue(profileCompare);
+    setup();
+    await screen.findByRole("table", { name: "Comparación de ejecuciones" });
+    expect(screen.getByText("Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(screen.getByText("Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.")).toBeInTheDocument();
+    expect(screen.getByText("Datos de origen")).toBeInTheDocument();
+    expect(screen.getByText("SHA-256 de datos de origen")).toBeInTheDocument();
+    expect(screen.getByText("Evolución comparada · fechas guardadas")).toBeInTheDocument();
+    expect(screen.queryByText(/datos históricos|Resultados históricos|fechas históricas|^Historial$|^SHA-256 historial$/i)).not.toBeInTheDocument();
+  });
+
+  it("shows server delta and elapsed versus bet draws with profile currency in table and chart", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(profileDetail);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue(profileCompare);
+    vi.mocked(apiClient.getReplay).mockResolvedValue(profileReplay);
+    setup();
+    const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*1.*3.*Límite de sesión/);
+    expect(screen.getByText("Capital").nextElementSibling).toHaveTextContent("EUR 100.00");
+    expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Datos textuales del gráfico" })).toHaveTextContent("EUR 99.00");
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+  });
+
+  it.each(["held", "failed"] as const)("shows %s with no fabricated result or replay", async (status) => {
+    const runs = [{ ...profileDetail.runs[0], status: status === "held" ? "pending" as const : "failed" as const, result: null, bets_count: 0 }];
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileDetail, status, runs });
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...profileCompare, status, completed: 0, complete: false, runs });
+    setup();
+    const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
+    expect(within(table).getAllByRole("row")[1]).not.toHaveTextContent("EUR 99.00");
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("—");
+    expect(apiClient.getReplay).not.toHaveBeenCalled();
+  });
+});
+
 describe("LW12 comparison", () => {
   it("uses server N/M and delta, shows absent values as dashes, and separates outcome from execution", async () => {
     setup();
@@ -55,6 +171,8 @@ describe("LW12 comparison", () => {
     expect(within(table).getByRole("columnheader", { name: "Cambio respecto del inicio" })).toBeInTheDocument();
     expect(screen.getByText(/Simulación con datos históricos: no predice resultados futuros/)).toBeInTheDocument();
     expect(screen.getByText(/Resultados históricos sobre datos ya investigados/)).toBeInTheDocument();
+    expect(screen.getByText("Historial")).toBeInTheDocument();
+    expect(screen.getByText("SHA-256 historial")).toBeInTheDocument();
   });
   it("treats two completed runs as complete, preserving requested order rather than ranking", async () => {
     const second = { ...runs[1], status: "completed" as const, result: { ...runs[0].result!, delta: -10, final_balance: 90, outcome: "limit" as const } };
@@ -64,23 +182,27 @@ describe("LW12 comparison", () => {
     expect(await screen.findByText("Comparación completa · 2/2 terminadas")).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row")[2]).toHaveTextContent("-RD$10");
-    expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 1, 0, 100);
+    await waitFor(() => expect(apiClient.getTrajectory).toHaveBeenCalledWith("exp", 1, 500));
   });
-  it("loads only bounded replay pages on demand and retries a failed series without erasing another", async () => {
+  it("loads complete bounded trajectories automatically and retries without erasing another", async () => {
     const second = { ...runs[1], status: "completed" as const, result: { ...runs[0].result!, bets_count: 1 } };
-    const long = { ...runs[0], bets_count: 101, result: { ...runs[0].result!, bets_count: 101 } };
+    const long = { ...runs[0], bets_count: 1001, result: { ...runs[0].result!, bets_count: 1001 } };
     vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...comparison, runs: [long, second] });
-    vi.mocked(apiClient.getReplay).mockImplementation(async (_id, ordinal, offset) => { if (ordinal === 1 && offset === 0) throw new NetworkError(); return page(ordinal, offset); });
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...detail, runs: [long, second] });
+    const trajectory = { initial_capital: 100, total: 1001, max_points: 500, reduction_method: "minmax-even-v1" as const,
+      minimum: { balance: 1, source_index: 700 }, maximum: { balance: 300, source_index: 400 },
+      points: [0, 400, 700, 1000].map((i) => ({ source_index: i, label: `2025-01-01 10:00`, balance: i === 700 ? 1 : 300, replay: `replay?offset=${i}&limit=1` })) };
+    vi.mocked(apiClient.getTrajectory).mockImplementation(async (_id, ordinal) => { if (ordinal === 1) throw new NetworkError(); return trajectory; });
     const { user } = setup();
-    expect(await screen.findByText(/Primera: 100\/101 cargadas/)).toBeInTheDocument();
-    expect(await screen.findByRole("alert", { name: /Segunda/ })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Cargar más de Primera/ }));
-    expect(await screen.findByText(/Primera: 101\/101 cargadas/)).toBeInTheDocument();
-    expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 100, 100);
-    vi.mocked(apiClient.getReplay).mockImplementation(async (_id, ordinal, offset) => page(ordinal, offset));
-    await user.click(screen.getByRole("button", { name: /Reintentar Segunda/ }));
-    expect(await screen.findByText(/Segunda: 1\/1 cargadas/)).toBeInTheDocument();
-    expect(screen.getByText(/Primera: 101\/101 cargadas/)).toBeInTheDocument();
+    expect(await screen.findByText(/Primera: 4 de 1001 apuestas.*reducción/)).toBeInTheDocument();
+    expect(await screen.findByText(/No se pudo cargar la trayectoria de Segunda/)).toBeInTheDocument();
+    expect(apiClient.getReplay).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Cargar más/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Apuesta 1001/ })).toHaveAttribute("href", "/experimentos/exp?run=0&bet=1000&from=comparison");
+    vi.mocked(apiClient.getTrajectory).mockResolvedValue({ ...trajectory, total: 1, points: trajectory.points.slice(0, 1), reduction_method: "none" });
+    await user.click(screen.getByRole("button", { name: /Reintentar trayectoria de Segunda/ }));
+    expect(await screen.findByText(/Segunda: 1 de 1 apuestas/)).toBeInTheDocument();
+    expect(screen.getByText(/Primera: 4 de 1001 apuestas/)).toBeInTheDocument();
   });
   it("shows 404 and disconnection separately, retries and ignores an old id response", async () => {
     vi.mocked(apiClient.compareExperiment).mockRejectedValueOnce(new ApiError(404, "missing"));
@@ -106,34 +228,33 @@ describe("LW12 comparison", () => {
     vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...comparison, runs: [long, second] });
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...detail, runs: [long, second] });
     const { user, router } = setup();
-    await screen.findByText(/Primera: 100\/101 cargadas/);
+    await screen.findByText(/Primera: 101 de 101 apuestas/);
     await user.click(screen.getByRole("checkbox", { name: /Mostrar Segunda/ }));
-    await user.click(screen.getByRole("button", { name: /Cargar más de Primera/ }));
-    await screen.findByText(/Primera: 101\/101 cargadas/);
+    await screen.findByText(/Primera: 101 de 101 apuestas/);
     await user.click(screen.getByRole("link", { name: /Detalle de Segunda/ }));
     expect(router.state.location.search).toBe("?run=1&from=comparison");
     expect(await screen.findByRole("region", { name: "Ejecución 2" })).toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: /Volver a comparación/ }));
-    expect(await screen.findByText(/Primera: 101\/101 cargadas/)).toBeInTheDocument();
+    expect(await screen.findByText(/Primera: 101 de 101 apuestas/)).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Mostrar Segunda/ })).not.toBeChecked();
     await act(async () => { await router.navigate("/experimentos/exp?run=999&from=comparison"); });
     expect(await screen.findByText(/ejecución solicitada no existe/i)).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Ejecución 1" })).toBeInTheDocument();
   });
-  it("ignores a late replay response after leaving and does not issue mutations", async () => {
-    let resolve!: (value: Page<Bet>) => void;
-    vi.mocked(apiClient.getReplay).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  it("ignores a late trajectory response after leaving and does not issue mutations", async () => {
+    let resolve!: (value: Awaited<ReturnType<typeof apiClient.getTrajectory>>) => void;
+    vi.mocked(apiClient.getTrajectory).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
     const { router } = setup();
-    expect(await screen.findByText(/Primera: 0\/2 cargadas/)).toBeInTheDocument();
+    expect(await screen.findByText(/Cargando trayectoria de Primera/)).toBeInTheDocument();
     await act(async () => { await router.navigate("/experimentos/exp?run=1&from=comparison"); });
-    await act(async () => { resolve({ total: 2, offset: 0, limit: 100, items: [bet("2025-01-01 10:00", 101)] }); });
-    expect(screen.queryByText(/Primera: 1\/2 cargadas/)).not.toBeInTheDocument();
+    await act(async () => { resolve({ initial_capital: 100, total: 0, max_points: 500, reduction_method: "none", points: [], minimum: { balance: 100, source_index: null }, maximum: { balance: 100, source_index: null } }); });
+    expect(screen.queryByText(/Primera: 0 de 0 apuestas/)).not.toBeInTheDocument();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
   it("has no automated accessibility violations in a completed comparison", async () => {
     vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 2, offset: 0, limit: 100, items: [bet("2025-01-01 10:00", 101), bet("2025-01-01 10:10", 120)] });
     const { container } = setup();
-    await screen.findByText(/Primera: 2\/2 cargadas/);
+    await screen.findByText(/Primera: 2 de 2 apuestas/);
     expect(await axe(container)).toHaveNoViolations();
   });
   it("polls nonterminal only, cleans up on unmount", async () => {

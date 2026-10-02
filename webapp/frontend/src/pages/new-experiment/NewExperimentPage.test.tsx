@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,7 +8,7 @@ import detail from "../../api/__fixtures__/experiment-detail.json";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getCatalog: vi.fn(), getStartingDraws: vi.fn(), getExperiment: vi.fn(), createExperiment: vi.fn(), getConfiguration: vi.fn(), listConfigurations: vi.fn(), createConfiguration: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getCatalog: vi.fn(), getStartingDraws: vi.fn(), getStartingDrawAvailability: vi.fn(), getExperiment: vi.fn(), createExperiment: vi.fn(), getConfiguration: vi.fn(), listConfigurations: vi.fn(), createConfiguration: vi.fn() } };
 });
 
 const catalog = {
@@ -35,12 +35,33 @@ async function conditions(user: ReturnType<typeof userEvent.setup>) {
 
 beforeEach(() => {
   vi.mocked(apiClient.getCatalog).mockResolvedValue(catalog as never);
-  vi.mocked(apiClient.getStartingDraws).mockResolvedValue({ total: 2, offset: 0, limit: 100, items: ["2025-09-02 05:10", "2025-09-02 05:15"] });
+  vi.mocked(apiClient.getStartingDraws).mockReset().mockImplementation(async (offset = 0, limit = 100, date) => ({
+    total: date === "2025-09-02" ? 2 : date ? 1 : 2, offset, limit,
+    items: date === "2025-09-02" ? ["2025-09-02 05:10", "2025-09-02 05:15"]
+      : date ? [date === "2025-01-01" ? detail.request.conditions.start_draw : `${date} 05:10`]
+        : ["2025-09-02 05:10", "2025-09-02 05:15"],
+  }));
+  vi.mocked(apiClient.getStartingDrawAvailability).mockReset().mockImplementation(async (date) => ({
+    date, history_total: date === "2025-09-02" ? 2 : 1, ranked_total: date === "2025-09-02" ? 2 : 1,
+  }));
   vi.mocked(apiClient.createExperiment).mockReset();
   vi.mocked(apiClient.getExperiment).mockReset();
   vi.mocked(apiClient.getConfiguration).mockReset();
   vi.mocked(apiClient.listConfigurations).mockReset().mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [{ id: "cfg-1", name: "Biblioteca", strategy: { name: "Fríos", selector: "system", system: "cold", coverage: 1, staking: "flat" } }] });
   vi.mocked(apiClient.createConfiguration).mockReset();
+});
+
+describe("profile creator discovery", () => {
+  it("links to the dedicated route without changing the legacy form", async () => {
+    const { user, router } = setup();
+    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Crear sesión con perfil" });
+    expect(link).toHaveAttribute("href", "/experimentos/nuevo/perfil");
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+    // The link is navigation only; existing legacy inputs remain usable.
+    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Clásico");
+    expect(router.state.location.pathname).toBe("/experimentos/nuevo");
+  });
 });
 
 describe("LW13 library templates", () => {
@@ -101,6 +122,7 @@ describe("LW13 library templates", () => {
     await screen.findByRole("textbox", { name: "Nombre del experimento" });
     await act(async () => { resolveOld(saved); });
     await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Nueva prueba");
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
     await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "100");
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "200");
@@ -171,7 +193,11 @@ describe("LW10 use as base", () => {
     ] } };
     let resolveBase!: (value: typeof saved) => void;
     vi.mocked(apiClient.getExperiment).mockReturnValue(new Promise((resolve) => { resolveBase = resolve; }) as never);
-    vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 101, offset: 0, limit: 100, items: ["2025-09-02 05:10"] }).mockResolvedValueOnce({ total: 101, offset: 100, limit: 100, items: ["2025-09-03 05:10"] });
+    vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => ({
+      total: date ? 101 : 1000, offset, limit,
+      items: date ? offset === 0 ? Array.from({ length: 100 }, (_, i) => `${date} ${String(Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}`)
+        : ["2025-09-03 05:10"] : ["2025-09-02 05:10"],
+    }));
     const { user, router } = setup("/experimentos/nuevo?base=exp-1");
     expect(await screen.findByText(/Cargando experimento base/)).toBeInTheDocument();
     await waitFor(() => expect(apiClient.getExperiment).toHaveBeenCalledWith("exp-1"));
@@ -179,7 +205,9 @@ describe("LW10 use as base", () => {
     expect(await screen.findByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Original");
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-03 05:10");
     expect(screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" })).toHaveValue("9007199254740991");
-    expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100);
+    expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-03");
+    expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100, "2025-09-03");
+    expect(vi.mocked(apiClient.getStartingDraws).mock.calls.filter(([, , date]) => !date)).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Mix");
     expect(screen.getByRole("combobox", { name: "Método de la estrategia 1" })).toHaveValue("blend");
@@ -306,6 +334,150 @@ describe("LW10 use as base", () => {
   });
 });
 
+describe("ODD03b dated starting draws", () => {
+  it("labels the date filter, keeps a same-day selection and clears it without choosing a different day", async () => {
+    const { user, router } = setup();
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    const date = screen.getByLabelText("Filtrar sorteos por fecha");
+    expect(date).toHaveAttribute("type", "date");
+    expect(date).toHaveAccessibleDescription(/Dejalo vacío para ver todas las fechas/);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:15");
+    fireEvent.change(date, { target: { value: "2025-09-02" } });
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-02 05:15"));
+    expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-02");
+    expect(apiClient.getStartingDrawAvailability).toHaveBeenCalledWith("2025-09-02");
+    fireEvent.change(date, { target: { value: "2025-09-03" } });
+    await screen.findByRole("option", { name: "2025-09-03 05:10" });
+    expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("");
+    expect(screen.queryByRole("option", { name: "2025-09-02 05:15" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/experimentos/nuevo");
+  });
+
+  it("distinguishes dates without history from dates with only unranked history", async () => {
+    vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => ({
+      total: date ? 0 : 2, offset, limit, items: date ? [] : ["2025-09-02 05:10"],
+    }));
+    vi.mocked(apiClient.getStartingDrawAvailability).mockImplementation(async (date) => ({
+      date, history_total: date === "2025-09-03" ? 0 : 4, ranked_total: 0,
+    }));
+    setup();
+    const date = await screen.findByLabelText("Filtrar sorteos por fecha");
+    fireEvent.change(date, { target: { value: "2025-09-03" } });
+    expect(await screen.findByText(/No hay sorteos históricos en esta fecha/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    fireEvent.change(date, { target: { value: "2025-09-04" } });
+    expect(await screen.findByText(/Hay sorteos históricos.*ninguno tiene ranking/)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeDisabled();
+  });
+
+  it("ignores older filter and pagination responses after a newer date is selected", async () => {
+    let resolveOld!: (page: { total: number; offset: number; limit: number; items: string[] }) => void;
+    let resolveMore!: (page: { total: number; offset: number; limit: number; items: string[] }) => void;
+    vi.mocked(apiClient.getStartingDraws).mockImplementation((offset = 0, limit = 100, date) => {
+      if (date === "2025-09-03") return new Promise((resolve) => { resolveOld = resolve; });
+      if (!date && offset > 0) return new Promise((resolve) => { resolveMore = resolve; });
+      return Promise.resolve({ total: date ? 1 : 150, offset, limit,
+        items: [date ? `${date} 05:10` : "2025-09-02 05:10"] });
+    });
+    const { user } = setup();
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await user.click(screen.getByRole("button", { name: "Cargar más sorteos" }));
+    const date = screen.getByLabelText("Filtrar sorteos por fecha");
+    fireEvent.change(date, { target: { value: "2025-09-03" } });
+    await waitFor(() => expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-03"));
+    fireEvent.change(date, { target: { value: "2025-09-04" } });
+    await screen.findByRole("option", { name: "2025-09-04 05:10" });
+    await act(async () => {
+      resolveOld({ total: 2, offset: 0, limit: 100, items: ["2025-09-03 05:10"] });
+      resolveMore({ total: 150, offset: 1, limit: 100, items: ["2025-09-02 05:15"] });
+    });
+    expect(screen.queryByRole("option", { name: "2025-09-03 05:10" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "2025-09-02 05:15" })).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Cargar más sorteos" })).not.toBeInTheDocument();
+  });
+
+  it("does not accept a selected draw after its same-day reload reports no ranking", async () => {
+    let datedLoads = 0;
+    vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => {
+      if (date === "2025-09-02") {
+        datedLoads += 1;
+        return { total: datedLoads === 1 ? 1 : 0, offset, limit,
+          items: datedLoads === 1 ? ["2025-09-02 05:10"] : [] };
+      }
+      return { total: 1, offset, limit, items: ["2025-09-02 05:10"] };
+    });
+    vi.mocked(apiClient.getStartingDrawAvailability).mockImplementation(async (date) => ({
+      date, history_total: 1, ranked_total: datedLoads === 1 ? 1 : 0,
+    }));
+    const { user } = setup();
+    const date = screen.getByLabelText("Filtrar sorteos por fecha");
+    fireEvent.change(date, { target: { value: "2025-09-02" } });
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
+    fireEvent.change(date, { target: { value: "" } });
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    fireEvent.change(date, { target: { value: "2025-09-02" } });
+    expect(await screen.findByText(/sorteo elegido ya no.*ranking/i)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-02 05:10");
+    expect(screen.getByRole("option", { name: /2025-09-02 05:10/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+  });
+
+  it("rechecks a selected off-page draw within its day and keeps it valid after reloading", async () => {
+    const late = "2025-09-03 05:10";
+    vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => ({
+      total: date ? 101 : 1000, offset, limit,
+      items: date ? offset === 0
+        ? Array.from({ length: 100 }, (_, i) => `${date} ${String(Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}`)
+        : [late] : ["2025-09-02 05:10"],
+    }));
+    vi.mocked(apiClient.getStartingDrawAvailability).mockImplementation(async (date) => ({ date, history_total: 101, ranked_total: 101 }));
+    const { user } = setup();
+    const date = screen.getByLabelText("Filtrar sorteos por fecha");
+    fireEvent.change(date, { target: { value: "2025-09-03" } });
+    await screen.findByRole("option", { name: "2025-09-03 00:00" });
+    await user.click(screen.getByRole("button", { name: "Cargar más sorteos" }));
+    await screen.findByRole("option", { name: late });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), late);
+    fireEvent.change(date, { target: { value: "" } });
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue(late));
+    fireEvent.change(date, { target: { value: "2025-09-03" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Continuar" })).toBeEnabled());
+    expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue(late);
+    expect(screen.getByRole("option", { name: late })).toBeEnabled();
+    expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100, "2025-09-03");
+    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Prueba");
+    await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "100");
+    await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "200");
+    await user.type(screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" }), "0");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
+  });
+
+  it("paginates only the selected day and retries a failed dated request", async () => {
+    vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => {
+      if (date === "2025-09-03" && offset === 0) throw new NetworkError();
+      return { total: date ? 101 : 2, offset, limit, items: [date ? `${date} ${offset ? "05:15" : "05:10"}` : "2025-09-02 05:10"] };
+    });
+    const { user } = setup();
+    fireEvent.change(await screen.findByLabelText("Filtrar sorteos por fecha"), { target: { value: "2025-09-03" } });
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Reintentá/);
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => ({
+      total: date ? 101 : 2, offset, limit, items: [date ? `${date} ${offset ? "05:15" : "05:10"}` : "2025-09-02 05:10"],
+    }));
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+    await screen.findByRole("option", { name: "2025-09-03 05:10" });
+    await user.click(screen.getByRole("button", { name: "Cargar más sorteos" }));
+    expect(await screen.findByRole("option", { name: "2025-09-03 05:15" })).toBeInTheDocument();
+    expect(apiClient.getStartingDraws).toHaveBeenCalledWith(1, 100, "2025-09-03");
+  });
+});
+
 describe("LW09 wizard", () => {
   it("shows empty and disconnected catalog states without inventing a default draw, then retries", async () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 0, offset: 0, limit: 100, items: [] });
@@ -339,7 +511,7 @@ describe("LW09 wizard", () => {
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     const fields = screen.getByRole("region", { name: "Condiciones comunes" }).querySelectorAll("input, select");
     expect(Array.from(fields, (field) => field.id)).toEqual([
-      "name", "start_draw", "capital", "goal", "settlement", "max_bets", "max_minutes", "seed",
+      "name", "draw_date", "start_draw", "capital", "goal", "settlement", "max_bets", "max_minutes", "seed",
     ]);
   });
 

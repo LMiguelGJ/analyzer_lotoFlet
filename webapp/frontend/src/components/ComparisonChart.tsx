@@ -1,7 +1,7 @@
 import { formatDOP } from "../lib/format";
 
 export interface ComparisonPoint { ordinal: number; label: string; balance: number }
-export interface ComparisonSeries { ordinal: number; name: string; visible: boolean; total: number; points: ComparisonPoint[] }
+export interface ComparisonSeries { ordinal: number; name: string; visible: boolean; total: number; points: ComparisonPoint[]; reductionMethod?: string; initialCapital?: number; startLabel?: string }
 
 const patterns = ["none", "8 5", "2 5", "12 4 2 4", "4 3 1 3"];
 const colors = ["var(--color-accent, currentColor)", "#876c42", "#6a7e9c", "#925e6d", "#60877a"];
@@ -9,7 +9,8 @@ const markers = ["circle", "square", "diamond", "triangle", "cross"];
 function time(label: string) { return Date.parse(label.replace(" ", "T")); }
 
 /** Connected strokes describe visual continuity only; circles are the actual saved observations. */
-export function ComparisonChart({ series, onToggle }: { series: ComparisonSeries[]; onToggle: (ordinal: number) => void }) {
+export function ComparisonChart({ series, onToggle, formatMoney = formatDOP }: { series: ComparisonSeries[]; onToggle: (ordinal: number) => void; formatMoney?: (amount: number) => string }) {
+  series = series.map((entry) => entry.points.length && entry.initialCapital != null && entry.startLabel ? { ...entry, points: [{ ordinal: 0, label: entry.startLabel, balance: entry.initialCapital }, ...entry.points] } : entry);
   const dated = series.flatMap((entry) => entry.points.map((point) => time(point.label))).filter(Number.isFinite);
   const balances = series.flatMap((entry) => entry.points.map((point) => point.balance));
   const minTime = dated.length ? Math.min(...dated) : 0;
@@ -20,8 +21,8 @@ export function ComparisonChart({ series, onToggle }: { series: ComparisonSeries
   const y = (balance: number) => 180 - ((balance - low) / (high - low || 1)) * 145;
   const timeLabels = series.flatMap((entry) => entry.points.map((point) => point.label)).sort((a, b) => time(a) - time(b));
   return <figure aria-label="Evolución comparada de saldos" className="min-w-0 space-y-3">
-    <figcaption className="font-heading text-xl">Evolución comparada · fechas históricas guardadas</figcaption>
-    <p className="text-sm text-text-secondary">Cada marca es una apuesta guardada. Las líneas conectan observaciones consecutivas cargadas; no agregan valores intermedios ni prolongan la sesión. Los tramos aún no cargados quedan sin conectar.</p>
+    <figcaption className="font-heading text-xl">Evolución comparada · fechas guardadas</figcaption>
+    <p className="text-sm text-text-secondary">Las líneas conectan observaciones guardadas y el capital inicial; no agregan valores intermedios ni prolongan la sesión. Las trayectorias reducidas conservan inicio, fin y extremos; la reducción se declara por corrida.</p>
     <fieldset aria-label="Series visibles" className="flex flex-wrap gap-x-5 gap-y-2">
       {series.map((entry) => <label key={entry.ordinal} className="inline-flex min-h-control items-center gap-2 text-sm">
         <input type="checkbox" checked={entry.visible} onChange={() => onToggle(entry.ordinal)} aria-label={`Mostrar ${entry.name}`} className="accent-accent" />
@@ -41,7 +42,7 @@ export function ComparisonChart({ series, onToggle }: { series: ComparisonSeries
           // A page gap is not evidence of a continuous saved sequence.
           const segments: ComparisonPoint[][] = [];
           for (const point of points) {
-            if (!segments.length || segments[segments.length - 1].at(-1)!.ordinal + 1 !== point.ordinal) segments.push([]);
+            if (!segments.length || (!entry.reductionMethod && segments[segments.length - 1].at(-1)!.ordinal + 1 !== point.ordinal)) segments.push([]);
             segments.at(-1)!.push(point);
           }
           return <g key={entry.ordinal}>
@@ -54,7 +55,7 @@ export function ComparisonChart({ series, onToggle }: { series: ComparisonSeries
       </svg>
     </section> : <p role="status">Todavía no hay apuestas guardadas cargadas para graficar.</p>}
     <section aria-label="Datos textuales del gráfico" tabIndex={0} className="max-h-40 overflow-auto text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
-      <ul className="space-y-1">{series.flatMap((entry) => entry.points.map((point) => <li key={`${entry.ordinal}:${point.ordinal}`}>{entry.name}: {point.label.replace("T", " ")} · {formatDOP(point.balance)}</li>))}</ul>
+      <ul className="space-y-1">{series.flatMap((entry) => entry.points.map((point) => <li key={`${entry.ordinal}:${point.ordinal}`}>{entry.name}: {point.label.replace("T", " ")} · {formatMoney(point.balance)}</li>))}</ul>
     </section>
   </figure>;
 }

@@ -22,6 +22,7 @@ import { useQueue } from "./QueueProvider";
 const NAV_ITEMS = [
   { to: "/experimentos", label: "Experimentos" },
   { to: "/configuraciones", label: "Estrategias guardadas" },
+  { to: "/datos", label: "Datos" },
   { to: "/ajustes", label: "Ajustes" },
 ] as const;
 

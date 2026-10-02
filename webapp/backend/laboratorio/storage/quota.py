@@ -1,4 +1,4 @@
-"""Measured experiment budget and conservative disk admission, without cleanup."""
+"""Measured logical artifact budget and conservative disk admission, without cleanup."""
 
 import shutil
 from dataclasses import dataclass
@@ -15,7 +15,9 @@ class QuotaExceeded(RuntimeError):
 @dataclass(frozen=True)
 class QuotaStatus:
     limit_bytes: int
-    logical_used_bytes: int
+    logical_used_bytes: int  # historical experiment/run metric, unchanged
+    profile_artifact_bytes: int
+    dataset_artifact_bytes: int
     logical_margin_bytes: int
     free_disk_bytes: int
     disk_margin_bytes: int
@@ -25,18 +27,25 @@ class QuotaStatus:
     temp_bytes: int
 
     @property
+    def admission_logical_bytes(self) -> int:
+        return self.logical_used_bytes + self.profile_artifact_bytes + self.dataset_artifact_bytes
+
+    @property
     def sqlite_bytes(self) -> int:
         return self.database_bytes + self.wal_bytes + self.shm_bytes + self.temp_bytes
 
     @property
     def warning(self) -> bool:
         return (
-            self.limit_bytes - self.logical_used_bytes <= 2 * self.logical_margin_bytes
+            self.limit_bytes - self.admission_logical_bytes <= 2 * self.logical_margin_bytes
             or self.free_disk_bytes <= 2 * self.disk_margin_bytes
         )
 
     def require_capacity(self, write_bytes: int = 0) -> None:
-        if self.logical_used_bytes + write_bytes + self.logical_margin_bytes >= self.limit_bytes:
+        if (
+            self.admission_logical_bytes + write_bytes + self.logical_margin_bytes
+            >= self.limit_bytes
+        ):
             raise QuotaExceeded("experiment quota has insufficient remaining headroom")
         if self.free_disk_bytes <= self.disk_margin_bytes + write_bytes:
             raise QuotaExceeded("free disk has insufficient write headroom")
@@ -48,7 +57,15 @@ def validate_quota_bytes(value: int) -> int:
     return value
 
 
-def measure(path: Path, limit_bytes: int, logical_used_bytes: int, *, disk_usage=shutil.disk_usage):
+def measure(
+    path: Path,
+    limit_bytes: int,
+    logical_used_bytes: int,
+    *,
+    profile_artifact_bytes: int = 0,
+    dataset_artifact_bytes: int = 0,
+    disk_usage=shutil.disk_usage,
+):
     """Snapshot only known local files; SQLite may allocate other OS-managed temp files."""
     limit_bytes = validate_quota_bytes(limit_bytes)
     path = Path(path)
@@ -62,6 +79,8 @@ def measure(path: Path, limit_bytes: int, logical_used_bytes: int, *, disk_usage
     return QuotaStatus(
         limit_bytes=limit_bytes,
         logical_used_bytes=logical_used_bytes,
+        profile_artifact_bytes=profile_artifact_bytes,
+        dataset_artifact_bytes=dataset_artifact_bytes,
         logical_margin_bytes=min(LOGICAL_MARGIN_BYTES, max(1, limit_bytes // 20)),
         free_disk_bytes=disk_usage(path.parent).free,
         disk_margin_bytes=DISK_MARGIN_BYTES,

@@ -17,7 +17,7 @@ from laboratorio.domain.contracts import (
     Strategy,
 )
 from laboratorio.domain.selection import random_order
-from laboratorio.domain.session import Draw, run_session
+from laboratorio.domain.session import Draw, preflight_initial_stake, run_session
 from laboratorio.engine.adapter import (
     DataError,
     History,
@@ -86,6 +86,40 @@ def test_repeated_numbers_pay_each_position_or_only_best_per_number():
         all_result.bets[0].balance = 0
 
 
+@pytest.mark.parametrize("coverage", (20, 30, 40))
+@pytest.mark.parametrize("staking,stake", (("flat", 1), ("ladder", 1), ("bold", 2)))
+@pytest.mark.parametrize("mode,prize", (("all", 95), ("best", 84)))
+def test_synthetic_coverage_accounting_with_repeated_numbers(coverage, staking, stake, mode, prize):
+    # Selected: 7, 8, then 20 onward; the other numbers cannot win this draw.
+    selected = (7, 8, *range(20, 20 + coverage - 2))
+    row = draw("2025-01-01 05:10", (7, 7, 8, 7, 8), selected)
+    result = run_session(
+        conditions(capital=200, goal=280, settlement=mode, max_bets=1),
+        strategy(staking=staking, coverage=coverage),
+        [row],
+    )
+    # Q80 prizes: all = 80+8+4+2+1; best = 80 for 7 and 4 for 8.
+    cost = stake * coverage
+    paid = stake * prize
+    balance = 200 - cost + paid
+    expected_outcome = Outcome.GOAL if balance >= 280 else Outcome.LIMIT
+    assert result.bets_count == 1
+    assert (result.wagered, result.paid, result.final_balance, result.outcome) == (
+        cost,
+        paid,
+        balance,
+        expected_outcome,
+    )
+    assert (
+        result.bets[0].numbers,
+        result.bets[0].results,
+        result.bets[0].per_number,
+        result.bets[0].wagered,
+        result.bets[0].paid,
+        result.bets[0].balance,
+    ) == (selected, (7, 7, 8, 7, 8), stake, cost, paid, balance)
+
+
 def test_initial_and_post_settlement_insolvency_do_not_overdraft():
     rows = [draw("2025-01-01 05:10", (0, 1, 2, 3, 4))]
     with pytest.raises(ValueError, match="afford"):
@@ -101,6 +135,30 @@ def test_initial_and_post_settlement_insolvency_do_not_overdraft():
             strategy(coverage=5),
             [draw("2025-01-01 05:10", (0, 1, 2, 3, 4), (7, 8))],
         )
+
+
+@pytest.mark.parametrize("staking", ("flat", "ladder", "bold"))
+@pytest.mark.parametrize("coverage", (5, 50))
+def test_preflight_rejects_unfunded_first_bet_and_accepts_exact_boundary(staking, coverage):
+    selected = strategy(staking=staking, coverage=coverage)
+    with pytest.raises(ValueError, match="initial capital cannot afford"):
+        preflight_initial_stake(conditions(capital=coverage - 1), selected)
+    with pytest.raises(ValueError, match="initial capital cannot afford"):
+        run_session(conditions(capital=coverage - 1), selected, ())
+
+    opts = conditions(capital=coverage)
+    assert preflight_initial_stake(opts, selected) == 1
+    result = run_session(opts, selected, [draw(opts.start_draw, (0, 1, 2, 3, 4))])
+    assert result.bets[0].per_number == 1
+    assert result.bets[0].wagered == coverage
+
+
+def test_preflight_bold_stake_matches_first_executed_wager():
+    opts = conditions(capital=2000, goal=2800)
+    selected = strategy(staking="bold", coverage=50)
+    stake = preflight_initial_stake(opts, selected)
+    result = run_session(opts, selected, [draw(opts.start_draw, (0, 1, 2, 3, 4))])
+    assert stake == result.bets[0].per_number == 27
 
 
 def test_ladder_uses_coverage_recovery_rounds_and_resets_on_first_hit():
@@ -226,6 +284,69 @@ def test_adapter_routes_selectors_and_preserves_unranked_clock(data_dir):
                 data, strategy(coverage=5), opts.model_copy(update={"start_draw": labels[1]})
             )
         )
+
+
+@pytest.mark.parametrize("coverage", (20, 30, 40))
+@pytest.mark.parametrize("selector", ("blend", "random"))
+@pytest.mark.parametrize("mode,prize", (("all", 95), ("best", 84)))
+def test_adapter_blend_and_random_accounting_at_wider_coverages(
+    data_dir, coverage, selector, mode, prize
+):
+    label = "2025-01-01 05:10"
+    ranked = (7, 8, *range(20, 100), *range(7), *range(9, 20))
+    if selector == "random":
+        ranked = tuple(int(n) for n in random_order(17, label))
+    first, second = ranked[:2]
+    results = (first, first, second, first, second)
+    history = History(
+        (label,),
+        np.array([results], dtype=np.uint8),
+        np.array([draw(label, results).minute]),
+        "test",
+    )
+    source = io.BytesIO()
+    # Blend components agree on the top 40; this tests adapter wiring, not blend scoring.
+    blend_ranking = np.array([(7, 8, *range(20, 100), *range(7), *range(9, 20))], dtype=np.uint8)
+    np.savez(source, ranking100__cold=blend_ranking, ranking100__transition=blend_ranking)
+    rankings = Rankings(
+        np.array([0], dtype=np.int64), data_dir / "never-open.npz", source.getvalue()
+    )
+    data = LabData(history, rankings, Settings.from_environment())
+    strat = (
+        strategy(
+            selector="blend",
+            coverage=coverage,
+            components=(
+                BlendComponent(system="cold", weight=50),
+                BlendComponent(system="transition", weight=50),
+            ),
+        )
+        if selector == "blend"
+        else strategy(selector="random", coverage=coverage)
+    )
+    opts = conditions(capital=200, goal=280, max_bets=1, settlement=mode)
+    rows = list(session_draws(data, strat, opts))
+    assert len(rows) == 1
+    assert rows[0].order == ranked[:coverage]
+    assert rows[0].results == results
+    result = run_session(opts, strat, rows)
+    # Positions 1/2/4 repeat first; positions 3/5 repeat second.
+    cost = coverage
+    balance = 200 - cost + prize
+    assert (result.bets_count, result.wagered, result.paid, result.final_balance) == (
+        1,
+        cost,
+        prize,
+        balance,
+    )
+    assert result.outcome is Outcome.LIMIT
+    assert (
+        result.bets[0].numbers,
+        result.bets[0].per_number,
+        result.bets[0].wagered,
+        result.bets[0].paid,
+        result.bets[0].balance,
+    ) == (ranked[:coverage], 1, cost, prize, balance)
 
 
 @pytest.mark.real_data

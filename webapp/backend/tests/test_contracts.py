@@ -9,11 +9,17 @@ from pydantic import ValidationError
 from laboratorio.domain.contracts import (
     COVERAGES,
     GAME,
+    MAX_MONEY,
+    MAX_PROFILE_POSITIONS,
+    MAX_PROFILE_SCALE,
+    MAX_PROFILE_UNIVERSE,
     MAX_SEED,
     SYSTEMS,
     Conditions,
     ExperimentRequest,
+    GameProfile,
     Strategy,
+    legacy_quiniela_80_profile,
     normalize_strategy_name,
 )
 
@@ -55,6 +61,160 @@ def test_game_is_the_fixed_quiniela_80_profile():
     assert COVERAGES == (1, 5, 10, 20, 25, 30, 40, 50)
     assert len(SYSTEMS) == 13
     assert "transition" in SYSTEMS and "logistic" not in SYSTEMS
+
+
+def profile(**overrides):
+    base = {
+        "schema_version": 1,
+        "profile_id": "example-3",
+        "revision": 1,
+        "universe_size": 100,
+        "positions": 3,
+        "allows_repeats": True,
+        "multipliers": [{"numerator": n, "denominator": 1} for n in (60, 10, 5)],
+        "currency": "DOP",
+        "scale": 0,
+        "stake_increment": 1,
+        "minimum_stake": 1,
+        "maximum_stake": 100,
+        "max_coverage": 10,
+        "max_exposure": 1_000,
+        "best_rule": "maximum-payout/v1",
+    }
+    base.update(overrides)
+    return base
+
+
+@pytest.mark.parametrize("positions", [1, 3, 5])
+def test_new_profiles_admit_explicit_position_counts(positions):
+    parsed = GameProfile.model_validate(
+        profile(positions=positions, multipliers=[{"numerator": 2, "denominator": 1}] * positions)
+    )
+    assert len(parsed.multipliers) == positions
+    assert GameProfile.model_validate_json(parsed.model_dump_json()) == parsed
+
+
+def test_new_profiles_allow_other_universes_and_exact_scaled_money():
+    parsed = GameProfile.model_validate(
+        profile(
+            universe_size=7,
+            positions=6,
+            allows_repeats=False,
+            max_coverage=7,
+            scale=2,
+            stake_increment=2,
+            minimum_stake=2,
+            maximum_stake=200,
+            max_exposure=1_400,
+            multipliers=[{"numerator": 3, "denominator": 2}] * 6,
+        )
+    )
+    assert parsed.multipliers[0].numerator == 3
+    assert '"minimum_stake":2' in parsed.model_dump_json()
+    assert '"scale":2' in parsed.model_dump_json()
+
+
+def test_profile_requires_every_field_and_rejects_extra_fields():
+    for key in profile():
+        incomplete = profile()
+        incomplete.pop(key)
+        with pytest.raises(ValidationError):
+            GameProfile.model_validate(incomplete)
+    with pytest.raises(ValidationError):
+        GameProfile.model_validate(profile(unknown=123))
+
+
+@pytest.mark.parametrize(
+    ("field", "bad"),
+    [
+        ("schema_version", 2),
+        ("schema_version", True),
+        ("profile_id", "Legacy Profile"),
+        ("revision", 0),
+        ("revision", 1_000_001),
+        ("universe_size", 0),
+        ("universe_size", MAX_PROFILE_UNIVERSE + 1),
+        ("positions", MAX_PROFILE_POSITIONS + 1),
+        ("allows_repeats", 1),
+        ("currency", "RD$"),
+        ("scale", MAX_PROFILE_SCALE + 1),
+        ("stake_increment", 0),
+        ("minimum_stake", 0),
+        ("maximum_stake", MAX_MONEY + 1),
+        ("max_coverage", 0),
+        ("max_exposure", MAX_MONEY + 1),
+        ("best_rule", "custom"),
+        ("universe_size", True),
+        ("positions", 3.0),
+        ("scale", "0"),
+        ("minimum_stake", 1.0),
+        ("maximum_stake", True),
+        ("max_exposure", float("inf")),
+    ],
+)
+def test_profile_rejects_malformed_scalar_fields(field, bad):
+    with pytest.raises(ValidationError):
+        GameProfile.model_validate(profile(**{field: bad}))
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"positions": 4},  # multiplier count
+        {"positions": 2, "universe_size": 1, "allows_repeats": False},
+        {"max_coverage": 101},
+        {"minimum_stake": 101},
+        {"minimum_stake": 3, "stake_increment": 2},
+        {"maximum_stake": 101, "stake_increment": 2},
+        {"max_exposure": 9},
+        {"maximum_stake": 101, "max_exposure": 100},
+        {"max_exposure": 1_000, "multipliers": [{"numerator": MAX_MONEY, "denominator": 1}] * 3},
+        {"stake_increment": 1, "multipliers": [{"numerator": 3, "denominator": 2}] * 3},
+        {"multipliers": [{"numerator": 1, "denominator": 0}] * 3},
+        {"multipliers": [{"numerator": 1.5, "denominator": 1}] * 3},
+        {"multipliers": [{"numerator": True, "denominator": 1}] * 3},
+        {"multipliers": [{"numerator": 1}] * 3},
+        {"multipliers": []},
+    ],
+)
+def test_profile_rejects_inconsistent_or_inexact_terms(changes):
+    with pytest.raises(ValidationError):
+        GameProfile.model_validate(profile(**changes))
+
+
+def test_profile_and_nested_multipliers_are_immutable_and_do_not_share_mutable_input():
+    raw = profile()
+    parsed = GameProfile.model_validate(raw)
+    raw["multipliers"][0]["numerator"] = 999
+    assert parsed.multipliers[0].numerator == 60
+    with pytest.raises(ValidationError):
+        parsed.positions = 4
+    with pytest.raises(ValidationError):
+        parsed.multipliers[0].numerator = 4
+
+
+def test_legacy_descriptor_is_frozen_stable_and_distinct_from_new_best_rule():
+    legacy = legacy_quiniela_80_profile()
+    assert (legacy.universe_size, legacy.positions, legacy.allows_repeats) == (
+        GAME.numbers,
+        GAME.positions,
+        GAME.allows_repeats,
+    )
+    assert tuple(p.numerator for p in legacy.multipliers) == GAME.prizes
+    assert (legacy.currency, legacy.scale, legacy.stake_increment, legacy.minimum_stake) == (
+        "DOP",
+        0,
+        1,
+        1,
+    )
+    assert (legacy.best_rule, legacy.max_coverage) == ("first-match/v0", max(COVERAGES))
+    assert legacy.maximum_stake <= legacy.max_exposure
+    assert GameProfile.model_validate_json(legacy.model_dump_json()) == legacy
+    assert legacy_quiniela_80_profile() == legacy
+    with pytest.raises(ValidationError):
+        GameProfile.model_validate(profile(best_rule="first-match/v0"))
+    with pytest.raises(ValidationError):
+        GameProfile.model_validate(profile(profile_id="legacy-quiniela-80"))
 
 
 def test_individual_system_strategy_is_valid():

@@ -16,15 +16,23 @@ describe("routing", () => {
     expect(screen.getByRole("heading", { name: "Experimentos" })).toBeInTheDocument();
   });
 
-  it("renders a stable URL for each of the three nav destinations", () => {
+  it("renders stable URLs including the data-import destination", () => {
     renderAt("/configuraciones");
     expect(screen.getByRole("heading", { name: "Estrategias guardadas" })).toBeInTheDocument();
+
+    renderAt("/datos");
+    expect(screen.getByRole("heading", { name: "Datos" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Datos" }).at(-1)).toHaveAttribute("aria-current", "page");
 
     renderAt("/ajustes");
     expect(screen.getByRole("heading", { name: "Ajustes" })).toBeInTheDocument();
 
     renderAt("/experimentos/nuevo");
     expect(screen.getByRole("heading", { name: "Nuevo experimento" })).toBeInTheDocument();
+
+    renderAt("/experimentos/nuevo/perfil");
+    expect(screen.getByRole("heading", { name: "Nueva sesión con perfil" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sesión con perfil registrado" })).toBeInTheDocument();
   });
 
   it("renders an honest not-found state for unknown paths", () => {
@@ -63,6 +71,7 @@ describe("keyboard focus order", () => {
       "Abrir navegación",
       "Experimentos",
       "Estrategias guardadas",
+      "Datos",
       "Ajustes",
     ];
 

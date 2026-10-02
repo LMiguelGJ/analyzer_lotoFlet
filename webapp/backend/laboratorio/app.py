@@ -14,7 +14,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from laboratorio.api import catalog, configurations, experiments, queue
+from laboratorio.api import catalog, configurations, datasets, experiments, imports, queue
 from laboratorio.api import settings as settings_api
 from laboratorio.engine.adapter import open_lab_data
 from laboratorio.jobs.queue import JobQueue
@@ -23,9 +23,11 @@ from laboratorio.storage.database import initialize_database
 from laboratorio.storage.repository import Repository
 
 _HOST = re.compile(r"(localhost|127\.0\.0\.1)(?::([0-9]{1,5}))?\Z")
+_IMPORT_ENVELOPE_BYTES = 3 * 1024 * 1024
+_IMPORT_PATHS = frozenset(("/api/v1/imports/preview", "/api/v1/imports/promote"))
 _OWNERS_LOCK = threading.Lock()
 _SPA_PATH = re.compile(
-    r"/(?:|experimentos(?:/nuevo|/[^/]+(?:/comparacion)?)?|configuraciones|ajustes)\Z"
+    r"/(?:|experimentos(?:/nuevo(?:/perfil)?|/[^/]+(?:/comparacion)?)?|configuraciones|ajustes|datos)\Z"
 )
 
 
@@ -119,11 +121,30 @@ def create_app(
             return JSONResponse({"detail": "same-origin required"}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS") and not origins:
             return JSONResponse({"detail": "Origin required for mutation"}, status_code=403)
+        if request.method == "POST" and request.url.path in _IMPORT_PATHS:
+            lengths = request.headers.getlist("content-length")
+            if any(value.isdecimal() and int(value) > _IMPORT_ENVELOPE_BYTES for value in lengths):
+                return JSONResponse({"detail": "import envelope exceeds 3 MiB"}, status_code=413)
+            # Bound actual streamed bytes too: Content-Length may be absent or false.
+            # Cache the accepted body on Starlette's request so call_next can replay it
+            # without raising from receive inside BaseHTTPMiddleware's task group.
+            chunks = []
+            size = 0
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > _IMPORT_ENVELOPE_BYTES:
+                    return JSONResponse(
+                        {"detail": "import envelope exceeds 3 MiB"}, status_code=413
+                    )
+                chunks.append(chunk)
+            request._body = b"".join(chunks)
         return await call_next(request)
 
     for router in (
         catalog.router,
         experiments.router,
+        imports.router,
+        datasets.router,
         configurations.router,
         queue.router,
         settings_api.router,

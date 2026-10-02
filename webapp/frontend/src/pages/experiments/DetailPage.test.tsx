@@ -5,11 +5,11 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { Bet, ExperimentSummary, Page } from "../../api/types";
+import type { Bet, ExperimentSummary, Page, ProfileExperimentSummary, ReplayPage } from "../../api/types";
 
 vi.mock("../../api/client", async (original) => {
   const actual = await original<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getExperiment: vi.fn(), getReplay: vi.fn(), createExperiment: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getExperiment: vi.fn(), getReplay: vi.fn(), getTrajectory: vi.fn(), createExperiment: vi.fn() } };
 });
 
 const bet: Bet = { label: "2026-01-02T10:05:00", numbers: [0, 7], per_number: 10, wagered: 20, results: [0, 3, 7, 8, 9], paid: 60, balance: 140 };
@@ -26,18 +26,191 @@ const snapshot: ExperimentSummary = {
   ],
 };
 const page: Page<Bet> = { total: 1, offset: 0, limit: 20, items: [bet] };
+const profileSnapshot: ProfileExperimentSummary = {
+  request_kind: "profile", id: "exp", status: "completed", created_at: null,
+  request: { kind: "profile", schema_version: 1, name: "Perfil USD", dataset_sha256: "a".repeat(64), profile_id: "test", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
+    conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 10000, goal: 20000, settlement: "all", max_elapsed_draws: 3, max_bet_draws: 2, end_minute: null, duration_minutes: null },
+    selector: { schema_version: 1, capability: "static-numbers/v1", coverage: 2, numbers: [7, 8], seed: null, algorithm_version: null },
+    staking: { schema_version: 1, capability: "flat-per-number/v1", per_number_stake: 125 } },
+  profile: { schema_version: 1, profile_id: "test", revision: 1, universe_size: 100, positions: 3, allows_repeats: true, multipliers: [80, 8, 4].map((numerator) => ({ numerator, denominator: 1 })), currency: "USD", scale: 2, stake_increment: 1, minimum_stake: 1, maximum_stake: 100000, max_coverage: 10, max_exposure: 100000, best_rule: "maximum-payout/v1" },
+  display: { name: "Perfil USD", currency: "USD", scale: 2, capital: 10000, goal: 20000, selector_label: "static-numbers/v1", staking_label: "flat-per-number/v1" },
+  sources: { history_id: "a", history_sha256: "a", rankings_id: "", rankings_sha256: "", code_version: "profile-v1" },
+  runs: [{ ordinal: 0, configuration_id: null, status: "completed", result_kind: "profile", bets_count: 1,
+    result: { schema_version: 1, profile_id: "test", profile_revision: 1, outcome: "limit", collisions: ["max_elapsed_draws"], elapsed_draws: 3, bet_draws: 1, wagered: 250, paid: 0, final_balance: 9750, delta: -250 } }],
+};
+const profilePage: ReplayPage = { result_kind: "profile", total: 1, offset: 0, limit: 20, items: [{ label: "2025-01-01 05:10", stakes: [[7, 125], [8, 125]], results: [7, 8, 9], wagered: 250, paid: 0, balance: 9750 }] };
+const cyclingSnapshot: ProfileExperimentSummary = {
+  ...profileSnapshot, status: "completed",
+  request: { ...profileSnapshot.request, schema_version: 2, staking: { schema_version: 1, capability: "q80-first-prize-cycling/v1" } },
+  display: { ...profileSnapshot.display, staking_label: "Escalera cíclica Q80 · apuesta dinámica por sorteo" },
+  runs: [{ ...profileSnapshot.runs[0], status: "completed", result: { ...profileSnapshot.runs[0].result!, schema_version: 2 } }],
+};
+const cyclingPage: ReplayPage = { result_kind: "profile", schema_version: 2, total: 1, offset: 0, limit: 20,
+  items: [{ label: "2025-01-01 05:10", stakes: [[7, 125], [8, 125]], results: [7, 8, 9], wagered: 250, paid: 0, balance: 9750 }] };
+const audazSnapshot: ProfileExperimentSummary = { ...cyclingSnapshot,
+  request: { ...cyclingSnapshot.request, schema_version: 3, staking: { schema_version: 1, capability: "profile-audaz/v1" } },
+  display: { ...cyclingSnapshot.display, staking_label: "Audaz · apuesta dinámica por sorteo" },
+  runs: [{ ...cyclingSnapshot.runs[0], result: { ...cyclingSnapshot.runs[0].result!, schema_version: 3 } }],
+};
 function setup(path = "/experimentos/exp") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
   return { router, user: userEvent.setup(), ...render(<RouterProvider router={router} />) };
 }
 beforeEach(() => {
   vi.mocked(apiClient.getExperiment).mockReset();
+  vi.mocked(apiClient.getTrajectory).mockReset().mockImplementation(async (_id, ordinal) => {
+    const latest = vi.mocked(apiClient.getExperiment).mock.results.at(-1);
+    const saved = await latest?.value;
+    const run = saved?.runs.find((r: { ordinal: number }) => r.ordinal === ordinal);
+    const total = run?.result?.bet_draws ?? run?.result?.bets_count ?? 0;
+    const capital = saved?.request.conditions.capital ?? 100;
+    const end = run?.result?.final_balance ?? capital;
+    return { initial_capital: capital, total, max_points: 500, reduction_method: "none",
+      minimum: { balance: Math.min(capital, end), source_index: null }, maximum: { balance: Math.max(capital, end), source_index: null },
+      points: Array.from({ length: Math.min(total, 500) }, (_, i) => ({ source_index: i, label: `2025-01-01 10:${String(i % 60).padStart(2, "0")}`, balance: end, replay: `replay?offset=${i}&limit=1` })) };
+  });
   vi.mocked(apiClient.getReplay).mockReset();
   vi.mocked(apiClient.getExperiment).mockResolvedValue(snapshot);
   vi.mocked(apiClient.getReplay).mockResolvedValue(page);
 });
 
+describe("profile detail READ", () => {
+  it.each(["pending", "running", "held", "failed"] as const)("shows Q80 %s without a fabricated result or replay", async (status) => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...cyclingSnapshot, status,
+      runs: [{ ...cyclingSnapshot.runs[0], status: status === "held" ? "pending" : status, result: null, bets_count: 0 }] });
+    const { user, unmount } = setup();
+    const run = await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(within(run).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+    await user.click(within(run).getByRole("tab", { name: "Parámetros y datos" }));
+    expect(within(run).getByText("Escalera cíclica Q80 · apuesta dinámica por sorteo")).toBeInTheDocument();
+    expect(apiClient.getReplay).not.toHaveBeenCalled();
+    unmount();
+  });
+  it("reads completed cycling stake as dynamic, not a fabricated flat amount", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(cyclingSnapshot);
+    vi.mocked(apiClient.getReplay).mockResolvedValue(cyclingPage);
+    const { user } = setup();
+    await screen.findByText("-USD 2.50");
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    expect(screen.getByText("Escalera cíclica Q80 · apuesta dinámica por sorteo")).toBeInTheDocument();
+    expect(screen.queryByText(/undefined por número/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Apuestas" }));
+    expect(await screen.findByText("7: USD 1.25, 8: USD 1.25")).toBeInTheDocument();
+    expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+  });
+  it.each([["pending", "pending"], ["held", "pending"], ["running", "running"], ["failed", "failed"]] as const)(
+    "shows schema-3 Audaz %s without an invented result", async (status, runStatus) => {
+      vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...audazSnapshot, status,
+        runs: [{ ...audazSnapshot.runs[0], status: runStatus, result: null, bets_count: 0 }] });
+      const { unmount } = setup();
+      const run = await screen.findByRole("region", { name: "Ejecución 1" });
+      expect(within(run).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+      expect(within(run).getByText(status === "held" ? "Pendiente" : status === "pending" ? "Pendiente" : status === "running" ? "En curso" : "Con error")).toBeInTheDocument();
+      expect(apiClient.getReplay).not.toHaveBeenCalled();
+      unmount();
+    });
+  it("renders schema-3 Audaz as dynamic across parameters and completed replay", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(audazSnapshot);
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 3, total: 1, offset: 0, limit: 20,
+      items: [{ label: "2025-01-01 05:10", stakes: [[7, 125], [8, 125]], results: [7, 8, 9], wagered: 250, paid: 0, balance: 9750 }] });
+    const { user } = setup();
+    await screen.findByText("-USD 2.50");
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    expect(screen.getByText("Audaz · apuesta dinámica por sorteo")).toBeInTheDocument();
+    expect(screen.queryByText(/por número/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Apuestas" }));
+    expect(await screen.findByText("7: USD 1.25, 8: USD 1.25")).toBeInTheDocument();
+    expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
+  });
+  it.each([["cycle", "Reiniciar la escalera"], ["stop", "Detener la sesión"]] as const)("shows schema-4 recovery request, saved result version, and %s details", async (end_mode, ending) => {
+    const recovery: ProfileExperimentSummary = { ...profileSnapshot,
+      request: { ...profileSnapshot.request, schema_version: 4, staking: { schema_version: 1, target_margin: 1250, rounds: 3, end_mode } },
+      profile: { ...profileSnapshot.profile, profile_id: "rational-recovery", multipliers: [{ numerator: 5, denominator: 2 }, { numerator: 3, denominator: 2 }] },
+      display: { ...profileSnapshot.display, staking_label: "Escalera de recuperación · parámetros explícitos por perfil" },
+      runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, schema_version: 4, collisions: ["recovery_round_limit"] } }],
+    };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(recovery);
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 4, total: 1, offset: 0, limit: 20,
+      items: [{ label: "2025-01-01 05:10", stakes: [[7, 125]], results: [7, 8, 9], wagered: 125, paid: 0, balance: 9875 }] });
+    const { user } = setup();
+    await screen.findByText("Perfil v4");
+    expect(screen.getByText("Perfil v4")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    expect(screen.getByText("Escalera de recuperación · parámetros explícitos por perfil")).toBeInTheDocument();
+    expect(screen.getByText("USD 12.50")).toBeInTheDocument();
+    expect(screen.getByText("Rondas de recuperación").nextElementSibling).toHaveTextContent("3");
+    expect(screen.getByText(ending)).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Apuestas" }));
+    expect(await screen.findByText("7: USD 1.25")).toBeInTheDocument();
+    expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
+  });
+  it("does not claim historical provenance for a profile dataset without source kind", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(profileSnapshot);
+    const { user } = setup();
+    const run = await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(within(run).getByText("Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(within(run).queryByText(/Simulación con datos históricos/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    expect(within(run).getByText("Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.")).toBeInTheDocument();
+    expect(within(run).queryByText(/Resultados históricos/)).not.toBeInTheDocument();
+  });
+
+  it("shows server delta, elapsed/bet counts, 3 positions and per-number stakes in USD cents", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(profileSnapshot);
+    vi.mocked(apiClient.getReplay).mockResolvedValue(profilePage);
+    const { user } = setup();
+    await screen.findByText("-USD 2.50");
+    expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).toHaveTextContent("-USD 2.50");
+    expect(screen.getByText("Sorteos transcurridos").nextElementSibling).toHaveTextContent("3");
+    expect(screen.getByText("Sorteos apostados").nextElementSibling).toHaveTextContent("1");
+    expect(screen.getByText(/Límite de sesión \(límite de sorteos transcurridos\)/)).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Apuestas" }));
+    const table = await screen.findByRole("table", { name: "Apuestas del experimento" });
+    expect(within(table).getAllByRole("columnheader", { name: /Resultado/ })).toHaveLength(3);
+    expect(within(table).getByText("7: USD 1.25, 8: USD 1.25")).toBeInTheDocument();
+    await user.click(within(table).getByRole("button", { name: "Detalle" }));
+    expect(screen.getByText("Resultados (3 posiciones)").nextElementSibling).toHaveTextContent("7, 8, 9");
+    expect(screen.getByText("Saldo resultante").nextElementSibling).toHaveTextContent("USD 97.50");
+    expect(screen.queryByText(/posiciones 1 a 5/)).not.toBeInTheDocument();
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+  });
+
+  it("shows one position without fixed-five columns, and preserves held/failed null results", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValueOnce({ ...profileSnapshot, profile: { ...profileSnapshot.profile, positions: 1 } });
+    const onePosition: ReplayPage = { result_kind: "profile", total: 1, offset: 0, limit: 20, items: [{ label: "2025-01-01 05:10", stakes: [[7, 125]], results: [7], wagered: 125, paid: 0, balance: 9875 }] };
+    vi.mocked(apiClient.getReplay).mockResolvedValueOnce(onePosition);
+    const first = setup();
+    await first.user.click(await screen.findByRole("tab", { name: "Apuestas" }));
+    expect(within(screen.getByRole("table", { name: "Apuestas del experimento" })).getAllByRole("columnheader", { name: /Resultado/ })).toHaveLength(1);
+    first.unmount();
+    for (const status of ["held", "failed"] as const) {
+      vi.mocked(apiClient.getExperiment).mockResolvedValueOnce({ ...profileSnapshot, status, runs: [{ ...profileSnapshot.runs[0], status: status === "held" ? "pending" : "failed", result: null, bets_count: 0 }] });
+      const view = setup();
+      expect(await screen.findByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+      expect(apiClient.getReplay).toHaveBeenCalledTimes(1);
+      view.unmount();
+    }
+  });
+});
+
 describe("LW11 detail", () => {
+  it("jumps directly to an exact source bet beyond page 20 from a comparison link", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed", runs: [{ ...snapshot.runs[0], bets_count: 1001, result: { ...snapshot.runs[0].result!, bets_count: 1001 } }] });
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 1001, offset: 600, limit: 20, items: [bet] });
+    setup("/experimentos/exp?run=0&bet=600&from=comparison");
+    expect(await screen.findByText(/Apuesta seleccionada 601:/)).toBeInTheDocument();
+    expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 600, 20);
+    expect(screen.getByRole("tab", { name: "Apuestas" })).toHaveAttribute("aria-selected", "true");
+  });
+  it("displays backend metrics with profile money and no browser recomputation", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, net: 777, max_drawdown: 123, return_per_wagered: 0.456789, roi: -0.543211 } }] });
+    setup();
+    await screen.findByRole("region", { name: "Métricas financieras" });
+    expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("USD 7.77");
+    expect(screen.getByText("Máximo drawdown absoluto").nextElementSibling).toHaveTextContent("USD 1.23");
+    expect(screen.getByText("Retorno por peso apostado").nextElementSibling).toHaveTextContent("0.456789");
+  });
   it.each([
     [40, "RD$40"],
     [-15, "-RD$15"],
@@ -76,6 +249,7 @@ describe("LW11 detail", () => {
     expect(screen.getByText("Un sistema de selección")).toBeInTheDocument();
     expect(screen.getByText("Plana")).toBeInTheDocument();
     expect(screen.getByText("Sumar los premios")).toBeInTheDocument();
+    expect(screen.getByText(/Resultados sobre datos históricos ya investigados: no constituyen una validación independiente/)).toBeInTheDocument();
     expect(screen.queryByText("Todas las posiciones")).not.toBeInTheDocument();
     expect(screen.queryByText("system")).not.toBeInTheDocument();
     expect(screen.queryByText("flat")).not.toBeInTheDocument();

@@ -7,7 +7,7 @@ import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import experimentsPage from "../../api/__fixtures__/experiments-page.json";
 import type { Page } from "../../api/types";
-import type { ExperimentSummary } from "../../api/types";
+import type { ExperimentSummary, LegacyExperimentSummary, ProfileExperimentSummary } from "../../api/types";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
@@ -22,7 +22,18 @@ vi.mock("../../api/client", async (importOriginal) => {
   };
 });
 
-const fixture = experimentsPage as Page<ExperimentSummary>;
+const fixture = experimentsPage as Page<LegacyExperimentSummary>;
+const profileItem: ProfileExperimentSummary = {
+  id: "profile-held", request_kind: "profile", status: "held", created_at: null,
+  request: { kind: "profile", schema_version: 1, name: "Perfil de prueba", dataset_sha256: "a".repeat(64), profile_id: "test", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
+    conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 10000, goal: 20000, settlement: "all", max_elapsed_draws: null, max_bet_draws: null, end_minute: null, duration_minutes: null },
+    selector: { schema_version: 1, capability: "static-numbers/v1", coverage: 1, numbers: [7], seed: null, algorithm_version: null },
+    staking: { schema_version: 1, capability: "flat-per-number/v1", per_number_stake: 100 } },
+  profile: { schema_version: 1, profile_id: "test", revision: 1, universe_size: 100, positions: 1, allows_repeats: true, multipliers: [{ numerator: 80, denominator: 1 }], currency: "USD", scale: 2, stake_increment: 1, minimum_stake: 1, maximum_stake: 100000, max_coverage: 10, max_exposure: 100000, best_rule: "maximum-payout/v1" },
+  display: { name: "Perfil de prueba", currency: "USD", scale: 2, capital: 10000, goal: 20000, selector_label: "static-numbers/v1", staking_label: "flat-per-number/v1" },
+  sources: { history_id: "a", history_sha256: "a", rankings_id: "", rankings_sha256: "", code_version: "profile-v1" },
+  runs: [{ ordinal: 0, configuration_id: null, status: "pending", result_kind: "profile", result: null, bets_count: 0 }],
+};
 
 function emptyPage(offset = 0, limit = 20): Page<ExperimentSummary> {
   return { total: 0, offset, limit, items: [] };
@@ -101,6 +112,36 @@ describe("LW10 experiments list · states", () => {
 });
 
 describe("LW10 experiments list · data and navigation", () => {
+  it("lists completed cycling with profile formatting and never offers a flat clone", async () => {
+    const cycling: ProfileExperimentSummary = {
+      ...profileItem, id: "cycling", status: "completed",
+      request: { ...profileItem.request, schema_version: 2, staking: { schema_version: 1, capability: "q80-first-prize-cycling/v1" } },
+      display: { ...profileItem.display, name: "Cycling", staking_label: "Escalera cíclica Q80 · apuesta dinámica por sorteo" },
+      runs: [{ ...profileItem.runs[0], status: "completed", bets_count: 1,
+        result: { schema_version: 2, profile_id: "test", profile_revision: 1, outcome: "limit", collisions: [], elapsed_draws: 1, bet_draws: 1, wagered: 100, paid: 0, final_balance: 9900, delta: -100 } }],
+    };
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [cycling] });
+    const { user } = setup();
+    const link = await screen.findByRole("link", { name: "Cycling" });
+    expect(link).toHaveAttribute("href", "/experimentos/cycling");
+    expect(screen.getByText(/Capital USD 100.00.*Perfil v2.*Escalera cíclica Q80/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Acciones de Perfil de prueba" }));
+    expect(screen.queryByRole("link", { name: "Usar como base" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Usar como base no disponible para perfiles/)).toBeInTheDocument();
+  });
+  it("labels a recovery run by its saved profile policy instead of calling it a strategy", async () => {
+    const recovery: ProfileExperimentSummary = {
+      ...profileItem, id: "recovery", request: { ...profileItem.request, schema_version: 4,
+        staking: { schema_version: 1, target_margin: 200, rounds: 3, end_mode: "stop" } },
+      display: { ...profileItem.display, name: "Recovery", staking_label: "Escalera de recuperación" },
+      runs: [{ ...profileItem.runs[0], result: null }],
+    };
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [recovery] });
+    setup();
+    expect(await screen.findByText(/Perfil v4.*Escalera de recuperación/)).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Corridas" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Estrategias" })).not.toBeInTheDocument();
+  });
   it("requests the bounded default page (offset 0, limit 20) and renders truthful columns only", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     setup();
@@ -115,7 +156,7 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(within(rows[1]).getByText("1")).toBeInTheDocument();
     expect(within(rows[2]).getByText("2")).toBeInTheDocument();
 
-    expect(screen.getByRole("columnheader", { name: "Estrategias" })).toHaveClass("table-numeric");
+    expect(screen.getByRole("columnheader", { name: "Corridas" })).toHaveClass("table-numeric");
     expect(within(rows[1]).getAllByRole("cell")[1]).toHaveClass("table-numeric");
     expect(screen.getByRole("columnheader", { name: /Creado/ })).toHaveAttribute("aria-sort", "descending");
     expect(screen.getByRole("columnheader", { name: /Creado/ })).toHaveClass("table-date");
@@ -240,7 +281,7 @@ describe("LW10 experiments list · data and navigation", () => {
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar experimento" }));
     await waitFor(() => expect(router.state.location.search).not.toContain("page=2"));
-    expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 0, limit: 20, sort: "created_at", order: "desc" });
+    await waitFor(() => expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 0, limit: 20, sort: "created_at", order: "desc" }));
   });
 
   it("has no axe violations in the ready state", async () => {
@@ -249,6 +290,22 @@ describe("LW10 experiments list · data and navigation", () => {
 
     await screen.findByText("Fríos K1");
     expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe("profile experiment list", () => {
+  it.each(["held", "failed", "completed"] as const)("shows %s profile with one run and no legacy base action", async (status) => {
+    const row = { ...profileItem, status, runs: [{ ...profileItem.runs[0], status: status === "held" ? "pending" as const : status }] };
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [row] });
+    const { user } = setup();
+    await screen.findByRole("link", { name: "Perfil de prueba" });
+    const table = screen.getByRole("table", { name: "Experimentos" });
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("1");
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Capital USD 100.00 · Meta USD 200.00");
+    await user.click(screen.getByRole("button", { name: "Acciones de Perfil de prueba" }));
+    expect(screen.queryByRole("menuitem", { name: "Usar como base" })).not.toBeInTheDocument();
+    expect(screen.getByText(/no disponible para perfiles/)).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Eliminar" })).toHaveFocus();
   });
 });
 

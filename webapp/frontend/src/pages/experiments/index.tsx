@@ -3,12 +3,14 @@ import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import type { ExperimentListParams } from "../../api/client";
+import { isProfileExperiment } from "../../api/types";
 import type { ExperimentStatus, ExperimentSummary } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { DataTable } from "../../components/DataTable";
 import { useQueue } from "../../components/QueueProvider";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StatusLabel } from "../../components/StatusLabel";
+import { profileMoney } from "../../lib/profile-display";
 
 const PAGE_SIZE = 20;
 const secondary = "btn btn-secondary disabled:opacity-50";
@@ -51,9 +53,10 @@ function RowActions({ row, onDelete }: { row: ExperimentSummary; onDelete: () =>
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const trigger = useRef<HTMLButtonElement>(null);
   const first = useRef<HTMLAnchorElement>(null);
+  const firstProfile = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open) return;
-    first.current?.focus();
+    (isProfileExperiment(row) ? firstProfile.current : first.current)?.focus();
     function dismiss(event: KeyboardEvent) {
       if (event.key === "Escape") { setOpen(false); trigger.current?.focus(); }
     }
@@ -70,8 +73,9 @@ function RowActions({ row, onDelete }: { row: ExperimentSummary; onDelete: () =>
       setOpen(!open);
     }}>Acciones</button>
     {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${row.request.name}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
-      <Link ref={first} role="menuitem" className="block px-3 py-2 text-accent hover:bg-field" to={`/experimentos/nuevo?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>
-      <button role="menuitem" type="button" className="block w-full px-3 py-2 text-left hover:bg-field" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
+      {!isProfileExperiment(row) && <Link ref={first} role="menuitem" className="block px-3 py-2 text-accent hover:bg-field" to={`/experimentos/nuevo?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
+      {isProfileExperiment(row) && <span className="block px-3 py-2 text-text-secondary">Usar como base no disponible para perfiles</span>}
+      <button ref={firstProfile} role="menuitem" type="button" className="block w-full px-3 py-2 text-left hover:bg-field" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
     </div>, document.body)}
   </>;
 }
@@ -169,12 +173,12 @@ export function ExperimentsPage() {
     return { key: sort, header, headerClassName: `table-${sort === "created_at" ? "date" : sort}`, cellClassName: `table-${sort === "created_at" ? "date" : sort}`,
       sort: query.sort === sort ? query.order === "asc" ? "ascending" : "descending" : "none",
       onSort: () => update({ sort, order: query.sort === sort && query.order === "asc" ? "desc" : "asc", page: 1 }),
-      render: (row) => sort === "name" ? <Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="text-accent underline">{row.request.name}</Link>
+      render: (row) => sort === "name" ? <><Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="text-accent underline">{isProfileExperiment(row) ? row.display.name : row.request.name}</Link>{isProfileExperiment(row) && <span className="block text-sm text-text-secondary">Perfil {row.profile.profile_id} · {row.profile.positions} posiciones · Capital {profileMoney(row, row.display.capital)} · Meta {profileMoney(row, row.display.goal)} · Perfil v{row.request.schema_version} · {row.display.staking_label}</span>}</>
         : sort === "status" ? <StatusLabel kind="execution" value={row.status} /> : <span title={row.created_at ?? "Fecha no registrada"}>{createdAt(row.created_at)}</span> };
   }
   const columns: DataTableColumn<ExperimentSummary>[] = [
     sortable("name", "Nombre"),
-    { key: "count", header: "Estrategias", headerClassName: "table-numeric", cellClassName: "table-numeric", render: (row) => row.request.strategies.length },
+    { key: "count", header: "Corridas", headerClassName: "table-numeric", cellClassName: "table-numeric", render: (row) => row.runs.length },
     sortable("created_at", "Creado"),
     sortable("status", "Estado"),
     { key: "actions", header: "Acciones", headerClassName: "table-actions", cellClassName: "table-actions", render: (row) => <RowActions row={row} onDelete={() => { setRowError(""); setDeleteTarget(row); }} /> },
@@ -182,7 +186,7 @@ export function ExperimentsPage() {
   const hasFilters = !!(query.name || query.status);
   return <div>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <p className="max-w-prose text-text-secondary">Simulaciones históricas sobre datos congelados.</p>
+      <p className="max-w-prose text-text-secondary">Simulaciones sobre datos congelados del conjunto seleccionado.</p>
       <Link to="/experimentos/nuevo" className="btn btn-primary">Nuevo experimento</Link>
     </div>
     {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">Activo en la última consulta{queueError ? " (estado no actualizado; puede haber cambiado)" : ""}: <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id)?.request.name ?? queue.active_id}</Link></p>}

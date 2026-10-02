@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient, ApiError, NetworkError } from "./client";
 import settingsFixture from "./__fixtures__/settings.json";
+import type { ProfileAudazRequest, ProfileExperimentRequest, ProfileRecoveryRequest } from "./types";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -49,6 +50,12 @@ describe("apiClient error mapping", () => {
     expect((error as Error).message).not.toMatch(/detuvo|stopped/i);
   });
 
+  it("requests a bounded whole-run trajectory with an encoded identifier", async () => {
+    const trajectory = { total: 1001, points: [], reduction_method: "minmax-even-v1" };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, trajectory));
+    await expect(apiClient.getTrajectory("a/b", 2, 500)).resolves.toEqual(trajectory);
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/v1/experiments/a%2Fb/runs/2/trajectory?max_points=500", expect.anything());
+  });
   it("resolves with the parsed JSON body on success", async () => {
     const catalog = { game: { name: "Quiniela 80" } };
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, catalog));
@@ -69,6 +76,80 @@ describe("apiClient error mapping", () => {
 
     const [url] = vi.mocked(globalThis.fetch).mock.calls[0];
     expect(String(url)).toBe("/api/v1/catalog");
+  });
+
+  it("reads bounded profiles and partial template metadata without a write request", async () => {
+    const page = {
+      total: 1, offset: 0, limit: 20,
+      items: [{ profile: { profile_id: "legacy-quiniela-80", revision: 1 }, execution_supported: true }],
+      templates: [{ name: "Original70", known_fields: { universe_size: 100 },
+        missing_fields: ["maximum_stake"], execution_supported: false }],
+    };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, page))
+      .mockResolvedValueOnce(jsonResponse(200, { ...page, offset: 2, limit: 1, items: [] }));
+    await expect(apiClient.getProfiles()).resolves.toEqual(page);
+    await expect(apiClient.getProfiles(2, 1)).resolves.toMatchObject({ offset: 2, limit: 1, items: [] });
+    expect(vi.mocked(globalThis.fetch).mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/catalog/profiles?offset=0&limit=20", "/api/v1/catalog/profiles?offset=2&limit=1",
+    ]);
+    expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => init?.method === undefined)).toBe(true);
+  });
+
+  it("registers a complete profile once and trusts the server response digest/readiness", async () => {
+    const profile = { schema_version: 1, profile_id: "new-profile", revision: 1, universe_size: 100,
+      positions: 1, allows_repeats: true, multipliers: [{ numerator: 5, denominator: 4 }],
+      currency: "DOP", scale: 2, stake_increment: 4, minimum_stake: 4, maximum_stake: 100,
+      max_coverage: 1, max_exposure: 100, best_rule: "maximum-payout/v1" as const };
+    const item = { profile, profile_sha256: "a".repeat(64), execution_supported: false,
+      profile_execution: { ready: true, selector_capabilities: ["static-numbers/v1"],
+        staking_capabilities: ["flat-per-number/v1"], entry_policies: ["all_rows/v1"],
+        settlements: ["all", "best"], requires_compatible_dataset: true,
+        audaz_compatibility: { available: false, maximum_compatible_coverage: 0,
+          coverage_rule: "selected coverage must be strictly less than multiplier[0]" } } };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(201, item))
+      .mockResolvedValueOnce(jsonResponse(409, { detail: "profile version conflicts with registered content" }))
+      .mockResolvedValueOnce(jsonResponse(409, { detail: "profile quota has insufficient headroom" }))
+      .mockResolvedValueOnce(jsonResponse(422, { detail: "invalid game profile" }));
+    await expect(apiClient.registerProfile(profile)).resolves.toEqual(item);
+    expect(vi.mocked(globalThis.fetch).mock.calls[0][0]).toBe("/api/v1/catalog/profiles");
+    expect(vi.mocked(globalThis.fetch).mock.calls[0][1]).toMatchObject({ method: "POST", body: JSON.stringify(profile) });
+    for (const status of [409, 409, 422]) await expect(apiClient.registerProfile(profile)).rejects.toMatchObject({ status });
+  });
+
+  it("reads bounded inert datasets through GET only", async () => {
+    const page = { total: 1, offset: 0, limit: 20, items: [{
+      dataset_sha256: "a".repeat(64), source_sha256: "b".repeat(64),
+      source_id: "local", source_revision: "v1", profile_id: "test-draw",
+      profile_revision: 1, positions: 3, universe_size: 100, records_total: 2,
+      first_draw: "2025-01-01 05:10", last_draw: "2025-01-02 05:10",
+      clock: { mode: "naive_legacy", zone: null }, execution_supported: false,
+      created_at: "2025-01-03T00:00:00Z",
+    }] };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, page))
+      .mockResolvedValueOnce(jsonResponse(200, { ...page, offset: 3, limit: 1, items: [] }));
+    await expect(apiClient.getDatasets()).resolves.toEqual(page);
+    await expect(apiClient.getDatasets(3, 1)).resolves.toMatchObject({ offset: 3, items: [] });
+    expect(vi.mocked(globalThis.fetch).mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/datasets?offset=0&limit=20", "/api/v1/datasets?offset=3&limit=1",
+    ]);
+    expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => init?.method === undefined)).toBe(true);
+  });
+
+  it("keeps unfiltered starting draws compatible and encodes dated pagination and availability", async () => {
+    const page = { total: 125, offset: 100, limit: 100, items: ["2025-09-03 08:00"] };
+    const availability = { date: "2025-09-03", history_total: 150, ranked_total: 125 };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, page))
+      .mockResolvedValueOnce(jsonResponse(200, page))
+      .mockResolvedValueOnce(jsonResponse(200, availability));
+    await expect(apiClient.getStartingDraws(100, 100)).resolves.toEqual(page);
+    await expect(apiClient.getStartingDraws(100, 100, "2025-09-03")).resolves.toEqual(page);
+    await expect(apiClient.getStartingDrawAvailability("2025-09-03")).resolves.toEqual(availability);
+    expect(vi.mocked(globalThis.fetch).mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/catalog/starting-draws?offset=100&limit=100",
+      "/api/v1/catalog/starting-draws?offset=100&limit=100&date=2025-09-03",
+      "/api/v1/catalog/starting-draws/availability?date=2025-09-03",
+    ]);
+    expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => init?.method === undefined)).toBe(true);
   });
 
   it("encodes server-side experiment filters, ordering and bounded offset without interpreting Unicode", async () => {
@@ -164,6 +245,76 @@ describe("apiClient error mapping", () => {
       "/api/v1/queue/a%2Fb%20c/start", "/api/v1/queue/a%2Fb%20c/cancel",
     ]);
     expect(calls.every(([, init]) => init?.method === "POST" && init.body === undefined)).toBe(true);
+  });
+
+  it("submits the same explicit import envelope to preview and hash-bound promotion", async () => {
+    const body = {
+      raw_base64: "AP8K", format: "csv" as const,
+      mapping: { date: "date", time: "time", positions: ["pos1"] },
+      source: { source_id: "local", kind: "artificial" as const, revision: "r1", provenance: "manual" },
+      clock: { mode: "naive_legacy" as const, zone: null }, profile: { profile_id: "saved", revision: 1 },
+    };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, { promotable: true, dataset_sha256: "a".repeat(64) }))
+      .mockResolvedValueOnce(jsonResponse(200, { dataset_sha256: "a".repeat(64), created: true }));
+    await apiClient.previewImport(body as never);
+    await apiClient.promoteImport({ ...body, expected_dataset_sha256: "a".repeat(64) } as never);
+    const calls = vi.mocked(globalThis.fetch).mock.calls;
+    expect(calls.map(([url]) => url)).toEqual(["/api/v1/imports/preview", "/api/v1/imports/promote"]);
+    expect(calls.map(([, init]) => init?.method)).toEqual(["POST", "POST"]);
+    expect(JSON.parse(String(calls[0][1]?.body))).toEqual(body);
+    expect(JSON.parse(String(calls[1][1]?.body))).toEqual({ ...body, expected_dataset_sha256: "a".repeat(64) });
+  });
+
+  it("posts an exact profile request document without the legacy request envelope", async () => {
+    const body: ProfileExperimentRequest = { kind: "profile", schema_version: 1, name: "Local", dataset_sha256: "a".repeat(64),
+      profile_id: "local", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
+      conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 200, goal: 300,
+        settlement: "all" as const, max_elapsed_draws: 12, max_bet_draws: null, end_minute: null, duration_minutes: null },
+      selector: { schema_version: 1, capability: "static-numbers/v1", coverage: 1, numbers: [0], seed: null, algorithm_version: null },
+      staking: { schema_version: 1, capability: "flat-per-number/v1", per_number_stake: 1 } };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(201, { id: "c".repeat(32), status: "pending" }));
+    await expect(apiClient.createProfileExperiment(body)).resolves.toMatchObject({ status: "pending" });
+    expect(vi.mocked(globalThis.fetch).mock.calls[0]).toMatchObject([
+      "/api/v1/experiments/profiles", { method: "POST", body: JSON.stringify(body) },
+    ]);
+  });
+
+  it("posts schema-3 Audaz with no fixed per-number stake", async () => {
+    const body: ProfileAudazRequest = { kind: "profile", schema_version: 3, name: "Audaz", dataset_sha256: "a".repeat(64),
+      profile_id: "rational", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
+      conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 20000, goal: 30000,
+        settlement: "all", max_elapsed_draws: 10, max_bet_draws: null, end_minute: null, duration_minutes: null },
+      selector: { schema_version: 1, capability: "static-numbers/v1", coverage: 1, numbers: [0], seed: null, algorithm_version: null },
+      staking: { schema_version: 1, capability: "profile-audaz/v1" } };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(201, { id: "d".repeat(32), status: "pending" }));
+    await apiClient.createProfileExperiment(body);
+    expect(vi.mocked(globalThis.fetch).mock.calls[0]).toMatchObject([
+      "/api/v1/experiments/profiles", { method: "POST", body: JSON.stringify(body) },
+    ]);
+    expect(JSON.stringify(body)).not.toContain("per_number_stake");
+  });
+  it("posts schema-4 recovery with explicit profile-generic parameters", async () => {
+    const body: ProfileRecoveryRequest = { kind: "profile", schema_version: 4, name: "Recovery", dataset_sha256: "a".repeat(64),
+      profile_id: "rational", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
+      conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 20000, goal: 30000,
+        settlement: "all", max_elapsed_draws: 10, max_bet_draws: null, end_minute: null, duration_minutes: null },
+      selector: { schema_version: 1, capability: "static-numbers/v1", coverage: 2, numbers: [0, 1], seed: null, algorithm_version: null },
+      staking: { schema_version: 1, target_margin: 250, rounds: 4, end_mode: "cycle" } };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(201, { id: "e".repeat(32), status: "pending" }));
+    await apiClient.createProfileExperiment(body);
+    expect(vi.mocked(globalThis.fetch).mock.calls[0]).toMatchObject([
+      "/api/v1/experiments/profiles", { method: "POST", body: JSON.stringify(body) },
+    ]);
+  });
+  it("fetches verified dataset identity and paged draw labels with date encoding", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, {}))
+      .mockResolvedValueOnce(jsonResponse(200, { total: 1, items: ["2025-01-01 05:10"] }));
+    await apiClient.getDataset("a".repeat(64));
+    await apiClient.getDatasetDraws("a".repeat(64), 100, 100, "2025-01-01");
+    expect(vi.mocked(globalThis.fetch).mock.calls.map(([url]) => url)).toEqual([
+      `/api/v1/datasets/${"a".repeat(64)}`,
+      `/api/v1/datasets/${"a".repeat(64)}/draws?offset=100&limit=100&date=2025-01-01`,
+    ]);
   });
 
   it("maps a proxy-marked disconnection response to NetworkError instead of ApiError", async () => {

@@ -1,90 +1,50 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { Bet, CompareResult, ExperimentSummary, RunSummary } from "../../api/types";
+import { isProfileExperiment, isProfileRun } from "../../api/types";
+import type { AnyRunSummary, CompareResult, ExperimentSummary, Trajectory } from "../../api/types";
 import { ComparisonChart } from "../../components/ComparisonChart";
-import type { ComparisonPoint, ComparisonSeries } from "../../components/ComparisonChart";
+import type { ComparisonSeries } from "../../components/ComparisonChart";
+import { RunTrajectory } from "../../components/RunTrajectory";
+import { metricRatio } from "../../components/FinancialMetrics";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StatusLabel } from "../../components/StatusLabel";
 import { formatDOP } from "../../lib/format";
+import { profileMoney, profileOutcome } from "../../lib/profile-display";
 import { FIELD_LABEL_DELTA, HISTORICAL_CAVEAT } from "../../lib/ui-labels";
 
-const PAGE = 100;
-// Session context is bounded to five series of at most five pages, even if more pages are viewed.
-const SAVED_POINTS = 500;
-type SavedView = { hidden: number[]; series: Record<number, ComparisonPoint[]> };
+type SavedView = { hidden: number[] };
 function storageKey(id: string) { return `comparison-view:${id}`; }
 function readView(id: string): SavedView {
   try {
     const raw = sessionStorage.getItem(storageKey(id));
-    if (!raw || raw.length > 300000) return { hidden: [], series: {} };
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return { hidden: [], series: {} };
-    const view = parsed as SavedView;
-    const hidden = Array.isArray(view.hidden) ? view.hidden.filter((n) => Number.isInteger(n) && n >= 0 && n < 5).slice(0, 5) : [];
-    const series: SavedView["series"] = {};
-    for (let i = 0; i < 5; i++) {
-      const points = view.series?.[i];
-      if (Array.isArray(points) && points.length <= SAVED_POINTS && points.every((p, index) => p && p.ordinal === index && typeof p.label === "string" && p.label.length < 80 && Number.isFinite(p.balance))) series[i] = points;
-    }
-    return { hidden, series };
-  } catch { return { hidden: [], series: {} }; }
+    if (!raw || raw.length > 300000) return { hidden: [] };
+    const parsed = JSON.parse(raw);
+    return { hidden: Array.isArray(parsed?.hidden) ? parsed.hidden.filter((n: unknown) => typeof n === "number" && Number.isInteger(n) && n >= 0 && n < 5).slice(0, 5) : [] };
+  } catch { return { hidden: [] }; }
 }
 function saveView(id: string, view: SavedView) {
-  const bounded: SavedView = { hidden: view.hidden.slice(0, 5), series: {} };
-  for (let i = 0; i < 5; i++) if (view.series[i]) bounded.series[i] = view.series[i].slice(0, SAVED_POINTS);
-  try { sessionStorage.setItem(storageKey(id), JSON.stringify(bounded)); } catch { /* Storage may be unavailable; the view still works in memory. */ }
+  try { sessionStorage.setItem(storageKey(id), JSON.stringify({ hidden: view.hidden.slice(0, 5) })); } catch { /* View remains available in memory. */ }
 }
 function errorText(cause: unknown) {
   if (cause instanceof NetworkError) return "No se pudo contactar al servidor local. Esto no indica que la ejecución se haya detenido.";
   if (cause instanceof ApiError && cause.status === 404) return "Este experimento no existe o fue eliminado.";
   return "No se pudo consultar la comparación. Probá de nuevo.";
 }
-function replayError(cause: unknown) {
-  if (cause instanceof NetworkError) return "No se pudo contactar al servidor local. Los datos ya cargados siguen visibles.";
-  if (cause instanceof ApiError && cause.status === 404) return "La ejecución o el experimento ya no existe.";
-  if (cause instanceof ApiError && cause.status === 409) return "La reproducción todavía no está disponible.";
-  return "No se pudo cargar esta página. Probá de nuevo.";
-}
 function nonterminal(status: string) { return status === "pending" || status === "held" || status === "running"; }
 
 interface Paired { detail: ExperimentSummary; comparison: CompareResult }
-function SeriesReplay({ id, run, name, saved, onPoints }: { id: string; run: RunSummary; name: string; saved: ComparisonPoint[]; onPoints: (ordinal: number, points: ComparisonPoint[]) => void }) {
-  const [points, setPoints] = useState<ComparisonPoint[]>(saved);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [retry, setRetry] = useState(0);
-  const total = run.result?.bets_count ?? 0;
-  const offset = points.length;
-  useEffect(() => {
-    if (!run.result || !total || offset >= total || (offset > 0 && retry === 0)) return;
-    let live = true;
-    setLoading(true); setError("");
-    void apiClient.getReplay(id, run.ordinal, offset, PAGE).then((response) => {
-      if (!live) return;
-      if (response.offset !== offset || !response.items.length) { setError("La página guardada no coincide con lo solicitado."); setLoading(false); return; }
-      const next = [...points, ...response.items.map((bet: Bet, index) => ({ ordinal: offset + index, label: bet.label, balance: bet.balance }))];
-      setPoints(next); onPoints(run.ordinal, next); setLoading(false);
-    }).catch((cause: unknown) => { if (live) { setError(replayError(cause)); setLoading(false); } });
-    return () => { live = false; };
-  // Only explicit demand triggers subsequent pages. The initial page is requested on mount.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, run.ordinal, retry]);
-  return <div className="flex flex-wrap items-center gap-3 text-sm" aria-label={`Carga de ${name}`}>
-    <span>{name}: {points.length}/{total} cargadas</span>
-    {loading && <span role="status">Cargando {name}…</span>}
-    {error && <span role="alert" aria-label={`Error de ${name}`}>{error} <button type="button" className="text-accent underline" onClick={() => setRetry((n) => n + 1)}>Reintentar {name}</button></span>}
-    {!loading && !error && points.length < total && <button type="button" className="btn btn-secondary hover:bg-field" onClick={() => setRetry((n) => n + 1)}>Cargar más de {name}</button>}
-  </div>;
-}
-
 export function ComparisonPage() {
   const { id = "" } = useParams();
   const [pair, setPair] = useState<Paired | null>(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
   const [view, setView] = useState<SavedView>(() => readView(id));
+  const [trajectories, setTrajectories] = useState<{ id: string; runs: Record<number, Trajectory> }>({ id, runs: {} });
+  const onTrajectory = useCallback((ordinal: number, trajectory: Trajectory) => {
+    setTrajectories((current) => ({ id, runs: { ...(current.id === id ? current.runs : {}), [ordinal]: trajectory } }));
+  }, [id]);
   useEffect(() => {
     let live = true;
     let timer: ReturnType<typeof setTimeout>;
@@ -107,44 +67,52 @@ export function ComparisonPage() {
   const data = pair?.detail.id === id && pair.comparison.id === id ? pair : null;
   function updateView(next: SavedView) { setView(next); saveView(id, next); }
   const runs = data?.comparison.runs.slice().sort((a, b) => a.ordinal - b.ordinal) ?? [];
-  const names = (ordinal: number) => data?.detail.request.strategies[ordinal]?.name ?? `Ejecución ${ordinal + 1}`;
-  const columns: DataTableColumn<RunSummary>[] = [
+  const names = (ordinal: number) => data && isProfileExperiment(data.detail) ? data.detail.display.name : data && !isProfileExperiment(data.detail) ? data.detail.request.strategies[ordinal]?.name ?? `Ejecución ${ordinal + 1}` : `Ejecución ${ordinal + 1}`;
+  const profileDetail = data && isProfileExperiment(data.detail) ? data.detail : null;
+  const money = profileDetail ? (amount: number) => profileMoney(profileDetail, amount) : formatDOP;
+  const columns: DataTableColumn<AnyRunSummary>[] = [
     { key: "strategy", header: "Estrategia", render: (run) => <Link className="text-accent underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`} aria-label={`Detalle de ${names(run.ordinal)}`}>{names(run.ordinal)}</Link> },
     { key: "status", header: "Estado de ejecución", render: (run) => <StatusLabel kind="execution" value={run.status} /> },
-    { key: "balance", header: "Saldo final", render: (run) => run.result ? formatDOP(run.result.final_balance) : "—" },
-    { key: "delta", header: FIELD_LABEL_DELTA, render: (run) => run.result ? formatDOP(run.result.delta) : "—" },
-    { key: "bets", header: "Apuestas realizadas", render: (run) => run.result ? run.result.bets_count : "—" },
-    { key: "outcome", header: "Motivo de cierre", render: (run) => run.result ? <StatusLabel kind="outcome" value={run.result.outcome} /> : "—" },
+    { key: "balance", header: "Saldo final", render: (run) => run.result ? money(run.result.final_balance) : "—" },
+    { key: "delta", header: FIELD_LABEL_DELTA, render: (run) => run.result ? money(run.result.delta) : "—" },
+    { key: "wagered", header: "Total apostado", render: (run) => run.result ? money(run.result.wagered) : "—" },
+    { key: "paid", header: "Total pagado", render: (run) => run.result ? money(run.result.paid) : "—" },
+    { key: "net", header: "Neto", render: (run) => run.result?.net == null ? "N/A" : money(run.result.net) },
+    { key: "return", header: "Retorno por peso", render: (run) => metricRatio(run.result?.return_per_wagered) },
+    { key: "roi", header: "ROI neto", render: (run) => metricRatio(run.result?.roi) },
+    { key: "drawdown", header: "Drawdown absoluto", render: (run) => run.result?.max_drawdown == null ? "N/A" : money(run.result.max_drawdown) },
+    { key: "bets", header: profileDetail ? "Sorteos apostados" : "Apuestas realizadas", render: (run) => run.result ? isProfileRun(run) ? run.result.bet_draws : run.result.bets_count : "—" },
+    ...(profileDetail ? [{ key: "elapsed", header: "Sorteos transcurridos", render: (run: AnyRunSummary) => isProfileRun(run) && run.result ? run.result.elapsed_draws : "—" },
+      { key: "schema", header: "Versión del resultado", render: (run: AnyRunSummary) => isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "—" }] : []),
+    { key: "outcome", header: "Motivo de cierre", render: (run) => run.result ? isProfileRun(run) ? profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : "—" },
   ];
-  const series: ComparisonSeries[] = runs.filter((run) => !!run.result).map((run) => ({ ordinal: run.ordinal, name: names(run.ordinal), visible: !view.hidden.includes(run.ordinal), total: run.result!.bets_count, points: view.series[run.ordinal] ?? [] }));
+  const series: ComparisonSeries[] = runs.filter((run) => !!run.result).map((run) => ({ ordinal: run.ordinal, name: names(run.ordinal), visible: !view.hidden.includes(run.ordinal), total: isProfileRun(run) ? run.result!.bet_draws : run.result!.bets_count, points: trajectories.id === id ? (trajectories.runs[run.ordinal]?.points ?? []).map((p) => ({ ordinal: p.source_index + 1, label: p.label, balance: p.balance })) : [], reductionMethod: trajectories.id === id ? trajectories.runs[run.ordinal]?.reduction_method : undefined, initialCapital: data?.detail.request.conditions.capital, startLabel: data?.detail.request.conditions.start_draw }));
   return <div className="min-w-0 space-y-7">
     <Link to="/experimentos" className="text-sm text-accent underline">Volver a Experimentos</Link>
     {!data && !error && <p role="status">Cargando comparación…</p>}
     {error && <p role="alert">{error} <button type="button" className="text-accent underline" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></p>}
     {data && <>
-      <div className="border-b border-border pb-5"><h2 className="font-heading text-2xl">{data.detail.request.name}</h2><p className="mt-2 text-sm">{data.comparison.complete ? "Comparación completa" : "Comparación incompleta"} · {data.comparison.completed}/{data.comparison.requested} terminadas</p>
+      <div className="border-b border-border pb-5"><h2 className="font-heading text-2xl">{profileDetail ? profileDetail.display.name : data.detail.request.name}</h2><p className="mt-2 text-sm">{data.comparison.complete ? "Comparación completa" : "Comparación incompleta"} · {data.comparison.completed}/{data.comparison.requested} terminadas</p>
         <p className="mt-2 text-sm text-text-secondary">ID: <span className="font-mono">{id}</span>. {nonterminal(data.comparison.status) ? "Consultando el progreso guardado; una desconexión no detiene la ejecución." : "Estado guardado del experimento."}</p>
       </div>
       <section className="space-y-3"><h3 className="section-header">Resultados guardados</h3>
         <DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} />
-        <p className="text-sm text-text-secondary">{HISTORICAL_CAVEAT}</p>
+        <p className="field-help">Métricas del backend por corrida guardada; ratios adimensionales, redondeo HALF_UP a seis decimales. Denominador cero: N/A. Drawdown desde el capital inicial. Un resultado guardado no completa un lote con otras corridas pendientes.</p>
+        <p className="text-sm text-text-secondary">{profileDetail ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
       </section>
-      <section className="min-w-0 space-y-4"><ComparisonChart series={series} onToggle={(ordinal) => updateView({ ...view, hidden: view.hidden.includes(ordinal) ? view.hidden.filter((n) => n !== ordinal) : [...view.hidden, ordinal] })} />
-        {runs.filter((run) => !!run.result).map((run) => <SeriesReplay key={`${id}:${run.ordinal}`} id={id} run={run} name={names(run.ordinal)} saved={view.series[run.ordinal] ?? []} onPoints={(ordinal, points) => setView((current) => {
-          const next = { ...current, series: { ...current.series, [ordinal]: points } };
-          saveView(id, next); return next;
-        })} />)}
+      <section className="min-w-0 space-y-4"><ComparisonChart series={series} formatMoney={money} onToggle={(ordinal) => updateView({ ...view, hidden: view.hidden.includes(ordinal) ? view.hidden.filter((n) => n !== ordinal) : [...view.hidden, ordinal] })} />
+        {runs.filter((run) => !!run.result).map((run) => <RunTrajectory key={`${id}:${run.ordinal}`} id={id} ordinal={run.ordinal} name={names(run.ordinal)} money={money} goal={data.detail.request.conditions.goal} chart={false} onLoad={onTrajectory} />)}
       </section>
       <section className="space-y-3 text-sm"><h3 className="section-header">Condiciones y datos de origen</h3>
         <dl className="data-list break-all">
           <dt>Sorteo inicial</dt><dd>{data.detail.request.conditions.start_draw}</dd>
-          <dt>Capital</dt><dd className="data-list-numeric">{formatDOP(data.detail.request.conditions.capital)}</dd>
-          <dt>Meta de referencia</dt><dd className="data-list-numeric">{formatDOP(data.detail.request.conditions.goal)}</dd>
-          <dt>Historial</dt><dd className="font-mono">{data.detail.sources.history_id}</dd><dt>SHA-256 historial</dt><dd className="font-mono">{data.detail.sources.history_sha256}</dd>
-          <dt>Rankings</dt><dd className="font-mono">{data.detail.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd className="font-mono">{data.detail.sources.rankings_sha256}</dd>
+          <dt>Capital</dt><dd className="data-list-numeric">{money(isProfileExperiment(data.detail) ? data.detail.display.capital : data.detail.request.conditions.capital)}</dd>
+          <dt>Meta de referencia</dt><dd className="data-list-numeric">{money(isProfileExperiment(data.detail) ? data.detail.display.goal : data.detail.request.conditions.goal)}</dd>
+          <dt>{profileDetail ? "Datos de origen" : "Historial"}</dt><dd className="font-mono">{data.detail.sources.history_id}</dd><dt>{profileDetail ? "SHA-256 de datos de origen" : "SHA-256 historial"}</dt><dd className="font-mono">{data.detail.sources.history_sha256}</dd>
+          {isProfileExperiment(data.detail) ? <><dt>Versión de solicitud</dt><dd>Perfil v{data.detail.request.schema_version}</dd>{data.detail.request.schema_version === 4 && <><dt>Margen objetivo</dt><dd>{profileMoney(data.detail, data.detail.request.staking.target_margin)}</dd><dt>Rondas de recuperación</dt><dd>{data.detail.request.staking.rounds}</dd><dt>Al agotar la escalera</dt><dd>{data.detail.request.staking.end_mode === "cycle" ? "Reiniciar la escalera" : "Detener la sesión"}</dd></>}<dt>Perfil</dt><dd>{data.detail.profile.profile_id} · revisión {data.detail.profile.revision} · {data.detail.profile.positions} posiciones · {data.detail.display.currency}</dd><dt>Conjunto de datos SHA-256</dt><dd className="font-mono">{data.detail.request.dataset_sha256}</dd></> : <><dt>Rankings</dt><dd className="font-mono">{data.detail.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd className="font-mono">{data.detail.sources.rankings_sha256}</dd></>}
           <dt>Versión de código</dt><dd className="font-mono">{data.detail.sources.code_version}</dd>
         </dl>
-        <p className="text-text-secondary">Resultados históricos sobre datos ya investigados: no constituyen validación independiente de rentabilidad.</p>
+        <p className="text-text-secondary">{profileDetail ? "Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito." : "Resultados históricos sobre datos ya investigados: no constituyen validación independiente de rentabilidad."}</p>
       </section>
     </>}
   </div>;

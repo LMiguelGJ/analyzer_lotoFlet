@@ -4,13 +4,21 @@ import sqlite3
 from contextlib import closing, contextmanager
 from pathlib import Path
 
-SCHEMA_VERSION = 3
+from laboratorio.domain.contracts import legacy_quiniela_80_profile
+
+SCHEMA_VERSION = 9
 _MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 # Ordered, sequential migration scripts; each key is the schema version it produces.
 _MIGRATIONS = {
     1: _MIGRATIONS_DIR / "0001_initial.sql",
     2: _MIGRATIONS_DIR / "0002_experiment_created_at.sql",
     3: _MIGRATIONS_DIR / "0003_settings.sql",
+    4: _MIGRATIONS_DIR / "0004_game_profiles.sql",
+    5: _MIGRATIONS_DIR / "0005_datasets.sql",
+    6: _MIGRATIONS_DIR / "0006_profile_requests.sql",
+    7: _MIGRATIONS_DIR / "0007_profile_cycling_storage.sql",
+    8: _MIGRATIONS_DIR / "0008_profile_audaz_storage.sql",
+    9: _MIGRATIONS_DIR / "0009_profile_recovery_storage.sql",
 }
 
 
@@ -54,13 +62,35 @@ def _run_migrations(db, expected_prior: int, versions: list[int]):
         "INSERT INTO migration_guard SELECT user_version FROM pragma_user_version;\n"
         "DROP TABLE migration_guard;\n"
     )
-    tail = f"\nPRAGMA user_version = {target};\nCOMMIT;"
     try:
-        db.executescript(guard + scripts + tail)
+        # The script starts its own guarded transaction because executescript commits
+        # an existing one. Do not append COMMIT: Python backfill and version bump must
+        # be in the *same* transaction as all DDL, including upgrades from v1/v2.
+        db.executescript(guard + scripts)
+        if 4 in versions:
+            profile = legacy_quiniela_80_profile()
+            snapshot = profile.model_dump_json()
+            db.execute(
+                "INSERT INTO game_profiles (profile_id, revision, profile_json) VALUES (?, ?, ?)",
+                (profile.profile_id, profile.revision, snapshot),
+            )
+            db.execute(
+                "INSERT INTO experiment_profiles "
+                "(experiment_id, profile_id, revision, profile_json) "
+                "SELECT id, ?, ?, ? FROM experiments",
+                (profile.profile_id, profile.revision, snapshot),
+            )
+        db.execute(f"PRAGMA user_version = {target}")
+        db.commit()
     except sqlite3.IntegrityError:
         db.rollback()
-        # Another initializer may have won the race; accept only the final version.
-        _check_version(db)
+        # The guard can fail after another initializer wins. Do not mask a real
+        # backfill failure when the version remained at its prior value.
+        if db.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
+            raise
+    except BaseException:
+        db.rollback()
+        raise
 
 
 def initialize_database(path: Path):

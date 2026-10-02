@@ -1,14 +1,27 @@
 import type {
-  Bet,
   Catalog,
   CompareResult,
   ConfigurationSummary,
+  DatasetListing,
   ExperimentRequest,
   ExperimentSummary,
   ExperimentStatus,
+  GameProfile,
+  ImportPreview,
+  ImportPromotion,
+  ImportRequest,
   Page,
+  ProfileCatalog,
+  ProfileAudazRequest,
+  ProfileCyclingRequest,
+  ProfileExperimentRequest,
+  ProfileRecoveryRequest,
+  ProfileListing,
   QueueStatus,
+  ReplayPage,
+  Trajectory,
   SettingsView,
+  StartingDrawAvailability,
   Strategy,
 } from "./types";
 
@@ -137,13 +150,51 @@ export interface CreateExperimentBody {
 export const apiClient = {
   getCatalog: () => request<Catalog>("/catalog"),
 
-  getStartingDraws: (offset = 0, limit = 100) =>
-    request<Page<string>>(`/catalog/starting-draws${query({ offset, limit })}`),
+  getProfiles: (offset = 0, limit = 20) =>
+    request<ProfileCatalog>(`/catalog/profiles${query({ offset, limit })}`),
+
+  registerProfile: (profile: GameProfile) => request<ProfileListing>("/catalog/profiles", {
+    method: "POST", body: JSON.stringify(profile),
+  }),
+
+  getDatasets: (offset = 0, limit = 20) =>
+    request<Page<DatasetListing>>(`/datasets${query({ offset, limit })}`),
+
+  getDataset: (sha256: string) => request<DatasetListing>(`/datasets/${encodeURIComponent(sha256)}`),
+
+  getDatasetDraws: (sha256: string, offset = 0, limit = 100, date?: string) => {
+    const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    if (date) params.set("date", date);
+    return request<Page<string>>(`/datasets/${encodeURIComponent(sha256)}/draws?${params}`);
+  },
+
+  previewImport: (body: ImportRequest) => request<ImportPreview>("/imports/preview", {
+    method: "POST", body: JSON.stringify(body),
+  }),
+
+  promoteImport: (body: ImportRequest & { expected_dataset_sha256: string }) =>
+    request<ImportPromotion>("/imports/promote", {
+      method: "POST", body: JSON.stringify(body),
+    }),
+
+  getStartingDraws: (offset = 0, limit = 100, date?: string) => {
+    const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    if (date) params.set("date", date);
+    return request<Page<string>>(`/catalog/starting-draws?${params}`);
+  },
+
+  getStartingDrawAvailability: (date: string) =>
+    request<StartingDrawAvailability>(`/catalog/starting-draws/availability?${new URLSearchParams({ date })}`),
 
   createExperiment: (body: CreateExperimentBody) =>
     request<{ id: string; status: string }>("/experiments", {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+
+  createProfileExperiment: (body: ProfileExperimentRequest | ProfileCyclingRequest | ProfileAudazRequest | ProfileRecoveryRequest) =>
+    request<{ id: string; status: string }>("/experiments/profiles", {
+      method: "POST", body: JSON.stringify(body),
     }),
 
   listExperiments: ({ offset = 0, limit = 20, name_contains, status, sort, order }: ExperimentListParams = {}) => {
@@ -158,9 +209,12 @@ export const apiClient = {
   getExperiment: (id: string) => request<ExperimentSummary>(`/experiments/${encodeURIComponent(id)}`),
 
   getReplay: (id: string, ordinal: number, offset = 0, limit = 20) =>
-    request<Page<Bet>>(
+    request<ReplayPage>(
       `/experiments/${encodeURIComponent(id)}/runs/${ordinal}/replay${query({ offset, limit })}`,
     ),
+
+  getTrajectory: (id: string, ordinal: number, max_points = 500) =>
+    request<Trajectory>(`/experiments/${encodeURIComponent(id)}/runs/${ordinal}/trajectory${query({ max_points })}`),
 
   compareExperiment: (id: string) => request<CompareResult>(`/experiments/${encodeURIComponent(id)}/compare`),
 

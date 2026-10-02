@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useBlocker, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
 import type { ApiFieldError } from "../../api/client";
-import type { Catalog, ConfigurationSummary, Page } from "../../api/types";
+import { isProfileExperiment } from "../../api/types";
+import type { Catalog, ConfigurationSummary, Page, StartingDrawAvailability } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { StrategyEditor } from "../../components/StrategyEditor";
 import { buildRequest, buildStrategy, diffStrategyKey, draftFromRequest, draftFromStrategy, errorDetail, errorMessage, initialConditions, newStrategy, trimName, validateConditions, validateStrategies } from "./model";
@@ -101,8 +102,15 @@ export function NewExperimentPage() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [draws, setDraws] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
+  const [drawDate, setDrawDate] = useState("");
+  const [knownDraw, setKnownDraw] = useState("");
+  const [verifiedDraw, setVerifiedDraw] = useState("");
+  const [availability, setAvailability] = useState<StartingDrawAvailability | null>(null);
   const [loading, setLoading] = useState(true);
   const [drawLoading, setDrawLoading] = useState(false);
+  const [drawError, setDrawError] = useState("");
+  const [drawRetry, setDrawRetry] = useState(0);
+  const drawGeneration = useRef(0);
   const [catalogError, setCatalogError] = useState("");
   const [catalogRetry, setCatalogRetry] = useState(0);
   const [posting, setPosting] = useState(false);
@@ -121,6 +129,9 @@ export function NewExperimentPage() {
   // clean source before loading another; dirty source changes are blocked above.
   useEffect(() => {
     if (previousSource.current !== sourceKey) {
+      drawGeneration.current += 1;
+      setDrawDate(""); setDrawRetry((value) => value + 1);
+      setKnownDraw(""); setVerifiedDraw(""); setDraws([]); setTotal(0); setAvailability(null);
       setConditions(initialConditions); setStrategies([newStrategy(1)]); nextId.current = 2;
       setDirty(false); setBaseState(baseId ? "loading" : "ready");
       setConfigurationState(configurationId ? "loading" : "ready");
@@ -151,14 +162,57 @@ export function NewExperimentPage() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    Promise.all([apiClient.getCatalog(), apiClient.getStartingDraws(0, 100)]).then(([result, page]) => {
+    apiClient.getCatalog().then((result) => {
       if (!alive) return;
-      setCatalog(result); setDraws(page.items); setTotal(page.total); setCatalogError("");
+      setCatalog(result); setCatalogError("");
     }).catch((error: unknown) => {
       if (alive) setCatalogError(error instanceof NetworkError ? "No se pudo contactar al servidor local. Probá de nuevo; no sabemos si la cola sigue trabajando." : "No se pudo cargar el catálogo. Probá de nuevo.");
     }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [catalogRetry]);
+
+  useEffect(() => {
+    const generation = ++drawGeneration.current;
+    let live = true;
+    setDrawLoading(true); setDrawError(""); setAvailability(null);
+    setDraws([]); setTotal(0); setVerifiedDraw("");
+    const requests = [drawDate ? apiClient.getStartingDraws(0, 100, drawDate) : apiClient.getStartingDraws(0, 100),
+      ...(drawDate ? [apiClient.getStartingDrawAvailability(drawDate)] : [])] as const;
+    Promise.all(requests).then(async ([page, result]) => {
+      if (!live || generation !== drawGeneration.current) return;
+      let verified = "";
+      if (knownDraw && (!drawDate || knownDraw.startsWith(`${drawDate} `)) && !(drawDate && result?.ranked_total === 0)) {
+        if (page.items.includes(knownDraw)) verified = knownDraw;
+        else {
+          // The first page cannot disprove a late-day draw. Recheck only its day,
+          // and never reuse confirmation from an earlier filter response.
+          const day = knownDraw.slice(0, 10);
+          if (/^\d{4}-\d{2}-\d{2} /.test(knownDraw)) {
+            let offset = drawDate === day ? page.items.length : 0;
+            let totalForDay = drawDate === day ? page.total : Infinity;
+            while (offset < totalForDay) {
+              const part = await apiClient.getStartingDraws(offset, 100, day);
+              if (!live || generation !== drawGeneration.current) return;
+              if (part.items.includes(knownDraw)) { verified = knownDraw; break; }
+              offset += part.items.length;
+              totalForDay = part.total;
+              if (!part.items.length) break;
+            }
+          }
+        }
+      }
+      if (!live || generation !== drawGeneration.current) return;
+      setDraws(page.items); setTotal(page.total);
+      setAvailability(result ?? null); setVerifiedDraw(verified);
+    }).catch((error: unknown) => {
+      if (live && generation === drawGeneration.current) setDrawError(error instanceof NetworkError
+        ? "No se pudo contactar al servidor local para cargar sorteos. Reintentá."
+        : "No se pudieron cargar los sorteos. Reintentá.");
+    }).finally(() => {
+      if (live && generation === drawGeneration.current) setDrawLoading(false);
+    });
+    return () => { live = false; };
+  }, [drawDate, drawRetry]);
 
   useEffect(() => {
     if (!configurationId || baseId || !catalog || loading) return;
@@ -198,21 +252,29 @@ export function NewExperimentPage() {
       try {
         const saved = await apiClient.getExperiment(baseId!);
         if (!alive) return;
+        if (isProfileExperiment(saved)) { setBaseState("invalid"); return; }
         const draft = draftFromRequest(saved.request);
-        // The first catalog page is not the whole ranked history. Walk its
-        // bounded endpoint until the exact saved label is confirmed or exhausted.
-        const available = [...draws];
-        for (let offset = 100; !available.includes(draft.conditions.start_draw) && offset < total; offset += 100) {
-          const page = await apiClient.getStartingDraws(offset, 100);
-          if (!alive) return;
-          available.push(...page.items);
-          if (!page.items.length) break;
+        // Search only the saved draw's day, not all earlier ranked history.
+        // A day can exceed one page; an exact match is required before prefill.
+        const savedDraw = draft.conditions.start_draw;
+        const savedDate = /^\d{4}-\d{2}-\d{2} /.test(savedDraw) ? savedDraw.slice(0, 10) : "";
+        let found = false;
+        if (savedDate) {
+          let offset = 0;
+          while (true) {
+            const page = await apiClient.getStartingDraws(offset, 100, savedDate);
+            if (!alive) return;
+            if (page.items.includes(savedDraw)) { found = true; break; }
+            offset += page.items.length;
+            if (!page.items.length || offset >= page.total) break;
+          }
         }
         if (!alive) return;
-        if (Object.keys(validateConditions(draft.conditions, available)).length || Object.keys(validateStrategies(draft.strategies, catalog!)).length) {
+        if (Object.keys(validateConditions(draft.conditions, found ? [savedDraw] : [])).length || Object.keys(validateStrategies(draft.strategies, catalog!)).length) {
           setBaseState("invalid"); return;
         }
-        setDraws(available);
+        drawGeneration.current += 1;
+        setDrawDate(savedDate); setKnownDraw(savedDraw);
         setConditions(draft.conditions); setStrategies(draft.strategies); nextId.current = draft.strategies.length + 1;
         setDirty(false); setBaseState("ready"); setStep(0); setActive(0);
         setErrors({}); setNotice("");
@@ -271,17 +333,29 @@ export function NewExperimentPage() {
     } finally { saveStrategyRef.current = false; setSavingStrategy(false); }
   }
   async function loadDraws() {
-    setDrawLoading(true);
+    const generation = drawGeneration.current;
+    const date = drawDate;
+    setDrawLoading(true); setDrawError("");
     try {
-      const page = await apiClient.getStartingDraws(draws.length, 100);
+      const page = date ? await apiClient.getStartingDraws(draws.length, 100, date)
+        : await apiClient.getStartingDraws(draws.length, 100);
+      if (generation !== drawGeneration.current) return;
       setDraws((previous) => [...previous, ...page.items.filter((item) => !previous.includes(item))]);
-      setTotal(page.total); setCatalogError("");
+      setTotal(page.total);
     } catch (error) {
-      setCatalogError(error instanceof NetworkError ? "No se pudo contactar al servidor local. Reintentá cargar sorteos." : "No se pudieron cargar más sorteos. Reintentá.");
-    } finally { setDrawLoading(false); }
+      if (generation === drawGeneration.current) setDrawError(error instanceof NetworkError ? "No se pudo contactar al servidor local. Reintentá cargar sorteos." : "No se pudieron cargar más sorteos. Reintentá.");
+    } finally { if (generation === drawGeneration.current) setDrawLoading(false); }
+  }
+  function changeDrawDate(value: string) {
+    drawGeneration.current += 1;
+    setDrawDate(value); setDraws([]); setTotal(0); setAvailability(null); setVerifiedDraw(""); setDrawError("");
+    if (value && conditions.start_draw && !conditions.start_draw.startsWith(`${value} `)) {
+      editCondition("start_draw", ""); setKnownDraw("");
+    }
   }
   function editCondition(key: keyof ConditionsDraft, value: string) {
     setConditions((previous) => ({ ...previous, [key]: value })); setDirty(true);
+    if (key === "start_draw") setKnownDraw(value);
     if (key in errors || "conditions" in errors) {
       const updated = { ...errors }; delete updated[key]; delete updated.conditions;
       setErrors(updated); setNotice("");
@@ -307,7 +381,8 @@ export function NewExperimentPage() {
   }
   function check(target: number): boolean {
     if (!catalog) return false;
-    const found = target === 0 ? validateConditions(conditions, draws) : validateStrategies(strategies, catalog);
+    const available = drawDate && availability?.ranked_total === 0 ? [] : [...draws, ...(verifiedDraw ? [verifiedDraw] : [])];
+    const found = target === 0 ? validateConditions(conditions, drawLoading || drawError ? [] : available) : validateStrategies(strategies, catalog);
     setErrors(found); setNotice("");
     if (Object.keys(found).length) { setStep(target); if (target === 1) {
       const match = Object.keys(found).find((key) => key.startsWith("strategies."));
@@ -356,6 +431,11 @@ export function NewExperimentPage() {
     } finally { postingRef.current = false; setPosting(false); }
   }
 
+  const offeredDraws = drawDate && availability?.ranked_total === 0 ? [] : draws;
+  const selectedAvailable = !!conditions.start_draw &&
+    (offeredDraws.includes(conditions.start_draw) || verifiedDraw === conditions.start_draw);
+  const staleDraw = !!knownDraw && conditions.start_draw === knownDraw && !drawLoading && !drawError && !selectedAvailable;
+
   if (baseId && configurationId) return <div><Link to="/experimentos" className="text-accent underline">Volver a experimentos</Link><p role="alert" className="mt-4 text-red-300">Se indicaron dos orígenes (base y configuración). Elegí solo uno; no se reemplazó ningún borrador.</p></div>;
 
   if (configurationId && (configurationState !== "ready" || catalogError)) return <div>
@@ -365,11 +445,12 @@ export function NewExperimentPage() {
 
   if (baseId && (baseState !== "ready" || catalogError)) return <div>
     <Link to="/experimentos" className="text-accent underline">Volver a experimentos</Link>
-    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="text-accent underline" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base y confirmando el sorteo disponible…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor local para cargar el experimento base." : baseState === "invalid" ? "El experimento base ya no coincide con el catálogo o contiene parámetros inválidos; no se reemplazaron valores." : "No se pudo cargar el experimento base."} <button type="button" className="text-accent underline" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
+    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="text-accent underline" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base y confirmando el sorteo disponible…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor local para cargar el experimento base." : baseState === "invalid" ? "El experimento base no es compatible con este asistente legado o contiene parámetros inválidos; no se reemplazaron valores." : "No se pudo cargar el experimento base."} <button type="button" className="text-accent underline" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   return <>
     <Link to="/experimentos" className="mb-4 inline-block text-accent underline">Volver a experimentos</Link>
+    <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil registrado y datos locales importados? <Link to="/experimentos/nuevo/perfil" className="text-accent underline">Crear sesión con perfil</Link>.</p><p className="field-help">Este asistente clásico conserva el juego Quiniela 80 y sus estrategias con ranking.</p></div>
     <nav aria-label="Pasos del asistente" className="mb-6 flex flex-wrap gap-3 border-b border-border pb-4 text-sm">
       {labels.map((label, i) => <span key={label} aria-current={step === i ? "step" : undefined} className={step === i ? "font-semibold text-accent" : "text-text-secondary"}>{i + 1} {label}</span>)}
     </nav>
@@ -388,14 +469,27 @@ export function NewExperimentPage() {
         </div>}
         {step === 0 && <section aria-label="Condiciones comunes">
           {errors.conditions && <p className="mb-4 text-sm text-red-300">{errorMessage(errors.conditions)}{errorDetail(errors.conditions) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors.conditions)}</span>}</p>}
-          {loading && <p role="status">Cargando catálogo y sorteos disponibles…</p>}
+          {loading && <p role="status">Cargando catálogo…</p>}
           {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="text-accent underline" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
-          {catalog && !loading && draws.length === 0 && <p role="status" className="mb-4">No hay sorteos iniciales con ranking disponible.</p>}
           {input("name", "Nombre del experimento")}
-          {field("start_draw", "Sorteo inicial", <select {...attrs("start_draw", true)} className={control} value={conditions.start_draw} disabled={!catalog || !draws.length} onChange={(event) => editCondition("start_draw", event.target.value)}>
-            <option value="">Elegí un sorteo disponible</option>{draws.map((draw) => <option key={draw} value={draw}>{draw}</option>)}
+          <div className="field">
+            <label htmlFor="draw_date" className="field-label">Filtrar sorteos por fecha</label>
+            <input id="draw_date" type="date" className={`${control} max-w-md`} value={drawDate} aria-describedby="draw_date-help" onChange={(event) => changeDrawDate(event.target.value)} />
+            <p id="draw_date-help" className="field-help">Dejalo vacío para ver todas las fechas. Solo podés elegir sorteos con ranking.</p>
+          </div>
+          {drawLoading && <p role="status" className="mb-4">Cargando sorteos disponibles…</p>}
+          {drawError && <p role="alert" className="mb-4 text-red-300">{drawError} <button type="button" className="text-accent underline" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
+          {staleDraw && <p role="status" className="mb-4 text-text-secondary">El sorteo elegido ya no está disponible con ranking. Elegí otro sorteo o fecha.</p>}
+          {catalog && !drawLoading && !drawError && offeredDraws.length === 0 && !knownDraw && <p role="status" className="mb-4">{drawDate && availability?.history_total === 0
+            ? "No hay sorteos históricos en esta fecha. Probá otra fecha."
+            : drawDate && availability?.ranked_total === 0
+              ? "Hay sorteos históricos en esta fecha, pero ninguno tiene ranking disponible. Probá otra fecha."
+              : "No hay sorteos iniciales con ranking disponible."}</p>}
+          {field("start_draw", "Sorteo inicial", <select {...attrs("start_draw", true)} className={control} value={conditions.start_draw} disabled={!catalog || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable)} onChange={(event) => editCondition("start_draw", event.target.value)}>
+            <option value="">Elegí un sorteo disponible</option>{offeredDraws.map((draw) => <option key={draw} value={draw}>{draw}</option>)}
+            {knownDraw && !offeredDraws.includes(knownDraw) && (!drawDate || knownDraw.startsWith(`${drawDate} `)) && <option value={knownDraw} disabled={!selectedAvailable}>{knownDraw}{selectedAvailable ? "" : " (sin ranking disponible)"}</option>}
           </select>, "Solo se ofrecen sorteos históricos con ranking disponible.")}
-          {draws.length < total && <button type="button" className={`${secondary} mb-5`} disabled={drawLoading} onClick={loadDraws}>{drawLoading ? "Cargando sorteos…" : "Cargar más sorteos"}</button>}
+          {draws.length < total && <button type="button" className={`${secondary} mb-5`} disabled={drawLoading} onClick={() => { void loadDraws(); }}>{drawLoading ? "Cargando sorteos…" : "Cargar más sorteos"}</button>}
           {/* Capital and goal are the two amounts that define success; grouped together at sm+. */}
           <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
             {input("capital", "Capital inicial (RD$)", "Pesos enteros; mínimo RD$1.")}
@@ -441,7 +535,7 @@ export function NewExperimentPage() {
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
           <button type="button" className={secondary} onClick={() => navigate("/experimentos")}>Salir</button>
           <div className="flex gap-3">{step > 0 && <button type="button" className={secondary} onClick={() => { setErrors({}); setNotice(""); setStep(step - 1); }}>Atrás</button>}
-            {step < 2 ? <button type="button" className={primary} disabled={!catalog || !draws.length} onClick={next}>Continuar</button> : <button type="button" className={primary} disabled={posting} onClick={submit}>{posting ? "Agregando…" : "Agregar a la cola"}</button>}
+            {step < 2 ? <button type="button" className={primary} disabled={!catalog || step === 0 && (drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable))} onClick={next}>Continuar</button> : <button type="button" className={primary} disabled={posting} onClick={submit}>{posting ? "Agregando…" : "Agregar a la cola"}</button>}
           </div>
         </div>
       </div>

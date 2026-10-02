@@ -12,7 +12,17 @@ vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
   return { ...actual, apiClient: { ...actual.apiClient, getSettings: vi.fn(), updateSettings: vi.fn() } };
 });
-const base = fixture as SettingsView;
+const base: SettingsView = {
+  ...fixture,
+  storage: {
+    ...fixture.storage,
+    profile_artifact_bytes: 512,
+    profile_artifact_bytes_exact: "512",
+    dataset_artifact_bytes_exact: "0",
+    admission_logical_bytes_exact: "1536",
+  },
+  quota: { ...fixture.quota, source: "default" },
+};
 function setup() {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/ajustes"] });
   return { user: userEvent.setup(), router, ...render(<RouterProvider router={router} />) };
@@ -28,8 +38,16 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   setup();
   expect(screen.getByRole("status")).toHaveTextContent(/Cargando ajustes/);
   resolve(base);
-  expect(await screen.findByText(/Uso lógico/)).toBeInTheDocument();
+  expect(await screen.findByText("Uso lógico de admisión")).toBeInTheDocument();
   expect(screen.getByText("5 GiB (5,368,709,120 bytes)")).toBeInTheDocument();
+  expect(screen.getByText("1,536 bytes")).toBeInTheDocument();
+  expect(screen.getByText("5,368,707,584 bytes")).toBeInTheDocument();
+  expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "0");
+  expect(screen.getByText("Experimentos y ejecuciones históricos")).toBeInTheDocument();
+  expect(screen.getByText("Artefactos de perfiles (copias JSON)")).toBeInTheDocument();
+  expect(screen.getByText("Artefactos de datasets")).toBeInTheDocument();
+  expect(screen.getByText("512 bytes")).toBeInTheDocument();
+  expect(within(screen.getByText("Artefactos de datasets").parentElement!).getByText("0 bytes")).toBeInTheDocument();
   expect(screen.getByText(/SQLite y archivos locales \(total informado\)/)).toBeInTheDocument();
   expect(screen.getByText("Espacio en disco libre")).toBeInTheDocument();
   expect(screen.getByText(/JSON y rankings originales no se incluyen/i)).toBeInTheDocument();
@@ -90,44 +108,94 @@ it("keeps the draft after 422, 409 below usage, and network failure; 422 focuses
     .mockRejectedValueOnce(new NetworkError());
   const { user } = setup();
   const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
-  await user.clear(input); await user.type(input, "500");
+  await user.clear(input); await user.type(input, "2000");
   await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
   expect(await screen.findByText(/El servidor rechazó el presupuesto/)).toBeInTheDocument();
   expect(input).toHaveFocus();
   await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/menor que el uso lógico actual/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/menor que el uso lógico de admisión actual/);
   await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/podría haber llegado/);
-  expect(input).toHaveValue("500");
+  expect(input).toHaveValue("2000");
 });
 
 it("shows an environment quota as read-only, with persisted preference distinct", async () => {
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce({ ...base, quota: { effective_bytes: "9007199254740993", persisted_bytes: "2147483648", source: "environment", writable: false } });
   setup();
   expect(await screen.findByText(/Variable de entorno/)).toBeInTheDocument();
+  expect(screen.getByText("1,536 bytes")).toBeInTheDocument();
   expect(screen.getByText(/2,147,483,648 bytes/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Guardar presupuesto" })).not.toBeInTheDocument();
   expect(screen.queryByRole("textbox", { name: /Límite lógico en bytes/ })).not.toBeInTheDocument();
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
 });
 
-it("presents max int64 and logical usage exactly with es-DO grouping while keeping raw ASCII input", async () => {
+it("presents max int64 and aggregate usage exactly with es-DO grouping while keeping raw ASCII input", async () => {
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce({
     ...base,
     quota: { effective_bytes: "9223372036854775807", persisted_bytes: null, source: "default", writable: true },
-    storage: { ...base.storage, logical_used_bytes_exact: "9007199254740993" },
+    storage: { ...base.storage, logical_used_bytes_exact: "9007199254740993", profile_artifact_bytes_exact: "7", admission_logical_bytes_exact: "9007199254741000" },
   });
   setup();
   expect(await screen.findByText("9,223,372,036,854,775,807 bytes")).toBeInTheDocument();
+  expect(screen.getByText("9,007,199,254,741,000 bytes")).toBeInTheDocument();
+  expect(screen.getByText("9,214,364,837,600,034,807 bytes")).toBeInTheDocument();
   expect(screen.getByText("9,007,199,254,740,993 bytes")).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: /Límite lógico en bytes/ })).toHaveValue("9223372036854775807");
 });
 
+it("rejects a quota above historical bytes but below aggregate admission usage, then allows equality", async () => {
+  const { user } = setup();
+  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  await user.clear(input); await user.type(input, "1500");
+  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  expect(input).toHaveFocus();
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  expect(screen.getByText(/al menos 1,536 bytes de uso lógico de admisión/)).toBeInTheDocument();
+  expect(screen.getByText(/no puede ser menor que el uso lógico de admisión actual.*1,536 bytes/, { selector: "#quota-error" })).toBeInTheDocument();
+  expect(apiClient.updateSettings).not.toHaveBeenCalled();
+  await user.clear(input); await user.type(input, "1536");
+  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  expect(apiClient.updateSettings).toHaveBeenCalledWith("1536");
+  expect(screen.queryByText(/no puede ser menor/, { selector: "#quota-error" })).not.toBeInTheDocument();
+});
+
+it("shows exact remaining capacity and bounded progress from aggregate usage", async () => {
+  vi.mocked(apiClient.getSettings).mockResolvedValueOnce({
+    ...base, quota: { effective_bytes: "2560", persisted_bytes: "2560", source: "persisted", writable: true },
+  });
+  setup();
+  expect(await screen.findByText("1,024 bytes", { selector: "span" })).toBeInTheDocument();
+  expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "60");
+});
+
+it("clamps remaining and progress when aggregate usage exceeds the effective limit", async () => {
+  vi.mocked(apiClient.getSettings).mockResolvedValueOnce({
+    ...base, quota: { effective_bytes: "1200", persisted_bytes: "1200", source: "persisted", writable: true },
+  });
+  setup();
+  expect(await screen.findByText("0 bytes", { selector: "span" })).toBeInTheDocument();
+  expect(screen.getByText(/uso superior al límite por 336 bytes/)).toBeInTheDocument();
+  expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "100");
+});
+
+it("marks historical-only responses as incomplete instead of claiming an aggregate", async () => {
+  vi.mocked(apiClient.getSettings).mockResolvedValueOnce(fixture as SettingsView);
+  const { user } = setup();
+  expect(await screen.findByText(/total de admisión y el espacio restante pueden estar incompletos/)).toBeInTheDocument();
+  expect(screen.queryByRole("progressbar", { name: "Cuota lógica utilizada" })).not.toBeInTheDocument();
+  expect(screen.queryByText("Artefactos de perfiles (copias JSON)")).not.toBeInTheDocument();
+  const input = screen.getByRole("textbox", { name: /Límite lógico en bytes/ });
+  await user.clear(input); await user.type(input, "1023");
+  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  expect(apiClient.updateSettings).not.toHaveBeenCalled();
+});
+
 it("warns on the server's quota warning without confusing it with disk reclamation", async () => {
-  vi.mocked(apiClient.getSettings).mockResolvedValueOnce({ ...base, storage: { ...base.storage, warning: true, logical_used_bytes_exact: "9007199254740993" } });
+  vi.mocked(apiClient.getSettings).mockResolvedValueOnce({ ...base, storage: { ...base.storage, warning: true, admission_logical_bytes_exact: "9007199254740993" } });
   setup();
   expect(await screen.findByRole("alert")).toHaveTextContent(/límite o falta de disco/);
-  expect(screen.getByText(/9,007,199,254,740,993 bytes/)).toBeInTheDocument();
+  expect(screen.getAllByText(/9,007,199,254,740,993 bytes/).length).toBeGreaterThanOrEqual(1);
 });
 
 it("guards dirty navigation and unload while a refresh keeps the draft across server changes", async () => {
@@ -188,6 +256,6 @@ it("does not block clean navigation and explains 403 and a raced read-only 409 w
 
 it("has no axe violations in loaded settings", async () => {
   const { container } = setup();
-  await screen.findByText(/Uso lógico/);
+  await screen.findByText("Uso lógico de admisión");
   expect(await axe(container)).toHaveNoViolations();
 });

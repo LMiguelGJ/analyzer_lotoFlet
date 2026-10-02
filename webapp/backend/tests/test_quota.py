@@ -1,5 +1,6 @@
 """Quota accounting is logical experiment data, not SQLite file size or source data."""
 
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from threading import Event
@@ -10,13 +11,16 @@ import pytest
 from laboratorio.domain.contracts import (
     Conditions,
     ExperimentRequest,
+    ExperimentStatus,
+    GameProfile,
     SelectorKind,
     StakingStyle,
     Strategy,
+    legacy_quiniela_80_profile,
 )
 from laboratorio.settings import DEFAULT_QUOTA_BYTES, Settings
 from laboratorio.storage.database import initialize_database
-from laboratorio.storage.quota import QuotaExceeded
+from laboratorio.storage.quota import LOGICAL_MARGIN_BYTES, QuotaExceeded, measure
 from laboratorio.storage.repository import QuotaBelowUsage, QuotaReadOnly, Repository
 
 
@@ -110,8 +114,8 @@ def test_preference_below_usage_rolls_back_and_equal_allowed(repo):
         rankings_sha256="b" * 64,
         code_version="v1",
     )
-    used = repo.logical_experiment_bytes()
-    assert used > 1
+    used = repo.admission_logical_bytes()
+    assert used > repo.logical_experiment_bytes() > 1
     repo.set_quota_preference(used)
     with pytest.raises(QuotaBelowUsage):
         repo.set_quota_preference(used - 1)
@@ -125,7 +129,7 @@ def test_write_boundary_rereads_preference_after_stale_preflight(repo):
     generous = 2 * 1024**3
     repo.set_quota_preference(generous)
     repo.require_capacity(disk_usage=lambda _: disk(generous))
-    repo.set_quota_preference(1)
+    repo.set_quota_preference(repo.admission_logical_bytes())
     with pytest.raises(QuotaExceeded):
         repo.create_experiment(
             request("First"),
@@ -211,6 +215,9 @@ def test_logical_usage_excludes_original_inputs_and_physical_overhead(repo, tmp_
     (tmp_path / "rank.npz").write_bytes(b"x" * 4096)
     empty = repo.quota_status(5 * 1024**3, disk_usage=lambda _: disk(2 * 1024**3))
     assert empty.logical_used_bytes == 0
+    assert empty.profile_artifact_bytes > 0  # seeded legacy profile version
+    assert empty.admission_logical_bytes == empty.profile_artifact_bytes
+    assert empty.dataset_artifact_bytes == 0
     identifier = repo.create_experiment(
         request("First"),
         history_id="history",
@@ -222,18 +229,20 @@ def test_logical_usage_excludes_original_inputs_and_physical_overhead(repo, tmp_
     status = repo.quota_status(5 * 1024**3, disk_usage=lambda _: disk(2 * 1024**3))
     assert status.logical_used_bytes > 0
     assert status.logical_used_bytes < 4096
+    assert status.admission_logical_bytes == (
+        status.logical_used_bytes + status.profile_artifact_bytes
+    )
     assert status.sqlite_bytes >= repo.path.stat().st_size
     assert status.free_disk_bytes == 2 * 1024**3
     assert status.limit_bytes == 5 * 1024**3
     assert repo.get_experiment(identifier) is not None
 
 
-def test_sqlite_wal_and_temporary_sidecars_reported_separately(repo, monkeypatch):
+def test_sqlite_wal_and_temporary_sidecars_reported_separately(repo):
     # A real SQLite open can clean up stale sidecars; isolate measurement itself.
-    monkeypatch.setattr(repo, "logical_experiment_bytes", lambda: 0)
     for suffix, size in (("-wal", 47), ("-shm", 31), ("-journal", 13)):
         (repo.path.parent / (repo.path.name + suffix)).write_bytes(b"a" * size)
-    status = repo.quota_status(5 * 1024**3, disk_usage=lambda _: disk(2 * 1024**3))
+    status = measure(repo.path, 5 * 1024**3, 0, disk_usage=lambda _: disk(2 * 1024**3))
     assert status.wal_bytes == 47
     assert status.temp_bytes == 13
     assert status.sqlite_bytes == repo.path.stat().st_size + 47 + 31 + 13
@@ -241,22 +250,157 @@ def test_sqlite_wal_and_temporary_sidecars_reported_separately(repo, monkeypatch
     assert status.logical_margin_bytes > 0
 
 
-def test_below_at_and_above_threshold_and_free_disk_independent(repo, monkeypatch):
+def test_below_at_and_above_threshold_and_free_disk_independent(repo):
     limit = 5 * 1024**3
-    base = repo.quota_status(limit, disk_usage=lambda _: disk(2 * 1024**3))
-    threshold = limit - base.logical_margin_bytes
-    monkeypatch.setattr(repo, "logical_experiment_bytes", lambda: threshold - 1)
-    repo.require_capacity(limit, disk_usage=lambda _: disk(2 * 1024**3))
-    monkeypatch.setattr(repo, "logical_experiment_bytes", lambda: threshold)
-    with pytest.raises(QuotaExceeded, match="quota"):
-        repo.require_capacity(limit, disk_usage=lambda _: disk(2 * 1024**3))
-    monkeypatch.setattr(repo, "logical_experiment_bytes", lambda: threshold + 1)
-    with pytest.raises(QuotaExceeded, match="quota"):
-        repo.require_capacity(limit, disk_usage=lambda _: disk(2 * 1024**3))
-    monkeypatch.setattr(repo, "logical_experiment_bytes", lambda: 0)
+    profile_bytes = repo.profile_artifact_bytes()
+    base = measure(
+        repo.path,
+        limit,
+        0,
+        profile_artifact_bytes=profile_bytes,
+        disk_usage=lambda _: disk(2 * 1024**3),
+    )
+    threshold = limit - base.logical_margin_bytes - profile_bytes
+    measure(
+        repo.path,
+        limit,
+        threshold - 1,
+        profile_artifact_bytes=profile_bytes,
+        disk_usage=lambda _: disk(2 * 1024**3),
+    ).require_capacity()
+    for used in (threshold, threshold + 1):
+        with pytest.raises(QuotaExceeded, match="quota"):
+            measure(
+                repo.path,
+                limit,
+                used,
+                profile_artifact_bytes=profile_bytes,
+                disk_usage=lambda _: disk(2 * 1024**3),
+            ).require_capacity()
     with pytest.raises(QuotaExceeded, match="disk"):
-        repo.require_capacity(limit, disk_usage=lambda _: disk(base.disk_margin_bytes))
-    repo.require_capacity(limit, disk_usage=lambda _: disk(base.disk_margin_bytes + 1))
+        measure(
+            repo.path, limit, 0, disk_usage=lambda _: disk(base.disk_margin_bytes)
+        ).require_capacity()
+    measure(
+        repo.path, limit, 0, disk_usage=lambda _: disk(base.disk_margin_bytes + 1)
+    ).require_capacity()
+
+
+def create_trial(repo, **kwargs):
+    return repo.create_experiment(
+        request("First"),
+        history_id="history",
+        history_sha256="a" * 64,
+        rankings_id="rankings",
+        rankings_sha256="b" * 64,
+        code_version="v1",
+        **kwargs,
+    )
+
+
+def admission_equality_limit(projected):
+    """Find an exact small-quota boundary accounting for the proportional margin."""
+    return next(
+        limit
+        for limit in range(projected, 2 * projected + 20)
+        if limit - min(LOGICAL_MARGIN_BYTES, max(1, limit // 20)) == projected
+    )
+
+
+def test_discriminator_bytes_are_counted_and_projected(repo):
+    baseline = repo.logical_experiment_bytes()
+    identifier = create_trial(repo)
+    with sqlite3.connect(repo.path) as db:
+        experiment_kind = db.execute(
+            "SELECT request_kind FROM experiments WHERE id = ?", (identifier,)
+        ).fetchone()[0]
+        run_kind = db.execute(
+            "SELECT result_kind FROM runs WHERE experiment_id = ?", (identifier,)
+        ).fetchone()[0]
+    assert (experiment_kind, run_kind) == ("legacy", "legacy")
+    used = repo.logical_experiment_bytes() - baseline
+    # Hold all other stored bytes constant; both new textual columns count.
+    with sqlite3.connect(repo.path) as db:
+        db.execute("UPDATE experiments SET request_kind = 'profile' WHERE id = ?", (identifier,))
+        db.execute("UPDATE runs SET result_kind = 'profile' WHERE experiment_id = ?", (identifier,))
+    assert repo.logical_experiment_bytes() == baseline + used + 2
+    assert repo.admission_logical_bytes() >= baseline + used + 2
+
+
+def test_snapshot_projection_counts_one_copy_atomically_at_equality(repo):
+    def free(_):
+        return disk(2 * 1024**3)
+
+    baseline = repo.admission_logical_bytes()
+    identifier = create_trial(repo, disk_usage=free)
+    snapshot_cost = repo.admission_logical_bytes() - baseline
+    assert snapshot_cost > repo.logical_experiment_bytes()
+    repo.finish_incomplete(identifier, ExperimentStatus.CANCELLED)
+    assert repo.delete_experiment(identifier)
+    assert repo.admission_logical_bytes() == baseline
+    limit = admission_equality_limit(baseline + snapshot_cost)
+    with pytest.raises(QuotaExceeded, match="quota"):
+        create_trial(repo, quota_bytes=limit, disk_usage=free)
+    assert repo.list_experiments() == []
+    admitted = create_trial(repo, quota_bytes=limit + 1, disk_usage=free)
+    assert repo.get_experiment(admitted) is not None
+    assert repo.admission_logical_bytes() == baseline + snapshot_cost
+
+
+def test_profile_version_quota_idempotence_and_conflict(repo):
+    def free(_):
+        return disk(2 * 1024**3)
+
+    legacy = legacy_quiniela_80_profile()
+    profile = GameProfile.model_validate(
+        {
+            **legacy.model_dump(),
+            "profile_id": "copy-one",
+            "best_rule": "maximum-payout/v1",
+        }
+    )
+    cost = len(profile.model_dump_json().encode("utf-8"))
+    baseline = repo.admission_logical_bytes()
+    limit = admission_equality_limit(baseline + cost)
+    with pytest.raises(QuotaExceeded, match="quota"):
+        repo.create_game_profile(profile, quota_bytes=limit, disk_usage=free)
+    assert repo.get_game_profile(profile.profile_id, 1) is None
+    repo.create_game_profile(profile, quota_bytes=limit + 1, disk_usage=free)
+    assert repo.profile_artifact_bytes() == baseline + cost
+    assert repo.create_game_profile(profile, quota_bytes=1, disk_usage=lambda _: disk(0)) == profile
+    assert repo.admission_logical_bytes() == baseline + cost
+    with pytest.raises(ValueError, match="different content"):
+        repo.create_game_profile(
+            GameProfile.model_validate(
+                {**profile.model_dump(), "revision": 1, "universe_size": 99}
+            ),
+            quota_bytes=1,
+        )
+    with pytest.raises(QuotaBelowUsage):
+        repo.set_quota_preference(baseline + cost - 1)
+    assert repo.set_quota_preference(baseline + cost) == baseline + cost
+
+
+def test_old_over_quota_data_readable_and_deletion_recovers_headroom(repo):
+    identifier = create_trial(repo)
+    old_used = repo.logical_experiment_bytes()
+    aggregate = repo.admission_logical_bytes()
+    assert aggregate > old_used
+    # Simulate an older persisted preference, established before profile accounting.
+    from laboratorio.storage.database import connection
+
+    with connection(repo.path) as db:
+        db.execute("INSERT INTO settings_quota VALUES (1, ?)", (old_used,))
+        db.commit()
+    assert repo.get_experiment(identifier) is not None
+    assert repo.quota_status().admission_logical_bytes == aggregate
+    with pytest.raises(QuotaExceeded):
+        create_trial(repo)
+    repo.finish_incomplete(identifier, ExperimentStatus.CANCELLED)
+    assert repo.delete_experiment(identifier)
+    assert repo.logical_experiment_bytes() == 0
+    assert repo.admission_logical_bytes() == repo.profile_artifact_bytes()
+    assert repo.set_quota_preference(repo.admission_logical_bytes()) > 0
 
 
 def test_result_write_checks_exact_utf8_bytes_before_commit(repo):
@@ -274,7 +418,7 @@ def test_result_write_checks_exact_utf8_bytes_before_commit(repo):
     repo.start_run(identifier, 0)
     bet = Bet("2025-01-01 05:10", (7,), 1, 1, (7, 8, 9, 10, 11), 80, 179)
     result = SessionResult(Outcome.GOAL, 1, 1, 80, 179, (bet,))
-    used = repo.logical_experiment_bytes()
+    used = repo.admission_logical_bytes()
     limit = used + 100
     with pytest.raises(QuotaExceeded):
         repo.complete_run(

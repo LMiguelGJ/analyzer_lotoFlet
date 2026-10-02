@@ -3,6 +3,7 @@
 import sqlite3
 import time
 from dataclasses import replace
+from datetime import date, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -12,10 +13,12 @@ from laboratorio.domain.contracts import (
     Conditions,
     ExperimentRequest,
     ExperimentStatus,
+    GameProfile,
     Outcome,
     SelectorKind,
     StakingStyle,
     Strategy,
+    legacy_quiniela_80_profile,
 )
 from laboratorio.domain.session import Bet, SessionResult
 from laboratorio.jobs.queue import JobQueue, QueueFailure
@@ -81,6 +84,323 @@ def test_catalog_and_create_read_without_recalculation(setup, monkeypatch):
     assert client.get("/api/v1/experiments").json()["total"] == 1
     assert client.get("/api/v1/experiments?offset=-1").status_code == 422
     assert client.get("/api/v1/experiments?limit=101").status_code == 422
+
+
+def test_profile_catalog_is_bounded_inert_and_keeps_legacy_catalog_shape(setup, monkeypatch):
+    client, app, _ = setup
+    legacy = legacy_quiniela_80_profile()
+    custom = GameProfile.model_validate(
+        {**legacy.model_dump(), "profile_id": "custom-copy", "best_rule": "maximum-payout/v1"}
+    )
+    next_revision = GameProfile.model_validate({**custom.model_dump(), "revision": 2})
+    app.state.repo.create_game_profile(custom)
+    app.state.repo.create_game_profile(next_revision)
+    from laboratorio.domain.profile_request import profile_sha256
+
+    monkeypatch.setattr(
+        app.state.repo, "list_game_profiles", lambda: pytest.fail("unbounded profile read")
+    )
+    catalog = client.get("/api/v1/catalog").json()
+    assert set(catalog["game"]) == {"name", "numbers", "positions", "prizes", "allows_repeats"}
+    assert "profiles" not in catalog
+    first = client.get("/api/v1/catalog/profiles", params={"limit": 1}).json()
+    assert (first["total"], first["offset"], first["limit"]) == (3, 0, 1)
+    assert first["items"][0]["profile"] == custom.model_dump(mode="json")
+    assert first["items"][0]["profile_sha256"] == profile_sha256(custom)
+    assert first["items"][0]["execution_supported"] is False
+    assert first["items"][0]["profile_execution"] == {
+        "ready": True,
+        "selector_capabilities": ["static-numbers/v1", "seeded-random/hash-sha256-v1"],
+        "staking_capabilities": [
+            "flat-per-number/v1",
+            "q80-first-prize-cycling/v1",
+            "profile-audaz/v1",
+            "profile-recovery-ladder/v1",
+        ],
+        "entry_policies": ["all_rows/v1"],
+        "settlements": ["all", "best"],
+        "requires_compatible_dataset": True,
+        "audaz_compatibility": {
+            "available": True,
+            "maximum_compatible_coverage": custom.max_coverage,
+            "coverage_rule": "selected coverage must be strictly less than multiplier[0]",
+        },
+        "recovery_compatibility": {
+            "available": True,
+            "maximum_compatible_coverage": custom.max_coverage,
+            "coverage_rule": "selected coverage must be strictly less than multiplier[0]",
+            "parameters": ["target_margin", "rounds", "end_mode"],
+        },
+    }
+    second = client.get("/api/v1/catalog/profiles", params={"offset": 1, "limit": 1}).json()
+    assert second["items"][0]["profile"]["revision"] == 2
+    assert second["items"][0]["execution_supported"] is False
+    assert second["items"][0]["profile_sha256"] == profile_sha256(next_revision)
+    last = client.get("/api/v1/catalog/profiles", params={"offset": 2, "limit": 1}).json()
+    assert last["items"][0]["profile"] == legacy.model_dump(mode="json")
+    assert last["items"][0]["execution_supported"] is True
+    assert last["items"][0]["profile_sha256"] == profile_sha256(legacy)
+    assert last["items"][0]["profile_execution"] == first["items"][0]["profile_execution"]
+    assert last["items"][0]["profile"]["multipliers"][0] == {"numerator": 80, "denominator": 1}
+    assert client.get("/api/v1/catalog/profiles", params={"offset": 3}).json()["items"] == []
+    templates = first["templates"]
+    assert [item["name"] for item in templates] == ["Original70", "User example 60/10/5"]
+    assert all(item["execution_supported"] is False for item in templates)
+    original, example = templates
+    assert original["known_fields"]["universe_size"] == 100  # not 70 numbers
+    assert original["known_fields"]["multipliers"] == [
+        {"numerator": value, "denominator": 1} for value in (70, 8, 4, 2, 1)
+    ]
+    assert "repo_ref/strategy_tests/rules.py" in original["provenance"]
+    assert "maximum_stake" in original["missing_fields"]
+    assert example["known_fields"] == {
+        "universe_size": 100,
+        "positions": 3,
+        "allows_repeats": True,
+        "multipliers": [{"numerator": value, "denominator": 1} for value in (60, 10, 5)],
+        "currency": "DOP",
+        "minimum_stake": 1,
+    }
+    assert "max_exposure" in example["missing_fields"]
+    assert (
+        client.post(
+            "/api/v1/catalog/profiles", json={}, headers={"Origin": "http://localhost:8765"}
+        ).status_code
+        == 422
+    )
+    for params in ({"offset": -1}, {"limit": 0}, {"limit": 101}):
+        assert client.get("/api/v1/catalog/profiles", params=params).status_code == 422
+
+
+def test_dataset_discovery_is_bounded_inert_and_metadata_only(setup, monkeypatch):
+    import json
+
+    from test_import_records import options, row
+
+    client, app, _ = setup
+    assert client.get("/api/v1/datasets").json() == {
+        "total": 0,
+        "offset": 0,
+        "limit": 20,
+        "items": [],
+    }
+    source = options()["source"]
+    saved = app.state.repo.promote_dataset(json.dumps([row()]).encode(), **options()).dataset
+    second = app.state.repo.promote_dataset(
+        json.dumps([row(day="2025-09-03")]).encode(),
+        **{
+            **options(),
+            "source": source.__class__("next", "historical", "r2", "private provenance"),
+        },
+    ).dataset
+    monkeypatch.setattr(app.state.repo, "list_game_profiles", lambda: pytest.fail("profile list"))
+    page = client.get("/api/v1/datasets", params={"limit": 1}).json()
+    assert (page["total"], page["offset"], page["limit"]) == (2, 0, 1)
+    first = page["items"][0]
+    from laboratorio.domain.profile_request import profile_sha256
+
+    assert first == {
+        "dataset_sha256": saved.dataset_sha256,
+        "source_sha256": saved.source_sha256,
+        "created_at": saved.created_at,
+        "source_id": "local-1",
+        "source_kind": "historical",
+        "source_revision": "v1",
+        "profile_id": "test-draw",
+        "profile_revision": 1,
+        "profile_sha256": profile_sha256(options()["profile"]),
+        "positions": 3,
+        "universe_size": 100,
+        "records_total": 1,
+        "first_draw": "2025-09-02 05:10",
+        "last_draw": "2025-09-02 05:10",
+        "clock": {"mode": "naive_legacy", "zone": None},
+        "execution_supported": False,
+        "profile_execution": {
+            "ready": False,
+            "selector_capabilities": ["static-numbers/v1", "seeded-random/hash-sha256-v1"],
+            "staking_capabilities": ["flat-per-number/v1"],
+            "entry_policies": ["all_rows/v1"],
+            "settlements": ["all", "best"],
+            "requires_compatible_dataset": True,
+            "audaz_compatibility": {
+                "available": False,
+                "maximum_compatible_coverage": 0,
+                "coverage_rule": "selected coverage must be strictly less than multiplier[0]",
+            },
+            "recovery_compatibility": {
+                "available": False,
+                "maximum_compatible_coverage": 0,
+                "coverage_rule": "selected coverage must be strictly less than multiplier[0]",
+                "parameters": ["target_margin", "rounds", "end_mode"],
+            },
+        },
+    }
+    assert "private provenance" not in json.dumps(page)
+    assert saved.raw_bytes.decode() not in json.dumps(page)
+    assert saved.canonical_json.decode() not in json.dumps(page)
+    assert (
+        client.get("/api/v1/datasets", params={"offset": 1, "limit": 1}).json()["items"][0][
+            "dataset_sha256"
+        ]
+        == second.dataset_sha256
+    )
+    assert client.get("/api/v1/datasets", params={"offset": 2}).json()["items"] == []
+    for params in ({"offset": -1}, {"limit": 0}, {"limit": 101}):
+        assert client.get("/api/v1/datasets", params=params).status_code == 422
+    assert post(client, "/api/v1/datasets", {}).status_code == 405
+
+
+def test_starting_draw_date_jumps_to_late_ranked_page_without_changing_legacy_pagination(
+    setup, monkeypatch
+):
+    client, app, _ = setup
+    labels = tuple(
+        f"2025-01-{day:02d} 05:{minute:02d}" for day in range(1, 31) for minute in (5, 10, 15)
+    )
+    ranked = (*range(0, 87, 3), 87, 88, 89)
+    monkeypatch.setattr(
+        app.state,
+        "data",
+        SimpleNamespace(
+            history=SimpleNamespace(labels=labels), rankings=SimpleNamespace(row_ids=ranked)
+        ),
+    )
+    endpoint = "/api/v1/catalog/starting-draws"
+    assert client.get(endpoint, params={"offset": 1, "limit": 2}).json() == {
+        "total": len(ranked),
+        "offset": 1,
+        "limit": 2,
+        "items": [labels[3], labels[6]],
+    }
+    late = client.get(endpoint, params={"date": "2025-01-30", "limit": 1}).json()
+    assert late == {"total": 3, "offset": 0, "limit": 1, "items": [labels[87]]}
+    assert client.get(endpoint, params={"date": "2025-01-30", "offset": 1, "limit": 2}).json() == {
+        "total": 3,
+        "offset": 1,
+        "limit": 2,
+        "items": [labels[88], labels[89]],
+    }
+    assert client.get(endpoint, params={"date": "2025-01-30", "offset": 3}).json() == {
+        "total": 3,
+        "offset": 3,
+        "limit": 100,
+        "items": [],
+    }
+
+
+def test_starting_draw_late_date_uses_indexed_access_not_linear_page_scanning(setup, monkeypatch):
+    client, app, _ = setup
+    labels = tuple(
+        f"{(date(2025, 1, 1) + timedelta(days=day)).isoformat()} 05:05" for day in range(12_000)
+    )
+
+    class IndexedOnly:
+        def __init__(self, values):
+            self.values = values
+            self.reads = 0
+
+        def __len__(self):
+            return len(self.values)
+
+        def __getitem__(self, index):
+            self.reads += 1
+            assert self.reads < 100, "lookup walked the historical pages"
+            return self.values[index]
+
+    indexed_labels = IndexedOnly(labels)
+    indexed_rows = IndexedOnly(tuple(range(len(labels))))
+    monkeypatch.setattr(
+        app.state,
+        "data",
+        SimpleNamespace(
+            history=SimpleNamespace(labels=indexed_labels),
+            rankings=SimpleNamespace(row_ids=indexed_rows),
+        ),
+    )
+    response = client.get(
+        "/api/v1/catalog/starting-draws", params={"date": labels[-1][:10], "limit": 1}
+    )
+    assert response.json() == {"total": 1, "offset": 0, "limit": 1, "items": [labels[-1]]}
+    assert indexed_labels.reads < 100 and indexed_rows.reads < 100
+
+
+def test_starting_draw_date_excludes_unranked_and_reports_bounded_history_availability(
+    setup, monkeypatch
+):
+    client, app, _ = setup
+    labels = (
+        "2025-01-01 05:05",
+        "2025-01-01 05:10",
+        "2025-01-02 05:05",
+        "2025-01-03 05:05",
+        "2025-01-03 05:10",
+    )
+    monkeypatch.setattr(
+        app.state,
+        "data",
+        SimpleNamespace(
+            history=SimpleNamespace(labels=labels), rankings=SimpleNamespace(row_ids=(1, 4))
+        ),
+    )
+    endpoint = "/api/v1/catalog/starting-draws"
+    availability = f"{endpoint}/availability"
+    assert client.get(endpoint, params={"date": "2025-01-01"}).json()["items"] == [labels[1]]
+    assert client.get(endpoint, params={"date": "2025-01-03"}).json()["items"] == [labels[4]]
+    assert client.get(endpoint, params={"date": "2025-01-02"}).json() == {
+        "total": 0,
+        "offset": 0,
+        "limit": 100,
+        "items": [],
+    }
+    assert client.get(availability, params={"date": "2025-01-02"}).json() == {
+        "date": "2025-01-02",
+        "history_total": 1,
+        "ranked_total": 0,
+    }
+    for missing in ("2024-12-31", "2025-01-04"):
+        assert client.get(endpoint, params={"date": missing}).json()["items"] == []
+        assert client.get(availability, params={"date": missing}).json() == {
+            "date": missing,
+            "history_total": 0,
+            "ranked_total": 0,
+        }
+    assert client.get(availability, params={"date": "2025-01-03"}).json() == {
+        "date": "2025-01-03",
+        "history_total": 2,
+        "ranked_total": 1,
+    }
+
+
+@pytest.mark.parametrize(
+    "bad_date", ("2025-02-30", "2025-1-02", "20250102", "2025-01-02T00:00", "oops")
+)
+def test_starting_draw_date_rejects_non_iso_or_invalid_calendar_day(setup, bad_date):
+    client, _, _ = setup
+    for endpoint in (
+        "/api/v1/catalog/starting-draws",
+        "/api/v1/catalog/starting-draws/availability",
+    ):
+        assert client.get(endpoint, params={"date": bad_date}).status_code == 422
+
+
+def test_experiment_profile_snapshot_is_additive_on_saved_responses(setup):
+    client, app, _ = setup
+    identifier = app.state.repo.create_experiment(
+        ExperimentRequest.model_validate(payload()),
+        history_id="h",
+        history_sha256="a" * 64,
+        rankings_id="r",
+        rankings_sha256="b" * 64,
+        code_version="v1",
+    )
+    expected = legacy_quiniela_80_profile().model_dump(mode="json")
+    detail = client.get(f"/api/v1/experiments/{identifier}").json()
+    listed = client.get("/api/v1/experiments").json()["items"][0]
+    assert detail["profile"] == listed["profile"] == expected
+    assert detail["request"] == listed["request"] == payload()
+    assert detail["profile"]["best_rule"] == "first-match/v0"
+    assert detail["sources"]["code_version"] == "v1"
 
 
 def test_experiment_search_filters_orders_paginates_and_serializes_created_at(setup):
@@ -204,6 +524,49 @@ def test_invalid_payload_and_start(setup):
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize("staking", ("flat", "ladder", "bold"))
+def test_create_rejects_unaffordable_initial_stake_before_submit(setup, monkeypatch, staking):
+    client, app, _ = setup
+    data = payload()
+    data["conditions"]["capital"] = 49
+    data["strategies"][0].update(name=f"Unfunded {staking}", staking=staking, coverage=50)
+    monkeypatch.setattr(app.state.jobs, "submit", lambda *a, **kw: pytest.fail("submitted"))
+    response = post(client, "/api/v1/experiments", {"request": data})
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        f"strategy 1 (Unfunded {staking}): initial capital cannot afford the prescribed bet"
+    )
+    assert app.state.repo.list_experiments() == []
+
+
+def test_create_rejects_later_unaffordable_strategy_without_persisting_batch(setup, monkeypatch):
+    client, app, _ = setup
+    data = payload()
+    data["conditions"]["capital"] = 5
+    data["strategies"].append(
+        {**data["strategies"][0], "name": "Second", "coverage": 10, "staking": "ladder"}
+    )
+    monkeypatch.setattr(app.state.jobs, "submit", lambda *a, **kw: pytest.fail("submitted"))
+    response = post(client, "/api/v1/experiments", {"request": data})
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "strategy 2 (Second): initial capital cannot afford the prescribed bet"
+    )
+    assert app.state.repo.list_experiments() == []
+    assert client.get("/api/v1/experiments").json()["total"] == 0
+
+
+@pytest.mark.parametrize("staking", ("flat", "ladder", "bold"))
+def test_create_accepts_exact_initial_cost_boundary(setup, staking):
+    client, app, _ = setup
+    data = payload()
+    data["conditions"]["capital"] = 50
+    data["strategies"][0].update(coverage=50, staking=staking)
+    response = post(client, "/api/v1/experiments", {"request": data})
+    assert response.status_code == 201
+    assert app.state.repo.get_experiment(response.json()["id"]) is not None
+
+
 def test_host_origin_guard(setup):
     client, _, _ = setup
     for host in (
@@ -273,6 +636,8 @@ def test_run_delta_projects_persisted_result_from_request_capital(setup, paid, e
     ):
         assert runs[0]["result"]["final_balance"] == 99 + paid
         assert runs[0]["result"]["delta"] == expected_delta
+        assert runs[0]["result"]["net"] == paid - 1
+        assert runs[0]["result"]["metric_scope"] == "saved_individual_run"
         assert runs[1]["result"] is None
 
 
@@ -314,6 +679,11 @@ def test_snapshot_replay_compare_and_confirmed_delete(setup, monkeypatch):
     monkeypatch.setattr("laboratorio.domain.session.run_session", lambda *a: pytest.fail("recalc"))
     detail = client.get(f"/api/v1/experiments/{identifier}").json()
     assert detail["runs"][0]["result"]["final_balance"] == 179
+    assert detail["runs"][0]["result"]["net"] == 79
+    assert detail["runs"][0]["result"]["return_per_wagered"] == 80.0
+    assert detail["runs"][0]["result"]["roi"] == 79.0
+    assert detail["runs"][0]["result"]["max_drawdown"] == 0
+    assert detail["runs"][0]["result"]["metric_scope"] == "saved_individual_run"
     assert "bets" not in detail["runs"][0]["result"]
     assert client.get(f"/api/v1/experiments/{identifier}/runs/0/replay?limit=1").json()["items"][0][
         "numbers"
@@ -321,6 +691,30 @@ def test_snapshot_replay_compare_and_confirmed_delete(setup, monkeypatch):
     response = client.get(f"/api/v1/experiments/{identifier}/runs/0/replay?limit=101")
     assert response.status_code == 422
     assert client.get(f"/api/v1/experiments/{identifier}/compare").json()["completed"] == 1
+    trajectory = client.get(f"/api/v1/experiments/{identifier}/runs/0/trajectory")
+    assert trajectory.status_code == 200
+    assert trajectory.json()["points"] == [
+        {
+            "source_index": 0,
+            "label": "2025-01-01 05:10",
+            "balance": 179,
+            "replay": "replay?offset=0&limit=1",
+        }
+    ]
+    assert trajectory.json()["initial_capital"] == 100
+    assert trajectory.json()["total"] == 1
+    assert trajectory.json()["reduction_method"] == "none"
+    assert (
+        client.get(f"/api/v1/experiments/{identifier}/runs/0/trajectory?max_points=3").status_code
+        == 422
+    )
+    assert (
+        client.get(
+            f"/api/v1/experiments/{identifier}/runs/0/trajectory?max_points=2001"
+        ).status_code
+        == 422
+    )
+    assert client.get(f"/api/v1/experiments/{identifier}/runs/2/trajectory").status_code == 404
     assert client.get(f"/api/v1/experiments/{identifier}/runs/2/replay").status_code == 404
     assert client.get("/api/v1/experiments/missing").status_code == 404
     assert (
@@ -361,6 +755,41 @@ def test_snapshot_replay_compare_and_confirmed_delete(setup, monkeypatch):
         == 204
     )
     assert client.get(f"/api/v1/experiments/{identifier}").status_code == 404
+
+
+def test_mixed_failed_batch_keeps_api_shapes_and_comparison_incomplete(setup):
+    client, app, _ = setup
+    data = payload()
+    data["strategies"] = [
+        {**data["strategies"][0], "name": name} for name in ("First", "Second", "Third")
+    ]
+    repo = app.state.repo
+    identifier = repo.create_experiment(
+        ExperimentRequest.model_validate(data),
+        history_id="history",
+        history_sha256="a" * 64,
+        rankings_id="rankings",
+        rankings_sha256="b" * 64,
+        code_version="v1",
+    )
+    repo.start_run(identifier, 0)
+    repo.complete_run(identifier, 0, result())
+    repo.start_run(identifier, 1)
+    repo.fail_run(identifier, 1)
+    repo.start_run(identifier, 2)
+    repo.complete_run(identifier, 2, result())
+    repo.fail_experiment_after_runs(identifier)
+    detail = client.get(f"/api/v1/experiments/{identifier}").json()
+    comparison = client.get(f"/api/v1/experiments/{identifier}/compare").json()
+    assert detail["status"] == comparison["status"] == "failed"
+    assert [run["status"] for run in detail["runs"]] == ["completed", "failed", "completed"]
+    assert detail["runs"][0]["result"]["final_balance"] == 179
+    assert detail["runs"][1]["result"] is None
+    assert comparison["completed"] == 2
+    assert comparison["requested"] == 3
+    assert comparison["complete"] is False
+    assert client.get(f"/api/v1/experiments/{identifier}/runs/2/replay").json()["total"] == 1
+    assert client.get(f"/api/v1/experiments/{identifier}/runs/1/trajectory").status_code == 409
 
 
 def test_active_delete_refused_and_cancel_held_start(setup):
@@ -779,7 +1208,13 @@ def test_settings_exact_quota_and_validation(setup):
         "source": "default",
         "writable": True,
     }
-    assert initial["storage"]["logical_used_bytes_exact"] == "0"
+    storage = initial["storage"]
+    assert storage["logical_used_bytes_exact"] == "0"
+    assert storage["profile_artifact_bytes_exact"] == str(
+        app_profile_bytes := len(legacy_quiniela_80_profile().model_dump_json().encode("utf-8"))
+    )
+    assert storage["admission_logical_bytes_exact"] == str(app_profile_bytes)
+    assert storage["dataset_artifact_bytes_exact"] == "0"
     maximum = str(2**63 - 1)
     assert put_settings(client, {"quota_bytes": maximum}).json()["quota"] == {
         "effective_bytes": maximum,
@@ -814,13 +1249,17 @@ def test_settings_below_used_conflicts_without_mutation(setup):
         rankings_sha256="b" * 64,
         code_version="v1",
     )
-    used = app.state.repo.logical_experiment_bytes()
+    used = app.state.repo.admission_logical_bytes()
+    legacy_used = app.state.repo.logical_experiment_bytes()
+    assert used > legacy_used
     assert put_settings(client, {"quota_bytes": str(used)}).status_code == 200
     rejected = put_settings(client, {"quota_bytes": str(used - 1)})
     assert rejected.status_code == 409
     view = client.get("/api/v1/settings").json()
     assert view["quota"]["persisted_bytes"] == str(used)
-    assert view["storage"]["logical_used_bytes_exact"] == str(used)
+    assert view["storage"]["logical_used_bytes_exact"] == str(legacy_used)
+    assert view["storage"]["admission_logical_bytes_exact"] == str(used)
+    assert view["storage"]["profile_artifact_bytes_exact"] == str(used - legacy_used)
     assert view["storage"]["limit_bytes"] == used
 
 

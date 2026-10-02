@@ -5,8 +5,10 @@ import { ExperimentsPage } from "./pages/experiments";
 import { DetailPage } from "./pages/experiments/DetailPage";
 import { ComparisonPage } from "./pages/experiments/ComparisonPage";
 import { NewExperimentPage } from "./pages/new-experiment";
+import { ProfileExperimentPage } from "./pages/new-experiment/ProfileExperimentPage";
 import { ConfigurationsPage } from "./pages/configurations";
 import { SettingsPage } from "./pages/settings";
+import { DataPage } from "./pages/data";
 
 export function App() {
   return (
@@ -25,6 +27,14 @@ export function App() {
         element={
           <Shell key="new-experiment" title="Nuevo experimento">
             <NewExperimentPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/experimentos/nuevo/perfil"
+        element={
+          <Shell key="new-profile-experiment" title="Nueva sesión con perfil">
+            <ProfileExperimentPage />
           </Shell>
         }
       />
@@ -49,6 +59,14 @@ export function App() {
         element={
           <Shell key="configurations" title="Estrategias guardadas">
             <ConfigurationsPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/datos"
+        element={
+          <Shell key="data" title="Datos">
+            <DataPage />
           </Shell>
         }
       />

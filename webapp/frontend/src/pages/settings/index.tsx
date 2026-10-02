@@ -51,6 +51,14 @@ export function SettingsPage() {
   const saveRef = useRef(false);
   const requestRef = useRef(0);
   const dirty = !!view && draft !== null && draft !== view.quota.effective_bytes;
+  // Current servers report the aggregate. Older captured responses may only
+  // report historical experiment bytes; make that incomplete fallback visible.
+  const hasAdmission = typeof view?.storage.admission_logical_bytes_exact === "string";
+  const used = view ? BigInt(hasAdmission ? view.storage.admission_logical_bytes_exact : view.storage.logical_used_bytes_exact) : 0n;
+  const limit = view ? BigInt(view.quota.effective_bytes) : 0n;
+  const remaining = limit > used ? limit - used : 0n;
+  // The conversion is of a bounded 0..100 integer, never of byte counts.
+  const progress = limit > 0n ? Number((used < limit ? used : limit) * 100n / limit) : 0;
   dirtyRef.current = dirty;
   const blocker = useBlocker(({ currentLocation, nextLocation }) =>
     dirty && currentLocation.pathname !== nextLocation.pathname);
@@ -89,7 +97,9 @@ export function SettingsPage() {
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!view?.quota.writable || draft === null || saveRef.current) return;
-    const error = validate(draft);
+    const error = validate(draft) ?? (BigInt(draft) < used
+      ? `El presupuesto no puede ser menor que el uso lógico de admisión actual (${bytes(used.toString())}). Ingresá ese valor o uno mayor.`
+      : null);
     setFieldError(error ?? ""); setSaveError(""); setSaved(false);
     if (error) { inputRef.current?.focus(); return; }
     saveRef.current = true; setSaving(true);
@@ -109,7 +119,7 @@ export function SettingsPage() {
       } else if (failure instanceof ApiError && failure.status === 409) {
         setSaveError(failure.detail === "environment quota is read-only"
           ? "La variable de entorno tiene prioridad y bloquea cambios desde la web. Actualizá el estado antes de editar."
-          : "El presupuesto no puede ser menor que el uso lógico actual. No se liberó capacidad; actualizá el estado e ingresá un valor mayor.");
+          : "El presupuesto no puede ser menor que el uso lógico de admisión actual. No se liberó capacidad; actualizá el estado e ingresá un valor mayor.");
       } else if (failure instanceof NetworkError) {
         setSaveError("No se pudo contactar al servidor local. La solicitud podría haber llegado; actualizá el estado antes de reintentar.");
       } else if (failure instanceof ApiError && failure.status === 403) {
@@ -122,7 +132,7 @@ export function SettingsPage() {
 
   return <div className="max-w-5xl space-y-8">
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <p className="max-w-prose text-text-secondary">Límite y uso de las simulaciones, separados del tamaño de archivos y del espacio libre en disco.</p>
+      <p className="max-w-prose text-text-secondary">Límite y uso lógico de admisión, separados del tamaño de archivos y del espacio libre en disco.</p>
       {view && <button type="button" className={action} disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>}
     </div>
     {loading && <p role="status" className="border-y border-border py-5 text-text-secondary">Cargando ajustes…</p>}
@@ -132,15 +142,24 @@ export function SettingsPage() {
         <h2 id="storage-heading" className="section-header">Límite y uso lógico</h2>
         <div className="metric-grid">
           <div className={metric}><h3 className="field-label">Límite lógico efectivo</h3><p className="metric-value">{budget(view.quota.effective_bytes)}</p><p className="field-help">{view.quota.source === "environment" ? "Variable de entorno (prioridad máxima)" : view.quota.source === "persisted" ? "Preferencia guardada" : "Por defecto: 5 GiB"}</p></div>
-          <div className={metric}><h3 className="field-label">Uso lógico</h3><p className="metric-value">{bytes(view.storage.logical_used_bytes_exact)}</p><p className="field-help">Experimentos y ejecuciones contabilizados por el servidor; no equivale al tamaño de los archivos.</p></div>
+          <div className={metric}><h3 className="field-label">Uso lógico de admisión</h3><p className="metric-value">{bytes(used.toString())}</p><p className="field-help">{hasAdmission ? "Incluye experimentos, ejecuciones y copias de perfiles guardados; no equivale al tamaño físico de SQLite." : "Este servidor solo informa el uso histórico de experimentos y ejecuciones. El total de admisión y el espacio restante pueden estar incompletos; actualizá el servidor para verlos."}</p></div>
         </div>
+        {hasAdmission && <>
+          <p className="mt-4 text-sm text-text-secondary">Capacidad restante según cuota: <span className="font-mono tabular-nums">{bytes(remaining.toString())}</span>{used > limit ? ` (uso superior al límite por ${bytes((used - limit).toString())})` : ""}. El margen para escrituras y el disco libre también pueden limitar nuevas admisiones.</p>
+          <progress className="mt-3 w-full accent-accent" aria-label="Cuota lógica utilizada" value={progress} max={100} />
+          <dl className="metric-grid mt-4 text-sm">
+            <div className={metric}><dt>Experimentos y ejecuciones históricos</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.logical_used_bytes_exact)}</dd></div>
+            <div className={metric}><dt>Artefactos de perfiles (copias JSON)</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.profile_artifact_bytes_exact)}</dd></div>
+            <div className={metric}><dt>Artefactos de datasets</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.dataset_artifact_bytes_exact)}</dd></div>
+          </dl>
+        </>}
         <p className="mt-4 text-sm text-text-secondary">Preferencia persistida: {view.quota.persisted_bytes === null ? "ninguna" : bytes(view.quota.persisted_bytes)}. {view.quota.source === "environment" ? "La variable de entorno prevalece sobre la preferencia persistida." : "Se conserva entre reinicios del servidor."}</p>
         {view.storage.warning && <p role="alert" className="mt-4 border border-border-control bg-field p-3 text-sm">Advertencia: el servidor señala proximidad al límite o falta de disco para nuevas escrituras. No se borra nada automáticamente.</p>}
         <p className="mt-4 max-w-prose text-sm text-text-secondary">El cambio se aplica en la próxima admisión o escritura; no cancela retroactivamente una ejecución activa. La cuota usa un margen para escrituras y metadatos. El servidor decide si hay capacidad suficiente; no se aumenta sola.</p>
         {view.quota.writable ? <form onSubmit={(event) => { void save(event); }} noValidate className="mt-6 max-w-xl">
           <label htmlFor="quota-bytes" className="field-label">Límite lógico en bytes</label>
           <input ref={inputRef} id="quota-bytes" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={draft ?? ""} disabled={saving} aria-invalid={!!fieldError} aria-describedby={fieldError ? "quota-help quota-error" : "quota-help"} onChange={(event) => { setDraft(event.target.value); setFieldError(""); setSaveError(""); setSaved(false); }} className="control font-mono tabular-nums" />
-          <p id="quota-help" className="field-help">Ingresá un entero decimal ASCII positivo en bytes (1 a 9,223,372,036,854,775,807), sin separadores, espacios ni ceros iniciales. 1 GiB = 1,073,741,824 bytes; 5 GiB = 5,368,709,120 bytes.</p>
+          <p id="quota-help" className="field-help">Ingresá un entero decimal ASCII positivo en bytes (1 a 9,223,372,036,854,775,807), sin separadores, espacios ni ceros iniciales. El nuevo límite debe ser al menos {bytes(used.toString())}{hasAdmission ? " de uso lógico de admisión" : " de uso histórico informado (el total de admisión no está disponible)"}. 1 GiB = 1,073,741,824 bytes; 5 GiB = 5,368,709,120 bytes.</p>
           {fieldError && <p id="quota-error" className="mt-2 text-sm text-red-300">{fieldError}</p>}
           {saveError && <p role="alert" className="mt-2 text-sm text-red-300">{saveError}</p>}
           {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado. El presupuesto efectivo se actualizó con la respuesta del servidor.</p>}

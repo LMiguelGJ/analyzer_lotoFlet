@@ -21,7 +21,9 @@ from laboratorio.domain.contracts import (
     Strategy,
 )
 from laboratorio.domain.session import Bet, SessionResult
+from laboratorio.engine.adapter import DataError
 from laboratorio.jobs.queue import JobQueue
+from laboratorio.jobs.worker import SharedCalculationError, StrategyLocalError, calculate_run
 from laboratorio.settings import Settings
 from laboratorio.storage.database import initialize_database
 from laboratorio.storage.repository import Repository
@@ -43,10 +45,29 @@ def synthetic(settings, conditions, strategy, cancel, entered, release, report):
         os._exit(17)
     if strategy.name.startswith("Error"):
         raise ValueError("synthetic data load failure")
+    if strategy.name.startswith("Local"):
+        raise StrategyLocalError("independent strategy failure")
+    if strategy.name.startswith("Shared"):
+        raise DataError("shared draw integrity failure")
+    if strategy.name.startswith("Storage"):
+        raise OSError("shared infrastructure failure")
+    if strategy.name.startswith("None"):
+        return None
+    if strategy.name.startswith("Wrong"):
+        return {"outcome": "goal"}
     if strategy.name.startswith("Bad"):
         return SessionResult(Outcome.GOAL, 1, 1, 80, 179, ())
     bet = Bet(conditions.start_draw, (7,), 1, 1, (7, 8, 9, 10, 11), 80, 179)
     return SessionResult(Outcome.GOAL, 1, 1, 80, 179, (bet,))
+
+
+def malformed_entry(send, *args):
+    send.send(("failed", ("strategy_local", 123)))
+    send.close()
+
+
+def silent_entry(send, *args):
+    send.close()
 
 
 def strategy(name):
@@ -104,6 +125,155 @@ def wait_for(predicate, timeout=12):
 def queue_for(setup):
     repo, settings, _, entered, release, report, _ = setup
     return JobQueue(repo.path, settings, runner=synthetic, runner_args=(entered, release, report))
+
+
+def test_spawned_local_failure_preserves_neighbours_and_continues(setup):
+    repo, _, _, _, _, report, create = setup
+    queue = queue_for(setup)
+    try:
+        queue.start()
+        identifier = create("First", "Local second", "Third")
+        queue.enqueue(identifier)
+        wait_for(lambda: repo.get_experiment(identifier).status is ExperimentStatus.FAILED)
+        saved = repo.get_experiment(identifier)
+        assert [run.status for run in saved.runs] == [
+            RunStatus.COMPLETED,
+            RunStatus.FAILED,
+            RunStatus.COMPLETED,
+        ]
+        assert saved.runs[0].result is not None
+        assert saved.runs[1].result is None
+        assert saved.runs[2].result is not None
+        assert all(report.get(timeout=5) != os.getpid() for _ in range(3))
+        assert queue.last_failure.persisted is True
+        assert "independent strategy" in str(queue.last_failure.error)
+    finally:
+        queue.shutdown()
+
+
+def test_unknown_worker_value_error_fails_current_experiment_not_later_job(setup):
+    repo, _, _, _, _, report, create = setup
+    queue = queue_for(setup)
+    try:
+        queue.start()
+        broken, later = create("First", "Error second", "Third"), create("Later")
+        queue.enqueue(broken)
+        queue.enqueue(later)
+        wait_for(lambda: repo.get_experiment(later).status is ExperimentStatus.COMPLETED)
+        assert [r.status for r in repo.get_experiment(broken).runs] == [
+            RunStatus.COMPLETED,
+            RunStatus.FAILED,
+            RunStatus.NOT_RUN,
+        ]
+        assert report.get(timeout=5) != os.getpid()
+        assert report.get(timeout=5) != os.getpid()
+        assert report.get(timeout=5) != os.getpid()
+        assert report.empty()
+    finally:
+        queue.shutdown()
+
+
+@pytest.mark.parametrize("name", ["Shared", "Storage"])
+def test_shared_worker_failure_stops_queue_and_preserves_unstarted_job(setup, name):
+    repo, _, _, _, _, _, create = setup
+    queue = queue_for(setup)
+    try:
+        queue.start()
+        broken, later = create("First", name, "Third"), create("Later")
+        queue.enqueue(broken)
+        queue.enqueue(later)
+        wait_for(lambda: queue.last_failure is not None)
+        assert queue.is_stopped
+        assert [r.status for r in repo.get_experiment(broken).runs] == [
+            RunStatus.COMPLETED,
+            RunStatus.FAILED,
+            RunStatus.NOT_RUN,
+        ]
+        assert repo.get_experiment(later).status is ExperimentStatus.PENDING
+        assert queue.last_failure.persisted is True
+    finally:
+        queue.shutdown()
+
+
+@pytest.mark.parametrize("entry", [malformed_entry, silent_entry])
+def test_malformed_spawn_message_is_queue_fatal(setup, monkeypatch, entry):
+    repo, _, _, _, _, _, create = setup
+    queue = queue_for(setup)
+    monkeypatch.setattr("laboratorio.jobs.queue.process_entry", entry)
+    try:
+        queue.start()
+        broken, later = create("First", "Second"), create("Later")
+        queue.enqueue(broken)
+        queue.enqueue(later)
+        wait_for(lambda: queue.last_failure is not None)
+        assert queue.is_stopped
+        assert [r.status for r in repo.get_experiment(broken).runs] == [
+            RunStatus.FAILED,
+            RunStatus.NOT_RUN,
+        ]
+        assert repo.get_experiment(later).status is ExperimentStatus.PENDING
+    finally:
+        queue.shutdown()
+
+
+def test_clean_exit_eof_is_fatal_even_when_pipe_reports_readable(setup, monkeypatch):
+    repo, _, ctx, _, _, _, create = setup
+    queue = queue_for(setup)
+    monkeypatch.setattr("laboratorio.jobs.queue.process_entry", silent_entry)
+
+    class ReadableEOF:
+        def __init__(self, receiver):
+            self.receiver = receiver
+
+        def poll(self, timeout=0):
+            return True  # Exercise recv()'s EOF path, not the poll-false path.
+
+        def recv(self):
+            return self.receiver.recv()
+
+        def close(self):
+            self.receiver.close()
+
+    def pipe(*args, **kwargs):
+        receiver, sender = ctx.Pipe(*args, **kwargs)
+        return ReadableEOF(receiver), sender
+
+    monkeypatch.setattr(
+        queue, "_ctx", SimpleNamespace(Event=ctx.Event, Process=ctx.Process, Pipe=pipe)
+    )
+    try:
+        queue.start()
+        broken, later = create("First"), create("Later")
+        queue.enqueue(broken)
+        queue.enqueue(later)
+        wait_for(lambda: queue.is_stopped)
+        assert repo.get_experiment(broken).runs[0].status is RunStatus.FAILED
+        assert repo.get_experiment(later).status is ExperimentStatus.PENDING
+        assert "without a final result" in str(queue.last_error)
+    finally:
+        queue.shutdown()
+
+
+def test_production_boundary_only_localizes_initial_stake(setup, monkeypatch):
+    from laboratorio.jobs import worker
+
+    _, settings, _, _, _, _, _ = setup
+    conditions = request("First").conditions.model_copy(update={"capital": 1})
+    selected = strategy("First").model_copy(update={"coverage": 50})
+    monkeypatch.setattr(worker, "open_lab_data", lambda _: object())
+    with pytest.raises(StrategyLocalError, match="initial capital"):
+        calculate_run(settings, conditions, selected, LocalEvent())
+    monkeypatch.setattr(worker, "open_lab_data", lambda _: (_ for _ in ()).throw(DataError("bad")))
+    with pytest.raises(DataError, match="bad"):
+        calculate_run(settings, conditions, selected, LocalEvent())
+    monkeypatch.setattr(worker, "open_lab_data", lambda _: object())
+
+    def corrupt_draw(*args):
+        raise ValueError("bad draw")
+
+    monkeypatch.setattr(worker, "run_session", corrupt_draw)
+    with pytest.raises(SharedCalculationError, match="bad draw"):
+        calculate_run(settings, request("First").conditions, strategy("First"), LocalEvent())
 
 
 def test_admission_at_enqueue_and_held_start(setup):
@@ -381,19 +551,33 @@ def test_child_initialization_failure_is_explicit_and_queue_recovers(setup):
         queue.shutdown()
 
 
-def test_invalid_child_result_fails_without_persisting_or_blocking_queue(setup):
-    repo, _, _, _, _, _, create = setup
+@pytest.mark.parametrize("malformed", ["None result", "Wrong type", "Bad result"])
+def test_invalid_child_result_is_queue_fatal_without_losing_prior_result(setup, malformed):
+    repo, _, _, _, _, report, create = setup
     queue = queue_for(setup)
     try:
         queue.start()
-        failed, next_job = create("Bad result"), create("Next")
+        failed, next_job = create("First", malformed, "Never"), create("Next")
         queue.enqueue(failed)
         queue.enqueue(next_job)
-        wait_for(lambda: repo.get_experiment(next_job).status is ExperimentStatus.COMPLETED)
+        wait_for(lambda: queue.last_failure is not None)
+        wait_for(lambda: queue.is_stopped)
         saved = repo.get_experiment(failed)
         assert saved.status is ExperimentStatus.FAILED
-        assert saved.runs[0].status is RunStatus.FAILED
-        assert saved.runs[0].result is None
+        assert [run.status for run in saved.runs] == [
+            RunStatus.COMPLETED,
+            RunStatus.FAILED,
+            RunStatus.NOT_RUN,
+        ]
+        assert saved.runs[0].result is not None
+        assert saved.runs[1].result is saved.runs[2].result is None
+        assert repo.get_experiment(next_job).status is ExperimentStatus.PENDING
+        assert queue.last_failure.persisted is True
+        assert "malformed worker completed result" in str(queue.last_failure.error)
+        assert report.get(timeout=5) != os.getpid()
+        assert report.get(timeout=5) != os.getpid()
+        assert report.empty()
+        assert queue._process is None
     finally:
         queue.shutdown()
 
@@ -489,7 +673,7 @@ def test_persisted_quota_reaches_existing_queue_submit_enqueue_and_held_start(se
     try:
         queue.start()
         existing = create("Existing")
-        repo.set_quota_preference(repo.logical_experiment_bytes())
+        repo.set_quota_preference(repo.admission_logical_bytes())
         with pytest.raises(Exception, match="quota"):
             queue.submit(
                 request("New"),
@@ -526,7 +710,8 @@ def test_explicit_environment_default_wins_over_persisted_limit_at_runtime(setup
     )
     try:
         queue.start()
-        repo.set_quota_preference(1)
+        persisted_limit = repo.admission_logical_bytes()
+        repo.set_quota_preference(persisted_limit)
         identifier = queue.submit(
             request("Environment"),
             history_id="history",
@@ -537,7 +722,7 @@ def test_explicit_environment_default_wins_over_persisted_limit_at_runtime(setup
         )
         wait_for(lambda: repo.get_experiment(identifier).status is ExperimentStatus.COMPLETED)
         assert repo.get_experiment(identifier).runs[0].result is not None
-        assert repo.get_quota_preference() == 1
+        assert repo.get_quota_preference() == persisted_limit
     finally:
         queue.shutdown()
 
@@ -551,7 +736,7 @@ def test_persisted_update_during_active_calculation_blocks_result_without_partia
         queue.enqueue(identifier)
         assert entered.wait(10)
         assert repo.get_experiment(identifier).runs[0].status is RunStatus.RUNNING
-        repo.set_quota_preference(repo.logical_experiment_bytes())
+        repo.set_quota_preference(repo.admission_logical_bytes())
         release.set()
         wait_for(lambda: queue.last_failure is not None)
         saved = repo.get_experiment(identifier)
@@ -571,7 +756,7 @@ def test_next_configuration_rechecks_persisted_limit_after_completed_result(setu
 
     def lower_after_first(identifier, ordinal, result, **kwargs):
         complete(identifier, ordinal, result, **kwargs)
-        repo.set_quota_preference(repo.logical_experiment_bytes())
+        repo.set_quota_preference(repo.admission_logical_bytes())
 
     monkeypatch.setattr(queue.repo, "complete_run", lower_after_first)
     try:
@@ -583,6 +768,7 @@ def test_next_configuration_rechecks_persisted_limit_after_completed_result(setu
         assert saved.runs[0].status is RunStatus.COMPLETED
         assert saved.runs[1].result is None
         assert queue.last_failure is not None
+        assert "quota" in str(queue.last_failure.error)
         assert report.get(timeout=5) != os.getpid()
         assert report.empty()  # no second calculation was spawned
     finally:
@@ -630,6 +816,44 @@ def test_default_worker_runs_real_engine_in_spawned_process(tmp_path):
         assert saved.status is ExperimentStatus.COMPLETED, queue.last_error
         result = saved.runs[0].result
         assert result is not None and result.bets_count == 1
+    finally:
+        queue.shutdown()
+
+
+@pytest.mark.real_data
+def test_real_engine_unaffordable_snapshot_is_local_after_spawn(tmp_path):
+    from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256
+
+    settings = replace(Settings.from_environment(), data_dir=tmp_path)
+    initialize_database(settings.database_path)
+    repo = Repository(settings.database_path)
+    conditions = Conditions(
+        start_draw="2025-09-02 05:10", capital=1, goal=2800, seed=42, max_bets=1
+    )
+    snapshot = ExperimentRequest(
+        name="Bypassed preflight",
+        conditions=conditions,
+        strategies=(strategy("Unfunded").model_copy(update={"coverage": 50}), strategy("Funded")),
+    )
+    identifier = repo.create_experiment(
+        snapshot,
+        history_id="history",
+        history_sha256=HISTORY_SHA256,
+        rankings_id="rankings",
+        rankings_sha256=RANKINGS_SHA256,
+        code_version="v1",
+    )
+    queue = JobQueue(repo.path, settings)
+    try:
+        queue.start()
+        queue.start_held(identifier)
+        wait_for(
+            lambda: repo.get_experiment(identifier).status is ExperimentStatus.FAILED,
+            timeout=30,
+        )
+        saved = repo.get_experiment(identifier)
+        assert [r.status for r in saved.runs] == [RunStatus.FAILED, RunStatus.COMPLETED]
+        assert saved.runs[1].result is not None
     finally:
         queue.shutdown()
 

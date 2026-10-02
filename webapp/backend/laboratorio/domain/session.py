@@ -71,6 +71,15 @@ def _stake(
     return min(balance // strategy.coverage, (goal - balance + margin - 1) // margin)
 
 
+def preflight_initial_stake(conditions: Conditions, strategy: Strategy) -> int:
+    """Validate the first wager using the same staking rule as session execution."""
+    ladder = _ladder(strategy.coverage)
+    stake = _stake(conditions.capital, conditions.goal, strategy, 0, ladder)
+    if stake < 1 or conditions.capital < strategy.coverage * stake:
+        raise ValueError("initial capital cannot afford the prescribed bet")
+    return stake
+
+
 def _payment(numbers: tuple[int, ...], results: tuple[int, ...], mode: SettlementMode) -> int:
     chosen = set(numbers)
     if mode is SettlementMode.ALL:
@@ -94,11 +103,9 @@ def run_session(conditions: Conditions, strategy: Strategy, draws: Iterable[Draw
     the clock cap excludes its boundary draw before any bet. A missing later
     ranking is not insolvency and never resets a ladder.
     """
+    preflight_initial_stake(conditions, strategy)
     coverage = strategy.coverage
     ladder = _ladder(coverage)
-    initial_stake = _stake(conditions.capital, conditions.goal, strategy, 0, ladder)
-    if initial_stake < 1 or conditions.capital < coverage * initial_stake:
-        raise ValueError("initial capital cannot afford the prescribed bet")
     balance = conditions.capital
     wagered = paid = round_index = 0
     bets: list[Bet] = []

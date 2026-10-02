@@ -72,6 +72,36 @@ def test_production_static_spa_and_api_isolation(local_settings):
         assert client.get("/api/v1/catalog").status_code == 200
 
 
+def test_profile_creation_direct_navigation_serves_only_the_spa_route(local_settings):
+    expected = (local_settings.frontend_dist / "index.html").read_text(encoding="utf-8")
+    with _client(local_settings) as client:
+        for method in (client.get, client.head):
+            response = method("/experimentos/nuevo/perfil")
+            assert response.status_code == 200
+            assert response.headers["content-type"].startswith("text/html")
+            if method == client.get:
+                assert response.text == expected
+        for path in (
+            "/experimentos/nuevo/perfiles",
+            "/experimentos/nuevo/perfil/child",
+            "/experimentos/nuevo/other",
+            "/experimentos/other/perfil",
+        ):
+            for method in (client.get, client.head):
+                assert method(path).status_code == 404, path
+
+
+def test_datos_direct_navigation_serves_only_the_spa_route(local_settings):
+    expected = (local_settings.frontend_dist / "index.html").read_text(encoding="utf-8")
+    with _client(local_settings) as client:
+        response = client.get("/datos")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/html")
+        assert response.text == expected
+        for path in ("/datos/child", "/datos-extra"):
+            assert client.get(path).status_code == 404
+
+
 def test_static_never_leaks_outside_build(local_settings, tmp_path):
     secret = tmp_path / "private.txt"
     secret.write_text("not public", encoding="utf-8")

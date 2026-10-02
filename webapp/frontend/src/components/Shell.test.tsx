@@ -20,6 +20,7 @@ describe("Shell nav toggle", () => {
   it("names the saved-strategy destination without changing its URL", () => {
     renderShell();
     expect(screen.getByRole("link", { name: "Estrategias guardadas" })).toHaveAttribute("href", "/configuraciones");
+    expect(screen.getByRole("link", { name: "Datos" })).toHaveAttribute("href", "/datos");
   });
   it("starts closed: aria-expanded=false, aria-controls points at the nav, nav marked closed", () => {
     renderShell();

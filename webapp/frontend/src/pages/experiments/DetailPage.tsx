@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { Bet, ExperimentSummary, Page, RunSummary } from "../../api/types";
-import { BalanceChart } from "../../components/BalanceChart";
+import { isProfileExperiment, isProfileReplay, isProfileRun } from "../../api/types";
+import type { AnyRunSummary, Bet, ExperimentSummary, LegacyExperimentSummary, ProfileBet, ProfileExperimentSummary, ReplayPage, RunSummary } from "../../api/types";
+import { RunTrajectory } from "../../components/RunTrajectory";
+import { FinancialMetrics } from "../../components/FinancialMetrics";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StatusLabel } from "../../components/StatusLabel";
 import { formatDOP, formatTwoDigit } from "../../lib/format";
+import { profileMoney, profileOutcome } from "../../lib/profile-display";
 import { FIELD_HELP_DELTA, FIELD_LABEL_DELTA, HISTORICAL_CAVEAT, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 import { PAGE_SIZE, pageOffset, replayIndex } from "./replay";
 
@@ -46,6 +49,31 @@ function BetDetails({ bet }: { bet: Bet }) {
   </div>;
 }
 
+function ProfileBetDetails({ bet, data }: { bet: ProfileBet; data: ProfileExperimentSummary }) {
+  const [open, setOpen] = useState(false);
+  return <div><button type="button" className="text-accent underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ocultar detalle" : "Detalle"}</button>
+    {open && <dl className="data-list mt-2 min-w-[220px]">
+      <dt>Fecha y hora</dt><dd>{storedDate(bet.label)}</dd>
+      <dt>Apuestas por número</dt><dd>{bet.stakes.map(([number, stake]) => `${number}: ${profileMoney(data, stake)}`).join(", ")}</dd>
+      <dt>Resultados ({bet.results.length} posiciones)</dt><dd>{bet.results.join(", ")}</dd>
+      <dt>Cobro</dt><dd className="data-list-numeric">{profileMoney(data, bet.paid)}</dd>
+      <dt>Saldo resultante</dt><dd className="data-list-numeric">{profileMoney(data, bet.balance)}</dd>
+    </dl>}
+  </div>;
+}
+
+function profileColumns(data: ProfileExperimentSummary): DataTableColumn<ProfileBet>[] {
+  return [
+    { key: "date", header: "Fecha y hora", render: (bet) => storedDate(bet.label) },
+    { key: "stakes", header: "Apuestas por número", render: (bet) => bet.stakes.map(([number, stake]) => `${number}: ${profileMoney(data, stake)}`).join(", ") },
+    { key: "wagered", header: "Gasto total", render: (bet) => profileMoney(data, bet.wagered) },
+    ...Array.from({ length: data.profile.positions }, (_, position): DataTableColumn<ProfileBet> => ({ key: `result-${position}`, header: `Resultado ${position + 1}`, render: (bet) => bet.results[position] ?? "—" })),
+    { key: "paid", header: "Cobro", render: (bet) => profileMoney(data, bet.paid) },
+    { key: "balance", header: "Saldo", render: (bet) => profileMoney(data, bet.balance) },
+    { key: "detail", header: "Detalle", render: (bet) => <ProfileBetDetails bet={bet} data={data} /> },
+  ];
+}
+
 const columns: DataTableColumn<Bet>[] = [
   { key: "date", header: "Fecha y hora", render: (bet) => storedDate(bet.label) },
   { key: "numbers", header: "Números elegidos", render: (bet) => numberList(bet.numbers) },
@@ -57,7 +85,7 @@ const columns: DataTableColumn<Bet>[] = [
   { key: "detail", header: "Detalle", render: (bet) => <BetDetails bet={bet} /> },
 ];
 
-function Parameters({ data, run }: { data: ExperimentSummary; run: RunSummary }) {
+function Parameters({ data, run }: { data: LegacyExperimentSummary; run: RunSummary }) {
   const conditions = data.request.conditions;
   const strategy = data.request.strategies[run.ordinal];
   return <div className="space-y-6 text-sm">
@@ -86,19 +114,49 @@ function Parameters({ data, run }: { data: ExperimentSummary; run: RunSummary })
   </div>;
 }
 
-function RunView({ data, run }: { data: ExperimentSummary; run: RunSummary }) {
-  const [tab, setTab] = useState<Tab>("Resultado");
-  const [cursor, setCursor] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [page, setPage] = useState<Page<Bet> | null>(null);
+function ProfileParameters({ data }: { data: ProfileExperimentSummary }) {
+  const { conditions, selector } = data.request;
+  return <div className="space-y-6 text-sm"><dl className="data-list">
+    <dt>Versión de solicitud</dt><dd>Perfil v{data.request.schema_version}</dd>
+    <dt>Sorteo inicial</dt><dd>{storedDate(conditions.start_draw)}</dd>
+    <dt>Perfil</dt><dd>{data.profile.profile_id} · revisión {data.profile.revision} · {data.profile.positions} posiciones · {data.display.currency}</dd>
+    <dt>Capital</dt><dd>{profileMoney(data, data.display.capital)}</dd>
+    <dt>Meta</dt><dd>{profileMoney(data, data.display.goal)}</dd>
+    <dt>Límite de sorteos transcurridos</dt><dd>{conditions.max_elapsed_draws ?? "Sin límite"}</dd>
+    <dt>Límite de sorteos apostados</dt><dd>{conditions.max_bet_draws ?? "Sin límite"}</dd>
+    <dt>Hora límite</dt><dd>{conditions.end_minute ?? "Sin límite"}</dd>
+    <dt>Duración límite (minutos)</dt><dd>{conditions.duration_minutes ?? "Sin límite"}</dd>
+    <dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd>
+    <dt>Selector</dt><dd>{data.display.selector_label} · cobertura {selector.coverage}{selector.numbers ? ` · números ${selector.numbers.join(", ")}` : ""}</dd>
+    <dt>Apuesta</dt><dd>{data.request.schema_version === 1
+      ? `${data.display.staking_label} · ${profileMoney(data, data.request.staking.per_number_stake)} por número`
+      : data.display.staking_label}</dd>
+    {data.request.schema_version === 4 && <><dt>Margen objetivo</dt><dd>{profileMoney(data, data.request.staking.target_margin)}</dd><dt>Rondas de recuperación</dt><dd>{data.request.staking.rounds}</dd><dt>Al agotar la escalera</dt><dd>{data.request.staking.end_mode === "cycle" ? "Reiniciar la escalera" : "Detener la sesión"}</dd></>}
+    <dt>Conjunto de datos SHA-256</dt><dd className="font-mono break-all">{data.request.dataset_sha256}</dd>
+    <dt>Perfil SHA-256</dt><dd className="font-mono break-all">{data.request.profile_sha256}</dd>
+    <dt>Versión de código</dt><dd>{data.sources.code_version}</dd>
+  </dl><p className="text-text-secondary">Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.</p></div>;
+}
+
+function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary }) {
+  const { search } = useLocation();
+  const betQuery = new URLSearchParams(search).get("bet");
+  const requestedBet = betQuery && /^(0|[1-9]\d*)$/.test(betQuery) ? Number(betQuery) : 0;
+  const betTotal = run.result ? isProfileRun(run) ? run.result.bet_draws : run.result.bets_count : 0;
+  const initialBet = Number.isSafeInteger(requestedBet) && requestedBet < betTotal ? requestedBet : 0;
+  const [tab, setTab] = useState<Tab>(betQuery != null ? "Apuestas" : "Resultado");
+  const [cursor, setCursor] = useState(initialBet);
+  const [offset, setOffset] = useState(pageOffset(initialBet));
+  const [page, setPage] = useState<ReplayPage | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [retry, setRetry] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const cache = useRef(new Map<number, Page<Bet>>());
+  const cache = useRef(new Map<number, ReplayPage>());
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const total = run.result?.bets_count ?? 0;
+  const money = isProfileExperiment(data) ? (amount: number) => profileMoney(data, amount) : formatDOP;
+  const total = run.result ? isProfileRun(run) ? run.result.bet_draws : run.result.bets_count : 0;
 
   useEffect(() => {
     if (!run.result) { setPage(null); setError(""); setLoading(false); return; }
@@ -145,26 +203,26 @@ function RunView({ data, run }: { data: ExperimentSummary; run: RunSummary }) {
   const visiblePage = page?.offset === offset ? page : null;
   const current = visiblePage?.items[cursor - offset];
   return <section className="mt-6" aria-label={`Ejecución ${run.ordinal + 1}`}>
-    <div className="flex flex-wrap items-center gap-4"><h2 className="font-heading text-2xl">{data.request.strategies[run.ordinal]?.name ?? `Ejecución ${run.ordinal + 1}`}</h2><StatusLabel kind="execution" value={run.status} /></div>
+    <div className="flex flex-wrap items-center gap-4"><h2 className="font-heading text-2xl">{isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? `Ejecución ${run.ordinal + 1}`}</h2><StatusLabel kind="execution" value={run.status} /></div>
     <div role="tablist" aria-label="Secciones del detalle" className="mt-6 flex flex-wrap gap-2 border-b border-border">
       {tabs.map((name, index) => <button key={name} ref={(node) => { tabRefs.current[index] = node; }} type="button" role="tab" id={`detail-tab-${index}`} aria-controls={`detail-panel-${index}`} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => selectTab(name)} onKeyDown={(event) => onTabKey(event, index)} className={`min-h-control px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${tab === name ? "border-b-2 border-accent text-text" : "text-text-secondary hover:text-text"}`}>{name}</button>)}
     </div>
     <div role="tabpanel" id={`detail-panel-${tabs.indexOf(tab)}`} aria-labelledby={`detail-tab-${tabs.indexOf(tab)}`} tabIndex={0} className="pt-5">
-      {tab === "Parámetros y datos" ? <Parameters data={data} run={run} /> : !run.result ? <p role="status">Esta ejecución no tiene un resultado completo guardado. No hay desenlace ni reproducción para mostrar.</p> : <>
+      {tab === "Parámetros y datos" ? isProfileExperiment(data) ? <ProfileParameters data={data} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null : !run.result ? <p role="status">Esta ejecución no tiene un resultado completo guardado. No hay desenlace ni reproducción para mostrar.</p> : <>
         {tab === "Resultado" && <>
           <dl className="data-list border-b border-border pb-5">
-            <dt>Saldo final</dt><dd className="data-list-numeric">{formatDOP(run.result.final_balance)}</dd>
-            <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help">{formatDOP(run.result.delta)}</dd>
-            <dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd>
-            <dt>Motivo de cierre</dt><dd><StatusLabel kind="outcome" value={run.result.outcome} /></dd>
+            <dt>Saldo final</dt><dd className="data-list-numeric">{money(run.result.final_balance)}</dd>
+            <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help">{money(run.result.delta)}</dd>
+            {isProfileRun(run) ? <><dt>Versión del resultado</dt><dd>Perfil v{run.result.schema_version}</dd><dt>Sorteos transcurridos</dt><dd>{run.result.elapsed_draws}</dd><dt>Sorteos apostados</dt><dd>{run.result.bet_draws}</dd><dt>Motivo de cierre</dt><dd>{profileOutcome(run.result)}</dd></> : <><dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd><dt>Motivo de cierre</dt><dd><StatusLabel kind="outcome" value={run.result.outcome} /></dd></>}
           </dl>
+          <FinancialMetrics result={run.result} money={money} />
           <p id="detail-delta-help" className="field-help mt-2">{FIELD_HELP_DELTA}</p>
-          <p className="mt-3 text-sm text-text-secondary">{HISTORICAL_CAVEAT}</p>
-          <BalanceChart points={(visiblePage?.items ?? []).map((bet, index) => ({ ordinal: offset + index + 1, balance: bet.balance }))} goal={data.request.conditions.goal} total={total} />
+          <p className="mt-3 text-sm text-text-secondary">{isProfileExperiment(data) ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
+          <RunTrajectory id={data.id} ordinal={run.ordinal} name={isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? "Corrida"} goal={isProfileExperiment(data) ? data.display.goal : data.request.conditions.goal} money={money} onSelect={(index) => { setPlaying(false); setCursor(index); setOffset(pageOffset(index)); setTab("Apuestas"); }} />
           <div className="border-t border-border pt-5" aria-label="Reproducción visual">
             <h3 className="section-header">Reproducción visual</h3>
             <p className="mb-3 text-sm text-text-secondary">El sorteo mostrado es una posición de lectura; no cambia el resultado final guardado.</p>
-            <p aria-live="polite" className="mb-3 text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)} · saldo en ese sorteo ${formatDOP(current.balance)}` : ""}</p>
+            <p aria-live="polite" className="mb-3 text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)} · saldo en ese sorteo ${money(current.balance)}` : ""}</p>
             <div className="flex flex-wrap items-center gap-2">
               <button className={button} type="button" disabled={!total || cursor === 0} onClick={() => move(-1)}>Sorteo anterior</button>
               <button className={button} type="button" disabled={!total || cursor >= total - 1 || (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)} onClick={() => setPlaying(!playing)}>{playing ? "Pausar" : "Reproducir"}</button>
@@ -175,8 +233,11 @@ function RunView({ data, run }: { data: ExperimentSummary; run: RunSummary }) {
           </div>
         </>}
         {tab === "Apuestas" && <>
+          {current && <p role="status">Apuesta seleccionada {cursor + 1}: {storedDate(current.label)} · {money(current.balance)}</p>}
           <p className="mb-3 text-sm text-text-secondary">Apuestas guardadas, página {Math.floor(offset / PAGE_SIZE) + 1}. Los resultados están ordenados por posición.</p>
-          {visiblePage && visiblePage.items.length > 0 && <DataTable caption="Apuestas del experimento" columns={columns} rows={visiblePage.items} getRowKey={(bet) => bet.label} />}
+          {visiblePage && visiblePage.items.length > 0 && (isProfileReplay(visiblePage) && isProfileExperiment(data)
+            ? <DataTable caption="Apuestas del experimento" columns={profileColumns(data)} rows={visiblePage.items} getRowKey={(bet) => bet.label} />
+            : !isProfileReplay(visiblePage) && <DataTable caption="Apuestas del experimento" columns={columns} rows={visiblePage.items} getRowKey={(bet) => bet.label} />)}
           {visiblePage && visiblePage.items.length === 0 && <p role="status">No hay apuestas registradas en esta página.</p>}
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm"><span>Mostrando {total ? offset + 1 : 0}–{Math.min(offset + (visiblePage?.items.length ?? 0), total)} de {total}</span><button type="button" className={button} disabled={offset === 0} onClick={() => { const previous = Math.max(0, offset - PAGE_SIZE); setPlaying(false); setOffset(previous); setCursor(previous); }}>Página anterior</button><button type="button" className={button} disabled={offset + PAGE_SIZE >= total} onClick={() => { const next = offset + PAGE_SIZE; setPlaying(false); setOffset(next); setCursor(next); }}>Página siguiente</button></div>
         </>}
@@ -234,7 +295,7 @@ export function DetailPage() {
       <div className="flex flex-wrap items-center gap-4 border-b border-border pb-5"><h2 className="font-heading text-2xl">{data.request.name}</h2><StatusLabel kind="execution" value={data.status} /></div>
       <p className="mt-3 text-sm text-text-secondary">ID: <span className="font-mono">{data.id}</span>. {data.status === "running" || data.status === "pending" || data.status === "held" ? "Consultando el progreso guardado; salir de esta página no cancela la ejecución." : "Estado guardado del experimento."}</p>
       <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
-        {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {data.request.strategies[run.ordinal]?.name ?? "Estrategia"} · <StatusLabel kind="execution" value={run.status} /></button>)}
+        {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? "Estrategia"} · <StatusLabel kind="execution" value={run.status} /></button>)}
       </div>
       {selected && <RunView key={`${id}:${selected.ordinal}`} data={data} run={selected} />}
     </>}
