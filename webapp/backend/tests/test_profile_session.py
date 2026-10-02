@@ -752,6 +752,43 @@ def test_q80_ten_misses_cycle_and_skips_do_not_advance_round():
     assert result.final_balance == 546_450
 
 
+def test_private_reference_audaz_staking_is_distinct_and_settles_q80_k1():
+    from laboratorio.domain.profile_staking import (
+        ProfileAudazStaking,
+        Q80ReferenceAudazStaking,
+    )
+
+    profile = legacy_quiniela_80_profile()
+    reference = Q80ReferenceAudazStaking()
+    assert reference.capability == "transition-1-audaz-reference/v1"
+    assert reference.capability != ProfileAudazStaking().capability
+    result = run(
+        q80_rows((7, 7, 7, 8, 9)),
+        p=profile,
+        conditions=opts(capital=2_000, goal=2_800),
+        selector=static(7),
+        staking=reference,
+    )
+    assert result.bets[0].stakes == ((7, 11),)
+    assert (result.bets[0].wagered, result.bets[0].paid, result.final_balance) == (11, 1_012, 3_001)
+    assert result.outcome is ProfileOutcome.GOAL
+    incompatible = profile.model_copy(
+        update={
+            "profile_id": "other-q80",
+            "best_rule": "maximum-payout/v1",
+            "multipliers": (*profile.multipliers[:4], profile.multipliers[0]),
+        }
+    )
+    with pytest.raises(ValueError, match="payouts"):
+        run(
+            q80_rows((7, 8, 9, 10, 11)),
+            p=incompatible,
+            conditions=opts(capital=2_000, goal=2_800),
+            selector=static(7),
+            staking=reference,
+        )
+
+
 def test_q80_admission_checks_whole_ladder_and_initial_affordability():
     base = legacy_quiniela_80_profile().model_copy(
         update={"profile_id": "another-q80", "best_rule": "maximum-payout/v1"}

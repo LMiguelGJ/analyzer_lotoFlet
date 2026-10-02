@@ -6,7 +6,7 @@ import { DataPage } from "./index";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getProfiles: vi.fn(), registerProfile: vi.fn(), previewImport: vi.fn(), promoteImport: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getProfiles: vi.fn(), getDatasets: vi.fn(), registerProfile: vi.fn(), previewImport: vi.fn(), promoteImport: vi.fn() } };
 });
 const hash = "a".repeat(64);
 const readiness = { ready: true, selector_capabilities: ["static-numbers/v1"], staking_capabilities: ["flat-per-number/v1"], entry_policies: ["all_rows/v1"], settlements: ["all", "best"] as const, requires_compatible_dataset: true };
@@ -22,7 +22,8 @@ const file = () => new File([new Uint8Array([0, 255, 10])], "draws.csv", { type:
 async function setup() {
   const user = userEvent.setup();
   render(<DataPage />);
-  await screen.findByRole("option", { name: /saved · revisión 2/ });
+  await user.click(screen.getByText(/Importación avanzada/));
+  await screen.findByLabelText("Perfil guardado completo");
   await user.upload(screen.getByLabelText(/Archivo local CSV o JSON/), file());
   await user.selectOptions(screen.getByLabelText(/Formato del archivo/), "csv");
   await user.selectOptions(screen.getByLabelText("Interpretación de la hora"), "naive_legacy");
@@ -41,6 +42,7 @@ beforeEach(() => {
   vi.mocked(apiClient.getProfiles).mockReset().mockResolvedValue({ total: 1, offset: 0, limit: 100,
     items: [{ profile, profile_sha256: hash, profile_execution: readiness, execution_supported: false }], templates: [{ name: "Example", provenance: "reference",
       known_fields: { positions: 2 }, missing_fields: ["profile_id"], execution_supported: false }] });
+  vi.mocked(apiClient.getDatasets).mockReset().mockResolvedValue({ total: 0, offset: 0, limit: 20, items: [] });
   vi.mocked(apiClient.registerProfile).mockReset();
   vi.mocked(apiClient.previewImport).mockReset().mockResolvedValue(valid);
   vi.mocked(apiClient.promoteImport).mockReset().mockResolvedValue({ dataset_sha256: hash, created_at: "2025-01-01T00:00:00Z",
@@ -86,6 +88,7 @@ describe("bounded local import", () => {
     await user.clear(screen.getByLabelText("Columna de posición 1"));
     await user.type(screen.getByLabelText("Columna de posición 1"), "first");
     await preview(user);
+    expect(screen.getByText(/El archivo queda guardado en la biblioteca local y puede abrirse desde «Continuar con este historial»; esta importación aún no habilita su ejecución/i)).toBeInTheDocument();
     expect(apiClient.previewImport).toHaveBeenCalledWith({ raw_base64: "AP8K", format: "csv",
       mapping: { date: "date", time: "time", positions: ["first", "pos2"] },
       source: { source_id: "ledger", kind: "artificial", revision: "r1", provenance: "manual" },
@@ -94,14 +97,15 @@ describe("bounded local import", () => {
     await user.click(screen.getByRole("button", { name: "Confirmar y guardar importación" }));
     expect(await screen.findByRole("heading", { name: "Importación guardada" })).toBeInTheDocument();
     expect(screen.getByText(/Hash guardado:/)).toHaveTextContent(hash);
-    expect(screen.getByText(/no se puede ejecutar todavía/i)).toBeInTheDocument();
+    expect(screen.getByText(/Este artefacto no se puede ejecutar todavía/i)).toBeInTheDocument();
     expect(apiClient.promoteImport).toHaveBeenCalledWith({ ...vi.mocked(apiClient.previewImport).mock.calls[0][0], expected_dataset_sha256: hash });
   });
 
   it("requires deliberate format and clock choices and supports JSON without altering raw bytes", async () => {
     const user = userEvent.setup();
     render(<DataPage />);
-    await screen.findByRole("option", { name: /saved · revisión 2/ });
+    await user.click(screen.getByText(/Importación avanzada/));
+    await screen.findByLabelText("Perfil guardado completo");
     await user.upload(screen.getByLabelText(/Archivo local CSV o JSON/), file());
     await user.selectOptions(screen.getByLabelText("Perfil guardado completo"), "saved@2");
     await user.type(screen.getByLabelText("Identificador de fuente"), "ledger");

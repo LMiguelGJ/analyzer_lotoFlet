@@ -3,6 +3,7 @@
 import base64
 import binascii
 import json
+import re
 from dataclasses import asdict
 from typing import Annotated, Literal
 
@@ -11,6 +12,8 @@ from pydantic import Field, ValidationError
 
 from laboratorio.api import StrictBody, repo
 from laboratorio.domain.contracts import GameProfile
+from laboratorio.domain.profile_request import profile_sha256
+from laboratorio.importing.history import history_options, parse_history
 from laboratorio.importing.records import (
     MAX_INPUT_BYTES,
     ClockDeclaration,
@@ -107,6 +110,93 @@ def _preview(result):
         "errors_truncated": result.errors_truncated,
         "errors": [asdict(error) for error in result.errors],
         "sample": [asdict(record) for record in result.records[:20]],
+        "execution_supported": False,
+    }
+
+
+def _history_context(request: Request, raw: bytes):
+    profile_id = request.headers.get("x-profile-id", "")
+    revision_text = request.headers.get("x-profile-revision", "")
+    if not profile_id or not revision_text.isdecimal():
+        raise HTTPException(422, "registered profile identity headers are required")
+    try:
+        profile = repo(request).get_game_profile(profile_id, int(revision_text))
+    except (ValueError, TypeError):
+        profile = None
+    if profile is None:
+        raise HTTPException(422, "registered profile identity was not found")
+    supplied_profile_hash = request.headers.get("x-profile-sha256", "")
+    if not re.fullmatch(r"[0-9a-f]{64}", supplied_profile_hash):
+        raise HTTPException(422, "registered profile hash header is required")
+    if supplied_profile_hash != profile_sha256(profile):
+        raise HTTPException(409, "registered profile hash does not match identity")
+    try:
+        document = json.loads(raw, object_pairs_hook=_object, parse_constant=_reject_constant)
+        context = history_options(document, profile)
+    except (ValueError, TypeError, KeyError, RecursionError, UnicodeError) as exc:
+        raise HTTPException(422, "invalid canonical history document") from exc
+    metadata = document["metadata"]
+    if request.headers.get("x-confirm-source") != metadata.get("origen"):
+        raise HTTPException(409, "explicit source confirmation must match metadata origin")
+    if request.headers.get("x-confirm-timezone") != metadata.get("zona_horaria"):
+        raise HTTPException(409, "explicit timezone confirmation must match metadata")
+    return profile, context
+
+
+def _history_preview(result, profile):
+    return {
+        **_preview(result),
+        "profile_compatibility": {
+            "profile_id": profile.profile_id,
+            "profile_revision": profile.revision,
+            "profile_sha256": profile_sha256(profile),
+            "registered": True,
+            "execution_supported": False,
+            "rules_source": "registered_game_profile",
+        },
+    }
+
+
+@router.post("/history/preview")
+async def history_preview(request: Request):
+    raw = await request.body()
+    profile, _context = _history_context(request, raw)
+    return _history_preview(parse_history(raw, profile), profile)
+
+
+@router.post("/history/promote")
+async def history_promote(request: Request):
+    raw = await request.body()
+    profile, context = _history_context(request, raw)
+    result = parse_history(raw, profile)
+    if not result.promotable or result.dataset_sha256 is None:
+        raise HTTPException(422, "history is not promotable")
+    expected = request.headers.get("x-expected-dataset-sha256", "")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected) or expected != result.dataset_sha256:
+        raise HTTPException(409, "dataset hash does not match preview")
+    settings = request.app.state.settings
+    try:
+        saved = repo(request).promote_dataset(
+            raw,
+            **context,
+            quota_bytes=settings.quota_bytes,
+            quota_explicit=settings.is_quota_explicit,
+        )
+    except QuotaExceeded as exc:
+        raise HTTPException(409, "dataset quota has insufficient headroom") from exc
+    except ValueError as exc:
+        raise HTTPException(409, "dataset integrity or source changed") from exc
+    return {
+        "dataset_sha256": saved.dataset.dataset_sha256,
+        "created_at": saved.dataset.created_at,
+        "created": saved.created,
+        "duplicate_source_differs": saved.duplicate_source_differs,
+        "retained_source_sha256": saved.dataset.source_sha256,
+        "submitted_source_sha256": saved.submitted_source_sha256,
+        "rows_seen": result.rows_seen,
+        "records_total": len(result.records),
+        "duplicates_merged": result.duplicates_merged,
+        "profile_compatibility": _history_preview(result, profile)["profile_compatibility"],
         "execution_supported": False,
     }
 

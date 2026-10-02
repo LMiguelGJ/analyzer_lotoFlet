@@ -32,8 +32,9 @@ smoke aislado usó un stub de navegador y `CTRL_BREAK_EVENT`; un intento seguro
 de probar `CTRL_C_EVENT` terminó en WinError 5 sin emitir la señal. No se afirma
 aceptación integral de todos los estados o conformidad WCAG.
 
-La API no habilita acceso remoto ni autenticación. La cola comparte un único
-sondeo y conserva el registro de acciones durante la navegación entre rutas de
+La API nativa que usa la interfaz local no requiere credencial Bearer y confía en clientes locales; no es una frontera frente a otros procesos. El facade para agentes (`/api/agent/v1`) requiere Bearer y sus mutaciones también validan el `Origin` local exacto, pero esto no aísla procesos ni habilita acceso remoto. Las regresiones de Bearer malformado/duplicado y publicación concurrente de credenciales están corregidas; la verificación independiente aprobó 8 pruebas enfocadas y Ruff. La re-verificación independiente de Ajustes aprobó 31 pruebas y typecheck, tras resolver tres correcciones. Esto no demuestra ACL de producción, durabilidad ante fallos ni aislamiento entre procesos. La credencial se consulta explícitamente desde Ajustes; consultá la [guía breve de API para agentes](../docs/api-agentes-80-20.md).
+
+La cola comparte un único sondeo y conserva el registro de acciones durante la navegación entre rutas de
 la misma sesión React; cerrar el cajón no lo descarta. Si una solicitud de
 inicio/cancelación queda incierta, «Comprobar estado» consulta el detalle guardado.
 Solo tras comprobarlo se ofrece reintentar un inicio aún retenido o reenviar

@@ -7,7 +7,7 @@ import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import experimentsPage from "../../api/__fixtures__/experiments-page.json";
 import type { Page } from "../../api/types";
-import type { ExperimentSummary, LegacyExperimentSummary, ProfileExperimentSummary } from "../../api/types";
+import type { ExperimentSummary, LegacyExperimentSummary, ProfileBatchExperimentSummary, ProfileExperimentSummary } from "../../api/types";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
@@ -33,6 +33,26 @@ const profileItem: ProfileExperimentSummary = {
   display: { name: "Perfil de prueba", currency: "USD", scale: 2, capital: 10000, goal: 20000, selector_label: "static-numbers/v1", staking_label: "flat-per-number/v1" },
   sources: { history_id: "a", history_sha256: "a", rankings_id: "", rankings_sha256: "", code_version: "profile-v1" },
   runs: [{ ordinal: 0, configuration_id: null, status: "pending", result_kind: "profile", result: null, bets_count: 0 }],
+};
+const profileBatchV5: ProfileBatchExperimentSummary = {
+  request_kind: "profile", request_schema_version: 5, id: "batch-v5", status: "completed", created_at: null,
+  request: { schema_version: 5, kind: "profile_batch", profile_id: "test", profile_revision: 1,
+    profile_sha256: "b".repeat(64), dataset_sha256: "a".repeat(64),
+    conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 10000, goal: 20000, settlement: "all", max_elapsed_draws: 2, max_bet_draws: 1, end_minute: null, duration_minutes: null },
+    strategies: [{ definition_version: 1, name: "Frozen strategy", selector: "static-numbers/v1", coverage: 1, staking: "flat-per-number/v1", selector_parameters: { numbers: [7] }, staking_parameters: {}, closing_defaults: {} }],
+    max_draws: 2, source_version: "canonical-history/v1" },
+  profile: profileItem.profile,
+  display: { ...profileItem.display, name: "Lote v5 guardado" },
+  sources: profileItem.sources,
+  batch_admission: {
+    strategy_refs: [{ id: "strategy-id", revision: 3, definition_sha256: "c".repeat(64) }],
+    source_identity: { dataset_sha256: "a".repeat(64), source_sha256: "d".repeat(64), canonical_sha256: "e".repeat(64), row_count: 4,
+      profile_id: "test", profile_revision: 1, profile_sha256: "b".repeat(64), archive_bound: false, archive_history_sha256: null, archive_rank_row_ids: null },
+    requested_constraints: {}, effective_constraints: {}, policy_revision: 1, policy: {},
+  },
+  runs: [{ result_kind: "profile", ordinal: 0, configuration_id: null, status: "completed", result_schema_version: null,
+    strategy: { id: "strategy-id", revision: 3, definition_sha256: "c".repeat(64), name: null }, result: null, bets_count: 0,
+    complete: false, completion: "unavailable", stop_category: "unknown", stop_reason: "failed", stop_code: "unknown", error: null }],
 };
 
 function emptyPage(offset = 0, limit = 20): Page<ExperimentSummary> {
@@ -290,6 +310,30 @@ describe("LW10 experiments list · data and navigation", () => {
 
     await screen.findByText("Fríos K1");
     expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe("profile batch v5 experiment list compatibility", () => {
+  it("uses the saved display name for queue identity, accessible actions, delete dialog, and success notice", async () => {
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [profileBatchV5] })
+      .mockResolvedValueOnce(emptyPage());
+    vi.mocked(apiClient.getQueue).mockResolvedValueOnce({ active_id: "batch-v5", pending: { total: 0, offset: 0, limit: 20, count: 0, items: [] }, held: { total: 0, offset: 0, limit: 20, count: 0, items: [] }, last_failure: null });
+    vi.mocked(apiClient.deleteExperiment).mockResolvedValueOnce(undefined);
+    const { user } = setup();
+    const name = profileBatchV5.display.name;
+    const links = await screen.findAllByRole("link", { name });
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute("href", "/experimentos/batch-v5");
+    expect(links[1]).toHaveAttribute("href", "/experimentos/batch-v5");
+    const trigger = screen.getByRole("button", { name: `Acciones de ${name}` });
+    await user.click(trigger);
+    expect(screen.getByRole("menu", { name: `Acciones de ${name}` })).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
+    const dialog = screen.getByRole("alertdialog", { name: `¿Eliminar el experimento «${name}»?` });
+    expect(dialog).toHaveTextContent(`Se eliminará «${name}» de forma permanente.`);
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
+    expect(apiClient.deleteExperiment).toHaveBeenCalledWith("batch-v5", "batch-v5");
+    expect(await screen.findByText(`Se eliminó "${name}".`)).toHaveAttribute("role", "status");
   });
 });
 

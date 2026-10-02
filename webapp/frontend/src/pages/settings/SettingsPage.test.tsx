@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import type { SettingsView } from "../../api/types";
@@ -10,8 +10,12 @@ import fixture from "../../api/__fixtures__/settings.json";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getSettings: vi.fn(), updateSettings: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getSettings: vi.fn(), updateSettings: vi.fn(), getAgentCredential: vi.fn() } };
 });
+const agentApi = apiClient as typeof apiClient & {
+  getAgentCredential: () => Promise<{ token: string }>;
+};
+let originalClipboard: PropertyDescriptor | undefined;
 const base: SettingsView = {
   ...fixture,
   storage: {
@@ -30,6 +34,12 @@ function setup() {
 beforeEach(() => {
   vi.mocked(apiClient.getSettings).mockReset().mockResolvedValue(base);
   vi.mocked(apiClient.updateSettings).mockReset().mockResolvedValue(base);
+  vi.mocked(agentApi.getAgentCredential).mockReset();
+  originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+});
+afterEach(() => {
+  if (originalClipboard) Object.defineProperty(navigator, "clipboard", originalClipboard);
+  else Reflect.deleteProperty(navigator, "clipboard");
 });
 
 it("loads the actual view, distinguishing logical quota, physical files and free disk", async () => {
@@ -53,7 +63,9 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   expect(screen.getByText(/JSON y rankings originales no se incluyen/i)).toBeInTheDocument();
   expect(screen.getByText(/borrar registros no garantiza reducir/i)).toBeInTheDocument();
   expect(screen.getByText(/próxima admisión o escritura/i)).toBeInTheDocument();
-  expect(screen.getByText(/lanzador.*LW16/i)).toBeInTheDocument();
+  expect(screen.getByText("iniciar-laboratorio.bat")).toBeInTheDocument();
+  expect(screen.getByText(/Ctrl\+C en su consola/)).toBeInTheDocument();
+  expect(screen.queryByText(/LW16/)).not.toBeInTheDocument();
   expect(screen.getByText("chance_express_history.json")).toBeInTheDocument();
   expect(screen.getByText("127.0.0.1:8765")).toBeInTheDocument();
   expect(screen.getByText(/Por defecto/)).toBeInTheDocument();
@@ -252,6 +264,107 @@ it("does not block clean navigation and explains 403 and a raced read-only 409 w
   expect(await screen.findByRole("alert")).toHaveTextContent(/variable de entorno tiene prioridad/);
   expect(edited).toHaveValue("7000000000");
   expect(input).not.toBeInTheDocument();
+});
+
+it("does not retrieve an agent credential until the operator explicitly asks", async () => {
+  const { user } = setup();
+  expect(await screen.findByText("Uso lógico de admisión")).toBeInTheDocument();
+  expect(agentApi.getAgentCredential).not.toHaveBeenCalled();
+  expect(screen.getByRole("heading", { name: "Acceso para agentes" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Consultar credencial de agente" }));
+  expect(agentApi.getAgentCredential).toHaveBeenCalledTimes(1);
+});
+
+it("keeps a retrieved token masked until revealed and copies only on explicit action", async () => {
+  const token = "test-only-agent-token";
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.mocked(agentApi.getAgentCredential).mockResolvedValueOnce({ token });
+  const { user } = setup();
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
+  const input = await screen.findByLabelText("Credencial de agente");
+  expect(input).toHaveValue(token);
+  expect(input).toHaveAttribute("type", "password");
+  expect(writeText).not.toHaveBeenCalled();
+  expect(localStorage.getItem("agent-token")).toBeNull();
+  expect(sessionStorage.getItem("agent-token")).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Mostrar credencial" }));
+  expect(input).toHaveAttribute("type", "text");
+  await user.click(screen.getByRole("button", { name: "Ocultar credencial" }));
+  expect(input).toHaveAttribute("type", "password");
+  expect(navigator.clipboard.writeText).toBe(writeText);
+  const copyButton = screen.getByRole("button", { name: "Copiar credencial" });
+  expect(copyButton).not.toBeDisabled();
+  await user.click(copyButton);
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith(token));
+  expect(await screen.findByRole("status")).toHaveTextContent("Credencial copiada al portapapeles");
+  expect(screen.getByRole("status").textContent).not.toContain(token);
+  await user.click(screen.getByRole("button", { name: "Ocultar y borrar credencial" }));
+  expect(screen.queryByLabelText("Credencial de agente")).not.toBeInTheDocument();
+});
+
+it("explains clipboard denial and reveals/selects the token for manual copy", async () => {
+  const token = "manual-copy-agent-token";
+  const writeText = vi.fn().mockRejectedValue(new Error("permission denied"));
+  vi.mocked(agentApi.getAgentCredential).mockResolvedValueOnce({ token });
+  const { user } = setup();
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
+  await user.click(screen.getByRole("button", { name: "Copiar credencial" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(/seleccioná y copiá el texto mostrado manualmente/i);
+  const input = screen.getByLabelText("Credencial de agente");
+  await waitFor(() => {
+    expect(input).toHaveAttribute("type", "text");
+    expect(input).toHaveFocus();
+    expect(input).toHaveProperty("selectionStart", 0);
+    expect(input).toHaveProperty("selectionEnd", token.length);
+  });
+});
+
+it("ignores credential responses dismissed while pending", async () => {
+  let resolve!: (value: { token: string }) => void;
+  vi.mocked(agentApi.getAgentCredential).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  const { user } = setup();
+  await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
+  expect(screen.getByRole("button", { name: "Consultando credencial…" })).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "Cancelar" }));
+  resolve({ token: "late-agent-token" });
+  const trigger = await screen.findByRole("button", { name: "Consultar credencial de agente" });
+  await waitFor(() => expect(trigger).toHaveFocus());
+  expect(screen.queryByDisplayValue("late-agent-token")).not.toBeInTheDocument();
+  expect(document.body.textContent).not.toContain("late-agent-token");
+  expect(agentApi.getAgentCredential).toHaveBeenCalledTimes(1);
+});
+
+it("restores focus to credential consultation after clearing the manual-copy fallback", async () => {
+  const token = "manual-copy-focus-token";
+  vi.mocked(agentApi.getAgentCredential).mockResolvedValueOnce({ token });
+  const { user } = setup();
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText: vi.fn().mockRejectedValue(new Error("permission denied")) },
+  });
+  await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
+  await user.click(screen.getByRole("button", { name: "Copiar credencial" }));
+  const input = screen.getByLabelText("Credencial de agente");
+  await waitFor(() => expect(input).toHaveFocus());
+  expect(input).toHaveProperty("selectionEnd", token.length);
+  await user.click(screen.getByRole("button", { name: "Ocultar y borrar credencial" }));
+  const trigger = await screen.findByRole("button", { name: "Consultar credencial de agente" });
+  await waitFor(() => expect(trigger).toHaveFocus());
+  expect(screen.queryByLabelText("Credencial de agente")).not.toBeInTheDocument();
+});
+
+it("ignores a credential response after the settings screen unmounts", async () => {
+  let resolve!: (value: { token: string }) => void;
+  vi.mocked(agentApi.getAgentCredential).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  const { user, unmount } = setup();
+  await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
+  unmount();
+  resolve({ token: "unmounted-agent-token" });
+  await Promise.resolve();
+  expect(document.body.textContent).not.toContain("unmounted-agent-token");
 });
 
 it("has no axe violations in loaded settings", async () => {

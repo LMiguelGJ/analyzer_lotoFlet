@@ -3,6 +3,10 @@ import { apiClient, ApiError, NetworkError } from "./client";
 import settingsFixture from "./__fixtures__/settings.json";
 import type { ProfileAudazRequest, ProfileExperimentRequest, ProfileRecoveryRequest } from "./types";
 
+const agentApi = apiClient as typeof apiClient & {
+  getAgentCredential: () => Promise<{ token: string }>;
+};
+
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -247,6 +251,25 @@ describe("apiClient error mapping", () => {
     expect(calls.every(([, init]) => init?.method === "POST" && init.body === undefined)).toBe(true);
   });
 
+  it("uploads canonical history as original Blob bytes with registered profile and exact metadata headers", async () => {
+    const file = new Blob(["{\\\"metadata\\\":{}}"], { type: "application/json" });
+    const profile = { profile: { profile_id: "saved", revision: 3 }, profile_sha256: "b".repeat(64) } as never;
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, { promotable: true }))
+      .mockResolvedValueOnce(jsonResponse(200, { dataset_sha256: "a".repeat(64) }));
+    await apiClient.previewHistoryImport(file, profile, "operator", "America/Santo_Domingo");
+    await apiClient.promoteHistoryImport(file, profile, "operator", "America/Santo_Domingo", "a".repeat(64));
+    const calls = vi.mocked(globalThis.fetch).mock.calls;
+    expect(calls.map(([url]) => url)).toEqual(["/api/v1/imports/history/preview", "/api/v1/imports/history/promote"]);
+    for (const [, init] of calls) {
+      expect(init?.body).toBe(file);
+      expect(init?.body).not.toBe(JSON.stringify(file));
+      expect(init?.headers).toMatchObject({ "X-Profile-Id": "saved", "X-Profile-Revision": "3",
+        "X-Profile-Sha256": "b".repeat(64), "X-Confirm-Source": "operator",
+        "X-Confirm-Timezone": "America/Santo_Domingo" });
+    }
+    expect(calls[1][1]?.headers).toMatchObject({ "X-Expected-Dataset-Sha256": "a".repeat(64) });
+  });
+
   it("submits the same explicit import envelope to preview and hash-bound promotion", async () => {
     const body = {
       raw_base64: "AP8K", format: "csv" as const,
@@ -315,6 +338,56 @@ describe("apiClient error mapping", () => {
       `/api/v1/datasets/${"a".repeat(64)}`,
       `/api/v1/datasets/${"a".repeat(64)}/draws?offset=100&limit=100&date=2025-01-01`,
     ]);
+  });
+
+  it("uses the closed v1 batch routes and exact client identity for validation, submit and recovery lookup", async () => {
+    const body = { schema_version: 1 as const, profile: { id: "local", revision: 2, sha256: "a".repeat(64) },
+      dataset_sha256: "b".repeat(64), strategies: [{ id: "s/1", revision: 3, definition_sha256: "c".repeat(64) }],
+      conditions: { schema_version: 1 as const, start_draw: "2025-01-01 05:10", capital: 100, goal: 200,
+        settlement: "all" as const, max_elapsed_draws: 20, max_bet_draws: null, end_minute: null, duration_minutes: null },
+      max_draws: 20, client_request_id: "client id/1" };
+    const validation = { valid: true, reservation_created: false };
+    const created = { id: "a".repeat(32), status: "pending" as const };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, validation))
+      .mockResolvedValueOnce(jsonResponse(201, created)).mockResolvedValueOnce(jsonResponse(200, created));
+    await expect(apiClient.validateProfileBatch(body)).resolves.toEqual(validation);
+    await expect(apiClient.createProfileBatch(body)).resolves.toEqual(created);
+    await expect(apiClient.getProfileBatchByClientRequestId(body.client_request_id)).resolves.toEqual(created);
+    expect(vi.mocked(globalThis.fetch).mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/profile-batches/validate", "/api/v1/profile-batches", "/api/v1/profile-batches/by-client-request/client%20id%2F1",
+    ]);
+    expect(JSON.parse(String(vi.mocked(globalThis.fetch).mock.calls[0][1]?.body))).toEqual(body);
+    expect(vi.mocked(globalThis.fetch).mock.calls[1][1]).toMatchObject({ method: "POST", body: JSON.stringify(body) });
+  });
+
+  it("reads strategies, exact profile compatibility, revisions and policy without changing legacy requests", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, { items: [], total: 0, offset: 0, limit: 20 }))
+      .mockResolvedValueOnce(jsonResponse(200, {})).mockResolvedValueOnce(jsonResponse(200, {}))
+      .mockResolvedValueOnce(jsonResponse(200, {})).mockResolvedValueOnce(jsonResponse(200, {}));
+    await apiClient.listProfileBatchStrategies();
+    await apiClient.getProfileBatchStrategy("preset/a", { id: "local", revision: 2, sha256: "d".repeat(64) });
+    await apiClient.getProfileBatchStrategyRevisions("preset/a", 20, 10);
+    await apiClient.getProfileBatchExecutionPolicy();
+    await apiClient.createProfileBatchStrategy({ definition_version: 1, name: "Custom", selector: "static-numbers/v1",
+      coverage: 1, staking: "flat-per-number/v1", selector_parameters: { numbers: [3] }, staking_parameters: { per_number_stake: 1 }, closing_defaults: {} });
+    expect(vi.mocked(globalThis.fetch).mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/strategies?offset=0&limit=20",
+      `/api/v1/strategies/preset%2Fa?profile_id=local&profile_revision=2&profile_sha256=${"d".repeat(64)}`,
+      "/api/v1/strategies/preset%2Fa/revisions?offset=20&limit=10", "/api/v1/execution-policy", "/api/v1/strategies",
+    ]);
+  });
+
+  it("retrieves the actual agent credential by same-origin POST with an empty JSON body", async () => {
+    const credential = { token: "test-only-agent-token" };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, credential));
+
+    await expect(agentApi.getAgentCredential()).resolves.toEqual(credential);
+
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0];
+    expect(url).toBe("/api/v1/settings/agent-credential");
+    expect(init).toMatchObject({ method: "POST", body: "{}" });
+    expect(init?.headers).toMatchObject({ "Content-Type": "application/json" });
+    expect(init?.headers).not.toHaveProperty("Authorization");
   });
 
   it("maps a proxy-marked disconnection response to NetworkError instead of ApiError", async () => {

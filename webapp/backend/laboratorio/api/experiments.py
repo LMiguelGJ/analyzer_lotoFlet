@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.concurrency import run_in_threadpool
 
 from laboratorio.api import StrictBody, experiment, jobs, missing, repo
+from laboratorio.api.profile_views import attach_source_indices, v5_strategy_result
 from laboratorio.domain.contracts import ExperimentRequest, ExperimentStatus
 from laboratorio.domain.profile_request import _bad_constant, _unique_pairs, load_profile_request
 from laboratorio.domain.profile_request_v2 import load_profile_cycling_request
@@ -16,7 +17,7 @@ from laboratorio.domain.profile_request_v4 import load_profile_recovery_request
 from laboratorio.domain.session import preflight_initial_stake
 from laboratorio.domain.trajectory import reduce_trajectory
 from laboratorio.settings import RANKINGS_SHA256
-from laboratorio.storage.quota import QuotaExceeded
+from laboratorio.storage.quota import PendingRunsExceeded, QuotaExceeded
 
 router = APIRouter(prefix="/experiments")
 PROFILE_BODY_LIMIT = 64 * 1024
@@ -74,6 +75,8 @@ def create(body: CreateExperiment, request: Request):
         )
     except QuotaExceeded as exc:
         raise HTTPException(507, str(exc)) from exc
+    except PendingRunsExceeded as exc:
+        raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     except RuntimeError as exc:
@@ -135,15 +138,18 @@ def list_all(
     sort: Literal["created_at", "name", "status"] = "created_at",
     order: Literal["asc", "desc"] = "desc",
 ):
-    total, rows = repo(request).search_experiments(
-        offset,
-        limit,
-        name_contains=name_contains,
-        status=status,
-        sort=sort,
-        order=order,
-        include_completed_cycling=True,
-    )
+    try:
+        total, rows = repo(request).search_experiments(
+            offset,
+            limit,
+            name_contains=name_contains,
+            status=status,
+            sort=sort,
+            order=order,
+            include_completed_cycling=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(409, "stored experiment snapshot is corrupt") from exc
     return {
         "total": total,
         "offset": offset,
@@ -153,10 +159,47 @@ def list_all(
 
 
 def public_experiment(identifier: str, request: Request):
-    saved = missing(repo(request).get_experiment(identifier))
-    # The same projection gate applies to detail, comparison and replay.
-    experiment(saved)
+    try:
+        saved = missing(repo(request).get_experiment(identifier))
+        # The same projection gate applies to detail, comparison and replay.
+        experiment(saved)
+    except ValueError as exc:
+        raise HTTPException(409, "stored experiment snapshot is corrupt") from exc
     return saved
+
+
+def _v5_source_indices(saved, run, request):
+    strategy = v5_strategy_result(run)
+    try:
+        dataset = repo(request).get_dataset(saved.request.dataset_sha256)
+    except ValueError as exc:
+        raise HTTPException(409, "stored profile batch source is corrupt") from exc
+    admission = saved.batch_admission
+    if dataset is None or admission is None:
+        raise HTTPException(409, "stored profile batch source is unavailable")
+    identity = admission["source_identity"]
+    labels = [f"{record.date} {record.time}" for record in dataset.preview.records]
+    if (
+        dataset.dataset_sha256 != strategy.dataset_sha256
+        or dataset.dataset_sha256 != identity["dataset_sha256"]
+        or dataset.source_sha256 != identity["source_sha256"]
+        or len(labels) != identity["row_count"]
+        or strategy.start_draw_index >= len(labels)
+        or labels[strategy.start_draw_index] != saved.request.conditions.start_draw
+    ):
+        raise HTTPException(409, "stored profile batch source association is corrupt")
+    by_label = {label: index for index, label in enumerate(labels)}
+    try:
+        indices = [by_label[bet.label] for bet in strategy.session.bets]
+    except KeyError as exc:
+        raise HTTPException(409, "stored profile bet is outside its saved source") from exc
+    if indices != sorted(set(indices)) or any(
+        index < strategy.start_draw_index
+        or index >= strategy.start_draw_index + strategy.session.elapsed_draws
+        for index in indices
+    ):
+        raise HTTPException(409, "stored profile bet order is corrupt")
+    return strategy, indices
 
 
 @router.get("/{identifier}")
@@ -179,17 +222,26 @@ def replay(
     result = run.result
     if result is None:
         raise HTTPException(409, "run has no completed replay")
-    if run.result_schema_version in (2, 3, 4):
+    source_indices = None
+    if run.result_schema_version == 5:
+        strategy, source_indices = _v5_source_indices(saved, run, request)
+        result = strategy.session
+    elif run.result_schema_version in (2, 3, 4):
         result = result.session
+    items = [asdict(bet) for bet in result.bets[offset : offset + limit]]
+    if source_indices is not None:
+        for index, item in enumerate(items, start=offset):
+            item["bet_index"] = index
+            item["source_index"] = source_indices[index]
     page = {
         "total": len(result.bets),
         "offset": offset,
         "limit": limit,
-        "items": [asdict(bet) for bet in result.bets[offset : offset + limit]],
+        "items": items,
     }
     if run.result_kind == "profile":
         page["result_kind"] = "profile"
-    if run.result_schema_version in (2, 3, 4):
+    if run.result_schema_version in (2, 3, 4, 5):
         page["schema_version"] = run.result_schema_version
     return page
 
@@ -208,12 +260,18 @@ def trajectory(
     result = run.result
     if result is None:
         raise HTTPException(409, "run has no completed replay")
-    if run.result_schema_version in (2, 3, 4):
+    source_indices = None
+    if run.result_schema_version == 5:
+        strategy, source_indices = _v5_source_indices(saved, run, request)
+        result = strategy.session
+    elif run.result_schema_version in (2, 3, 4):
         result = result.session
     response = reduce_trajectory(saved.request.conditions.capital, result.bets, max_points)
+    if source_indices is not None:
+        response = attach_source_indices(response, result.bets, source_indices)
     if run.result_kind == "profile":
         response["result_kind"] = "profile"
-    if run.result_schema_version in (2, 3, 4):
+    if run.result_schema_version in (2, 3, 4, 5):
         response["schema_version"] = run.result_schema_version
     return response
 

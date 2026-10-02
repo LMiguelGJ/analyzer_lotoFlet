@@ -91,6 +91,31 @@ def test_profile_creation_direct_navigation_serves_only_the_spa_route(local_sett
                 assert method(path).status_code == 404, path
 
 
+def test_batch_session_direct_navigation_serves_only_the_spa_route(local_settings):
+    expected = (local_settings.frontend_dist / "index.html").read_text(encoding="utf-8")
+    with _client(local_settings) as client:
+        for path in (
+            "/experimentos/nuevo/sesion",
+            "/experimentos/nuevo/sesion?draft=session",
+        ):
+            for method in (client.get, client.head):
+                response = method(path)
+                assert response.status_code == 200, path
+                assert response.headers["content-type"].startswith("text/html")
+                if method == client.get:
+                    assert response.text == expected
+        for path in (
+            "/experimentos/nuevo/sesiones",
+            "/experimentos/nuevo/sesion/child",
+            "/experimentos/nuevo/sesion-extra",
+            "/experimentos/other/sesion",
+            "/api/v1/does-not-exist",
+            "/assets/absent.js",
+        ):
+            for method in (client.get, client.head):
+                assert method(path).status_code == 404, path
+
+
 def test_datos_direct_navigation_serves_only_the_spa_route(local_settings):
     expected = (local_settings.frontend_dist / "index.html").read_text(encoding="utf-8")
     with _client(local_settings) as client:

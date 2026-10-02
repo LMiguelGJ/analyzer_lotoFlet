@@ -155,6 +155,17 @@ export interface ImportRequest {
   profile: GameProfile;
 }
 
+export interface HistoryImportPreview extends ImportPreview {
+  profile_compatibility: {
+    profile_id: string;
+    profile_revision: number;
+    profile_sha256: string;
+    registered: boolean;
+    execution_supported: false;
+    rules_source: string;
+  };
+}
+
 export interface ImportPreview {
   promotable: boolean;
   source_sha256: string;
@@ -174,7 +185,9 @@ export interface DatasetListing {
   dataset_sha256: string;
   source_sha256: string;
   created_at: string;
+  source_format?: "csv" | "json" | "history_json";
   source_id: string;
+  source_kind?: "historical" | "artificial";
   source_revision: string;
   profile_id: string;
   profile_revision: number;
@@ -187,6 +200,52 @@ export interface DatasetListing {
   execution_supported: false;
   profile_sha256: string;
   profile_execution: ProfileExecution;
+}
+
+export interface ProfileBatchStrategyDefinition {
+  definition_version: 1;
+  name: string;
+  selector: "static-numbers/v1" | "seeded-random/hash-sha256-v1" | "archived-cold/v1" | "archived-transition/v1" | "archived-topk/v1" | "archived-parity50/v1";
+  coverage: number;
+  staking: "flat-per-number/v1" | "q80-first-prize-cycling/v1" | "profile-audaz/v1" | "profile-recovery-ladder/v1" | "q80-reference-audaz/v1";
+  selector_parameters: Record<string, unknown>;
+  staking_parameters: Record<string, unknown>;
+  closing_defaults: Record<string, unknown>;
+}
+
+export interface ProfileBatchStrategy {
+  id: string; name: string; revision: number; latest_revision: number; definition_version: number;
+  definition: ProfileBatchStrategyDefinition; definition_sha256: string; created_at: string; revision_created_at: string;
+  protected: boolean; preset_explanation: string | null; definition_valid: boolean; profile_context_provided: boolean;
+  profile_compatible: boolean | null; incompatibilities: string[]; requirements: Record<string, unknown>;
+  execution_available: boolean; execution_unavailable_reason: string | null;
+}
+export interface ProfileBatchStrategyPage extends Page<ProfileBatchStrategy> {}
+export interface ProfileBatchStrategyRevisions extends Page<ProfileBatchStrategy> {}
+export interface ProfileBatchConditions {
+  schema_version: 1; start_draw: string; capital: number; goal: number; settlement: SettlementMode;
+  max_elapsed_draws: number | null; max_bet_draws: number | null; end_minute: number | null; duration_minutes: number | null;
+}
+export interface ProfileBatchSubmissionBody {
+  schema_version: 1; profile: { id: string; revision: number; sha256: string }; dataset_sha256: string;
+  strategies: { id: string; revision: number; definition_sha256: string }[]; conditions: ProfileBatchConditions;
+  max_draws: number; client_request_id: string;
+}
+export interface ProfileBatchValidation {
+  valid: boolean; reasons: string[]; profile: { id: string; revision: number; sha256: string };
+  dataset: Record<string, unknown>; strategies: ProfileBatchSubmissionBody["strategies"];
+  requested_constraints: Record<string, unknown>; effective_constraints: Record<string, unknown>;
+  limits: { worker_count: number; max_strategies_per_batch: number; max_pending_runs: number; run_timeout_seconds: number; reservation_created: false };
+  policy: { revision: number; [key: string]: number };
+}
+export interface ProfileBatchResponse {
+  id: string; status: ExperimentStatus; created?: boolean;
+  links?: { self: string; compare: string; runs: { ordinal: number; replay: string; trajectory: string }[] };
+}
+export interface ProfileBatchExecutionPolicy {
+  revision: number; policy: { max_strategies_per_batch: number; worker_count: number; max_pending_runs: number; max_bet_draws: number; max_elapsed_draws: number; run_timeout_seconds: number };
+  effective: ProfileBatchExecutionPolicy["policy"]; defaults: ProfileBatchExecutionPolicy["policy"];
+  bounds: Record<string, [number, number]>; explanation: string;
 }
 
 export interface ImportPromotion {
@@ -256,7 +315,9 @@ export interface FinancialMetrics {
 }
 
 export interface TrajectoryPoint {
+  /** Source row index; v5 replay additionally has the local bet_index. */
   source_index: number;
+  bet_index?: number;
   label: string;
   balance: number;
   replay: string;
@@ -264,13 +325,13 @@ export interface TrajectoryPoint {
 
 export interface Trajectory {
   result_kind?: "profile";
-  schema_version?: 2 | 3 | 4;
+  schema_version?: 2 | 3 | 4 | 5;
   initial_capital: number;
   total: number;
   max_points: number;
   reduction_method: "none" | "minmax-even-v1";
-  minimum: { balance: number; source_index: number | null };
-  maximum: { balance: number; source_index: number | null };
+  minimum: { balance: number; source_index: number | null; bet_index?: number };
+  maximum: { balance: number; source_index: number | null; bet_index?: number };
   points: TrajectoryPoint[];
 }
 
@@ -361,14 +422,74 @@ export interface ProfileBet {
   wagered: number;
   paid: number;
   balance: number;
+  /** Present only in v5 replay: source identity and local bet ordinal remain distinct. */
+  source_index?: number;
+  bet_index?: number;
 }
+
+export type ProfileOutcome = Outcome | "cancelled";
+export type ProfileBatchStopCategory = "financial_goal" | "financial_ruin" | "recovery_end" | "interrupted" | "configured_limit" | "operational_budget" | "operational_window" | "source_end" | "unknown";
+export interface ProfileBatchRequestV5 {
+  schema_version: 5;
+  kind: "profile_batch";
+  profile_id: string;
+  profile_revision: number;
+  profile_sha256: string;
+  dataset_sha256: string;
+  conditions: ProfileConditions;
+  strategies: ProfileBatchStrategyDefinition[];
+  max_draws: number;
+  source_version: "canonical-history/v1";
+}
+export interface ProfileBatchAdmission {
+  strategy_refs: { id: string; revision: number; definition_sha256: string }[];
+  source_identity: {
+    dataset_sha256: string; source_sha256: string; canonical_sha256: string; row_count: number;
+    profile_id: string; profile_revision: number; profile_sha256: string; archive_bound: boolean;
+    archive_history_sha256: string | null; archive_rank_row_ids: number[] | null;
+  };
+  requested_constraints: Record<string, unknown>;
+  effective_constraints: Record<string, unknown>;
+  policy_revision: number;
+  policy: Record<string, unknown>;
+}
+export interface ProfileBatchRunResult extends Omit<ProfileRunResult, "schema_version" | "bets_count"> {
+  schema_version: 5;
+  definition_name: string;
+  start_draw_index: number;
+  prior_cutoff: string | null;
+  dataset_sha256: string;
+  source_count: number;
+  requested_conditions: Record<string, unknown>;
+  effective_conditions: Record<string, unknown>;
+  stop_category: ProfileBatchStopCategory;
+  stop_reason: string;
+  complete: boolean;
+}
+export interface ProfileBatchRunSummary {
+  result_kind: "profile";
+  ordinal: number;
+  configuration_id: string | null;
+  status: RunStatus;
+  result_schema_version: 5 | null;
+  strategy: { id: string; revision: number; definition_sha256: string; name: string | null };
+  result: ProfileBatchRunResult | null;
+  bets_count: number;
+  complete: boolean;
+  completion: "complete" | "incomplete" | "unavailable";
+  stop_category: ProfileBatchStopCategory;
+  stop_reason: string;
+  stop_code: string;
+  error: string | null;
+}
+
 
 export interface ProfileRunResult extends FinancialMetrics {
   /** run_summary() projects asdict(result), without the full result envelope's kind/bets. */
-  schema_version: 1 | 2 | 3 | 4;
+  schema_version: 1 | 2 | 3 | 4 | 5;
   profile_id: string;
   profile_revision: number;
-  outcome: Outcome | "cancelled";
+  outcome: ProfileOutcome;
   collisions: string[];
   elapsed_draws: number;
   bet_draws: number;
@@ -414,10 +535,16 @@ export interface ProfileRecoveryExperimentSummary extends ProfileSummaryBase {
   request: ProfileRecoveryRequest;
   runs: (ProfileRunSummary & { result: (ProfileRunResult & { schema_version: 4 }) | null })[];
 }
-export type ProfileExperimentSummary = ProfileV1ExperimentSummary | ProfileCyclingExperimentSummary | ProfileAudazExperimentSummary | ProfileRecoveryExperimentSummary;
+export interface ProfileBatchExperimentSummary extends Omit<ProfileSummaryBase, "runs"> {
+  request_schema_version: 5;
+  request: ProfileBatchRequestV5;
+  batch_admission: ProfileBatchAdmission;
+  runs: ProfileBatchRunSummary[];
+}
+export type ProfileExperimentSummary = ProfileV1ExperimentSummary | ProfileCyclingExperimentSummary | ProfileAudazExperimentSummary | ProfileRecoveryExperimentSummary | ProfileBatchExperimentSummary;
 
 export type ExperimentSummary = LegacyExperimentSummary | ProfileExperimentSummary;
-export type AnyRunSummary = LegacyRunSummary | ProfileRunSummary;
+export type AnyRunSummary = LegacyRunSummary | ProfileRunSummary | ProfileBatchRunSummary;
 
 export interface LegacyCompareResult {
   id: string;
@@ -431,20 +558,29 @@ export interface LegacyCompareResult {
 
 export interface ProfileCompareResult extends Omit<LegacyCompareResult, "request_kind" | "runs"> {
   request_kind: "profile";
-  runs: ProfileRunSummary[];
+  runs: (ProfileRunSummary | ProfileBatchRunSummary)[];
 }
 
 export type CompareResult = LegacyCompareResult | ProfileCompareResult;
 
 export type ProfileReplayPage = (Page<ProfileBet> & { result_kind: "profile"; schema_version?: never })
-  | (Page<ProfileBet> & { result_kind: "profile"; schema_version: 2 | 3 | 4 });
+  | (Page<ProfileBet> & { result_kind: "profile"; schema_version: 2 | 3 | 4 })
+  | (Page<ProfileBet & { source_index: number; bet_index: number }> & { result_kind: "profile"; schema_version: 5 });
 export type ReplayPage = (Page<Bet> & { result_kind?: "legacy" }) | ProfileReplayPage;
 
 export function isProfileExperiment(value: ExperimentSummary): value is ProfileExperimentSummary {
   return value.request_kind === "profile";
 }
-export function isProfileRun(value: AnyRunSummary): value is ProfileRunSummary {
+export function isProfileRun(value: AnyRunSummary): value is ProfileRunSummary | ProfileBatchRunSummary {
   return value.result_kind === "profile";
+}
+export function isProfileBatchExperiment(value: ExperimentSummary): value is ProfileBatchExperimentSummary {
+  return value.request_kind === "profile" && "request_schema_version" in value && value.request_schema_version === 5
+    && value.request.kind === "profile_batch" && value.request.schema_version === 5;
+}
+export function isProfileBatchRun(value: AnyRunSummary): value is ProfileBatchRunSummary {
+  return value.result_kind === "profile" && "strategy" in value && "result_schema_version" in value
+    && (value.result_schema_version === 5 || value.result_schema_version === null);
 }
 export function isProfileComparison(value: CompareResult): value is ProfileCompareResult {
   return value.request_kind === "profile";
@@ -516,4 +652,8 @@ export interface SettingsView {
   };
   sources: Pick<Sources, "history_id" | "history_sha256" | "rankings_id" | "rankings_sha256" | "code_version">;
   connection: { host: string; port: number; version: string };
+}
+
+export interface AgentCredentialResponse {
+  token: string;
 }

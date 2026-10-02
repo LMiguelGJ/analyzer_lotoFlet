@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import type { ExperimentListParams } from "../../api/client";
-import { isProfileExperiment } from "../../api/types";
+import { isProfileBatchExperiment, isProfileExperiment } from "../../api/types";
 import type { ExperimentStatus, ExperimentSummary } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { DataTable } from "../../components/DataTable";
@@ -41,6 +41,10 @@ function queryParams(query: Query) {
   if (query.page > 1) params.set("page", String(query.page));
   return params;
 }
+function experimentName(row: ExperimentSummary): string {
+  return isProfileBatchExperiment(row) ? row.display.name : row.request.name;
+}
+
 function createdAt(value: string | null | undefined) {
   if (!value) return "—";
   const date = new Date(value);
@@ -68,11 +72,11 @@ function RowActions({ row, onDelete }: { row: ExperimentSummary; onDelete: () =>
     return () => { document.removeEventListener("keydown", dismiss); document.removeEventListener("pointerdown", outside); };
   }, [open, row.id]);
   return <>
-    <button ref={trigger} type="button" className={secondary} aria-label={`Acciones de ${row.request.name}`} aria-expanded={open} aria-controls={`actions-${row.id}`} onClick={() => {
+    <button ref={trigger} type="button" className={secondary} aria-label={`Acciones de ${experimentName(row)}`} aria-expanded={open} aria-controls={`actions-${row.id}`} onClick={() => {
       if (!open) { const rect = trigger.current!.getBoundingClientRect(); setPosition({ top: Math.min(rect.bottom, window.innerHeight - 100), left: Math.max(0, rect.right - 180) }); }
       setOpen(!open);
     }}>Acciones</button>
-    {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${row.request.name}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
+    {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${experimentName(row)}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
       {!isProfileExperiment(row) && <Link ref={first} role="menuitem" className="block px-3 py-2 text-accent hover:bg-field" to={`/experimentos/nuevo?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
       {isProfileExperiment(row) && <span className="block px-3 py-2 text-text-secondary">Usar como base no disponible para perfiles</span>}
       <button ref={firstProfile} role="menuitem" type="button" className="block w-full px-3 py-2 text-left hover:bg-field" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
@@ -157,7 +161,7 @@ export function ExperimentsPage() {
       await apiClient.deleteExperiment(target.id, target.id);
       setDeleteTarget(null);
       await load(queryRef.current, (queryRef.current.page - 1) * PAGE_SIZE);
-      setNotice(`Se eliminó "${target.request.name}".`);
+      setNotice(`Se eliminó "${experimentName(target)}".`);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) setRowError("No se puede eliminar un experimento activo o en cola.");
       else if (error instanceof ApiError && error.status === 404) {
@@ -189,7 +193,7 @@ export function ExperimentsPage() {
       <p className="max-w-prose text-text-secondary">Simulaciones sobre datos congelados del conjunto seleccionado.</p>
       <Link to="/experimentos/nuevo" className="btn btn-primary">Nuevo experimento</Link>
     </div>
-    {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">Activo en la última consulta{queueError ? " (estado no actualizado; puede haber cambiado)" : ""}: <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id)?.request.name ?? queue.active_id}</Link></p>}
+    {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">Activo en la última consulta{queueError ? " (estado no actualizado; puede haber cambiado)" : ""}: <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id) ? experimentName(items.find((item) => item.id === queue.active_id)!) : queue.active_id}</Link></p>}
     {notice && <p ref={noticeRef} tabIndex={-1} role="status" className="mb-4 border border-border-control p-3 text-sm text-accent focus:outline-none">{notice}</p>}
     {rowError && <p role="alert" className="mb-4 border border-border-control p-3 text-sm text-text">{rowError}</p>}
     <div className="mb-5 flex flex-wrap items-end gap-4" role="group" aria-label="Filtros de experimentos">
@@ -207,6 +211,6 @@ export function ExperimentsPage() {
         <div className="flex gap-3"><button type="button" className={secondary} disabled={offset === 0} onClick={() => update({ page: query.page - 1 })}>Anterior</button><button type="button" className={secondary} disabled={offset + PAGE_SIZE >= total} onClick={() => update({ page: query.page + 1 })}>Siguiente</button></div>
       </div>
     </>}
-    <ConfirmDialog open={!!deleteTarget} title={deleteTarget ? `¿Eliminar el experimento «${deleteTarget.request.name}»?` : "¿Eliminar experimento?"} description={deleteTarget ? `Se eliminará «${deleteTarget.request.name}» de forma permanente. Esta acción no se puede deshacer.` : ""} confirmLabel={deleting ? "Eliminando…" : "Eliminar experimento"} onConfirm={confirmDelete} onCancel={() => { setDeleteTarget(null); setRowError(""); }} />
+    <ConfirmDialog open={!!deleteTarget} title={deleteTarget ? `¿Eliminar el experimento «${experimentName(deleteTarget)}»?` : "¿Eliminar experimento?"} description={deleteTarget ? `Se eliminará «${experimentName(deleteTarget)}» de forma permanente. Esta acción no se puede deshacer.` : ""} confirmLabel={deleting ? "Eliminando…" : "Eliminar experimento"} onConfirm={confirmDelete} onCancel={() => { setDeleteTarget(null); setRowError(""); }} />
   </div>;
 }

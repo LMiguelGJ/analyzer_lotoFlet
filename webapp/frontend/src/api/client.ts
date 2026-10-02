@@ -1,4 +1,5 @@
 import type {
+  AgentCredentialResponse,
   Catalog,
   CompareResult,
   ConfigurationSummary,
@@ -10,6 +11,7 @@ import type {
   ImportPreview,
   ImportPromotion,
   ImportRequest,
+  HistoryImportPreview,
   Page,
   ProfileCatalog,
   ProfileAudazRequest,
@@ -17,6 +19,13 @@ import type {
   ProfileExperimentRequest,
   ProfileRecoveryRequest,
   ProfileListing,
+  ProfileBatchStrategy,
+  ProfileBatchStrategyPage,
+  ProfileBatchStrategyRevisions,
+  ProfileBatchSubmissionBody,
+  ProfileBatchValidation,
+  ProfileBatchResponse,
+  ProfileBatchExecutionPolicy,
   QueueStatus,
   ReplayPage,
   Trajectory,
@@ -168,6 +177,28 @@ export const apiClient = {
     return request<Page<string>>(`/datasets/${encodeURIComponent(sha256)}/draws?${params}`);
   },
 
+  previewHistoryImport: (file: Blob, profile: ProfileListing, source: string, timezone: string) => request<HistoryImportPreview>("/imports/history/preview", {
+    method: "POST", body: file, headers: {
+      "X-Profile-Id": profile.profile.profile_id,
+      "X-Profile-Revision": String(profile.profile.revision),
+      "X-Profile-Sha256": profile.profile_sha256,
+      "X-Confirm-Source": source,
+      "X-Confirm-Timezone": timezone,
+    },
+  }),
+
+  promoteHistoryImport: (file: Blob, profile: ProfileListing, source: string, timezone: string, expectedDatasetSha256: string) =>
+    request<ImportPromotion>("/imports/history/promote", {
+      method: "POST", body: file, headers: {
+        "X-Profile-Id": profile.profile.profile_id,
+        "X-Profile-Revision": String(profile.profile.revision),
+        "X-Profile-Sha256": profile.profile_sha256,
+        "X-Confirm-Source": source,
+        "X-Confirm-Timezone": timezone,
+        "X-Expected-Dataset-Sha256": expectedDatasetSha256,
+      },
+    }),
+
   previewImport: (body: ImportRequest) => request<ImportPreview>("/imports/preview", {
     method: "POST", body: JSON.stringify(body),
   }),
@@ -196,6 +227,39 @@ export const apiClient = {
     request<{ id: string; status: string }>("/experiments/profiles", {
       method: "POST", body: JSON.stringify(body),
     }),
+
+  listProfileBatchStrategies: (offset = 0, limit = 20) =>
+    request<ProfileBatchStrategyPage>(`/strategies${query({ offset, limit })}`),
+
+  getProfileBatchStrategy: (id: string, profile?: { id: string; revision: number; sha256: string }) => {
+    const params = new URLSearchParams();
+    if (profile) { params.set("profile_id", profile.id); params.set("profile_revision", String(profile.revision)); params.set("profile_sha256", profile.sha256); }
+    return request<ProfileBatchStrategy>(`/strategies/${encodeURIComponent(id)}${params.size ? `?${params}` : ""}`);
+  },
+
+  getProfileBatchStrategyRevisions: (id: string, offset = 0, limit = 20) =>
+    request<ProfileBatchStrategyRevisions>(`/strategies/${encodeURIComponent(id)}/revisions${query({ offset, limit })}`),
+
+  createProfileBatchStrategy: (definition: ProfileBatchStrategy["definition"]) =>
+    request<ProfileBatchStrategy>("/strategies", { method: "POST", body: JSON.stringify({ definition }) }),
+
+  reviseProfileBatchStrategy: (id: string, expectedLatestRevision: number, definition: ProfileBatchStrategy["definition"]) =>
+    request<ProfileBatchStrategy>(`/strategies/${encodeURIComponent(id)}/revisions`, {
+      method: "POST", body: JSON.stringify({ expected_latest_revision: expectedLatestRevision, definition }),
+    }),
+
+  getProfileBatchExecutionPolicy: () => request<ProfileBatchExecutionPolicy>("/execution-policy"),
+
+  validateProfileBatch: (body: ProfileBatchSubmissionBody) => request<ProfileBatchValidation>("/profile-batches/validate", {
+    method: "POST", body: JSON.stringify(body),
+  }),
+
+  createProfileBatch: (body: ProfileBatchSubmissionBody) => request<ProfileBatchResponse>("/profile-batches", {
+    method: "POST", body: JSON.stringify(body),
+  }),
+
+  getProfileBatchByClientRequestId: (clientRequestId: string) =>
+    request<ProfileBatchResponse>(`/profile-batches/by-client-request/${encodeURIComponent(clientRequestId)}`),
 
   listExperiments: ({ offset = 0, limit = 20, name_contains, status, sort, order }: ExperimentListParams = {}) => {
     const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
@@ -256,6 +320,11 @@ export const apiClient = {
     request<{ id: string; status: string }>(`/queue/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
 
   getSettings: () => request<SettingsView>("/settings"),
+
+  getAgentCredential: () => request<AgentCredentialResponse>("/settings/agent-credential", {
+    method: "POST",
+    body: JSON.stringify({}),
+  }),
 
   updateSettings: (quotaBytes: string) => request<SettingsView>("/settings", {
     method: "PUT",

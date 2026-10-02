@@ -13,11 +13,11 @@ vi.mock("../../api/client", async (importOriginal) => {
     getDataset: vi.fn(), getDatasetDraws: vi.fn(), createProfileExperiment: vi.fn() } };
 });
 const id = "c".repeat(32);
-function setup() {
+function setup(initialEntry = "/experimentos/nuevo/perfil") {
   const router = createMemoryRouter([
     { path: "/experimentos/nuevo/perfil", element: <ProfileExperimentPage /> },
     { path: "/experimentos/:id", element: <p>Detalle creado</p> },
-  ], { initialEntries: ["/experimentos/nuevo/perfil"] });
+  ], { initialEntries: [initialEntry] });
   const view = render(<RouterProvider router={router} />);
   return { ...view, router, user: userEvent.setup() };
 }
@@ -50,6 +50,14 @@ beforeEach(() => {
 });
 
 describe("profile session creator", () => {
+  it("keeps a library dataset URL as a read-only identity hint without auto-selecting another profile or dataset", async () => {
+    const selectedHash = "f".repeat(64);
+    setup(`/experimentos/nuevo/perfil?dataset_sha256=${selectedHash}`);
+    expect(await screen.findByRole("status")).toHaveTextContent(`Historial elegido desde la biblioteca: ${selectedHash}`);
+    expect(screen.getByRole("combobox", { name: "Perfil y revisión" })).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "Versión de datos compatible" })).toHaveValue("");
+  });
+
   it("submits explicitly selected Q80 cycling without fixed stake and blocks uncertain duplicate", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [cyclingProfile], templates: [] });

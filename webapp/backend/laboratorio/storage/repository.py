@@ -4,7 +4,7 @@ import hashlib
 import json
 import shutil
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -19,6 +19,7 @@ from laboratorio.domain.contracts import (
     Strategy,
     legacy_quiniela_80_profile,
 )
+from laboratorio.domain.execution_policy import EDITABLE_FIELDS, ExecutionPolicy
 from laboratorio.domain.profile_request import (
     ProfileExperimentRequest,
     load_profile_request,
@@ -39,6 +40,11 @@ from laboratorio.domain.profile_request_v4 import (
     ProfileRecoveryRequest,
     load_profile_recovery_request,
     serialize_profile_recovery_request,
+)
+from laboratorio.domain.profile_request_v5 import (
+    ProfileBatchRequestV5,
+    load_profile_batch_v5,
+    serialize_profile_batch_v5,
 )
 from laboratorio.domain.profile_result import (
     load_profile_result,
@@ -63,6 +69,11 @@ from laboratorio.domain.profile_result_v4 import (
     serialize_profile_recovery_result,
     validate_profile_recovery_result,
 )
+from laboratorio.domain.profile_result_v5 import (
+    load_profile_batch_result_v5,
+    serialize_profile_batch_result_v5,
+    validate_profile_batch_result_v5,
+)
 from laboratorio.domain.profile_session import (
     ProfileConditions,
     ProfileDraw,
@@ -72,8 +83,18 @@ from laboratorio.domain.profile_session import (
     _minute,
     run_profile_session,
 )
+from laboratorio.domain.profile_session_v5 import ProfileBatchResultV5
+from laboratorio.domain.profile_strategy import StrategyDefinition
 from laboratorio.domain.session import Bet, SessionResult
-from laboratorio.importing.datasets import Promotion, checked_dataset
+from laboratorio.domain.strategy_library import (
+    PRESETS,
+    compatibility_projection,
+    definition_snapshot,
+    registered_preset_definition,
+    strategy_payload,
+)
+from laboratorio.importing.datasets import Promotion, SavedDataset, checked_dataset
+from laboratorio.importing.history import history_options, parse_history
 from laboratorio.importing.records import (
     ClockDeclaration,
     ColumnMapping,
@@ -83,7 +104,7 @@ from laboratorio.importing.records import (
 )
 from laboratorio.settings import DEFAULT_QUOTA_BYTES
 from laboratorio.storage.database import connection, require_database
-from laboratorio.storage.quota import measure, validate_quota_bytes
+from laboratorio.storage.quota import PendingRunsExceeded, measure, validate_quota_bytes
 
 SQLITE_MAX = 2**63 - 1
 
@@ -94,6 +115,10 @@ class QuotaReadOnly(RuntimeError):
 
 class QuotaBelowUsage(RuntimeError):
     """A new preference cannot be less than existing admitted logical artifacts."""
+
+
+class IdempotencyConflict(ValueError):
+    """A client request identity was reused for different canonical batch content."""
 
 
 @dataclass(frozen=True)
@@ -122,6 +147,7 @@ class SavedRun:
         | ProfileCyclingResult
         | ProfileAudazResult
         | ProfileRecoveryResult
+        | ProfileBatchResultV5
         | None
     )
     result_kind: Literal["legacy", "profile"] = "legacy"
@@ -138,6 +164,7 @@ class SavedExperiment:
         | ProfileCyclingRequest
         | ProfileAudazRequest
         | ProfileRecoveryRequest
+        | ProfileBatchRequestV5
     )
     history_id: str
     history_sha256: str
@@ -149,10 +176,40 @@ class SavedExperiment:
     profile: GameProfile
     request_kind: Literal["legacy", "profile"] = "legacy"
     request_schema_version: int = 1
+    batch_admission: dict | None = None
 
 
 def _json(value):
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+
+
+def _profile_conditions_dict(conditions):
+    return {
+        "schema_version": conditions.schema_version,
+        "start_draw": conditions.start_draw,
+        "capital": conditions.capital,
+        "goal": conditions.goal,
+        "settlement": conditions.settlement.value,
+        "max_elapsed_draws": conditions.max_elapsed_draws,
+        "max_bet_draws": conditions.max_bet_draws,
+        "end_minute": conditions.end_minute,
+        "duration_minutes": conditions.duration_minutes,
+    }
+
+
+def _batch_identity_hash(profile_id, profile_revision, profile_hash, dataset_hash, refs, requested):
+    payload = {
+        "profile_id": profile_id,
+        "profile_revision": profile_revision,
+        "profile_sha256": profile_hash,
+        "dataset_sha256": dataset_hash,
+        "strategy_refs": refs,
+        "requested_constraints": requested,
+    }
+    canonical = json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _now_iso() -> str:
@@ -225,7 +282,7 @@ def _dataset_draws(dataset):
     )
 
 
-def _load_experiment(db, identifier: str) -> SavedExperiment | None:
+def _load_experiment(db, identifier: str, dataset_loader=None) -> SavedExperiment | None:
     row = db.execute("SELECT * FROM experiments WHERE id = ?", (identifier,)).fetchone()
     if row is None:
         return None
@@ -255,6 +312,8 @@ def _load_experiment(db, identifier: str) -> SavedExperiment | None:
         request = load_profile_audaz_request(row[2])
     elif request_kind == "profile" and type(request_version) is int and request_version == 4:
         request = load_profile_recovery_request(row[2])
+    elif request_kind == "profile" and type(request_version) is int and request_version == 5:
+        request = load_profile_batch_v5(row[2])
     else:
         raise ValueError("unsupported stored request kind/version")
     if request_kind == "profile":
@@ -265,6 +324,7 @@ def _load_experiment(db, identifier: str) -> SavedExperiment | None:
                 ProfileCyclingRequest,
                 ProfileAudazRequest,
                 ProfileRecoveryRequest,
+                ProfileBatchRequestV5,
             ),
         ):
             raise ValueError("profile request binding mismatch")
@@ -296,6 +356,8 @@ def _load_experiment(db, identifier: str) -> SavedExperiment | None:
             result = load_profile_audaz_result(value)
         elif result_kind == "profile" and result_version == 4:
             result = load_profile_recovery_result(value)
+        elif result_kind == "profile" and result_version == 5:
+            result = load_profile_batch_result_v5(value)
         elif result_kind == "profile" and result_version == 1:
             result = load_profile_result(value)
         elif result_kind == "legacy" and result_version == 1:
@@ -305,6 +367,215 @@ def _load_experiment(db, identifier: str) -> SavedExperiment | None:
         saved_runs.append(
             SavedRun(ordinal, link, RunStatus(status), result, result_kind, result_version)
         )
+    admission = None
+    if request_kind == "profile" and request_version == 5:
+        metadata = db.execute(
+            "SELECT client_request_id, request_sha256, strategy_refs_json, "
+            "requested_constraints_json, effective_constraints_json, policy_revision, "
+            "policy_json, source_identity_json FROM profile_batch_admissions "
+            "WHERE experiment_id = ?",
+            (identifier,),
+        ).fetchone()
+        if not isinstance(request, ProfileBatchRequestV5):
+            raise ValueError("stored v5 request has the wrong codec type")
+        if metadata is None or len(saved_runs) != len(request.strategies):
+            raise ValueError("missing profile batch admission snapshot or runs")
+        for index, saved_run in enumerate(saved_runs):
+            if saved_run.ordinal != index or (
+                saved_run.result is not None
+                and (
+                    not isinstance(saved_run.result, ProfileBatchResultV5)
+                    or len(saved_run.result.results) != 1
+                    or saved_run.result.results[0].ordinal != 0
+                    or saved_run.result.results[0].definition != request.strategies[index]
+                    or saved_run.result.profile_id != request.profile_id
+                    or saved_run.result.profile_revision != request.profile_revision
+                    or saved_run.result.profile_sha256 != request.profile_sha256
+                    or saved_run.result.dataset_sha256 != request.dataset_sha256
+                )
+            ):
+                raise ValueError("profile batch run ordinal/result association mismatch")
+        try:
+            admission = {
+                "client_request_id": metadata[0],
+                "request_sha256": metadata[1],
+                "strategy_refs": json.loads(metadata[2]),
+                "requested_constraints": json.loads(metadata[3]),
+                "effective_constraints": json.loads(metadata[4]),
+                "policy_revision": metadata[5],
+                "policy": json.loads(metadata[6]),
+                "source_identity": json.loads(metadata[7]),
+            }
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("corrupt profile batch admission snapshot") from exc
+        if (
+            serialize_profile_batch_v5(request) != row[2]
+            or type(admission["strategy_refs"]) is not list
+            or len(admission["strategy_refs"]) != len(request.strategies)
+            or _json(admission["strategy_refs"]) != metadata[2]
+            or _json(admission["requested_constraints"]) != metadata[3]
+            or _json(admission["effective_constraints"]) != metadata[4]
+            or _json(admission["policy"]) != metadata[6]
+            or _json(admission["source_identity"]) != metadata[7]
+            or type(admission["policy_revision"]) is not int
+            or _batch_identity_hash(
+                request.profile_id,
+                request.profile_revision,
+                request.profile_sha256,
+                request.dataset_sha256,
+                admission["strategy_refs"],
+                admission["requested_constraints"],
+            )
+            != admission["request_sha256"]
+        ):
+            raise ValueError("profile batch request or identity snapshot hash mismatch")
+        saved_policy = ExecutionPolicy.from_values(admission["policy"])
+        expected_effective = {
+            **_profile_conditions_dict(request.conditions),
+            "max_draws": request.max_draws,
+            "policy_revision": admission["policy_revision"],
+            "policy": saved_policy.as_dict(),
+        }
+        requested = admission["requested_constraints"]
+        if type(requested) is not dict or requested.keys() != (
+            set(_profile_conditions_dict(request.conditions)) | {"max_draws"}
+        ):
+            raise ValueError("corrupt requested batch constraints")
+        if (
+            type(requested["max_draws"]) is not int
+            or not 1 <= requested["max_draws"] <= 10_000
+            or any(
+                value is not None and (type(value) is not int or not 1 <= value <= 10_000)
+                for value in (
+                    requested["max_bet_draws"],
+                    requested["max_elapsed_draws"],
+                )
+            )
+        ):
+            raise ValueError("invalid requested batch limit snapshot")
+        requested_shared = _profile_conditions_dict(request.conditions)
+        for field in (
+            "schema_version",
+            "start_draw",
+            "capital",
+            "goal",
+            "settlement",
+            "end_minute",
+            "duration_minutes",
+        ):
+            if requested[field] != requested_shared[field]:
+                raise ValueError("shared batch condition changed after admission")
+        source = admission["source_identity"]
+        if type(source) is not dict or source.keys() != {
+            "dataset_sha256",
+            "source_sha256",
+            "canonical_sha256",
+            "row_count",
+            "profile_id",
+            "profile_revision",
+            "profile_sha256",
+            "archive_bound",
+            "archive_history_sha256",
+            "archive_rank_row_ids",
+        }:
+            raise ValueError("corrupt profile batch source identity shape")
+        max_bet_draws = request.conditions.max_bet_draws
+        max_elapsed_draws = request.conditions.max_elapsed_draws
+        if (
+            admission["effective_constraints"] != expected_effective
+            or requested["max_draws"] < request.max_draws
+            or source.get("dataset_sha256") != request.dataset_sha256
+            or source.get("profile_id") != request.profile_id
+            or source.get("profile_revision") != request.profile_revision
+            or source.get("profile_sha256") != request.profile_sha256
+            or type(source.get("archive_bound")) is not bool
+            or type(source.get("row_count")) is not int
+            or source["row_count"] < 1
+            or any(
+                type(source[field]) is not str
+                or len(source[field]) != 64
+                or any(char not in "0123456789abcdef" for char in source[field])
+                for field in ("source_sha256", "canonical_sha256")
+            )
+            or (
+                source["archive_bound"]
+                and (
+                    type(source["archive_history_sha256"]) is not str
+                    or len(source["archive_history_sha256"]) != 64
+                    or type(source["archive_rank_row_ids"]) is not list
+                    or any(
+                        type(row_id) is not int or row_id < 0
+                        for row_id in source["archive_rank_row_ids"]
+                    )
+                )
+            )
+            or (
+                not source["archive_bound"]
+                and (
+                    source["archive_history_sha256"] is not None
+                    or source["archive_rank_row_ids"] is not None
+                )
+            )
+            or max_bet_draws is None
+            or max_elapsed_draws is None
+        ):
+            raise ValueError("corrupt profile batch source or policy snapshot")
+        dataset = dataset_loader(request.dataset_sha256) if dataset_loader is not None else None
+        if dataset is None:
+            raise ValueError("missing verified profile batch dataset")
+        try:
+            dataset_profile = GameProfile.model_validate(
+                json.loads(dataset.canonical_json)["profile"]
+            )
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("corrupt profile batch dataset profile") from exc
+        if (
+            dataset.dataset_sha256 != request.dataset_sha256
+            or dataset.source_sha256 != source["source_sha256"]
+            or hashlib.sha256(dataset.canonical_json).hexdigest() != source["canonical_sha256"]
+            or len(dataset.preview.records) != source["row_count"]
+            or dataset_profile != profile
+            or dataset_profile.profile_id != source["profile_id"]
+            or dataset_profile.revision != source["profile_revision"]
+            or profile_sha256(dataset_profile) != source["profile_sha256"]
+        ):
+            raise ValueError("profile batch source identity differs from verified dataset")
+        if (
+            max_bet_draws > saved_policy.max_bet_draws
+            or max_elapsed_draws > saved_policy.max_elapsed_draws
+            or request.max_draws > max_elapsed_draws
+            or saved_policy.max_strategies_per_batch < len(request.strategies)
+            or (
+                requested["max_bet_draws"] is not None
+                and requested["max_bet_draws"] < max_bet_draws
+            )
+            or (
+                requested["max_elapsed_draws"] is not None
+                and requested["max_elapsed_draws"] < max_elapsed_draws
+            )
+        ):
+            raise ValueError("corrupt profile batch effective constraints")
+        for index, (ref, definition) in enumerate(
+            zip(admission["strategy_refs"], request.strategies, strict=True)
+        ):
+            if type(ref) is not dict or ref.keys() != {"id", "revision", "definition_sha256"}:
+                raise ValueError("corrupt profile batch strategy reference")
+            strategy_row = db.execute(
+                "SELECT s.id, s.name, s.created_at, s.protected, s.preset_explanation, "
+                "s.latest_revision, r.revision, r.definition_version, r.definition_sha256, "
+                "r.definition_json, r.created_at FROM strategies AS s "
+                "JOIN strategy_revisions AS r ON r.strategy_id = s.id "
+                "WHERE s.id = ? AND r.revision = ?",
+                (ref["id"], ref["revision"]),
+            ).fetchone()
+            snapshot = Repository._strategy_snapshot(strategy_row)
+            if (
+                snapshot is None
+                or snapshot["definition_sha256"] != ref["definition_sha256"]
+                or snapshot["definition"] != definition
+                or type(ref["revision"]) is not int
+            ):
+                raise ValueError(f"profile batch strategy reference mismatch at ordinal {index}")
     return SavedExperiment(
         row[0],
         ExperimentStatus(row[1]),
@@ -319,6 +590,7 @@ def _load_experiment(db, identifier: str) -> SavedExperiment | None:
         profile,
         request_kind,
         request_version,
+        admission,
     )
 
 
@@ -381,7 +653,7 @@ def _transaction(path):
 
 
 def _logical_experiment_bytes(db):
-    """UTF-8 bytes of experiment and run fields, excluding reusable configurations.
+    """UTF-8 bytes of experiment, run and batch-admission fields.
 
     Includes copied requests, IDs, provenance, statuses and completed result JSON.
     This is not SQLite page allocation or a reclaimable-byte estimate.
@@ -418,6 +690,16 @@ def _logical_experiment_bytes(db):
         + db.execute(
             "SELECT 8 * count(*) FROM runs"  # fixed-width ordinal in the logical contract
         ).fetchone()[0]
+        + db.execute(
+            "SELECT coalesce(sum(length(CAST(experiment_id AS BLOB)) + "
+            "length(CAST(client_request_id AS BLOB)) + length(CAST(request_sha256 AS BLOB)) + "
+            "length(CAST(strategy_refs_json AS BLOB)) + "
+            "length(CAST(requested_constraints_json AS BLOB)) + "
+            "length(CAST(effective_constraints_json AS BLOB)) + 8 + "
+            "length(CAST(policy_json AS BLOB)) + "
+            "length(CAST(source_identity_json AS BLOB))), 0) "
+            "FROM profile_batch_admissions"
+        ).fetchone()[0]
     )
 
 
@@ -440,8 +722,26 @@ def _dataset_artifact_bytes(db) -> int:
     ).fetchone()[0]
 
 
+def _strategy_artifact_bytes(db) -> int:
+    """Count strategy metadata and every immutable UTF-8 definition snapshot."""
+    return db.execute(
+        "SELECT "
+        "(SELECT coalesce(sum(length(CAST(id AS BLOB)) + length(CAST(name AS BLOB)) + "
+        "length(CAST(created_at AS BLOB)) + length(CAST(preset_explanation AS BLOB)) + 9), 0) "
+        "FROM strategies) + "
+        "(SELECT coalesce(sum(length(CAST(strategy_id AS BLOB)) + 8 + 8 + "
+        "length(CAST(definition_sha256 AS BLOB)) + length(CAST(definition_json AS BLOB)) + "
+        "length(CAST(created_at AS BLOB))), 0) FROM strategy_revisions)"
+    ).fetchone()[0]
+
+
 def _admission_logical_bytes(db) -> int:
-    return _logical_experiment_bytes(db) + _profile_artifact_bytes(db) + _dataset_artifact_bytes(db)
+    return (
+        _logical_experiment_bytes(db)
+        + _profile_artifact_bytes(db)
+        + _dataset_artifact_bytes(db)
+        + _strategy_artifact_bytes(db)
+    )
 
 
 def _persisted_quota(db) -> int | None:
@@ -477,6 +777,81 @@ class Repository:
         self.path = Path(path)
         require_database(self.path)
 
+    @staticmethod
+    def _pending_run_count(db) -> int:
+        return db.execute(
+            "SELECT count(*) FROM runs WHERE status IN ('pending', 'held', 'running')"
+        ).fetchone()[0]
+
+    @staticmethod
+    def _policy_row(db):
+        row = db.execute(
+            "SELECT revision, max_strategies_per_batch, worker_count, max_pending_runs, "
+            "max_bet_draws, max_elapsed_draws, run_timeout_seconds "
+            "FROM execution_policy WHERE id = 1"
+        ).fetchone()
+        if row is None:
+            raise ValueError("execution policy singleton is missing")
+        return row[0], ExecutionPolicy.from_values(
+            dict(
+                zip(
+                    (
+                        "max_strategies_per_batch",
+                        "worker_count",
+                        "max_pending_runs",
+                        "max_bet_draws",
+                        "max_elapsed_draws",
+                        "run_timeout_seconds",
+                    ),
+                    row[1:],
+                    strict=True,
+                )
+            )
+        )
+
+    @classmethod
+    def _check_pending_capacity(cls, db, incoming_runs: int) -> None:
+        if type(incoming_runs) is not int or incoming_runs < 1:
+            raise ValueError("incoming run count must be positive")
+        _, policy = cls._policy_row(db)
+        if cls._pending_run_count(db) + incoming_runs > policy.max_pending_runs:
+            raise PendingRunsExceeded(
+                f"pending run capacity ({policy.max_pending_runs}) would be exceeded"
+            )
+
+    def execution_policy(self) -> tuple[int, ExecutionPolicy]:
+        with connection(self.path) as db:
+            return self._policy_row(db)
+
+    def update_execution_policy(self, changes: dict, *, expected_revision: int | None = None):
+        if type(changes) is not dict or not changes or set(changes) - EDITABLE_FIELDS:
+            raise ValueError("only bounded editable execution policy fields may be changed")
+        if expected_revision is not None and (
+            type(expected_revision) is not int or expected_revision < 1
+        ):
+            raise ValueError("expected execution policy revision must be positive")
+        with _transaction(self.path) as db:
+            revision, current = self._policy_row(db)
+            if expected_revision is not None and expected_revision != revision:
+                raise ValueError("execution policy revision conflict")
+            updated = ExecutionPolicy.from_values({**current.as_dict(), **changes})
+            db.execute(
+                "UPDATE execution_policy SET revision = ?, max_strategies_per_batch = ?, "
+                "worker_count = ?, max_pending_runs = ?, max_bet_draws = ?, "
+                "max_elapsed_draws = ?, run_timeout_seconds = ? WHERE id = 1 AND revision = ?",
+                (
+                    revision + 1,
+                    updated.max_strategies_per_batch,
+                    updated.worker_count,
+                    updated.max_pending_runs,
+                    updated.max_bet_draws,
+                    updated.max_elapsed_draws,
+                    updated.run_timeout_seconds,
+                    revision,
+                ),
+            )
+        return revision + 1, updated
+
     def logical_experiment_bytes(self) -> int:
         with connection(self.path) as db:
             return _logical_experiment_bytes(db)
@@ -492,6 +867,10 @@ class Repository:
     def dataset_artifact_bytes(self) -> int:
         with connection(self.path) as db:
             return _dataset_artifact_bytes(db)
+
+    def strategy_artifact_bytes(self) -> int:
+        with connection(self.path) as db:
+            return _strategy_artifact_bytes(db)
 
     def get_dataset(self, dataset_sha256: str):
         """Read an immutable artifact only after verifying raw bytes and canonical context."""
@@ -587,7 +966,7 @@ class Repository:
         self,
         data: bytes,
         *,
-        format: Literal["csv", "json"],
+        format: Literal["csv", "json", "history_json"],
         mapping: ColumnMapping,
         source: SourceMetadata,
         clock: ClockDeclaration,
@@ -600,9 +979,23 @@ class Repository:
         if not isinstance(profile, GameProfile):
             raise ValueError("a validated game profile is required")
         profile = GameProfile.model_validate_json(profile.model_dump_json())
-        preview = parse_records(
-            data, format=format, mapping=mapping, source=source, clock=clock, profile=profile
-        )
+        if format == "history_json":
+            preview = parse_history(data, profile)
+            try:
+                document = json.loads(data)
+                history = history_options(document, profile)
+            except (ValueError, TypeError, KeyError) as exc:
+                raise ValueError("dataset source is not promotable") from exc
+            if (history["mapping"], history["source"], history["clock"]) != (
+                mapping,
+                source,
+                clock,
+            ):
+                raise ValueError("history context changed")
+        else:
+            preview = parse_records(
+                data, format=format, mapping=mapping, source=source, clock=clock, profile=profile
+            )
         if not preview.promotable or preview.dataset_sha256 is None:
             raise ValueError("dataset source is not promotable")
         canonical = canonical_bytes(preview.records, format, mapping, clock, source, profile)
@@ -631,6 +1024,7 @@ class Repository:
                 _logical_experiment_bytes(db),
                 profile_artifact_bytes=_profile_artifact_bytes(db),
                 dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                strategy_artifact_bytes=_strategy_artifact_bytes(db),
                 disk_usage=disk_usage,
             ).require_capacity(projected)
             db.execute(
@@ -694,12 +1088,14 @@ class Repository:
             experiment_bytes = _logical_experiment_bytes(db)
             profile_bytes = _profile_artifact_bytes(db)
             dataset_bytes = _dataset_artifact_bytes(db)
+            strategy_bytes = _strategy_artifact_bytes(db)
         return measure(
             self.path,
             limit,
             experiment_bytes,
             profile_artifact_bytes=profile_bytes,
             dataset_artifact_bytes=dataset_bytes,
+            strategy_artifact_bytes=strategy_bytes,
             disk_usage=disk_usage,
         )
 
@@ -743,6 +1139,7 @@ class Repository:
                     _logical_experiment_bytes(db),
                     profile_artifact_bytes=_profile_artifact_bytes(db),
                     dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                    strategy_artifact_bytes=_strategy_artifact_bytes(db),
                     disk_usage=disk_usage,
                 ).require_capacity(len(serialized.encode("utf-8")))
                 db.execute(
@@ -798,6 +1195,280 @@ class Repository:
             profiles.append(profile)
         return total, profiles
 
+    @staticmethod
+    def _strategy_snapshot(row):
+        if row is None:
+            return None
+        (
+            identifier,
+            name,
+            created_at,
+            protected,
+            explanation,
+            latest_revision,
+            revision,
+            version,
+            digest,
+            serialized,
+            revision_created_at,
+        ) = row
+        try:
+            definition = strategy_payload(json.loads(serialized))
+            canonical, actual_digest = definition_snapshot(definition)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("corrupt stored strategy definition") from exc
+        if (
+            canonical != serialized
+            or actual_digest != digest
+            or definition.definition_version != version
+            or (revision == latest_revision and definition.name != name)
+            or revision > latest_revision
+        ):
+            raise ValueError("corrupt stored strategy revision")
+        preset_ids = {preset_id for preset_id, _, _ in PRESETS}
+        if protected or identifier in preset_ids:
+            if not protected:
+                raise ValueError("corrupt stored protected preset identity")
+            try:
+                expected_explanation, expected_definition = registered_preset_definition(identifier)
+            except ValueError as exc:
+                raise ValueError("corrupt stored protected preset identity") from exc
+            expected_json, expected_digest = definition_snapshot(expected_definition)
+            if (
+                identifier not in preset_ids
+                or latest_revision != 1
+                or revision != 1
+                or version != expected_definition.definition_version
+                or name != expected_definition.name
+                or explanation != expected_explanation
+                or serialized != expected_json
+                or canonical != expected_json
+                or digest != expected_digest
+                or actual_digest != expected_digest
+                or created_at != revision_created_at
+            ):
+                raise ValueError("corrupt stored protected preset snapshot")
+        return {
+            "id": identifier,
+            "name": definition.name,
+            "created_at": created_at,
+            "protected": bool(protected),
+            "preset_explanation": explanation,
+            "latest_revision": latest_revision,
+            "revision": revision,
+            "definition_version": version,
+            "definition_sha256": digest,
+            "definition_json": serialized,
+            "revision_created_at": revision_created_at,
+            "definition": definition,
+            **compatibility_projection(
+                definition,
+                reference_preset_id=identifier if protected else None,
+            ),
+        }
+
+    def _strategy_row(self, db, identifier, revision=None):
+        query = (
+            "SELECT s.id, s.name, s.created_at, s.protected, s.preset_explanation, "
+            "s.latest_revision, r.revision, r.definition_version, r.definition_sha256, "
+            "r.definition_json, r.created_at FROM strategies AS s "
+            "JOIN strategy_revisions AS r ON r.strategy_id = s.id WHERE s.id = ? "
+        )
+        if revision is None:
+            row = db.execute(query + "AND r.revision = s.latest_revision", (identifier,)).fetchone()
+            if (
+                row is None
+                and db.execute("SELECT 1 FROM strategies WHERE id = ?", (identifier,)).fetchone()
+            ):
+                raise ValueError("corrupt stored strategy head")
+        else:
+            row = db.execute(query + "AND r.revision = ?", (identifier, revision)).fetchone()
+            head = db.execute(
+                "SELECT latest_revision FROM strategies WHERE id = ?", (identifier,)
+            ).fetchone()
+            if row is None and head is not None and revision <= head[0]:
+                raise ValueError("corrupt stored strategy revision history")
+        return row
+
+    def get_strategy(self, identifier: str):
+        with connection(self.path) as db:
+            row = self._strategy_row(db, identifier)
+        return self._strategy_snapshot(row)
+
+    def get_strategy_revision(self, identifier: str, revision: int):
+        if type(revision) is not int or revision < 1:
+            raise ValueError("revision out of range")
+        with connection(self.path) as db:
+            row = self._strategy_row(db, identifier, revision)
+        return self._strategy_snapshot(row)
+
+    def page_strategies(self, offset: int, limit: int):
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("offset and limit out of range")
+        with connection(self.path) as db:
+            db.execute("BEGIN")
+            total = db.execute("SELECT count(*) FROM strategies").fetchone()[0]
+            identifiers = db.execute(
+                "SELECT id FROM strategies ORDER BY created_at, id LIMIT ? OFFSET ?",
+                (limit, offset),
+            ).fetchall()
+            rows = [self._strategy_row(db, identifier) for (identifier,) in identifiers]
+        return total, [self._strategy_snapshot(row) for row in rows]
+
+    def _admit_strategy_bytes(self, db, projected, quota_bytes, quota_explicit, disk_usage):
+        effective = _effective_quota(db, quota_bytes, quota_explicit)
+        measure(
+            self.path,
+            effective.effective_bytes,
+            _logical_experiment_bytes(db),
+            profile_artifact_bytes=_profile_artifact_bytes(db),
+            dataset_artifact_bytes=_dataset_artifact_bytes(db),
+            strategy_artifact_bytes=_strategy_artifact_bytes(db),
+            disk_usage=disk_usage,
+        ).require_capacity(projected)
+
+    def _insert_strategy(self, db, identifier, definition, explanation, protected, created_at):
+        serialized, digest = definition_snapshot(definition)
+        db.execute(
+            "INSERT INTO strategies VALUES (?, ?, ?, ?, ?, 1)",
+            (identifier, definition.name, created_at, int(protected), explanation),
+        )
+        db.execute(
+            "INSERT INTO strategy_revisions VALUES (?, 1, ?, ?, ?, ?)",
+            (identifier, definition.definition_version, digest, serialized, created_at),
+        )
+
+    def create_strategy(
+        self,
+        definition: StrategyDefinition,
+        *,
+        preset_explanation="",
+        quota_bytes=None,
+        quota_explicit=None,
+        disk_usage=shutil.disk_usage,
+    ):
+        if type(definition) is not StrategyDefinition:
+            raise ValueError("a closed StrategyDefinition is required")
+        definition.__post_init__()
+        if type(preset_explanation) is not str or len(preset_explanation.encode("utf-8")) > 4000:
+            raise ValueError("preset explanation exceeds its bounded text limit")
+        identifier = uuid4().hex
+        created_at = _now_iso()
+        serialized, digest = definition_snapshot(definition)
+        projected = (
+            len(identifier.encode("utf-8"))
+            + len(definition.name.encode("utf-8"))
+            + len(created_at.encode("utf-8")) * 2
+            + len(preset_explanation.encode("utf-8"))
+            + 9
+            + len(identifier.encode("utf-8"))
+            + 16
+            + len(digest)
+            + len(serialized.encode("utf-8"))
+        )
+        with _transaction(self.path) as db:
+            self._admit_strategy_bytes(db, projected, quota_bytes, quota_explicit, disk_usage)
+            self._insert_strategy(db, identifier, definition, preset_explanation, False, created_at)
+        return self.get_strategy(identifier)
+
+    def append_strategy_revision(
+        self,
+        identifier,
+        expected_latest_revision,
+        definition,
+        *,
+        quota_bytes=None,
+        quota_explicit=None,
+        disk_usage=shutil.disk_usage,
+    ):
+        if type(expected_latest_revision) is not int or expected_latest_revision < 1:
+            raise ValueError("expected_latest_revision must be a positive integer")
+        if type(definition) is not StrategyDefinition:
+            raise ValueError("a closed StrategyDefinition is required")
+        definition.__post_init__()
+        serialized, digest = definition_snapshot(definition)
+        created_at = _now_iso()
+        with _transaction(self.path) as db:
+            row = db.execute(
+                "SELECT latest_revision, protected, name FROM strategies WHERE id = ?",
+                (identifier,),
+            ).fetchone()
+            if row is None:
+                raise KeyError("strategy not found")
+            latest, protected, old_name = row
+            if protected:
+                raise ValueError("protected strategy cannot be revised; create a copy")
+            if latest != expected_latest_revision:
+                raise ValueError("strategy revision conflict")
+            revision = latest + 1
+            projected = (
+                len(identifier.encode("utf-8"))
+                + 16
+                + len(digest)
+                + len(serialized.encode("utf-8"))
+                + len(created_at.encode("utf-8"))
+                + len(definition.name.encode("utf-8"))
+                - len(old_name.encode("utf-8"))
+            )
+            self._admit_strategy_bytes(db, projected, quota_bytes, quota_explicit, disk_usage)
+            db.execute(
+                "INSERT INTO strategy_revisions VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    identifier,
+                    revision,
+                    definition.definition_version,
+                    digest,
+                    serialized,
+                    created_at,
+                ),
+            )
+            db.execute(
+                "UPDATE strategies SET latest_revision = ?, name = ? WHERE id = ? "
+                "AND latest_revision = ?",
+                (revision, definition.name, identifier, latest),
+            )
+        return self.get_strategy_revision(identifier, revision)
+
+    def seed_strategy_presets(
+        self, presets, *, quota_bytes=None, quota_explicit=None, disk_usage=shutil.disk_usage
+    ):
+        seeded = []
+        for identifier, explanation, constructor in presets:
+            definition = constructor()
+            expected, digest = definition_snapshot(definition)
+            with _transaction(self.path) as db:
+                existing = self._strategy_row(db, identifier)
+                if existing is not None:
+                    saved = self._strategy_snapshot(existing)
+                    if saved is None:
+                        raise ValueError("corrupt stored protected preset")
+                    if (
+                        not saved["protected"]
+                        or saved["preset_explanation"] != explanation
+                        or saved["definition_json"] != expected
+                        or saved["definition_sha256"] != digest
+                    ):
+                        raise ValueError("protected preset identity already has different content")
+                else:
+                    created_at = _now_iso()
+                    projected = (
+                        len(identifier.encode("utf-8"))
+                        + len(definition.name.encode("utf-8"))
+                        + len(created_at.encode("utf-8")) * 2
+                        + len(explanation.encode("utf-8"))
+                        + 9
+                        + len(identifier.encode("utf-8"))
+                        + 16
+                        + len(digest)
+                        + len(expected.encode("utf-8"))
+                    )
+                    self._admit_strategy_bytes(
+                        db, projected, quota_bytes, quota_explicit, disk_usage
+                    )
+                    self._insert_strategy(db, identifier, definition, explanation, True, created_at)
+            seeded.append(self.get_strategy(identifier))
+        return seeded
+
     def create_configuration(self, name: str, strategy: Strategy) -> str:
         if not name.strip() or not isinstance(strategy, Strategy):
             raise ValueError("configuration needs a name and validated strategy")
@@ -839,6 +1510,225 @@ class Repository:
         with _transaction(self.path) as db:
             changed = db.execute("DELETE FROM configurations WHERE id = ?", (identifier,)).rowcount
         return bool(changed)
+
+    def get_profile_batch_request_id(self, client_request_id: str) -> str | None:
+        """Read a batch ID by caller identity and verify its stored experiment snapshot."""
+        if (
+            type(client_request_id) is not str
+            or not 1 <= len(client_request_id.encode("utf-8")) <= 128
+        ):
+            raise ValueError("invalid client request identity")
+        with connection(self.path) as db:
+            row = db.execute(
+                "SELECT experiment_id FROM profile_batch_admissions WHERE client_request_id = ?",
+                (client_request_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        if self.get_experiment(row[0]) is None:
+            raise ValueError("profile batch identity points to a missing experiment")
+        return row[0]
+
+    def find_profile_batch_request(self, client_request_id: str, request_digest: str) -> str | None:
+        if (
+            type(client_request_id) is not str
+            or not 1 <= len(client_request_id.encode("utf-8")) <= 128
+            or type(request_digest) is not str
+            or len(request_digest) != 64
+            or any(char not in "0123456789abcdef" for char in request_digest)
+        ):
+            raise ValueError("invalid client request identity")
+        with connection(self.path) as db:
+            row = db.execute(
+                "SELECT experiment_id, request_sha256 FROM profile_batch_admissions "
+                "WHERE client_request_id = ?",
+                (client_request_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        if row[1] != request_digest:
+            raise IdempotencyConflict("client_request_id was already used for another request")
+        if self.get_experiment(row[0]) is None:
+            raise ValueError("idempotent profile batch points to a missing experiment")
+        return row[0]
+
+    def create_profile_batch_experiment(
+        self,
+        request: ProfileBatchRequestV5,
+        *,
+        strategy_refs: tuple[dict, ...],
+        client_request_id: str,
+        requested_constraints: dict,
+        effective_constraints: dict,
+        policy_revision: int,
+        policy: ExecutionPolicy,
+        source_identity: dict,
+        dataset_snapshot,
+        quota_bytes: int | None = None,
+        quota_explicit: bool | None = None,
+        disk_usage=shutil.disk_usage,
+    ) -> str:
+        """Atomically persist an exact v5 request, ordered runs, policy and idempotency key."""
+        if type(request) is not ProfileBatchRequestV5:
+            raise ValueError("request must be a closed ProfileBatchRequestV5")
+        request.__post_init__()
+        wire = serialize_profile_batch_v5(request)
+        request_digest = _batch_identity_hash(
+            request.profile_id,
+            request.profile_revision,
+            request.profile_sha256,
+            request.dataset_sha256,
+            strategy_refs,
+            requested_constraints,
+        )
+        if (
+            type(client_request_id) is not str
+            or not 1 <= len(client_request_id.encode("utf-8")) <= 128
+            or type(strategy_refs) is not tuple
+            or len(strategy_refs) != len(request.strategies)
+            or type(policy_revision) is not int
+            or policy_revision < 1
+            or type(policy) is not ExecutionPolicy
+        ):
+            raise ValueError("invalid profile batch admission metadata")
+        refs_wire = _json(strategy_refs)
+        requested_wire = _json(requested_constraints)
+        effective_wire = _json(effective_constraints)
+        policy_wire = _json(policy.as_dict())
+        source_wire = _json(source_identity)
+        snapshot = self.get_game_profile(request.profile_id, request.profile_revision)
+        if snapshot is None or profile_sha256(snapshot) != request.profile_sha256:
+            raise ValueError("missing or mismatched registered profile")
+        if (
+            type(dataset_snapshot) is not SavedDataset
+            or dataset_snapshot.dataset_sha256 != request.dataset_sha256
+            or hashlib.sha256(dataset_snapshot.canonical_json).hexdigest()
+            != dataset_snapshot.dataset_sha256
+            or hashlib.sha256(dataset_snapshot.raw_bytes).hexdigest()
+            != dataset_snapshot.source_sha256
+        ):
+            raise ValueError("batch dataset snapshot is not a checked saved artifact")
+        dataset = dataset_snapshot
+        try:
+            embedded = GameProfile.model_validate(json.loads(dataset.canonical_json)["profile"])
+        except (ValueError, KeyError, TypeError) as exc:
+            raise ValueError("corrupt dataset profile snapshot") from exc
+        if embedded != snapshot:
+            raise ValueError("dataset profile differs from registered profile")
+
+        identifier = uuid4().hex
+        created_at = _now_iso()
+        profile_json = snapshot.model_dump_json()
+        with _transaction(self.path) as db:
+            duplicate = db.execute(
+                "SELECT experiment_id, request_sha256 FROM profile_batch_admissions "
+                "WHERE client_request_id = ?",
+                (client_request_id,),
+            ).fetchone()
+            if duplicate is not None:
+                if duplicate[1] != request_digest:
+                    raise IdempotencyConflict(
+                        "client_request_id was already used for another request"
+                    )
+                return duplicate[0]
+            current_revision, current_policy = self._policy_row(db)
+            if current_revision != policy_revision or current_policy != policy:
+                raise ValueError(
+                    "execution policy changed during admission; retry with current policy"
+                )
+            self._check_pending_capacity(db, len(request.strategies))
+            registered = db.execute(
+                "SELECT profile_json FROM game_profiles WHERE profile_id = ? AND revision = ?",
+                (request.profile_id, request.profile_revision),
+            ).fetchone()
+            dataset_row = db.execute(
+                "SELECT dataset_sha256, source_sha256, canonical_json, raw_bytes, created_at "
+                "FROM datasets WHERE dataset_sha256 = ?",
+                (request.dataset_sha256,),
+            ).fetchone()
+            if registered != (profile_json,) or dataset_row != (
+                dataset.dataset_sha256,
+                dataset.source_sha256,
+                dataset.canonical_json.decode("utf-8"),
+                dataset.raw_bytes,
+                dataset.created_at,
+            ):
+                raise ValueError("profile or dataset changed during batch admission")
+            for definition, ref in zip(request.strategies, strategy_refs, strict=True):
+                if type(ref) is not dict or ref.keys() != {"id", "revision", "definition_sha256"}:
+                    raise ValueError("strategy reference must be exact id/revision/hash")
+                row = self._strategy_row(db, ref["id"], ref["revision"])
+                saved = self._strategy_snapshot(row)
+                if (
+                    saved is None
+                    or saved["definition_sha256"] != ref["definition_sha256"]
+                    or saved["definition"] != definition
+                ):
+                    raise ValueError("strategy reference does not match immutable revision")
+            effective = _effective_quota(db, quota_bytes, quota_explicit)
+            projected = sum(
+                len(value.encode("utf-8"))
+                for value in (
+                    identifier,
+                    wire,
+                    request.dataset_sha256,
+                    dataset.source_sha256,
+                    "profile-v5",
+                    created_at,
+                    "profile",
+                    refs_wire,
+                    requested_wire,
+                    effective_wire,
+                    policy_wire,
+                    source_wire,
+                    client_request_id,
+                    request_digest,
+                )
+            ) + len(profile_json.encode("utf-8"))
+            projected += len(ExperimentStatus.PENDING.value) + 1
+            admission_copy_bytes = len(identifier.encode("utf-8")) + 8
+            projected += admission_copy_bytes  # experiment_id plus policy_revision
+            projected += len(request.strategies) * (len(identifier.encode("utf-8")) + 8 + 7 + 7)
+            measure(
+                self.path,
+                effective.effective_bytes,
+                _logical_experiment_bytes(db),
+                profile_artifact_bytes=_profile_artifact_bytes(db),
+                dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                strategy_artifact_bytes=_strategy_artifact_bytes(db),
+                disk_usage=disk_usage,
+            ).require_capacity(projected)
+            db.execute(
+                "INSERT INTO experiments (id, status, request_json, history_id, history_sha256, "
+                "rankings_id, rankings_sha256, code_version, created_at, request_kind, "
+                "request_schema_version) VALUES (?, 'pending', ?, ?, ?, '', '', 'profile-v5', ?, "
+                "'profile', 5)",
+                (identifier, wire, request.dataset_sha256, dataset.dataset_sha256, created_at),
+            )
+            db.executemany(
+                "INSERT INTO runs (experiment_id, ordinal, configuration_id, status, "
+                "result_json, result_kind) VALUES (?, ?, NULL, 'pending', NULL, 'profile')",
+                [(identifier, ordinal) for ordinal in range(len(request.strategies))],
+            )
+            db.execute(
+                "INSERT INTO experiment_profiles VALUES (?, ?, ?, ?)",
+                (identifier, snapshot.profile_id, snapshot.revision, profile_json),
+            )
+            db.execute(
+                "INSERT INTO profile_batch_admissions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    identifier,
+                    client_request_id,
+                    request_digest,
+                    refs_wire,
+                    requested_wire,
+                    effective_wire,
+                    policy_revision,
+                    policy_wire,
+                    source_wire,
+                ),
+            )
+        return identifier
 
     def create_profile_experiment(
         self,
@@ -998,6 +1888,7 @@ class Repository:
                 )
             ):
                 raise ValueError("profile or dataset changed during admission")
+            self._check_pending_capacity(db, 1)
             effective = _effective_quota(db, quota_bytes, quota_explicit)
             before = _admission_logical_bytes(db)
             measure(
@@ -1006,6 +1897,7 @@ class Repository:
                 _logical_experiment_bytes(db),
                 profile_artifact_bytes=_profile_artifact_bytes(db),
                 dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                strategy_artifact_bytes=_strategy_artifact_bytes(db),
                 disk_usage=disk_usage,
             ).require_capacity(projected)
             db.execute(
@@ -1058,6 +1950,7 @@ class Repository:
             raise ValueError("configuration links must match strategies")
         identifier = uuid4().hex
         with _transaction(self.path) as db:
+            self._check_pending_capacity(db, len(request.strategies))
             profile = legacy_quiniela_80_profile()
             snapshot = profile.model_dump_json()
             stored = db.execute(
@@ -1107,6 +2000,7 @@ class Repository:
                 _logical_experiment_bytes(db),
                 profile_artifact_bytes=_profile_artifact_bytes(db),
                 dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                strategy_artifact_bytes=_strategy_artifact_bytes(db),
                 disk_usage=disk_usage,
             ).require_capacity(projected + len(snapshot.encode("utf-8")))
             db.execute(
@@ -1129,7 +2023,7 @@ class Repository:
     def get_experiment(self, identifier: str) -> SavedExperiment | None:
         with connection(self.path) as db:
             db.execute("BEGIN")  # coherent parent and children, even under another writer
-            return _load_experiment(db, identifier)
+            return _load_experiment(db, identifier, self.get_dataset)
 
     def list_experiments(self) -> list[SavedExperiment]:
         with connection(self.path) as db:
@@ -1182,34 +2076,42 @@ class Repository:
         if type(include_completed_cycling) is not bool:
             raise ValueError("include_completed_cycling must be a bool")
         pattern = None if name_contains is None else f"%{_escape_like(name_contains.casefold())}%"
-        filters = (pattern, pattern, status, status)
-        # Use the identical visibility predicate for total and page IDs before OFFSET.
         # Explicit profile schema versions are public only through their validated projection.
-        visible = (
-            "request_kind = 'legacy' OR (request_kind = 'profile' AND request_schema_version = 1)"
-        )
-        if include_completed_cycling:
-            visible += (
-                " OR (request_kind = 'profile' AND request_schema_version IN (2, 3, 4) "
-                "AND (SELECT count(*) FROM runs WHERE experiment_id = experiments.id) = 1 "
-                "AND EXISTS (SELECT 1 FROM runs WHERE experiment_id = experiments.id "
-                "AND ordinal = 0 AND result_kind = 'profile'))"
-            )
         with connection(self.path) as db:
             db.create_function("unicode_casefold", 1, str.casefold, deterministic=True)
             db.execute("BEGIN")  # total, IDs and snapshots share one read view
             total = db.execute(
-                f"SELECT count(*) FROM experiments WHERE ({visible}) AND "
-                "(? IS NULL OR unicode_casefold(json_extract(request_json, '$.name')) "
-                "LIKE ? ESCAPE '\\') AND (? IS NULL OR status = ?)",
-                filters,
+                "SELECT count(*) FROM experiments WHERE (request_kind = 'legacy' OR "
+                "(request_kind = 'profile' AND request_schema_version = 1) OR "
+                "(? = 1 AND ((request_kind = 'profile' AND request_schema_version IN (2, 3, 4) "
+                "AND (SELECT count(*) FROM runs WHERE experiment_id = experiments.id) = 1 "
+                "AND EXISTS (SELECT 1 FROM runs WHERE experiment_id = experiments.id "
+                "AND ordinal = 0 AND result_kind = 'profile')) OR "
+                "(request_kind = 'profile' AND request_schema_version = 5 "
+                "AND EXISTS (SELECT 1 FROM profile_batch_admissions "
+                "WHERE experiment_id = experiments.id))))) AND "
+                "(? IS NULL OR unicode_casefold(coalesce(json_extract(request_json, '$.name'), "
+                "(SELECT client_request_id FROM profile_batch_admissions "
+                "WHERE experiment_id = experiments.id))) LIKE ? ESCAPE '\\') "
+                "AND (? IS NULL OR status = ?)",
+                (include_completed_cycling, pattern, pattern, status, status),
             ).fetchone()[0]
             ids = [
                 row[0]
                 for row in db.execute(
-                    f"SELECT id FROM experiments WHERE ({visible}) AND "
-                    "(? IS NULL OR unicode_casefold(json_extract(request_json, '$.name')) "
-                    "LIKE ? ESCAPE '\\') AND (? IS NULL OR status = ?) ORDER BY "
+                    "SELECT id FROM experiments WHERE (request_kind = 'legacy' OR "
+                    "(request_kind = 'profile' AND request_schema_version = 1) OR "
+                    "(? = 1 AND ((request_kind = 'profile' AND request_schema_version IN (2, 3, 4) "
+                    "AND (SELECT count(*) FROM runs WHERE experiment_id = experiments.id) = 1 "
+                    "AND EXISTS (SELECT 1 FROM runs WHERE experiment_id = experiments.id "
+                    "AND ordinal = 0 AND result_kind = 'profile')) OR "
+                    "(request_kind = 'profile' AND request_schema_version = 5 "
+                    "AND EXISTS (SELECT 1 FROM profile_batch_admissions "
+                    "WHERE experiment_id = experiments.id))))) AND "
+                    "(? IS NULL OR unicode_casefold(coalesce(json_extract(request_json, '$.name'), "
+                    "(SELECT client_request_id FROM profile_batch_admissions "
+                    "WHERE experiment_id = experiments.id))) LIKE ? ESCAPE '\\') "
+                    "AND (? IS NULL OR status = ?) ORDER BY "
                     "CASE WHEN ? = 'created_at' AND ? = 'asc' THEN created_at END ASC, "
                     "CASE WHEN ? = 'created_at' AND ? = 'desc' THEN created_at END DESC, "
                     "CASE WHEN ? = 'name' AND ? = 'asc' "
@@ -1219,10 +2121,20 @@ class Repository:
                     "CASE WHEN ? = 'status' AND ? = 'asc' THEN status END ASC, "
                     "CASE WHEN ? = 'status' AND ? = 'desc' THEN status END DESC, "
                     "CASE WHEN ? = 'asc' THEN id END ASC, id DESC LIMIT ? OFFSET ?",
-                    (*filters, *(sort, order) * 6, order, limit, offset),
+                    (
+                        include_completed_cycling,
+                        pattern,
+                        pattern,
+                        status,
+                        status,
+                        *(sort, order) * 6,
+                        order,
+                        limit,
+                        offset,
+                    ),
                 )
             ]
-            rows = [_load_experiment(db, identifier) for identifier in ids]
+            rows = [_load_experiment(db, identifier, self.get_dataset) for identifier in ids]
         return total, [row for row in rows if row is not None]
 
     def page_experiments(self, offset: int, limit: int):
@@ -1324,6 +2236,7 @@ class Repository:
                 _logical_experiment_bytes(db),
                 profile_artifact_bytes=_profile_artifact_bytes(db),
                 dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                strategy_artifact_bytes=_strategy_artifact_bytes(db),
                 disk_usage=disk_usage,
             )
             status.require_capacity(len(serialized.encode("utf-8")) + 3)  # status delta + version
@@ -1335,6 +2248,134 @@ class Repository:
             ).rowcount
             if not changed:
                 raise ValueError("run not running or already completed")
+
+    def complete_profile_batch_run(
+        self,
+        identifier: str,
+        ordinal: int,
+        result: ProfileBatchResultV5,
+        *,
+        settings,
+        quota_bytes: int | None = None,
+        quota_explicit: bool | None = None,
+        disk_usage=shutil.disk_usage,
+    ) -> None:
+        """Validate one worker result against full saved data and trusted archive context.
+
+        The worker's inner result ordinal is zero; this method binds it to the actual
+        outer run ordinal and exact persisted strategy revision before storing it.
+        """
+        from laboratorio.domain.profile_archive import bind_archived_dataset
+        from laboratorio.settings import Settings
+
+        if type(settings) is not Settings:
+            raise ValueError("trusted Settings context is required to complete a v5 run")
+        saved = self.get_experiment(identifier)
+        if (
+            saved is None
+            or saved.request_kind != "profile"
+            or saved.request_schema_version != 5
+            or not isinstance(saved.request, ProfileBatchRequestV5)
+            or saved.status is not ExperimentStatus.RUNNING
+            or type(ordinal) is not int
+            or not 0 <= ordinal < len(saved.request.strategies)
+            or len(saved.runs) != len(saved.request.strategies)
+            or saved.runs[ordinal].ordinal != ordinal
+            or saved.runs[ordinal].status is not RunStatus.RUNNING
+            or saved.runs[ordinal].result is not None
+        ):
+            raise ValueError("v5 profile run not owned, running or missing")
+        request = saved.request
+        dataset = self.get_dataset(request.dataset_sha256)
+        if dataset is None:
+            raise ValueError("v5 profile dataset missing")
+        archive_needed = any(
+            definition.selector.startswith("archived-") for definition in request.strategies
+        )
+        binding = bind_archived_dataset(dataset, settings) if archive_needed else None
+        identity = saved.batch_admission["source_identity"] if saved.batch_admission else None
+        if (
+            identity is None
+            or identity.get("dataset_sha256") != dataset.dataset_sha256
+            or identity.get("source_sha256") != dataset.source_sha256
+            or identity.get("canonical_sha256")
+            != hashlib.sha256(dataset.canonical_json).hexdigest()
+            or identity.get("archive_bound") != (binding is not None)
+            or (
+                binding is not None
+                and (
+                    identity.get("archive_history_sha256") != binding.history.sha256
+                    or identity.get("archive_rank_row_ids") != list(binding.rank_row_ids)
+                )
+            )
+        ):
+            raise ValueError("trusted source context differs from frozen batch admission")
+        single = replace(request, strategies=(request.strategies[ordinal],))
+        admitted = validate_profile_batch_result_v5(
+            result,
+            single,
+            saved.profile,
+            dataset,
+            binding,
+            operation_budget=request.max_draws,
+        )
+        serialized = serialize_profile_batch_result_v5(admitted)
+        wire = serialize_profile_batch_v5(request)
+        profile_json = saved.profile.model_dump_json()
+        with _transaction(self.path) as db:
+            experiment_row = db.execute(
+                "SELECT status, request_json, request_kind, history_id, history_sha256, "
+                "rankings_id, rankings_sha256, code_version, request_schema_version "
+                "FROM experiments WHERE id = ?",
+                (identifier,),
+            ).fetchone()
+            run_row = db.execute(
+                "SELECT ordinal, status, result_json, result_kind, result_schema_version "
+                "FROM runs WHERE experiment_id = ? AND ordinal = ?",
+                (identifier, ordinal),
+            ).fetchone()
+            profile_row = db.execute(
+                "SELECT profile_id, revision, profile_json FROM experiment_profiles "
+                "WHERE experiment_id = ?",
+                (identifier,),
+            ).fetchone()
+            if (
+                experiment_row
+                != (
+                    "running",
+                    wire,
+                    "profile",
+                    request.dataset_sha256,
+                    request.dataset_sha256,
+                    "",
+                    "",
+                    "profile-v5",
+                    5,
+                )
+                or run_row != (ordinal, "running", None, "profile", None)
+                or profile_row != (request.profile_id, request.profile_revision, profile_json)
+            ):
+                raise ValueError("v5 profile request/run association changed during replay")
+            effective = _effective_quota(db, quota_bytes, quota_explicit)
+            projected = len(serialized.encode("utf-8")) + len("completed") - len("running") + 1
+            measure(
+                self.path,
+                effective.effective_bytes,
+                _logical_experiment_bytes(db),
+                profile_artifact_bytes=_profile_artifact_bytes(db),
+                dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                strategy_artifact_bytes=_strategy_artifact_bytes(db),
+                disk_usage=disk_usage,
+            ).require_capacity(projected)
+            changed = db.execute(
+                "UPDATE runs SET status = 'completed', result_json = ?, result_schema_version = 5 "
+                "WHERE experiment_id = ? AND ordinal = ? AND status = 'running' "
+                "AND result_kind = 'profile' AND result_schema_version IS NULL "
+                "AND result_json IS NULL",
+                (serialized, identifier, ordinal),
+            ).rowcount
+            if changed != 1:
+                raise ValueError("v5 profile run no longer running")
 
     def complete_profile_run(
         self,
@@ -1529,6 +2570,7 @@ class Repository:
                 _logical_experiment_bytes(db),
                 profile_artifact_bytes=_profile_artifact_bytes(db),
                 dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                strategy_artifact_bytes=_strategy_artifact_bytes(db),
                 disk_usage=disk_usage,
             ).require_capacity(projected)
             changed = db.execute(

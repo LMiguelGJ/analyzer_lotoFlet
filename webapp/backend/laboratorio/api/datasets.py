@@ -30,6 +30,7 @@ def _metadata(request: Request, saved, *, include_profile: bool):
         "dataset_sha256": saved.dataset_sha256,
         "source_sha256": saved.source_sha256,
         "created_at": saved.created_at,
+        "source_format": snapshot["format"],
         "source_id": snapshot["source"]["source_id"],
         "source_kind": snapshot["source"]["kind"],
         "source_revision": snapshot["source"]["revision"],

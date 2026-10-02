@@ -46,10 +46,23 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [agentCredential, setAgentCredential] = useState<string | null>(null);
+  const [agentCredentialVisible, setAgentCredentialVisible] = useState(false);
+  const [agentCredentialLoading, setAgentCredentialLoading] = useState(false);
+  const [agentCredentialCopying, setAgentCredentialCopying] = useState(false);
+  const [agentCredentialError, setAgentCredentialError] = useState("");
+  const [agentCredentialCopied, setAgentCredentialCopied] = useState(false);
+  const [manualCopyFallback, setManualCopyFallback] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const agentCredentialInputRef = useRef<HTMLInputElement>(null);
+  const agentCredentialTriggerRef = useRef<HTMLButtonElement>(null);
+  const restoreAgentCredentialFocusRef = useRef(false);
   const dirtyRef = useRef(false);
   const saveRef = useRef(false);
   const requestRef = useRef(0);
+  const agentCredentialSequenceRef = useRef(0);
+  const agentCredentialBusyRef = useRef(false);
+  const agentCredentialCopyBusyRef = useRef(false);
   const dirty = !!view && draft !== null && draft !== view.quota.effective_bytes;
   // Current servers report the aggregate. Older captured responses may only
   // report historical experiment bytes; make that incomplete fallback visible.
@@ -93,6 +106,102 @@ export function SettingsPage() {
     // Refresh is explicit; a draft never triggers a new GET.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
+
+  useEffect(() => () => {
+    agentCredentialSequenceRef.current += 1;
+    agentCredentialBusyRef.current = false;
+    agentCredentialCopyBusyRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    if (!manualCopyFallback || !agentCredential || !agentCredentialVisible) return;
+    agentCredentialInputRef.current?.focus();
+    agentCredentialInputRef.current?.select();
+  }, [agentCredential, agentCredentialVisible, manualCopyFallback]);
+
+  useEffect(() => {
+    if (!restoreAgentCredentialFocusRef.current || agentCredential || agentCredentialLoading) return;
+    const trigger = agentCredentialTriggerRef.current;
+    if (!trigger) return;
+    restoreAgentCredentialFocusRef.current = false;
+    trigger.focus();
+  }, [agentCredential, agentCredentialLoading]);
+
+  async function retrieveAgentCredential() {
+    if (agentCredentialBusyRef.current) return;
+    const sequence = ++agentCredentialSequenceRef.current;
+    agentCredentialBusyRef.current = true;
+    setAgentCredentialLoading(true);
+    setAgentCredentialError("");
+    setAgentCredentialCopied(false);
+    setManualCopyFallback(false);
+    try {
+      const response = await apiClient.getAgentCredential();
+      if (sequence !== agentCredentialSequenceRef.current) return;
+      if (typeof response?.token !== "string" || response.token.length === 0) {
+        throw new Error("invalid credential response");
+      }
+      setAgentCredential(response.token);
+      setAgentCredentialVisible(false);
+    } catch (failure) {
+      if (sequence !== agentCredentialSequenceRef.current) return;
+      if (failure instanceof NetworkError) {
+        setAgentCredentialError("No se pudo contactar al servidor local. Reintentá desde Ajustes.");
+      } else if (failure instanceof ApiError && failure.status === 403) {
+        setAgentCredentialError("El servidor rechazó el origen. Abrí la aplicación desde el mismo origen local del servidor e intentá de nuevo.");
+      } else if (failure instanceof ApiError && failure.status === 401) {
+        setAgentCredentialError("El servidor rechazó la solicitud de credencial (HTTP 401). Reintentá desde Ajustes.");
+      } else {
+        setAgentCredentialError("No se pudo consultar la credencial. Reintentá.");
+      }
+    } finally {
+      if (sequence === agentCredentialSequenceRef.current) {
+        agentCredentialBusyRef.current = false;
+        setAgentCredentialLoading(false);
+      }
+    }
+  }
+
+  function hideAgentCredential() {
+    restoreAgentCredentialFocusRef.current = true;
+    agentCredentialSequenceRef.current += 1;
+    agentCredentialBusyRef.current = false;
+    agentCredentialCopyBusyRef.current = false;
+    setAgentCredential(null);
+    setAgentCredentialVisible(false);
+    setAgentCredentialLoading(false);
+    setAgentCredentialCopying(false);
+    setAgentCredentialError("");
+    setAgentCredentialCopied(false);
+    setManualCopyFallback(false);
+  }
+
+  async function copyAgentCredential() {
+    if (!agentCredential || agentCredentialCopyBusyRef.current) return;
+    const sequence = agentCredentialSequenceRef.current;
+    agentCredentialCopyBusyRef.current = true;
+    setAgentCredentialCopying(true);
+    setAgentCredentialCopied(false);
+    setAgentCredentialError("");
+    setManualCopyFallback(false);
+    try {
+      const clipboard = navigator.clipboard;
+      if (typeof clipboard?.writeText !== "function") throw new Error("clipboard unavailable");
+      await clipboard.writeText(agentCredential);
+      if (sequence !== agentCredentialSequenceRef.current) return;
+      setAgentCredentialCopied(true);
+    } catch {
+      if (sequence !== agentCredentialSequenceRef.current) return;
+      setAgentCredentialVisible(true);
+      setManualCopyFallback(true);
+      setAgentCredentialError("No se pudo copiar. Seleccioná y copiá el texto mostrado manualmente.");
+    } finally {
+      if (sequence === agentCredentialSequenceRef.current) {
+        agentCredentialCopyBusyRef.current = false;
+        setAgentCredentialCopying(false);
+      }
+    }
+  }
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,7 +304,45 @@ export function SettingsPage() {
       <section aria-labelledby="connection-heading" className="border-t border-border pt-5">
         <h2 id="connection-heading" className="section-header">Conexión local</h2>
         <p className="text-sm">Respuesta del servidor local: <span className="font-mono">{view.connection.host}:{view.connection.port}</span> · versión <span className="font-mono">{view.connection.version}</span>.</p>
-        <p className="mt-3 max-w-prose text-sm text-text-secondary">Para detener la aplicación, cerrá el proceso del servidor con el que la iniciaste. El lanzador de Windows está pendiente (LW16); todavía no hay un control de detención desde esta web. Cerrar el navegador no detiene la cola.</p>
+        <p className="mt-3 max-w-prose text-sm text-text-secondary">En Windows, hacé doble clic en <code>iniciar-laboratorio.bat</code> después de completar la preparación inicial indicada en README. Para detener el servidor, presioná Ctrl+C en su consola y esperá la salida; cerrar el navegador no detiene la cola.</p>
+      </section>
+      <section aria-labelledby="agent-access-heading" className="border-t border-border pt-5">
+        <h2 id="agent-access-heading" className="section-header">Acceso para agentes</h2>
+        <p className="max-w-prose text-sm text-text-secondary">La API de agentes requiere una credencial Bearer. Consultala solo cuando vayas a usarla; se mantiene en esta pantalla y queda oculta al terminar.</p>
+        <p className="mt-3 max-w-prose border border-border-control bg-field p-3 text-sm">Mantené privada la credencial. La aplicación confía en clientes locales: otro proceso local puede llamar la API nativa sin esta credencial y puede simular un origen permitido. Host y Origin no aíslan procesos locales.</p>
+        {!agentCredential && !agentCredentialLoading && <button ref={agentCredentialTriggerRef} type="button" className={`${action} mt-4`} onClick={() => { void retrieveAgentCredential(); }}>
+          {agentCredentialError ? "Reintentar consulta" : "Consultar credencial de agente"}
+        </button>}
+        {agentCredentialLoading && <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button type="button" className={action} disabled>Consultando credencial…</button>
+          <button type="button" className={action} onClick={hideAgentCredential}>Cancelar</button>
+        </div>}
+        {agentCredentialError && <p role="alert" className="mt-3 max-w-prose text-sm text-red-300">{agentCredentialError}</p>}
+        {agentCredential && <div className="mt-4 max-w-2xl">
+          <label htmlFor="agent-credential" className="field-label">Credencial de agente</label>
+          <input
+            ref={agentCredentialInputRef}
+            id="agent-credential"
+            type={agentCredentialVisible ? "text" : "password"}
+            className="control mt-2 w-full font-mono"
+            value={agentCredential}
+            readOnly
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby="agent-credential-help"
+          />
+          <p id="agent-credential-help" className="field-help mt-2">El navegador no la guarda. Copiarla requiere tu acción; ocultarla la borra de la pantalla.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" className={action} onClick={() => { setAgentCredentialVisible((value) => !value); setManualCopyFallback(false); }}>
+              {agentCredentialVisible ? "Ocultar credencial" : "Mostrar credencial"}
+            </button>
+            <button type="button" className={action} disabled={agentCredentialCopying} onClick={() => { void copyAgentCredential(); }}>
+              {agentCredentialCopying ? "Copiando…" : "Copiar credencial"}
+            </button>
+            <button type="button" className={action} onClick={hideAgentCredential}>Ocultar y borrar credencial</button>
+          </div>
+          {agentCredentialCopied && <p role="status" className="mt-3 text-sm text-accent">Credencial copiada al portapapeles.</p>}
+        </div>}
       </section>
     </>}
     <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios del presupuesto que aún no guardaste." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onCancel={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />

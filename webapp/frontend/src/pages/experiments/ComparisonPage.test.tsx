@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { Bet, CompareResult, ExperimentSummary, Page, ProfileCompareResult, ProfileExperimentSummary, ReplayPage } from "../../api/types";
+import type { Bet, CompareResult, ExperimentSummary, Page, ProfileBatchExperimentSummary, ProfileBatchRunSummary, ProfileCompareResult, ProfileExperimentSummary, ReplayPage } from "../../api/types";
 
 vi.mock("../../api/client", async (original) => {
   const actual = await original<typeof import("../../api/client")>();
@@ -35,6 +35,25 @@ const profileDetail: ProfileExperimentSummary = {
 };
 const profileCompare: ProfileCompareResult = { id: "exp", status: "completed", request_kind: "profile", completed: 1, requested: 1, complete: true, runs: profileDetail.runs };
 const profileReplay: ReplayPage = { result_kind: "profile", total: 1, offset: 0, limit: 100, items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] };
+const batchNames = ["Frozen A", "Frozen B", "Frozen C"];
+const batchStrategies = batchNames.map((name) => ({ definition_version: 1 as const, name, selector: "static-numbers/v1" as const, coverage: 1, staking: "flat-per-number/v1" as const, selector_parameters: { numbers: [7] }, staking_parameters: {}, closing_defaults: {} }));
+const batchRefs = batchNames.map((_, ordinal) => ({ id: `frozen-${ordinal}`, revision: ordinal + 4, definition_sha256: String.fromCharCode(97 + ordinal).repeat(64) }));
+const batchSuccess: ProfileBatchRunSummary = {
+  result_kind: "profile", ordinal: 0, configuration_id: null, status: "completed", result_schema_version: 5,
+  strategy: { ...batchRefs[0], name: batchNames[0] }, bets_count: 2, complete: false, completion: "incomplete",
+  stop_category: "operational_window", stop_reason: "bounded draw window ended before source end", stop_code: "operational_window", error: null,
+  result: { schema_version: 5, profile_id: "test", profile_revision: 1, outcome: "history_exhausted", collisions: [], elapsed_draws: 4, bet_draws: 2, wagered: 500, paid: 1250, final_balance: 10750, delta: 750, net: 750, return_per_wagered: 2.5, roi: 1.5, max_drawdown: 125, metric_scope: "saved_individual_run", ratio_rounding: "decimal-half-up-6", definition_name: batchNames[0], start_draw_index: 5, prior_cutoff: "2024-12-31 05:10", dataset_sha256: "a".repeat(64), source_count: 15, requested_conditions: { max_draws: 4 }, effective_conditions: { max_draws: 4 }, stop_category: "operational_window", stop_reason: "bounded draw window ended before source end", complete: false },
+};
+const batchFailed: ProfileBatchRunSummary = { result_kind: "profile", ordinal: 2, configuration_id: null, status: "failed", result_schema_version: null, strategy: { ...batchRefs[2], name: null }, result: null, bets_count: 0, complete: false, completion: "unavailable", stop_category: "unknown", stop_reason: "failed", stop_code: "unknown", error: "strategy-local failure" };
+const batchCancelled: ProfileBatchRunSummary = { result_kind: "profile", ordinal: 1, configuration_id: null, status: "cancelled", result_schema_version: null, strategy: { ...batchRefs[1], name: null }, result: null, bets_count: 0, complete: false, completion: "unavailable", stop_category: "interrupted", stop_reason: "cancelled", stop_code: "interrupted", error: null };
+const batchV5Detail: ProfileBatchExperimentSummary = {
+  request_kind: "profile", request_schema_version: 5, id: "exp", status: "failed", created_at: null,
+  request: { schema_version: 5, kind: "profile_batch", profile_id: "test", profile_revision: 1, profile_sha256: "b".repeat(64), dataset_sha256: "a".repeat(64), conditions: { schema_version: 1, start_draw: "2025-01-01 10:00", capital: 10000, goal: 20000, settlement: "all", max_elapsed_draws: 4, max_bet_draws: 2, end_minute: null, duration_minutes: null }, strategies: batchStrategies, max_draws: 4, source_version: "canonical-history/v1" },
+  profile: profileDetail.profile, display: { ...profileDetail.display, name: "Batch saved identity" }, sources: profileDetail.sources,
+  batch_admission: { strategy_refs: batchRefs, source_identity: { dataset_sha256: "a".repeat(64), source_sha256: "d".repeat(64), canonical_sha256: "e".repeat(64), row_count: 15, profile_id: "test", profile_revision: 1, profile_sha256: "b".repeat(64), archive_bound: false, archive_history_sha256: null, archive_rank_row_ids: null }, requested_constraints: { max_draws: 4, max_elapsed_draws: 4 }, effective_constraints: { max_draws: 4, max_elapsed_draws: 4 }, policy_revision: 2, policy: { worker_count: 1 } },
+  runs: [batchFailed, batchSuccess, batchCancelled],
+};
+const batchCompare: CompareResult = { id: "exp", status: "failed", request_kind: "profile", completed: 1, requested: 3, complete: false, runs: [batchFailed, batchSuccess, batchCancelled] };
 const page = (ordinal: number, offset = 0): Page<Bet> => ({ offset, limit: 100, total: ordinal ? 1 : 101, items: offset ? [bet("2025-01-01 11:00", 150)] : ordinal ? [bet("2025-01-01 10:30", 110)] : Array.from({ length: 100 }, (_, i) => bet(`2025-01-01 10:${String(i % 60).padStart(2, "0")}`, 101 + i)) });
 function setup(path = "/experimentos/exp/comparacion") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
@@ -145,6 +164,68 @@ describe("profile comparison READ", () => {
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row")[1]).not.toHaveTextContent("EUR 99.00");
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("—");
+    expect(apiClient.getReplay).not.toHaveBeenCalled();
+  });
+});
+
+describe("profile batch v5 comparison", () => {
+  it("shows frozen ordered strategies, saved server metrics, incomplete operational windows, and local bet continuity", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(batchV5Detail);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue(batchCompare);
+    vi.mocked(apiClient.getTrajectory).mockResolvedValue({ result_kind: "profile", schema_version: 5, initial_capital: 10000, total: 2, max_points: 500, reduction_method: "none",
+      minimum: { balance: 9750, source_index: 5, bet_index: 0 }, maximum: { balance: 10750, source_index: 8, bet_index: 1 },
+      points: [{ source_index: 5, bet_index: 0, label: "2025-01-01 10:10", balance: 9750, replay: "replay?offset=0&limit=1" }, { source_index: 8, bet_index: 1, label: "2025-01-01 10:40", balance: 10750, replay: "replay?offset=1&limit=1" }] });
+    setup();
+    expect(await screen.findByText("Comparación incompleta · 1/3 terminadas")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Batch saved identity" })).toBeInTheDocument();
+    const experimentStatus = screen.getByText(/Estado del experimento/).parentElement;
+    expect(experimentStatus && within(experimentStatus).getByText("Con error")).toHaveAttribute("data-status-value", "failed");
+    const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
+    const rows = within(table).getAllByRole("row");
+    expect(rows[1]).toHaveTextContent(/Frozen A.*EUR 107.50.*EUR 7.50.*EUR 5.00.*EUR 12.50.*2\.500000.*1\.500000.*EUR 1.25/);
+    expect(rows[1]).toHaveTextContent(/Ventana operativa; fuente incompleta.*bounded draw window ended before source end/);
+    expect(rows[1]).toHaveTextContent("Ventana operativa; fuente incompleta");
+    expect(rows[1]).not.toHaveTextContent("Historial agotado");
+    expect(rows[2]).toHaveTextContent(/Frozen B.*Cancelado.*N\/A/);
+    expect(rows[3]).toHaveTextContent(/Frozen C.*Con error.*strategy-local failure/);
+    expect(screen.queryByText("Fin de la fuente guardada")).not.toBeInTheDocument();
+    expect(screen.getByText("frozen-0 · revisión 4 · SHA-256 " + "a".repeat(64))).toBeInTheDocument();
+    expect(within(rows[1]).getAllByText(/Ventana operativa; fuente incompleta/)).toHaveLength(2);
+    expect(screen.getByText(/Límites efectivos guardados/).nextElementSibling).toHaveTextContent(/max_draws.*4/);
+    expect(await screen.findByText(/Frozen A: 2 de 2 apuestas/)).toBeInTheDocument();
+    const chart = screen.getByRole("figure", { name: /Evolución comparada/ });
+    expect(within(chart).getByTestId("series-0").getAttribute("points")?.split(" ")).toHaveLength(3);
+    expect(apiClient.getTrajectory).toHaveBeenCalledExactlyOnceWith("exp", 0, 500);
+    expect(apiClient.getReplay).not.toHaveBeenCalled();
+  });
+  it("labels history exhaustion only for a backend-classified full-source end", async () => {
+    const exhausted: ProfileBatchRunSummary = { ...batchSuccess, complete: true, completion: "complete", stop_category: "source_end", stop_reason: "full saved source ended", stop_code: "source_end",
+      result: { ...batchSuccess.result!, outcome: "history_exhausted", elapsed_draws: 4, source_count: 9, complete: true, stop_category: "source_end", stop_reason: "full saved source ended" } };
+    const detail: ProfileBatchExperimentSummary = { ...batchV5Detail, status: "completed", batch_admission: { ...batchV5Detail.batch_admission, source_identity: { ...batchV5Detail.batch_admission.source_identity, row_count: 9 } }, runs: [exhausted] };
+    const comparison: CompareResult = { ...batchCompare, status: "completed", completed: 1, requested: 1, complete: true, runs: [exhausted] };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(detail);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue(comparison);
+    setup();
+    const row = within(await screen.findByRole("table", { name: "Comparación de ejecuciones" })).getAllByRole("row")[1];
+    expect(row).toHaveTextContent("Historial agotado");
+    expect(row).toHaveTextContent("Fin de la fuente guardada");
+    expect(row).not.toHaveTextContent("Ventana operativa; fuente incompleta");
+  });
+  it("keeps all nonterminal v5 rows resultless and out of the chart", async () => {
+    const pendingRuns: ProfileBatchRunSummary[] = batchV5Detail.runs.map((run) => ({ ...run, status: "pending", result_schema_version: null, result: null, bets_count: 0, complete: false, completion: "unavailable", stop_category: "unknown", stop_reason: "pending", stop_code: "unknown", error: null }));
+    const detail: ProfileBatchExperimentSummary = { ...batchV5Detail, status: "running", runs: pendingRuns };
+    const progress: CompareResult = { ...batchCompare, status: "running", completed: 0, complete: false, runs: pendingRuns };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(detail);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue(progress);
+    vi.mocked(apiClient.getTrajectory).mockReset();
+    setup();
+    expect(await screen.findByText("Comparación incompleta · 0/3 terminadas")).toBeInTheDocument();
+    expect(screen.getByText(/Estado del experimento/).parentElement).toHaveTextContent("En curso");
+    const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
+    expect(within(table).getAllByRole("row").slice(1)).toHaveLength(3);
+    expect(within(table).getAllByText("N/A").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText("Todavía no hay apuestas guardadas cargadas para graficar.")).toHaveAttribute("role", "status");
+    expect(apiClient.getTrajectory).not.toHaveBeenCalled();
     expect(apiClient.getReplay).not.toHaveBeenCalled();
   });
 });

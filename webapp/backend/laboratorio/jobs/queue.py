@@ -6,41 +6,58 @@ for explicit action after restart. Neither a browser connection nor a request
 thread owns the worker lifecycle.
 """
 
+import hashlib
 import itertools
 import json
 import multiprocessing
+import queue as thread_queue
 import shutil
 import sqlite3
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
+from laboratorio.domain.batch_admission import (
+    ProfileBatchSubmission,
+    _conditions_dict,
+    admit_profile_batch,
+)
 from laboratorio.domain.contracts import ExperimentStatus, GameProfile, RunStatus
+from laboratorio.domain.profile_archive import bind_archived_dataset
 from laboratorio.domain.profile_request import ProfileExperimentRequest, profile_sha256
 from laboratorio.domain.profile_request_v2 import ProfileCyclingRequest
 from laboratorio.domain.profile_request_v3 import ProfileAudazRequest
 from laboratorio.domain.profile_request_v4 import ProfileRecoveryRequest
+from laboratorio.domain.profile_request_v5 import ProfileBatchRequestV5
 from laboratorio.domain.profile_result import load_profile_result
 from laboratorio.domain.profile_result_v2 import load_profile_cycling_result
 from laboratorio.domain.profile_result_v3 import load_profile_audaz_result
 from laboratorio.domain.profile_result_v4 import load_profile_recovery_result
+from laboratorio.domain.profile_result_v5 import load_profile_batch_result_v5
 from laboratorio.domain.profile_session import MAX_SESSION_ROWS, ProfileDraw, _minute
 from laboratorio.jobs.worker import (
     calculate_run,
     process_entry,
     profile_audaz_process_entry,
+    profile_batch_process_entry,
     profile_cycling_process_entry,
     profile_process_entry,
     profile_recovery_process_entry,
 )
 from laboratorio.settings import Settings
 from laboratorio.storage.quota import QuotaExceeded
-from laboratorio.storage.repository import Repository, validate_result_payload
+from laboratorio.storage.repository import (
+    Repository,
+    _batch_identity_hash,
+    validate_result_payload,
+)
 
 _POLL_SECONDS = 0.05
 _STOP_GRACE_SECONDS = 0.5
+# Bounds decoded v5 results before parsing; legacy pipe payloads remain unchanged.
+_MAX_PROFILE_BATCH_FRAME_BYTES = 16 * 1024 * 1024
 
 
 class StrategyLocalFailure(RuntimeError):
@@ -57,6 +74,34 @@ class QueueFailure:
     error: Exception
     persisted: bool  # Only a committed failed experiment status counts.
     persistence_error: Exception | None = None
+
+
+def _decode_profile_batch_frame(frame: bytes) -> tuple[str, object]:
+    """Decode a bounded primitive-only v5 frame into the coordinator protocol."""
+    try:
+        decoded = json.loads(frame.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("invalid profile batch worker JSON frame") from exc
+    if (
+        type(decoded) is not dict
+        or type(decoded.get("version")) is not int
+        or decoded["version"] != 5
+    ):
+        raise ValueError("unsupported profile batch worker frame")
+    status = decoded.get("status")
+    if status == "completed" and set(decoded) == {"version", "status", "value"}:
+        return status, decoded["value"]
+    if status == "cancelled" and set(decoded) == {"version", "status"}:
+        return status, None
+    if (
+        status == "failed"
+        and set(decoded) == {"version", "status", "kind", "reason"}
+        and decoded["kind"] in ("shared", "strategy_local")
+        and type(decoded["reason"]) is str
+        and decoded["reason"]
+    ):
+        return status, (decoded["kind"], decoded["reason"])
+    raise ValueError("malformed profile batch worker frame")
 
 
 class JobQueue:
@@ -193,6 +238,78 @@ class JobQueue:
                 self.repo.discard_pending(identifier)
                 raise
             return identifier
+
+    def submit_profile_batch(self, submission: ProfileBatchSubmission) -> str:
+        """Admit and enqueue one immutable v5 batch without duplicating retries."""
+        if type(submission) is not ProfileBatchSubmission:
+            raise TypeError("submission must be a closed ProfileBatchSubmission")
+        submission.__post_init__()
+        requested = {
+            **_conditions_dict(submission.conditions),
+            "max_draws": submission.max_draws,
+        }
+        digest = _batch_identity_hash(
+            submission.profile_id,
+            submission.profile_revision,
+            submission.profile_sha256,
+            submission.dataset_sha256,
+            tuple(reference.as_dict() for reference in submission.strategy_refs),
+            requested,
+        )
+        with self._lock:
+            self._require_open()
+            existing = self.repo.find_profile_batch_request(submission.client_request_id, digest)
+            if existing is not None:
+                return existing
+            identifier = admit_profile_batch(
+                self.repo,
+                submission,
+                settings=self.settings,
+                quota_bytes=self.settings.quota_bytes,
+                quota_explicit=self.settings.is_quota_explicit,
+                disk_usage=self.disk_usage,
+            )
+            # Admission can return an identity created concurrently by another caller.
+            saved = self.repo.get_experiment(identifier)
+            if saved is None or saved.status is not ExperimentStatus.PENDING:
+                return identifier
+            try:
+                self._enqueue_profile_batch(identifier)
+            except Exception:
+                if identifier in self._pending:
+                    self._pending.remove(identifier)
+                self.repo.discard_pending(identifier)
+                raise
+            return identifier
+
+    def _enqueue_profile_batch(self, identifier: str):
+        with self._lock:
+            self._require_open()
+            saved = self.repo.get_experiment(identifier)
+            if (
+                saved is None
+                or saved.request_kind != "profile"
+                or saved.request_schema_version != 5
+                or type(saved.request) is not ProfileBatchRequestV5
+                or saved.status not in (ExperimentStatus.PENDING, ExperimentStatus.HELD)
+                or len(saved.runs) != len(saved.request.strategies)
+                or any(
+                    run.ordinal != ordinal
+                    or run.result_kind != "profile"
+                    or run.status is not RunStatus.PENDING
+                    for ordinal, run in enumerate(saved.runs)
+                )
+            ):
+                raise ValueError("only a pending profile batch with ordered runs can be enqueued")
+            if identifier in self._pending or identifier == self._active:
+                raise ValueError("experiment already enqueued")
+            self.repo.require_capacity(
+                self.settings.quota_bytes,
+                quota_explicit=self.settings.is_quota_explicit,
+                disk_usage=self.disk_usage,
+            )
+            self._pending.append(identifier)
+            self._wake.set()
 
     def submit_profile_audaz(self, request: ProfileAudazRequest) -> str:
         """Admit and schedule a schema-3 audaz session with compensating cleanup."""
@@ -339,9 +456,14 @@ class JobQueue:
                 saved.request_schema_version == 1
                 or (
                     saved.request_kind == "profile"
-                    and saved.request_schema_version in (2, 3, 4)
+                    and saved.request_schema_version in (2, 3, 4, 5)
                     and type(saved.request)
-                    in (ProfileCyclingRequest, ProfileAudazRequest, ProfileRecoveryRequest)
+                    in (
+                        ProfileCyclingRequest,
+                        ProfileAudazRequest,
+                        ProfileRecoveryRequest,
+                        ProfileBatchRequestV5,
+                    )
                 )
             ):
                 raise ValueError("stored experiment version is not executable")
@@ -532,6 +654,62 @@ class JobQueue:
         )
         return registered, request, draws
 
+    def _prepare_profile_batch(self, saved):
+        """Authenticate complete v5 snapshots and frozen source identity before spawn."""
+        from laboratorio.domain.profile_request import profile_sha256
+        from laboratorio.importing.datasets import SavedDataset
+
+        request = saved.request
+        if (
+            saved.request_kind != "profile"
+            or saved.request_schema_version != 5
+            or type(request) is not ProfileBatchRequestV5
+            or len(saved.runs) != len(request.strategies)
+            or saved.batch_admission is None
+        ):
+            raise SharedWorkerFailure("malformed profile batch request or run count")
+        request.__post_init__()
+        registered = self.repo.get_game_profile(request.profile_id, request.profile_revision)
+        dataset = self.repo.get_dataset(request.dataset_sha256)
+        if (
+            registered is None
+            or registered != saved.profile
+            or profile_sha256(registered) != request.profile_sha256
+            or type(dataset) is not SavedDataset
+            or saved.history_id != request.dataset_sha256
+            or saved.history_sha256 != request.dataset_sha256
+            or saved.rankings_id != ""
+            or saved.rankings_sha256 != ""
+            or saved.code_version != "profile-v5"
+        ):
+            raise SharedWorkerFailure("profile batch registered context mismatch")
+        admission = saved.batch_admission
+        identity = admission.get("source_identity")
+        if (
+            type(identity) is not dict
+            or identity.get("dataset_sha256") != dataset.dataset_sha256
+            or identity.get("source_sha256") != dataset.source_sha256
+            or identity.get("canonical_sha256")
+            != hashlib.sha256(dataset.canonical_json).hexdigest()
+            or identity.get("profile_id") != registered.profile_id
+            or identity.get("profile_revision") != registered.revision
+            or identity.get("profile_sha256") != request.profile_sha256
+            or type(identity.get("row_count")) is not int
+            or identity["row_count"] != len(dataset.preview.records)
+        ):
+            raise SharedWorkerFailure("profile batch frozen source identity mismatch")
+        needs_archive = any(item.selector.startswith("archived-") for item in request.strategies)
+        binding = bind_archived_dataset(dataset, self.settings) if needs_archive else None
+        if identity.get("archive_bound") != (binding is not None) or (
+            binding is not None
+            and (
+                identity.get("archive_history_sha256") != binding.history.sha256
+                or identity.get("archive_rank_row_ids") != list(binding.rank_row_ids)
+            )
+        ):
+            raise SharedWorkerFailure("profile batch archive differs from frozen admission")
+        return registered, dataset, binding, identity
+
     def _run_experiment(self, identifier):
         saved = self.repo.get_experiment(identifier)
         if saved is None:
@@ -539,7 +717,8 @@ class JobQueue:
         if (
             (saved.request_kind == "legacy" and saved.request_schema_version != 1)
             or (
-                saved.request_kind == "profile" and saved.request_schema_version not in (1, 2, 3, 4)
+                saved.request_kind == "profile"
+                and saved.request_schema_version not in (1, 2, 3, 4, 5)
             )
             or saved.request_kind not in ("legacy", "profile")
         ):
@@ -548,6 +727,9 @@ class JobQueue:
             return
         assert self._cancel is not None
         local_failure = None
+        batch_prepared = (
+            self._prepare_profile_batch(saved) if saved.request_schema_version == 5 else None
+        )
         for run in saved.runs:
             if self._stopping:
                 break
@@ -556,7 +738,13 @@ class JobQueue:
             if not self._admit(identifier):
                 return
             try:
-                prepared = self._prepare_profile(saved) if saved.request_kind == "profile" else None
+                prepared = (
+                    batch_prepared
+                    if saved.request_schema_version == 5
+                    else self._prepare_profile(saved)
+                    if saved.request_kind == "profile"
+                    else None
+                )
                 self.repo.start_run(identifier, run.ordinal)
                 result = self._calculate(saved, run.ordinal, prepared)
             except StrategyLocalFailure as exc:
@@ -589,6 +777,8 @@ class JobQueue:
                         if saved.request_kind == "profile" and saved.request_schema_version == 3
                         else self.repo.complete_profile_recovery_run
                         if saved.request_kind == "profile" and saved.request_schema_version == 4
+                        else self.repo.complete_profile_batch_run
+                        if saved.request_kind == "profile" and saved.request_schema_version == 5
                         else self.repo.complete_profile_run
                         if saved.request_kind == "profile"
                         else self.repo.complete_run
@@ -597,6 +787,9 @@ class JobQueue:
                         identifier,
                         run.ordinal,
                         result,
+                        **(
+                            {"settings": self.settings} if saved.request_schema_version == 5 else {}
+                        ),
                         quota_bytes=self.settings.quota_bytes,
                         quota_explicit=self.settings.is_quota_explicit,
                         disk_usage=self.disk_usage,
@@ -632,16 +825,34 @@ class JobQueue:
         if saved.request_kind == "profile":
             if prepared is None:
                 raise SharedWorkerFailure("profile input not prepared")
-            target = (
-                profile_cycling_process_entry
-                if saved.request_schema_version == 2
-                else profile_audaz_process_entry
-                if saved.request_schema_version == 3
-                else profile_recovery_process_entry
-                if saved.request_schema_version == 4
-                else profile_process_entry
-            )
-            args = (send, *prepared, self._cancel)
+            if saved.request_schema_version == 5:
+                profile, dataset, _binding, source_identity = prepared
+                single = replace(
+                    saved.request,
+                    strategies=(saved.request.strategies[ordinal],),
+                )
+                target = profile_batch_process_entry
+                args = (
+                    send,
+                    self.settings,
+                    profile,
+                    dataset,
+                    single,
+                    source_identity,
+                    self._cancel,
+                    saved.request.max_draws,
+                )
+            else:
+                target = (
+                    profile_cycling_process_entry
+                    if saved.request_schema_version == 2
+                    else profile_audaz_process_entry
+                    if saved.request_schema_version == 3
+                    else profile_recovery_process_entry
+                    if saved.request_schema_version == 4
+                    else profile_process_entry
+                )
+                args = (send, *prepared, self._cancel)
         elif saved.request_kind == "legacy":
             target = process_entry
             args = (
@@ -656,29 +867,102 @@ class JobQueue:
         else:
             raise SharedWorkerFailure(f"unsupported request kind: {saved.request_kind!r}")
         process = self._ctx.Process(target=target, args=args, daemon=True)
+        reader_thread = None
         try:
             process.start()
             with self._lock:
                 self._process = process
             send.close()
-            deadline = None
+            stop_deadline = None
+            batch_policy = (
+                saved.batch_admission.get("policy", {})
+                if saved.request_schema_version == 5 and saved.batch_admission
+                else {}
+            )
+            timeout_seconds = batch_policy.get("run_timeout_seconds")
+            worker_deadline = (
+                time.monotonic() + timeout_seconds
+                if type(timeout_seconds) is int and timeout_seconds > 0
+                else None
+            )
+            timed_out = False
             message = None
+            reader_result = thread_queue.Queue(maxsize=1)
+
+            def start_profile_batch_reader():
+                def receive_frame():
+                    try:
+                        reader_result.put(
+                            (True, recv.recv_bytes(maxlength=_MAX_PROFILE_BATCH_FRAME_BYTES))
+                        )
+                    except Exception as exc:
+                        reader_result.put((False, exc))
+
+                nonlocal reader_thread
+                reader_thread = threading.Thread(
+                    target=receive_frame,
+                    name="laboratorio-profile-batch-reader",
+                    daemon=True,
+                )
+                reader_thread.start()
+
+            def collect_profile_batch_frame():
+                nonlocal message
+                try:
+                    received, value = reader_result.get_nowait()
+                except thread_queue.Empty:
+                    return
+                if received:
+                    try:
+                        message = _decode_profile_batch_frame(value)
+                    except (ValueError, UnicodeDecodeError) as exc:
+                        raise SharedWorkerFailure(
+                            "malformed or oversized profile batch worker frame"
+                        ) from exc
+                elif isinstance(value, EOFError):
+                    message = None
+                elif isinstance(value, (OSError, ValueError, UnicodeDecodeError)):
+                    raise SharedWorkerFailure(
+                        "malformed or oversized profile batch worker frame"
+                    ) from value
+                else:
+                    raise SharedWorkerFailure(
+                        "profile batch worker frame receive failed"
+                    ) from value
+
             while process.is_alive():
                 if self._stopping or self._cancel.is_set():
-                    if deadline is None:
-                        deadline = time.monotonic() + _STOP_GRACE_SECONDS
-                    if time.monotonic() >= deadline:
+                    if stop_deadline is None:
+                        stop_deadline = time.monotonic() + _STOP_GRACE_SECONDS
+                    if time.monotonic() >= stop_deadline:
                         process.terminate()
+                elif worker_deadline is not None and time.monotonic() >= worker_deadline:
+                    timed_out = True
+                    process.terminate()
                 if message is None:
                     try:
-                        if recv.poll(_POLL_SECONDS):
+                        if saved.request_schema_version == 5:
+                            if reader_thread is None and recv.poll(_POLL_SECONDS):
+                                start_profile_batch_reader()
+                            elif reader_thread is not None:
+                                collect_profile_batch_frame()
+                        elif recv.poll(_POLL_SECONDS):
                             message = recv.recv()
-                    except (EOFError, OSError):
+                    except EOFError:
+                        # Cancellation/timeout may intentionally terminate the child.
+                        message = None
+                    except (OSError, ValueError, UnicodeDecodeError) as exc:
+                        if saved.request_schema_version == 5:
+                            raise SharedWorkerFailure(
+                                "malformed or oversized profile batch worker frame"
+                            ) from exc
                         message = None  # Reap before classifying abnormal exit versus bad IPC.
                 process.join(_POLL_SECONDS)
             process.join()
             if self._stopping or self._cancel.is_set():
                 return None
+            if timed_out:
+                raise StrategyLocalFailure("profile batch run exceeded its frozen wall limit")
             # Only an observed abnormal exit is an independent legacy run failure.
             # A clean exit with no final IPC is a malformed protocol for both kinds.
             exitcode = process.exitcode
@@ -692,10 +976,26 @@ class JobQueue:
                 return None
             if message is None:
                 try:
-                    if recv.poll(0.1):
+                    if saved.request_schema_version == 5:
+                        if reader_thread is None and recv.poll(0.1):
+                            start_profile_batch_reader()
+                        if reader_thread is not None:
+                            reader_thread.join(1)
+                            collect_profile_batch_frame()
+                            if reader_thread.is_alive():
+                                raise SharedWorkerFailure(
+                                    "profile batch worker frame reader did not stop after exit"
+                                )
+                    elif recv.poll(0.1):
                         message = recv.recv()
-                except (EOFError, OSError):
+                except EOFError:
                     message = None  # EOF is not a final message, even after a clean exit.
+                except (OSError, ValueError, UnicodeDecodeError) as exc:
+                    if saved.request_schema_version == 5:
+                        raise SharedWorkerFailure(
+                            "malformed or oversized profile batch worker frame"
+                        ) from exc
+                    message = None  # Legacy receives still defer classification until child reap.
             if message is None:
                 raise SharedWorkerFailure("worker exited without a final result")
             if not isinstance(message, tuple) or len(message) != 2:
@@ -711,6 +1011,8 @@ class JobQueue:
                             if saved.request_schema_version == 3
                             else load_profile_recovery_result(value)
                             if saved.request_schema_version == 4
+                            else load_profile_batch_result_v5(value)
+                            if saved.request_schema_version == 5
                             else load_profile_result(value)
                         )
                     else:
@@ -735,6 +1037,8 @@ class JobQueue:
                         if kind == "unknown":
                             self.last_error = RuntimeError(text)
                             return None
+                    elif saved.request_schema_version == 5 and kind == "strategy_local":
+                        raise StrategyLocalFailure(text)
             raise SharedWorkerFailure("malformed worker failure classification")
         finally:
             if process.pid is not None and process.is_alive():
@@ -747,3 +1051,9 @@ class JobQueue:
                 self._process = None
             send.close()
             recv.close()
+            if reader_thread is not None:
+                reader_thread.join(1)
+                if reader_thread.is_alive():
+                    raise SharedWorkerFailure(
+                        "profile batch worker frame reader leaked after pipe close"
+                    )

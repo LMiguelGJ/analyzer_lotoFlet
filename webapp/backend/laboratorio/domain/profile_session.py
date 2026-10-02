@@ -5,7 +5,7 @@ prepared draw rows; skipped entries still advance the elapsed-draw clock. The
 registry names pending families rather than silently treating them as supported.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -25,11 +25,15 @@ from laboratorio.domain.profile_staking import (
     ProfileRecoveryLadderStaking,
     ProfileRecoveryState,
     Q80LadderState,
+    Q80ReferenceAudazStaking,
+    Q80ReferenceAudazState,
     profile_audaz_stake,
     profile_recovery_ladder,
     q80_first_prize_ladder,
+    q80_reference_audaz_stake,
     step_profile_recovery,
     step_q80_first_prize_cycle,
+    step_q80_reference_audaz,
 )
 
 SESSION_VERSION = 1
@@ -226,12 +230,17 @@ def run_profile_session(
     conditions: ProfileConditions,
     selector: ProfileSelector,
     staking: (
-        ProfileStaking | Q80CyclingStaking | ProfileAudazStaking | ProfileRecoveryLadderStaking
+        ProfileStaking
+        | Q80CyclingStaking
+        | ProfileAudazStaking
+        | ProfileRecoveryLadderStaking
+        | Q80ReferenceAudazStaking
     ),
     draws: Sequence[ProfileDraw],
     *,
     row_budget: int = MAX_SESSION_ROWS,
     cancel_after_elapsed_draws: int | None = None,
+    selected_numbers: Callable[[ProfileDraw], tuple[int, ...]] | None = None,
 ) -> ProfileSessionResult:
     """Validate and admit at most ``row_budget`` rows, then run without external IO.
 
@@ -255,6 +264,7 @@ def run_profile_session(
             Q80CyclingStaking,
             ProfileAudazStaking,
             ProfileRecoveryLadderStaking,
+            Q80ReferenceAudazStaking,
         )
     ):
         raise TypeError("conditions, selector and staking must be typed session models")
@@ -265,6 +275,8 @@ def run_profile_session(
     _exact_int(row_budget, "row_budget", 1, MAX_SESSION_ROWS)
     if cancel_after_elapsed_draws is not None:
         _exact_int(cancel_after_elapsed_draws, "cancel_after_elapsed_draws", 0, row_budget)
+    if selected_numbers is not None and not callable(selected_numbers):
+        raise TypeError("selected_numbers must be a callable selector")
     if type(draws) not in (tuple, list):
         raise TypeError("draws must be a bounded materialized list or tuple of imported rows")
     if len(draws) > row_budget:
@@ -276,6 +288,7 @@ def run_profile_session(
     ladder = ()
     ladder_state = Q80LadderState(conditions.capital)
     recovery_state = ProfileRecoveryState(conditions.capital)
+    reference_state = Q80ReferenceAudazState(conditions.capital)
     stake = 0
     if isinstance(staking, Q80CyclingStaking):
         ladder = q80_first_prize_ladder(profile, selector.coverage)
@@ -286,6 +299,13 @@ def run_profile_session(
             profile, selector.coverage, staking.target_margin, staking.rounds
         )
         cost = ladder[0] * selector.coverage
+    elif isinstance(staking, Q80ReferenceAudazStaking):
+        stake = q80_reference_audaz_stake(conditions.capital, conditions.goal, profile=profile)
+        if stake == 0:
+            raise ValueError("initial capital cannot afford the minimum reference audaz stake")
+        cost = stake * selector.coverage
+        if cost > conditions.capital:
+            raise ValueError("initial reference audaz stake exceeds capital")
     elif isinstance(staking, ProfileAudazStaking):
         # Validate exact policy compatibility and initial affordability before any row.
         stake = profile_audaz_stake(profile, selector.coverage, conditions.capital, conditions.goal)
@@ -359,11 +379,31 @@ def run_profile_session(
         ladder_outcome = None
         audaz_outcome = None
         if row.enter:
-            numbers = _selected(profile, selector, row.label)
+            numbers = (
+                selected_numbers(row)
+                if selected_numbers is not None
+                else _selected(profile, selector, row.label)
+            )
+            if (
+                type(numbers) is not tuple
+                or len(numbers) != selector.coverage
+                or len(set(numbers)) != len(numbers)
+                or any(
+                    type(number) is not int or not 0 <= number < profile.universe_size
+                    for number in numbers
+                )
+            ):
+                raise ValueError(
+                    "selected numbers must be a distinct coverage-sized profile selection"
+                )
             if isinstance(staking, Q80CyclingStaking):
                 stake = ladder[ladder_state.round_index]
             elif isinstance(staking, ProfileRecoveryLadderStaking):
                 stake = ladder[recovery_state.round_index]
+            elif isinstance(staking, Q80ReferenceAudazStaking):
+                stake = q80_reference_audaz_stake(balance, conditions.goal, profile=profile)
+                if stake == 0:
+                    audaz_outcome = "ruin"
             elif isinstance(staking, ProfileAudazStaking):
                 stake = profile_audaz_stake(profile, selector.coverage, balance, conditions.goal)
                 if stake == 0:
@@ -398,6 +438,22 @@ def run_profile_session(
                     ladder_state = ladder_step.state
                     ladder_outcome = ladder_step.outcome
                     balance = ladder_state.balance
+                elif isinstance(staking, Q80ReferenceAudazStaking):
+                    unit_paid, remainder = divmod(payout.paid, stake)
+                    if remainder:
+                        raise AssertionError(
+                            "Q80 reference settlement is not divisible by unit stake"
+                        )
+                    reference_step = step_q80_reference_audaz(
+                        profile, reference_state, selector.coverage, unit_paid, conditions.goal
+                    )
+                    if reference_step.cost != payout.cost or reference_step.paid != payout.paid:
+                        raise AssertionError(
+                            "reference audaz kernel and authoritative settlement disagree"
+                        )
+                    reference_state = reference_step.state
+                    audaz_outcome = "ruin" if reference_step.outcome == "quiebre" else None
+                    balance = reference_state.balance
                 elif isinstance(staking, ProfileRecoveryLadderStaking):
                     recovery_step = step_profile_recovery(
                         ladder,
@@ -445,10 +501,11 @@ def run_profile_session(
                         and (
                             ladder_outcome == "ruin"
                             if isinstance(
-                                staking, (Q80CyclingStaking, ProfileRecoveryLadderStaking)
+                                staking,
+                                (Q80CyclingStaking, ProfileRecoveryLadderStaking),
                             )
                             else audaz_outcome == "ruin"
-                            if isinstance(staking, ProfileAudazStaking)
+                            if isinstance(staking, (ProfileAudazStaking, Q80ReferenceAudazStaking))
                             else balance < cost
                         )
                     ),

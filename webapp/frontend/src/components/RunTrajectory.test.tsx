@@ -33,6 +33,19 @@ describe("whole-run trajectories", () => {
     expect(screen.queryByText(/gráfico incompleto/)).not.toBeInTheDocument();
     expect(screen.getByRole("img").querySelectorAll("circle")).toHaveLength(5);
   });
+  it("keeps canonical v5 source indexes separate from local replay bet indexes", async () => {
+    const select = vi.fn(); const user = userEvent.setup();
+    vi.mocked(apiClient.getTrajectory).mockResolvedValue({ ...long, schema_version: 5, total: 2, reduction_method: "none", points: [
+      { source_index: 900, bet_index: 0, label: "2025-01-01 10:00", balance: 9900, replay: "replay?offset=0&limit=1" },
+      { source_index: 905, bet_index: 1, label: "2025-01-02 10:00", balance: 9800, replay: "replay?offset=1&limit=1" },
+    ] });
+    render(<RunTrajectory {...props} onSelect={select} />);
+    expect(await screen.findByText(/2 de 2 apuestas.*sin reducción/)).toBeInTheDocument();
+    await user.click(screen.getByText("Consultar apuesta exacta de un punto"));
+    await user.click(screen.getByRole("button", { name: /Apuesta 2 · sorteo fuente 905/ }));
+    expect(select).toHaveBeenLastCalledWith(1);
+    expect(screen.getByRole("img").querySelectorAll("circle")).toHaveLength(3);
+  });
   it("uses all >20 unreduced points and links exact lookup without replay downloads", async () => {
     const points = Array.from({ length: 30 }, (_, i) => ({ ...long.points[0], source_index: i }));
     vi.mocked(apiClient.getTrajectory).mockResolvedValue({ ...long, total: 30, reduction_method: "none", points });
@@ -48,6 +61,7 @@ describe("whole-run trajectories", () => {
     await user.click(screen.getByRole("button", { name: /Reintentar trayectoria/ }));
     expect(await screen.findByText(/0 de 0 apuestas.*sin reducción/)).toBeInTheDocument();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
   it("ignores late responses after unmount", async () => {
     let resolve!: (t: Trajectory) => void;

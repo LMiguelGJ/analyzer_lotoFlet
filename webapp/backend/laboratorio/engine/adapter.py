@@ -267,9 +267,17 @@ def _write_cached_parity(path: Path, votes: np.ndarray, history_sha256: str) -> 
         raise
 
 
-def open_lab_data(settings: Settings) -> LabData:
+def load_verified_archive(settings: Settings) -> tuple[History, Rankings]:
+    """Load trusted frozen assets from Settings paths, verifying both pinned hashes."""
+    if type(settings) is not Settings:
+        raise TypeError("settings must be the trusted Settings instance")
     history = load_history(settings.history_path, HISTORY_SHA256)
     rankings = load_rankings(settings.rankings_path, RANKINGS_SHA256, history)
+    return history, rankings
+
+
+def open_lab_data(settings: Settings) -> LabData:
+    history, rankings = load_verified_archive(settings)
     return LabData(history=history, rankings=rankings, settings=settings)
 
 

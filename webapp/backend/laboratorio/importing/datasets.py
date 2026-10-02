@@ -5,6 +5,7 @@ import json
 from dataclasses import dataclass
 
 from laboratorio.domain.contracts import GameProfile
+from laboratorio.importing.history import history_options, parse_history
 from laboratorio.importing.records import (
     ClockDeclaration,
     ColumnMapping,
@@ -58,7 +59,11 @@ def checked_dataset(row) -> SavedDataset:
             ),
             "profile": profile,
         }
-        preview = parse_records(raw, **opts)
+        if envelope["format"] == "history_json":
+            preview = parse_history(raw, profile)
+            opts = history_options(json.loads(raw), profile)
+        else:
+            preview = parse_records(raw, **opts)
         if not preview.promotable or preview.dataset_sha256 != dataset_hash:
             raise ValueError("stored dataset cannot be reparsed")
         if encoded != canonical_bytes(preview.records, **opts):

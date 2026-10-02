@@ -10,11 +10,115 @@ not this policy. The original 70-prize screenshot LADDER is not Q80.
 from dataclasses import dataclass
 from typing import Literal
 
-from laboratorio.domain.contracts import MAX_MONEY, GameProfile
+from laboratorio.domain.contracts import MAX_MONEY, GameProfile, legacy_quiniela_80_profile
 
 _ROUNDS = 10
 _MARGIN = 10
 _PRIZES = (80, 8, 4, 2, 1)
+
+
+@dataclass(frozen=True, slots=True)
+class Q80ReferenceAudazStaking:
+    """Private identity for the archived transition k=1 rule, not a wire capability."""
+
+    schema_version: int = 1
+    capability: str = "transition-1-audaz-reference/v1"
+
+    def __post_init__(self) -> None:
+        if type(self.schema_version) is not int or self.schema_version != 1:
+            raise ValueError("unsupported reference audaz staking version")
+        if self.capability != "transition-1-audaz-reference/v1":
+            raise ValueError("unsupported reference audaz staking capability")
+
+
+@dataclass(frozen=True, slots=True)
+class Q80ReferenceAudazState:
+    balance: int
+
+    def __post_init__(self) -> None:
+        if type(self.balance) is not int or not 0 <= self.balance <= MAX_MONEY:
+            raise ValueError("balance must be an exact bounded integer")
+
+
+@dataclass(frozen=True, slots=True)
+class Q80ReferenceAudazStep:
+    cost: int
+    paid: int
+    state: Q80ReferenceAudazState
+    next_stake: int
+    reset: bool
+    capped: bool
+    outcome: Literal["quiebre"] | None
+
+
+def _q80_reference_audaz_decision(
+    balance: int, goal: int, profile: GameProfile
+) -> tuple[int, bool]:
+    profile = _validate_q80_profile(profile, 1)
+    if type(balance) is not int or not 0 <= balance <= MAX_MONEY:
+        raise ValueError("balance must be an exact integer within safe money bounds")
+    if type(goal) is not int or not 1 <= goal <= MAX_MONEY:
+        raise ValueError("goal must be an exact positive bounded integer")
+    if balance >= goal:
+        return 0, False
+    desired = (goal - balance + 78) // 79
+    stake = min(desired, balance)
+    if stake == 0:
+        return 0, False
+    if stake < profile.minimum_stake or stake % profile.stake_increment:
+        return 0, False
+    if stake > profile.maximum_stake:
+        raise ValueError("Q80 audaz stake exceeds profile maximum stake")
+    if stake > profile.max_exposure or stake > MAX_MONEY:
+        raise ValueError("Q80 audaz stake exceeds profile exposure")
+    return stake, desired > stake
+
+
+def q80_reference_audaz_stake(
+    balance: int, goal: int, *, profile: GameProfile | None = None
+) -> int:
+    """Exact reference k=1 rule: min(ceil((goal-balance)/79), balance)."""
+    return _q80_reference_audaz_decision(
+        balance, goal, legacy_quiniela_80_profile() if profile is None else profile
+    )[0]
+
+
+def step_q80_reference_audaz(
+    profile: GameProfile,
+    state: Q80ReferenceAudazState,
+    coverage: int,
+    paid_per_unit: int,
+    goal: int,
+) -> Q80ReferenceAudazStep:
+    """Settle k=1 exactly; zero initial affordability means quiebre, never goal."""
+    profile = _validate_q80_profile(profile, coverage)
+    if type(coverage) is not int or coverage != 1:
+        raise ValueError("reference audaz transition uses exactly one selected number")
+    if type(state) is not Q80ReferenceAudazState:
+        raise TypeError("state must be Q80ReferenceAudazState")
+    state.__post_init__()
+    if type(paid_per_unit) is not int or not 0 <= paid_per_unit <= sum(_PRIZES):
+        raise ValueError("paid_per_unit must be an exact Q80 covered payout")
+    stake, capped = _q80_reference_audaz_decision(state.balance, goal, profile)
+    if stake == 0:
+        return Q80ReferenceAudazStep(0, 0, state, 0, False, capped, "quiebre")
+    paid = stake * paid_per_unit
+    balance = state.balance - stake + paid
+    if balance > MAX_MONEY:
+        raise ValueError("Q80 audaz settlement exceeds safe money ceiling")
+    next_stake, next_capped = _q80_reference_audaz_decision(balance, goal, profile)
+    outcome = "quiebre" if next_stake == 0 and balance < goal else None
+    return Q80ReferenceAudazStep(
+        stake,
+        paid,
+        Q80ReferenceAudazState(balance),
+        next_stake,
+        paid_per_unit >= _PRIZES[0],
+        capped or next_capped,
+        outcome,
+    )
+
+
 MAX_RECOVERY_ROUNDS = 10_000  # One possible rung per admitted session row.
 
 

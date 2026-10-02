@@ -12,6 +12,21 @@ from typing import Literal
 CapabilityKind = Literal["selector", "staking", "entry", "settlement"]
 CapabilityStatus = Literal["supported", "pending"]
 ENTRY_POLICY = "all_rows/v1"  # Kept as the v1 result/request compatibility identifier.
+# Private composition vocabulary only. Deliberately excluded from supported() and
+# public capability projections until request dispatch/persistence lands in ODD80-04.
+PRIVATE_V5_COMPONENTS = (
+    ("selector", "archived-cold/v1"),
+    ("selector", "archived-transition/v1"),
+    ("selector", "archived-topk/v1"),
+    ("selector", "archived-parity50/v1"),
+    ("staking", "q80-reference-audaz/v1"),
+    ("staking", "q80-first-prize-cycling/v1"),
+    ("staking", "flat-per-number/v1"),
+    ("staking", "profile-audaz/v1"),
+    ("staking", "profile-recovery-ladder/v1"),
+    ("selector", "static-numbers/v1"),
+    ("selector", "seeded-random/hash-sha256-v1"),
+)
 
 
 @dataclass(frozen=True, slots=True)

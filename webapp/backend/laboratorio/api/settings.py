@@ -3,7 +3,7 @@
 import re
 from dataclasses import asdict
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import field_validator
 
 from laboratorio.api import StrictBody, repo
@@ -12,6 +12,10 @@ from laboratorio.storage.repository import QuotaBelowUsage, QuotaReadOnly
 
 router = APIRouter()
 _QUOTA_DECIMAL = re.compile(r"[1-9][0-9]{0,18}\Z")
+
+
+class CredentialRequest(StrictBody):
+    pass
 
 
 class QuotaPreference(StrictBody):
@@ -25,6 +29,14 @@ class QuotaPreference(StrictBody):
         if int(value) > 2**63 - 1:
             raise ValueError("quota_bytes exceeds the SQLite signed 64-bit maximum")
         return value
+
+
+@router.post("/settings/agent-credential")
+def read_agent_credential(_body: CredentialRequest, request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return {"token": request.app.state.agent_token}
 
 
 @router.get("/settings")

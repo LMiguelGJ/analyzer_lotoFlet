@@ -6,6 +6,7 @@ import { DetailPage } from "./pages/experiments/DetailPage";
 import { ComparisonPage } from "./pages/experiments/ComparisonPage";
 import { NewExperimentPage } from "./pages/new-experiment";
 import { ProfileExperimentPage } from "./pages/new-experiment/ProfileExperimentPage";
+import { ProfileBatchPage } from "./pages/new-experiment/ProfileBatchPage";
 import { ConfigurationsPage } from "./pages/configurations";
 import { SettingsPage } from "./pages/settings";
 import { DataPage } from "./pages/data";
@@ -27,6 +28,14 @@ export function App() {
         element={
           <Shell key="new-experiment" title="Nuevo experimento">
             <NewExperimentPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/experimentos/nuevo/sesion"
+        element={
+          <Shell key="new-profile-batch" title="Nuevo lote de sesiones">
+            <ProfileBatchPage />
           </Shell>
         }
       />

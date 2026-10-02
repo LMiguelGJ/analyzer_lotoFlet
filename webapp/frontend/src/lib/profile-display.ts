@@ -1,4 +1,4 @@
-import type { ProfileExperimentSummary, ProfileRunResult } from "../api/types";
+import type { ProfileBatchRunResult, ProfileExperimentSummary, ProfileRunResult } from "../api/types";
 
 /** Profile amounts are exact integer minor units; formatting never computes a payout. */
 export function formatProfileMoney(amount: number, currency: string, scale: number): string {
@@ -30,4 +30,11 @@ export const PROFILE_COLLISION_LABELS: Record<string, string> = {
 export function profileOutcome(result: ProfileRunResult): string {
   const reasons = result.collisions.map((reason) => PROFILE_COLLISION_LABELS[reason] ?? reason);
   return `${PROFILE_OUTCOME_LABELS[result.outcome]}${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
+}
+
+/** V5's server stop category disambiguates a bounded window from full-source exhaustion. */
+export function profileBatchOutcome(result: ProfileBatchRunResult): string {
+  if (result.stop_category === "operational_window") return "Ventana operativa; fuente incompleta";
+  if (result.stop_category === "operational_budget") return "Presupuesto operativo; fuente incompleta";
+  return profileOutcome(result);
 }

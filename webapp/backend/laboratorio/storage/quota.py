@@ -12,12 +12,17 @@ class QuotaExceeded(RuntimeError):
     """A new write or calculation cannot be admitted with the measured headroom."""
 
 
+class PendingRunsExceeded(ValueError):
+    """A submission would exceed the global pending/running run capacity."""
+
+
 @dataclass(frozen=True)
 class QuotaStatus:
     limit_bytes: int
-    logical_used_bytes: int  # historical experiment/run metric, unchanged
+    logical_used_bytes: int  # experiment/run fields, including immutable batch metadata
     profile_artifact_bytes: int
     dataset_artifact_bytes: int
+    strategy_artifact_bytes: int
     logical_margin_bytes: int
     free_disk_bytes: int
     disk_margin_bytes: int
@@ -28,7 +33,12 @@ class QuotaStatus:
 
     @property
     def admission_logical_bytes(self) -> int:
-        return self.logical_used_bytes + self.profile_artifact_bytes + self.dataset_artifact_bytes
+        return (
+            self.logical_used_bytes
+            + self.profile_artifact_bytes
+            + self.dataset_artifact_bytes
+            + self.strategy_artifact_bytes
+        )
 
     @property
     def sqlite_bytes(self) -> int:
@@ -64,6 +74,7 @@ def measure(
     *,
     profile_artifact_bytes: int = 0,
     dataset_artifact_bytes: int = 0,
+    strategy_artifact_bytes: int = 0,
     disk_usage=shutil.disk_usage,
 ):
     """Snapshot only known local files; SQLite may allocate other OS-managed temp files."""
@@ -81,6 +92,7 @@ def measure(
         logical_used_bytes=logical_used_bytes,
         profile_artifact_bytes=profile_artifact_bytes,
         dataset_artifact_bytes=dataset_artifact_bytes,
+        strategy_artifact_bytes=strategy_artifact_bytes,
         logical_margin_bytes=min(LOGICAL_MARGIN_BYTES, max(1, limit_bytes // 20)),
         free_disk_bytes=disk_usage(path.parent).free,
         disk_margin_bytes=DISK_MARGIN_BYTES,

@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { Bet, ExperimentSummary, Page, ProfileExperimentSummary, ReplayPage } from "../../api/types";
+import type { Bet, ExperimentSummary, Page, ProfileBatchExperimentSummary, ProfileExperimentSummary, ReplayPage } from "../../api/types";
 
 vi.mock("../../api/client", async (original) => {
   const actual = await original<typeof import("../../api/client")>();
@@ -52,6 +52,24 @@ const audazSnapshot: ProfileExperimentSummary = { ...cyclingSnapshot,
   display: { ...cyclingSnapshot.display, staking_label: "Audaz · apuesta dinámica por sorteo" },
   runs: [{ ...cyclingSnapshot.runs[0], result: { ...cyclingSnapshot.runs[0].result!, schema_version: 3 } }],
 };
+const batchV5Snapshot: ProfileBatchExperimentSummary = {
+  request_kind: "profile", request_schema_version: 5, id: "exp", status: "completed", created_at: null,
+  request: { schema_version: 5, kind: "profile_batch", profile_id: "test", profile_revision: 1,
+    profile_sha256: "b".repeat(64), dataset_sha256: "a".repeat(64),
+    conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 10000, goal: 20000, settlement: "all", max_elapsed_draws: 3, max_bet_draws: 2, end_minute: null, duration_minutes: null },
+    strategies: [{ definition_version: 1, name: "Snapshot cold", selector: "static-numbers/v1", coverage: 2, staking: "flat-per-number/v1", selector_parameters: { numbers: [7, 8] }, staking_parameters: {}, closing_defaults: {} }], max_draws: 3, source_version: "canonical-history/v1" },
+  profile: profileSnapshot.profile,
+  display: { ...profileSnapshot.display, name: "Lote guardado · Snapshot cold" },
+  sources: profileSnapshot.sources,
+  batch_admission: {
+    strategy_refs: [{ id: "strategy-old", revision: 2, definition_sha256: "c".repeat(64) }],
+    source_identity: { dataset_sha256: "a".repeat(64), source_sha256: "d".repeat(64), canonical_sha256: "e".repeat(64), row_count: 8, profile_id: "test", profile_revision: 1, profile_sha256: "b".repeat(64), archive_bound: false, archive_history_sha256: null, archive_rank_row_ids: null },
+    requested_constraints: { max_draws: 3 }, effective_constraints: { max_draws: 3 }, policy_revision: 1, policy: {},
+  },
+  runs: [{ result_kind: "profile", ordinal: 0, configuration_id: null, status: "completed", bets_count: 1, complete: true, completion: "complete", stop_category: "configured_limit", stop_reason: "max_bet_draws", stop_code: "configured_limit", error: null,
+    result_schema_version: 5, strategy: { id: "strategy-old", revision: 2, definition_sha256: "c".repeat(64), name: "Snapshot cold" },
+    result: { schema_version: 5, profile_id: "test", profile_revision: 1, outcome: "limit", collisions: ["max_bet_draws"], elapsed_draws: 1, bet_draws: 1, wagered: 250, paid: 0, final_balance: 9750, delta: -250, net: -250, return_per_wagered: 0, roi: -1, max_drawdown: 250, metric_scope: "saved_individual_run", ratio_rounding: "decimal-half-up-6", definition_name: "Snapshot cold", start_draw_index: 5, prior_cutoff: "2024-12-31 05:10", dataset_sha256: "a".repeat(64), source_count: 8, requested_conditions: { max_draws: 3 }, effective_conditions: { max_draws: 3 }, stop_category: "configured_limit", stop_reason: "max_bet_draws", complete: true } }],
+};
 function setup(path = "/experimentos/exp") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
   return { router, user: userEvent.setup(), ...render(<RouterProvider router={router} />) };
@@ -65,9 +83,11 @@ beforeEach(() => {
     const total = run?.result?.bet_draws ?? run?.result?.bets_count ?? 0;
     const capital = saved?.request.conditions.capital ?? 100;
     const end = run?.result?.final_balance ?? capital;
-    return { initial_capital: capital, total, max_points: 500, reduction_method: "none",
+    const v5 = saved?.request_schema_version === 5;
+    return { result_kind: v5 ? "profile" as const : undefined, schema_version: v5 ? 5 as const : undefined,
+      initial_capital: capital, total, max_points: 500, reduction_method: "none" as const,
       minimum: { balance: Math.min(capital, end), source_index: null }, maximum: { balance: Math.max(capital, end), source_index: null },
-      points: Array.from({ length: Math.min(total, 500) }, (_, i) => ({ source_index: i, label: `2025-01-01 10:${String(i % 60).padStart(2, "0")}`, balance: end, replay: `replay?offset=${i}&limit=1` })) };
+      points: Array.from({ length: Math.min(total, 500) }, (_, i) => ({ source_index: v5 ? (run?.result?.start_draw_index ?? 0) + i : i, ...(v5 ? { bet_index: i } : {}), label: `2025-01-01 10:${String(i % 60).padStart(2, "0")}`, balance: end, replay: `replay?offset=${i}&limit=1` })) };
   });
   vi.mocked(apiClient.getReplay).mockReset();
   vi.mocked(apiClient.getExperiment).mockResolvedValue(snapshot);
@@ -191,6 +211,93 @@ describe("profile detail READ", () => {
       expect(apiClient.getReplay).toHaveBeenCalledTimes(1);
       view.unmount();
     }
+  });
+});
+
+describe("profile batch v5 detail", () => {
+  it("uses saved identity, frozen references, backend metrics, stop scope, and canonical replay indexes", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(batchV5Snapshot);
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 5, total: 1, offset: 0, limit: 20, items: [
+      { label: "2025-01-01 05:10", stakes: [[7, 125], [8, 125]], results: [7, 8, 9], wagered: 250, paid: 0, balance: 9750, source_index: 5, bet_index: 0 },
+    ] });
+    const { user } = setup();
+    await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(screen.getByRole("heading", { name: "Lote guardado · Snapshot cold" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Snapshot cold" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver comparación" })).toHaveAttribute("href", "/experimentos/exp/comparacion");
+    expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
+    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Límite configurado · max_bet_draws");
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    expect(screen.getByText("Snapshot cold · ID strategy-old · revisión 2")).toBeInTheDocument();
+    expect(screen.getByText("c".repeat(64))).toBeInTheDocument();
+    expect(screen.getByText("e".repeat(64))).toBeInTheDocument();
+    expect(screen.getByText("Filas de la fuente guardada").nextElementSibling).toHaveTextContent("8");
+    await user.click(screen.getByRole("tab", { name: "Apuestas" }));
+    const table = await screen.findByRole("table", { name: "Apuestas del experimento" });
+    expect(within(table).getByText("5")).toBeInTheDocument();
+    expect(within(table).getByText("1")).toBeInTheDocument();
+    expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
+  });
+  it.each([
+    ["pending", "pending", "unknown", "pending"],
+    ["held", "pending", "unknown", "pending"],
+    ["cancelled", "cancelled", "interrupted", "cancelled"],
+    ["failed", "failed", "unknown", "failed"],
+  ] as const)("shows v5 %s without claiming metrics or replay", async (status, runStatus, stopCategory, reason) => {
+    const run = batchV5Snapshot.runs[0];
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, status, runs: [{ ...run,
+      status: runStatus, result_schema_version: null, result: null, bets_count: 0, complete: false,
+      completion: "unavailable" as const, stop_category: stopCategory, stop_reason: reason, stop_code: stopCategory,
+      error: status === "failed" ? "strategy failed" : null,
+    }] });
+    const { unmount } = setup();
+    const view = await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(within(view).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+    expect(within(view).queryByRole("region", { name: "Métricas financieras" })).not.toBeInTheDocument();
+    expect(apiClient.getReplay).not.toHaveBeenCalled();
+    unmount();
+  });
+  it("keeps mixed strategy failures ordinal-local without financial zeros", async () => {
+    const failed = { ...batchV5Snapshot.runs[0], ordinal: 1, status: "failed" as const, result_schema_version: null,
+      strategy: { id: "strategy-new", revision: 1, definition_sha256: "f".repeat(64), name: null }, result: null,
+      bets_count: 0, complete: false, completion: "unavailable" as const, stop_category: "unknown" as const,
+      stop_reason: "failed", stop_code: "unknown", error: "strategy failed" };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, status: "failed", runs: [
+      { ...batchV5Snapshot.runs[0], status: "completed" },
+      failed,
+    ] });
+    const { user } = setup();
+    await screen.findByRole("region", { name: "Ejecución 1" });
+    await user.click(screen.getByRole("button", { name: /2\. Estrategia 2/ }));
+    const run = screen.getByRole("region", { name: "Ejecución 2" });
+    expect(within(run).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+    expect(within(run).getByText(/unknown · failed · strategy failed/)).toBeInTheDocument();
+    expect(within(run).queryByRole("region", { name: "Métricas financieras" })).not.toBeInTheDocument();
+    expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 0, 20);
+  });
+  it("labels history_exhausted as an incomplete operational window when the backend category says so", async () => {
+    const run = batchV5Snapshot.runs[0];
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, batch_admission: { ...batchV5Snapshot.batch_admission, source_identity: { ...batchV5Snapshot.batch_admission.source_identity, row_count: 10 } }, runs: [{ ...run,
+      complete: false, completion: "incomplete" as const, stop_category: "operational_window" as const, stop_reason: "bounded draw window ended before source end",
+      result: { ...run.result!, outcome: "history_exhausted", collisions: [], elapsed_draws: 3, source_count: 10, complete: false, stop_category: "operational_window" as const, stop_reason: "bounded draw window ended before source end" },
+    }] });
+    setup();
+    await screen.findByText(/bounded draw window ended before source end/);
+    expect(screen.getByText("Motivo de cierre").nextElementSibling).toHaveTextContent("Ventana operativa; fuente incompleta");
+    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Ventana operativa; fuente incompleta");
+    expect(screen.queryByText("Historial agotado")).not.toBeInTheDocument();
+    expect(screen.queryByText("Fin de la fuente guardada")).not.toBeInTheDocument();
+  });
+  it("keeps Historial agotado when v5 reports the actual full-source end", async () => {
+    const run = batchV5Snapshot.runs[0];
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, runs: [{ ...run, complete: true, completion: "complete" as const,
+      stop_category: "source_end" as const, stop_reason: "full saved source ended",
+      result: { ...run.result!, outcome: "history_exhausted", collisions: [], elapsed_draws: 3, complete: true, stop_category: "source_end" as const, stop_reason: "full saved source ended" },
+    }] });
+    setup();
+    await screen.findByText("Historial agotado");
+    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Fin de la fuente guardada · full saved source ended");
+    expect(screen.queryByText("Ventana operativa; fuente incompleta")).not.toBeInTheDocument();
   });
 });
 

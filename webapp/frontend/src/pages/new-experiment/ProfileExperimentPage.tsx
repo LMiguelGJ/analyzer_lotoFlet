@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
 import type { DatasetListing, Page, ProfileListing } from "../../api/types";
 import { buildProfileRequest, initialProfileDraft, matchingDataset } from "./profile-model";
@@ -13,6 +13,9 @@ type Choice<T> = { item: T; offset: number };
 
 export function ProfileExperimentPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestedDataset = new URLSearchParams(location.search).get("dataset_sha256");
+  const requestedDatasetHash = requestedDataset && /^[0-9a-f]{64}$/.test(requestedDataset) ? requestedDataset : null;
   const [profiles, setProfiles] = useState<Page<ProfileListing> | null>(null);
   const [datasets, setDatasets] = useState<Page<DatasetListing> | null>(null);
   const [profileOffset, setProfileOffset] = useState(0);
@@ -162,8 +165,10 @@ export function ProfileExperimentPage() {
   const compatible = datasets?.items.filter((item) => profileChoice && matchingDataset(profileChoice.item, item)) ?? [];
   const disabled = posting || uncertain || !profiles || !datasets || !draws || !!profileError || !!datasetError || !!drawError;
   return <div className="max-w-prose space-y-7">
-    <Link to="/experimentos/nuevo" className="text-accent underline">Volver al asistente clásico</Link>
-    <div><h2 className="text-2xl">Sesión con perfil registrado</h2><p className="field-help">Usá un perfil inmutable y datos locales ya importados. Elegí una política de apuesta ofrecida por el servidor para este perfil. Los rankings y otras familias todavía no están disponibles para perfiles.</p></div>
+    <div className="flex flex-wrap gap-4"><Link to="/experimentos/nuevo/sesion" className="text-accent underline">Probar el nuevo asistente de lote v5</Link><Link to="/experimentos/nuevo" className="text-accent underline">Volver al asistente clásico</Link></div>
+    <div><h2 className="text-2xl">Sesión con perfil registrado</h2><p className="field-help">Usá un perfil inmutable y datos locales ya importados. Elegí una política de apuesta ofrecida por el servidor para este perfil. Los rankings y otras familias todavía no están disponibles para perfiles.</p>
+      {requestedDatasetHash && <p role="status" className="field-help break-all">Historial elegido desde la biblioteca: <code>{requestedDatasetHash}</code>. La identidad es una referencia; elegí manualmente un perfil y un dataset que coincidan. No se preselecciona otro dato ni se afirma que este historial permita ejecutar.</p>}
+      {requestedDataset && !requestedDatasetHash && <p role="alert">La referencia al dataset del enlace no es válida. Elegí los datos desde la biblioteca.</p>}</div>
     <form onSubmit={(event) => { void submit(event); }} noValidate className="space-y-6">
       <section aria-labelledby="profile-choice-title"><h3 id="profile-choice-title" className="section-header">Perfil registrado</h3>
         {!profiles && !profileError && <p role="status">Cargando perfiles…</p>}
