@@ -1,6 +1,0 @@
-### Result
-{"scroll":63,"max":63,"buttonRect":{"left":1145.828125,"right":1234.578125},"regionRect":{"left":238,"right":1252},"fullyVisible":true}
-### Ran Playwright code
-```js
-await (async page => {await page.setViewportSize({width:1280,height:900});await page.goto("http://127.0.0.1:8791/experimentos");const r=page.getByRole("region",{name:"Experimentos"});await r.focus();await page.keyboard.press("ArrowRight");await page.keyboard.press("ArrowRight");await page.waitForTimeout(250);return await page.evaluate(()=>{const r=document.querySelector(".data-table-region"),b=document.querySelector("button[aria-label=\"Acciones de Prueba base 80-20\"]")?.getBoundingClientRect(),rr=r.getBoundingClientRect();return {scroll:r.scrollLeft,max:r.scrollWidth-r.clientWidth,buttonRect:b?{left:b.left,right:b.right}:null,regionRect:{left:rr.left,right:rr.right},fullyVisible:b?b.left>=rr.left&&b.right<=rr.right:null}})})(page);
-```

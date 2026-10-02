@@ -45,6 +45,8 @@ desktop.ini
 *.log
 # Selected redacted verification logs are durable evidence, not runtime logs.
 !webapp/reports/verification/**/*.log
+# Local verification evidence and screenshots; not required by the application.
+/webapp/reports/
 logs/
 
 # Data files (optional - comment out if you want to track them)

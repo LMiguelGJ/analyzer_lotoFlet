@@ -1,6 +1,0 @@
-### Result
-{"before":{"focus":"Cancelar","dialog":"¿Eliminar el experimento «Prueba base 80-20»?\n\nSe eliminará «Prueba base 80-20» de forma permanente. Esta acción no se puede deshacer.\n\nCancelar\nEliminar experimento"},"tab":{"focus":"Eliminar experimento","outline":"solid"},"back":{"focus":"Cancelar","outline":"solid"},"after":{"focus":"Acciones","dialog":false}}
-### Ran Playwright code
-```js
-await (async page => {const before=await page.evaluate(()=>({focus:document.activeElement?.textContent?.trim(),dialog:document.querySelector("[role=alertdialog]")?.innerText})); await page.keyboard.press("Tab"); const tab=await page.evaluate(()=>({focus:document.activeElement?.textContent?.trim(),outline:getComputedStyle(document.activeElement).outlineStyle})); await page.keyboard.press("Shift+Tab"); const back=await page.evaluate(()=>({focus:document.activeElement?.textContent?.trim(),outline:getComputedStyle(document.activeElement).outlineStyle})); await page.keyboard.press("Escape"); return {before,tab,back,after:await page.evaluate(()=>({focus:document.activeElement?.textContent?.trim(),dialog:!!document.querySelector("[role=alertdialog]")}))}})(page);
-```
