@@ -23,18 +23,18 @@ function storedDate(label: string) {
   return label.replace("T", " ");
 }
 function stopCategoryLabel(category: string) {
-  return ({ financial_goal: "Meta financiera alcanzada", financial_ruin: "Quiebre financiero", recovery_end: "Fin de escalera de recuperación", interrupted: "Interrumpida", configured_limit: "Límite configurado", operational_budget: "Presupuesto operativo; fuente incompleta", operational_window: "Ventana operativa; fuente incompleta", source_end: "Fin de la fuente guardada", unknown: "Cierre no disponible" } as Record<string, string>)[category] ?? "Cierre no reconocido";
+  return ({ financial_goal: "Meta financiera alcanzada", financial_ruin: "Quiebre financiero", recovery_end: "Fin de escalera de recuperación", interrupted: "Interrumpida", configured_limit: "Límite configurado", operational_budget: "Límite operativo; fuente incompleta", operational_window: "Ventana operativa; fuente incompleta", source_end: "Fin de la fuente guardada", unknown: "Cierre no disponible" } as Record<string, string>)[category] ?? "Cierre no reconocido";
 }
 function detailError(error: unknown) {
-  if (error instanceof NetworkError) return "No se pudo contactar al servidor local. Esto no indica que la ejecución se haya detenido.";
+  if (error instanceof NetworkError) return "No se pudo contactar al servidor. Esto no detiene la ejecución.";
   if (error instanceof ApiError && error.status === 404) return "Este experimento no existe o fue eliminado.";
-  return "No se pudo consultar el experimento. Probá de nuevo.";
+  return "No se pudo consultar el experimento. Reintentá.";
 }
 function replayError(error: unknown) {
-  if (error instanceof NetworkError) return "No se pudo contactar al servidor local. La reproducción guardada no cambió.";
+  if (error instanceof NetworkError) return "No se pudo contactar al servidor. Lo guardado no cambió.";
   if (error instanceof ApiError && error.status === 409) return "La reproducción todavía no está disponible para esta ejecución.";
   if (error instanceof ApiError && error.status === 404) return "La ejecución o el experimento ya no existe.";
-  return "No se pudo cargar esta página de apuestas. Probá de nuevo.";
+  return "No se pudo cargar esta página de apuestas. Reintentá.";
 }
 
 function BetDetails({ bet }: { bet: Bet }) {
@@ -68,8 +68,8 @@ function ProfileBetDetails({ bet, data }: { bet: ProfileBet; data: ProfileExperi
 function profileColumns(data: ProfileExperimentSummary, canonical = false): DataTableColumn<ProfileBet>[] {
   return [
     ...(canonical ? [
-      { key: "source-index", header: "Índice de sorteo fuente", render: (bet: ProfileBet) => bet.source_index == null ? "—" : bet.source_index },
-      { key: "bet-index", header: "Apuesta local", render: (bet: ProfileBet) => bet.bet_index == null ? "—" : bet.bet_index + 1 },
+      { key: "source-index", header: "Sorteo n.º", render: (bet: ProfileBet) => bet.source_index == null ? "—" : bet.source_index },
+      { key: "bet-index", header: "Apuesta n.º", render: (bet: ProfileBet) => bet.bet_index == null ? "—" : bet.bet_index + 1 },
     ] : []),
     { key: "date", header: "Fecha y hora", render: (bet) => storedDate(bet.label) },
     { key: "stakes", header: "Apuestas por número", render: (bet) => bet.stakes.map(([number, stake]) => `${number}: ${profileMoney(data, stake)}`).join(", ") },
@@ -104,27 +104,26 @@ function Parameters({ data, run }: { data: LegacyExperimentSummary; run: RunSumm
       <dt>Límite de minutos históricos</dt><dd>{conditions.max_minutes ?? "Sin límite"}</dd>
       <dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd>
       <dt>Semilla guardada</dt><dd>{conditions.seed}</dd>
-      <dt>Configuración asociada</dt><dd className={run.configuration_id ? "font-mono" : undefined}>{run.configuration_id ?? "Sin configuración asociada"}</dd>
-      <dt>Estrategia</dt><dd>{strategy?.name ?? "No registrada"}</dd>
+            <dt>Estrategia</dt><dd>{strategy?.name ?? "No registrada"}</dd>
       {strategy && <><dt>Selector</dt><dd>{SELECTOR_LABELS[strategy.selector]}</dd><dt>Sistema</dt><dd>{strategy.system ?? "—"}</dd><dt>Cobertura</dt><dd>{strategy.coverage}</dd><dt>Apuesta</dt><dd>{STAKING_LABELS[strategy.staking]}</dd>
         {strategy.components && <><dt>Componentes guardados</dt><dd>{strategy.components.map((component) => `${component.system}: ${component.weight}`).join(", ")}</dd></>}</>}
     </dl>
     <div>
-      <h3 className="section-header">Datos de origen</h3>
-      <dl className="data-list break-all">
+      <details><summary className="disclosure-summary">Detalles técnicos</summary>
+      <dl className="data-list break-all pt-2">
+        <dt>Configuración asociada</dt><dd className={run.configuration_id ? "font-mono" : undefined}>{run.configuration_id ?? "Sin configuración asociada"}</dd>
         <dt>Historial</dt><dd className="font-mono">{data.sources.history_id}</dd><dt>SHA-256 historial</dt><dd className="font-mono">{data.sources.history_sha256}</dd>
         <dt>Rankings</dt><dd className="font-mono">{data.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd className="font-mono">{data.sources.rankings_sha256}</dd>
         <dt>Versión de código</dt><dd className="font-mono">{data.sources.code_version}</dd>
       </dl>
-    </div>
+    </details></div>
     <p className="text-text-secondary">Resultados sobre datos históricos ya investigados: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.</p>
   </div>;
 }
 
-function ProfileParameters({ data }: { data: Exclude<ProfileExperimentSummary, ProfileBatchExperimentSummary> }) {
+function ProfileParameters({ data, run }: { data: Exclude<ProfileExperimentSummary, ProfileBatchExperimentSummary>; run: AnyRunSummary }) {
   const { conditions, selector } = data.request;
   return <div className="space-y-6 text-sm"><dl className="data-list">
-    <dt>Versión de solicitud</dt><dd>Perfil v{data.request.schema_version}</dd>
     <dt>Sorteo inicial</dt><dd>{storedDate(conditions.start_draw)}</dd>
     <dt>Perfil</dt><dd>{data.profile.profile_id} · revisión {data.profile.revision} · {data.profile.positions} posiciones · {data.display.currency}</dd>
     <dt>Capital</dt><dd>{profileMoney(data, data.display.capital)}</dd>
@@ -139,10 +138,9 @@ function ProfileParameters({ data }: { data: Exclude<ProfileExperimentSummary, P
       ? `${data.display.staking_label} · ${profileMoney(data, data.request.staking.per_number_stake)} por número`
       : data.display.staking_label}</dd>
     {data.request.schema_version === 4 && <><dt>Margen objetivo</dt><dd>{profileMoney(data, data.request.staking.target_margin)}</dd><dt>Rondas de recuperación</dt><dd>{data.request.staking.rounds}</dd><dt>Al agotar la escalera</dt><dd>{data.request.staking.end_mode === "cycle" ? "Reiniciar la escalera" : "Detener la sesión"}</dd></>}
-    <dt>Conjunto de datos SHA-256</dt><dd className="font-mono break-all">{data.request.dataset_sha256}</dd>
+      </dl><details><summary className="disclosure-summary">Detalles técnicos</summary><dl className="data-list pt-2"><dt>Versión de solicitud</dt><dd>Perfil v{data.request.schema_version}</dd><dt>Versión del resultado</dt><dd>{isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd><dt>Conjunto de datos SHA-256</dt><dd className="font-mono break-all">{data.request.dataset_sha256}</dd>
     <dt>Perfil SHA-256</dt><dd className="font-mono break-all">{data.request.profile_sha256}</dd>
-    <dt>Versión de código</dt><dd>{data.sources.code_version}</dd>
-  </dl><p className="text-text-secondary">Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.</p></div>;
+    <dt>Versión de código</dt><dd>{data.sources.code_version}</dd></dl></details><p className="text-text-secondary">Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.</p></div>;
 }
 
 function ProfileBatchParameters({ data, run }: { data: ProfileBatchExperimentSummary; run: AnyRunSummary }) {
@@ -153,30 +151,32 @@ function ProfileBatchParameters({ data, run }: { data: ProfileBatchExperimentSum
   const strategyName = isProfileBatchRun(run) ? run.strategy.name : null;
   const definition = data.request.strategies[run.ordinal];
   return <div className="space-y-6 text-sm"><dl className="data-list break-all">
-    <dt>Versión de solicitud</dt><dd>Perfil v5 · lote de una estrategia por ejecución</dd>
-    <dt>Sorteo inicial</dt><dd>{storedDate(conditions.start_draw)} · índice fuente {definition ? data.runs[run.ordinal]?.result?.start_draw_index ?? "(no iniciado)" : "—"}</dd>
-    <dt>Perfil congelado</dt><dd>{data.request.profile_id} · revisión {data.request.profile_revision}</dd>
-    <dt>SHA-256 del perfil</dt><dd className="font-mono">{data.request.profile_sha256}</dd>
+    <dt>Sorteo inicial</dt><dd>{storedDate(conditions.start_draw)}</dd>
+    <dt>Perfil</dt><dd>{data.request.profile_id} · revisión {data.request.profile_revision}</dd>
     <dt>Capital</dt><dd>{profileMoney(data, conditions.capital)}</dd>
     <dt>Meta</dt><dd>{profileMoney(data, conditions.goal)}</dd>
     <dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd>
-    <dt>Estrategia congelada</dt><dd>{strategyName ?? definition?.name ?? "No disponible"} · ID {strategyRef?.id ?? "—"} · revisión {strategyRef?.revision ?? "—"}</dd>
+    <dt>Estrategia</dt><dd>{strategyName ?? definition?.name ?? "No disponible"} · revisión {strategyRef?.revision ?? "—"}{definition ? ` · cobertura ${definition.coverage}` : ""}</dd>
+    <dt>Ventana</dt><dd>{String(admission.effective_constraints.max_draws ?? data.request.max_draws)} sorteos máximos · {String(admission.effective_constraints.max_elapsed_draws ?? "sin límite")} transcurridos</dd>
+    <dt>Filas de la fuente</dt><dd>{identity.row_count}</dd>
+  </dl><details><summary className="disclosure-summary">Detalles técnicos</summary><dl className="data-list break-all pt-2">
+    <dt>Versión de solicitud</dt><dd>Perfil v{data.request.schema_version}</dd>
+    <dt>Versión del resultado</dt><dd>{isProfileBatchRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd>
+    <dt>Sorteo de inicio (índice fuente)</dt><dd>{definition ? data.runs[run.ordinal]?.result?.start_draw_index ?? "(no iniciado)" : "—"}</dd>
+    <dt>SHA-256 del perfil</dt><dd className="font-mono">{data.request.profile_sha256}</dd>
+    <dt>ID de estrategia</dt><dd>{strategyRef?.id ?? "—"}</dd>
     <dt>SHA-256 de definición</dt><dd className="font-mono">{strategyRef?.definition_sha256 ?? "—"}</dd>
-    <dt>Selector y apuesta guardados</dt><dd>{definition ? `${definition.selector} · cobertura ${definition.coverage} · ${definition.staking}` : "No disponible"}</dd>
-    {definition && <><dt>Definición de estrategia guardada</dt><dd><details><summary className="disclosure-summary">Ver parámetros congelados</summary><pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(definition, null, 2)}</pre></details></dd></>}
+    <dt>Selector y apuesta</dt><dd>{definition ? `${definition.selector} · ${definition.staking}` : "No disponible"}</dd>
+    {definition && <><dt>Definición guardada</dt><dd><pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(definition, null, 2)}</pre></dd></>}
     <dt>Dataset SHA-256</dt><dd className="font-mono">{identity.dataset_sha256}</dd>
     <dt>Fuente SHA-256</dt><dd className="font-mono">{identity.source_sha256}</dd>
     <dt>Fuente canónica SHA-256</dt><dd className="font-mono">{identity.canonical_sha256}</dd>
-    <dt>Filas de la fuente guardada</dt><dd>{identity.row_count}</dd>
-    <dt>Binding archivado</dt><dd>{identity.archive_bound ? `Verificado · historial ${identity.archive_history_sha256}` : "No aplica a esta estrategia"}</dd>
-    <dt>Ventana solicitada</dt><dd>{String(admission.requested_constraints.max_draws ?? data.request.max_draws)} sorteos máximos · {String(admission.requested_constraints.max_elapsed_draws ?? "sin límite declarado")} transcurridos</dd>
-    <dt>Condiciones efectivas guardadas</dt><dd>{String(admission.effective_constraints.max_draws ?? data.request.max_draws)} sorteos máximos · {String(admission.effective_constraints.max_elapsed_draws ?? "no disponible")} transcurridos</dd>
-    <dt>Ventana operativa de esta corrida</dt><dd>{data.request.max_draws} sorteos máximos; inicio no renumerado</dd>
-    <dt>Restricciones solicitadas al ingreso</dt><dd><code>{JSON.stringify(admission.requested_constraints)}</code></dd>
-    <dt>Restricciones efectivas guardadas</dt><dd><code>{JSON.stringify(admission.effective_constraints)}</code></dd>
-    <dt>Política de ejecución congelada</dt><dd>Revisión {admission.policy_revision} · <code>{JSON.stringify(admission.policy)}</code></dd>
+    <dt>Archivo autenticado</dt><dd>{identity.archive_bound ? `Verificado · historial ${identity.archive_history_sha256}` : "No aplica a esta estrategia"}</dd>
+    <dt>Restricciones solicitadas</dt><dd><code>{JSON.stringify(admission.requested_constraints)}</code></dd>
+    <dt>Restricciones efectivas</dt><dd><code>{JSON.stringify(admission.effective_constraints)}</code></dd>
+    <dt>Política de ejecución</dt><dd>Revisión {admission.policy_revision} · <code>{JSON.stringify(admission.policy)}</code></dd>
     <dt>Versión de código</dt><dd className="font-mono">{data.sources.code_version}</dd>
-  </dl><p className="text-text-secondary">Identidad y estrategia corresponden a las revisiones admitidas; no se sustituyen por la definición más reciente de la biblioteca. Las filas fuente pueden exceder la ventana ejecutada.</p></div>;
+  </dl></details><p className="text-text-secondary">Se muestran las revisiones admitidas, no las más recientes.</p></div>;
 }
 
 function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary }) {
@@ -251,7 +251,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
       {tabs.map((name, index) => <button key={name} ref={(node) => { tabRefs.current[index] = node; }} type="button" role="tab" id={`detail-tab-${index}`} aria-controls={`detail-panel-${index}`} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => selectTab(name)} onKeyDown={(event) => onTabKey(event, index)} className={`min-h-control px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${tab === name ? "border-b-2 border-accent text-text" : "text-text-secondary hover:text-text"}`}>{name}</button>)}
     </div>
     <div role="tabpanel" id={`detail-panel-${tabs.indexOf(tab)}`} aria-labelledby={`detail-tab-${tabs.indexOf(tab)}`} tabIndex={0} className="pt-5">
-      {tab === "Parámetros y datos" ? isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null : !run.result ? <><p role="status">Esta ejecución no tiene un resultado completo guardado. No hay desenlace ni reproducción para mostrar.</p>{isProfileBatchRun(run) && <p className="mt-2 text-sm">{stopCategoryLabel(run.stop_category)} · {run.stop_category} · {run.stop_reason}{run.error ? ` · ${run.error}` : ""}</p>}</> : <>
+      {tab === "Parámetros y datos" ? isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} run={run} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null : !run.result ? <><p role="status">Esta ejecución no tiene un resultado guardado.</p>{isProfileBatchRun(run) && <><p className="mt-2 text-sm">{stopCategoryLabel(run.stop_category)}</p><details><summary className="disclosure-summary">Detalles técnicos</summary><dl className="data-list pt-2"><dt>Categoría de parada (código)</dt><dd>{run.stop_category}</dd><dt>Motivo informado</dt><dd>{run.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd>{run.error && <><dt>Error</dt><dd>{run.error}</dd></>}</dl></details></>}</> : <>
         {tab === "Resultado" && <>
           {isProfileBatchRun(run) && !run.result.complete && <p role="status" className="mb-4 text-sm">Resultado incompleto · {stopCategoryLabel(run.result.stop_category)}</p>}
           <section aria-label="Desenlace" className="border-b border-border pb-5">
@@ -261,14 +261,13 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
               <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help">{money(run.result.delta)}</dd>
               <dt>Neto</dt><dd className="data-list-numeric">{run.result.net == null ? "N/A" : money(run.result.net)}</dd>
               <dt>Motivo de cierre</dt><dd>{isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} />}</dd>
-              {isProfileBatchRun(run) && <><dt>Clasificación de parada</dt><dd>{stopCategoryLabel(run.result.stop_category)} · {run.result.stop_reason}</dd></>}
+              {isProfileBatchRun(run) && <><dt>Clasificación de parada</dt><dd>{stopCategoryLabel(run.result.stop_category)}</dd></>}
             </dl>
             <p id="detail-delta-help" className="field-help mt-2">{FIELD_HELP_DELTA}</p>
           </section>
           <RunTrajectory id={data.id} ordinal={run.ordinal} name={runName} goal={isProfileExperiment(data) ? data.display.goal : data.request.conditions.goal} money={money} onSelect={(index) => { setPlaying(false); setCursor(index); setOffset(pageOffset(index)); setTab("Apuestas"); }} />
           <div className="border-t border-border pt-5" aria-label="Reproducción visual">
             <h4 className="section-header">Reproducción visual</h4>
-            <p className="mb-3 text-sm text-text-secondary">El sorteo mostrado es una posición de lectura; no cambia el resultado final guardado.</p>
             <p aria-live="polite" className="mb-3 text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)}${isProfileBatchRun(run) && canonicalSourceIndex != null ? ` · índice fuente ${canonicalSourceIndex}` : ""} · saldo en ese sorteo ${money(current.balance)}` : ""}</p>
             <div className="flex flex-wrap items-center gap-2">
               <button className={button} type="button" disabled={!total || cursor === 0} onClick={() => move(-1)}>Sorteo anterior</button>
@@ -276,17 +275,17 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
               <button className={button} type="button" disabled={!total || cursor >= total - 1} onClick={() => move(1)}>Siguiente sorteo</button>
               <label htmlFor="replay-speed" className="text-sm">Velocidad</label><select id="replay-speed" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} className="min-h-control rounded-control border border-border-control bg-field px-2 text-sm"><option value={0.5}>0,5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
             </div>
-            {typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches && <p className="mt-2 text-sm">Movimiento reducido: usá anterior y siguiente; reproducción automática desactivada.</p>}
+            {typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches && <p className="mt-2 text-sm">Movimiento reducido: usá anterior y siguiente.</p>}
           </div>
           <dl className="data-list mt-5 border-t border-border pt-5">
-            {isProfileRun(run) ? <><dt>Versión del resultado</dt><dd>Perfil v{run.result.schema_version}</dd><dt>Sorteos transcurridos</dt><dd>{run.result.elapsed_draws}</dd><dt>Sorteos apostados</dt><dd>{run.result.bet_draws}</dd>{isProfileBatchRun(run) && <><dt>Alcance del resultado</dt><dd>{run.result.complete ? "Completo según el límite configurado" : "Incompleto; no equivale al fin de la fuente"}</dd></>}</> : <><dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd></>}
+            {isProfileRun(run) ? <><dt>Sorteos transcurridos</dt><dd>{run.result.elapsed_draws}</dd><dt>Sorteos apostados</dt><dd>{run.result.bet_draws}</dd>{isProfileBatchRun(run) && <><dt>Alcance del resultado</dt><dd>{run.result.complete ? "Completo según el límite configurado" : "Incompleto; no equivale al fin de la fuente"}</dd></>}</> : <><dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd></>}
           </dl>
           <FinancialMetrics result={run.result} money={money} omitNet />
+          {isProfileBatchRun(run) && <details><summary className="disclosure-summary">Detalles técnicos</summary><dl className="data-list break-all pt-2"><dt>Versión de solicitud</dt><dd>{isProfileBatchExperiment(data) ? `Perfil v${data.request.schema_version}` : "No disponible"}</dd><dt>Versión del resultado</dt><dd>{run.result.schema_version}</dd><dt>Categoría de parada (código)</dt><dd>{run.result.stop_category}</dd><dt>Motivo informado</dt><dd>{run.result.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd><dt>Índice de inicio en la fuente</dt><dd>{run.result.start_draw_index}</dd></dl></details>}
           <p className="mt-3 text-sm text-text-secondary">{isProfileExperiment(data) ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
         </>}
         {tab === "Apuestas" && <>
           {current && <p role="status">Apuesta seleccionada {cursor + 1}: {storedDate(current.label)} · {money(current.balance)}</p>}
-          <p className="mb-3 text-sm text-text-secondary">Apuestas guardadas, página {Math.floor(offset / PAGE_SIZE) + 1}. Los resultados están ordenados por posición.</p>
           {visiblePage && visiblePage.items.length > 0 && (isProfileReplay(visiblePage) && isProfileExperiment(data)
             ? <DataTable caption="Apuestas del experimento" columns={profileColumns(data, isProfileBatchRun(run))} rows={visiblePage.items} getRowKey={(bet) => bet.label} />
             : !isProfileReplay(visiblePage) && <DataTable caption="Apuestas del experimento" columns={columns} rows={visiblePage.items} getRowKey={(bet) => bet.label} />)}
@@ -343,9 +342,9 @@ export function DetailPage() {
         <Link className="btn btn-tertiary" to="/experimentos">Volver a Experimentos</Link>
         <Link className="btn btn-tertiary" to={`/experimentos/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Ver comparación"}</Link>
       </nav>
-      {requestedRun !== null && !requested && <p role="status" className="mb-4">La ejecución solicitada no existe en este experimento; se muestra la primera disponible.</p>}
+      {requestedRun !== null && !requested && <p role="status" className="mb-4">Esa ejecución no existe; se muestra la primera.</p>}
       <div className="flex flex-wrap items-center gap-4 border-b border-border pb-5"><h2 className="font-heading text-2xl">{isProfileBatchExperiment(data) ? data.display.name : isProfileExperiment(data) ? data.request.name : data.request.name}</h2><StatusLabel kind="execution" value={data.status} /></div>
-      <p className="mt-3 text-sm text-text-secondary">ID: <span className="font-mono">{data.id}</span>. {data.status === "running" || data.status === "pending" || data.status === "held" ? "Consultando el progreso guardado; salir de esta página no cancela la ejecución." : "Estado guardado del experimento."}</p>
+      {(data.status === "running" || data.status === "pending" || data.status === "held") && <p className="mt-3 text-sm text-text-secondary">Se actualiza solo; salir de esta página no cancela la ejecución.</p>}
       {data.runs.length > 1 && <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
         {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {isProfileBatchRun(run) ? run.strategy.name ?? `Estrategia ${run.ordinal + 1}` : isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? "Estrategia"} · <StatusLabel kind="execution" value={run.status} /></button>)}
       </div>}

@@ -100,7 +100,7 @@ describe("LW10 experiments list · states", () => {
     const { user } = setup();
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toMatch(/No se pudo contactar al servidor local/);
+    expect(alert.textContent).toMatch(/No se pudo contactar al servidor/);
     expect(alert.textContent ?? "").not.toMatch(/detuvo|detenido|se detuvo/i);
 
     await user.click(within(alert).getByRole("button", { name: "Reintentar" }));
@@ -144,10 +144,12 @@ describe("LW10 experiments list · data and navigation", () => {
     const { user } = setup();
     const link = await screen.findByRole("link", { name: "Cycling" });
     expect(link).toHaveAttribute("href", "/experimentos/cycling");
-    expect(screen.getByText(/Capital USD 100.00.*Perfil v2.*Escalera cíclica Q80/)).toBeInTheDocument();
+    expect(screen.getByText(/Perfil test · 1 posiciones/)).toBeInTheDocument();
+    expect(screen.getByText(/Capital USD 100.00/)).toBeInTheDocument();
+    expect(screen.getByText(/Escalera cíclica Q80/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Acciones de Perfil de prueba" }));
     expect(screen.queryByRole("link", { name: "Usar como base" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Usar como base no disponible para perfiles/)).toBeInTheDocument();
+    expect(screen.getByText(/No disponible como base/)).toBeInTheDocument();
   });
   it("labels a recovery run by its saved profile policy instead of calling it a strategy", async () => {
     const recovery: ProfileExperimentSummary = {
@@ -158,7 +160,8 @@ describe("LW10 experiments list · data and navigation", () => {
     };
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [recovery] });
     setup();
-    expect(await screen.findByText(/Perfil v4.*Escalera de recuperación/)).toBeInTheDocument();
+    const row = (await screen.findByRole("link", { name: "Recovery" })).closest("tr");
+    expect(row).toHaveTextContent(/Perfil test · 1 posiciones.*Escalera de recuperación/);
     expect(screen.getByRole("columnheader", { name: "Corridas" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Estrategias" })).not.toBeInTheDocument();
   });
@@ -251,7 +254,7 @@ describe("LW10 experiments list · data and navigation", () => {
     await screen.findByText("Fríos K1");
     expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 20, limit: 20, name_contains: "Fríos", status: "running", sort: "name", order: "asc" });
     expect(screen.getByRole("columnheader", { name: /Nombre/ })).toHaveAttribute("aria-sort", "ascending");
-    await user.selectOptions(screen.getByLabelText("Estado de ejecución"), "completed");
+    await user.selectOptions(screen.getByLabelText("Estado"), "completed");
     await waitFor(() => expect(router.state.location.search).toContain("status=completed"));
     expect(router.state.location.search).not.toContain("page=2");
   });
@@ -330,7 +333,7 @@ describe("profile batch v5 experiment list compatibility", () => {
     expect(screen.getByRole("menu", { name: `Acciones de ${name}` })).toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     const dialog = screen.getByRole("alertdialog", { name: `¿Eliminar el experimento «${name}»?` });
-    expect(dialog).toHaveTextContent(`Se eliminará «${name}» de forma permanente.`);
+    expect(dialog).toHaveTextContent("Se elimina de forma permanente.");
     await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
     expect(apiClient.deleteExperiment).toHaveBeenCalledWith("batch-v5", "batch-v5");
     expect(await screen.findByText(`Se eliminó "${name}".`)).toHaveAttribute("role", "status");
@@ -348,7 +351,7 @@ describe("profile experiment list", () => {
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Capital USD 100.00 · Meta USD 200.00");
     await user.click(screen.getByRole("button", { name: "Acciones de Perfil de prueba" }));
     expect(screen.queryByRole("menuitem", { name: "Usar como base" })).not.toBeInTheDocument();
-    expect(screen.getByText(/no disponible para perfiles/)).toBeInTheDocument();
+    expect(screen.getByText(/No disponible como base/)).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Eliminar" })).toHaveFocus();
   });
 });

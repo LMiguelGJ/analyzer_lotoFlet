@@ -122,10 +122,10 @@ describe("profile comparison READ", () => {
     vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 4, total: 1, offset: 0, limit: 100,
       items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] });
     setup();
-    const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
-    expect(within(table).getByRole("columnheader", { name: "Versión del resultado" })).toBeInTheDocument();
-    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Perfil v4");
-    expect(await screen.findAllByText("Perfil v4")).toHaveLength(2);
+    await screen.findByRole("table", { name: "Comparación de ejecuciones" });
+    await userEvent.setup().click(screen.getByText("Detalles técnicos"));
+    expect(screen.getByText("Versión de solicitud").nextElementSibling).toHaveTextContent("Perfil v4");
+    expect(screen.getByText("Resultado · Perfil EUR").nextElementSibling).toHaveTextContent("Perfil v4");
     expect(screen.getByText("EUR 5.00")).toBeInTheDocument();
     expect(screen.getByText(ending)).toBeInTheDocument();
     expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
@@ -136,7 +136,6 @@ describe("profile comparison READ", () => {
     setup();
     await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(screen.getByText("Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
-    expect(screen.getByText("Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.")).toBeInTheDocument();
     expect(screen.getByText("Datos de origen")).toBeInTheDocument();
     expect(screen.getByText("SHA-256 de datos de origen")).toBeInTheDocument();
     expect(screen.getByText("Evolución comparada · fechas guardadas")).toBeInTheDocument();
@@ -175,10 +174,10 @@ describe("profile batch v5 comparison", () => {
     vi.mocked(apiClient.getTrajectory).mockResolvedValue({ result_kind: "profile", schema_version: 5, initial_capital: 10000, total: 2, max_points: 500, reduction_method: "none",
       minimum: { balance: 9750, source_index: 5, bet_index: 0 }, maximum: { balance: 10750, source_index: 8, bet_index: 1 },
       points: [{ source_index: 5, bet_index: 0, label: "2025-01-01 10:10", balance: 9750, replay: "replay?offset=0&limit=1" }, { source_index: 8, bet_index: 1, label: "2025-01-01 10:40", balance: 10750, replay: "replay?offset=1&limit=1" }] });
-    setup();
+    const { user } = setup();
     expect(await screen.findByText("Comparación incompleta · 1/3 terminadas")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Batch saved identity" })).toBeInTheDocument();
-    const experimentStatus = screen.getByText(/Estado del experimento/).parentElement;
+    const experimentStatus = screen.getByText(/Estado:/).parentElement;
     expect(experimentStatus && within(experimentStatus).getByText("Con error")).toHaveAttribute("data-status-value", "failed");
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     const rows = within(table).getAllByRole("row");
@@ -189,7 +188,8 @@ describe("profile batch v5 comparison", () => {
     expect(rows[2]).toHaveTextContent(/Frozen B.*Cancelado.*N\/A/);
     expect(rows[3]).toHaveTextContent(/Frozen C.*Con error.*strategy-local failure/);
     expect(screen.queryByText("Fin de la fuente guardada")).not.toBeInTheDocument();
-    expect(screen.getByText("frozen-0 · revisión 4 · SHA-256 " + "a".repeat(64))).toBeInTheDocument();
+    await user.click(screen.getByText("Condiciones y datos de origen"));
+    expect(screen.getByText("Definiciones congeladas").nextElementSibling).toHaveTextContent(`frozen-0 · revisión 4 · SHA-256 ${"a".repeat(64)}`);
     expect(within(rows[1]).getAllByText(/Ventana operativa; fuente incompleta/)).toHaveLength(2);
     expect(screen.getByText(/Límites efectivos guardados/).nextElementSibling).toHaveTextContent(/max_draws.*4/);
     expect(await screen.findByText(/Frozen A: 2 de 2 apuestas/)).toBeInTheDocument();
@@ -220,7 +220,7 @@ describe("profile batch v5 comparison", () => {
     vi.mocked(apiClient.getTrajectory).mockReset();
     setup();
     expect(await screen.findByText("Comparación incompleta · 0/3 terminadas")).toBeInTheDocument();
-    expect(screen.getByText(/Estado del experimento/).parentElement).toHaveTextContent("En curso");
+    expect(screen.getByText(/Estado:/).parentElement).toHaveTextContent("En curso");
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row").slice(1)).toHaveLength(3);
     expect(within(table).getAllByText("N/A").length).toBeGreaterThanOrEqual(3);
@@ -250,8 +250,8 @@ describe("LW12 comparison", () => {
     setup();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getByRole("columnheader", { name: "Cambio respecto del inicio" })).toBeInTheDocument();
-    expect(screen.getByText(/Simulación con datos históricos: no predice resultados futuros/)).toBeInTheDocument();
-    expect(screen.getByText(/Resultados históricos sobre datos ya investigados/)).toBeInTheDocument();
+    expect(screen.getByText(/Simulación con datos históricos: no predice resultados futuros ni garantiza rentabilidad/)).toBeInTheDocument();
+    expect(screen.queryByText(/Resultados históricos sobre datos ya investigados/)).not.toBeInTheDocument();
     expect(screen.getByText("Historial")).toBeInTheDocument();
     expect(screen.getByText("SHA-256 historial")).toBeInTheDocument();
   });
@@ -319,7 +319,7 @@ describe("LW12 comparison", () => {
     expect(await screen.findByText(/Primera: 101 de 101 apuestas/)).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Mostrar Segunda/ })).not.toBeChecked();
     await act(async () => { await router.navigate("/experimentos/exp?run=999&from=comparison"); });
-    expect(await screen.findByText(/ejecución solicitada no existe/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Esa ejecución no existe/i)).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Ejecución 1" })).toBeInTheDocument();
   });
   it("ignores a late trajectory response after leaving and does not issue mutations", async () => {

@@ -25,7 +25,7 @@ function fail(field: string, message: string): never { throw new FieldError(fiel
 
 function makeProfile(draft: Draft): GameProfile {
   if (!/^[a-z][a-z0-9-]{0,79}$/.test(draft.profile_id) || draft.profile_id === "legacy-quiniela-80") {
-    fail("profile-id", "ID: usá 1–80 caracteres (minúsculas, números o guiones), empezando con una letra. La identidad heredada está reservada.");
+    fail("profile-id", "ID: usá minúsculas, números o guiones (hasta 80), empezando con una letra. Ese ID está reservado.");
   }
   const revision = at("profile-revision", () => wholeNumber(draft.revision, "Revisión", 1n, 1_000_000n));
   const universe_size = at("profile-universe", () => wholeNumber(draft.universe_size, "Universo", 1n, 1_000n));
@@ -89,6 +89,7 @@ export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange,
   const [templateIndex, setTemplateIndex] = useState("");
   const [draft, setDraft] = useState<Draft>(empty);
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState<number | null>(null);
   const [errorField, setErrorField] = useState<string | null>(null);
   const [errorToken, setErrorToken] = useState(0);
   const [pending, setPending] = useState(false);
@@ -110,22 +111,22 @@ export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange,
   const selectedTemplate = templateIndex === "" ? null : templates[Number(templateIndex)] ?? null;
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
-    setError(""); setErrorField(null); setNotice("");
+    setError(""); setErrorCode(null); setErrorField(null); setNotice("");
   }
   function changePositions(value: string) {
     setDraft((current) => ({ ...current, positions: value, multipliers: /^(?:[1-9]|1[0-6])$/.test(value)
       ? Array.from({ length: Number(value) }, (_, index) => current.multipliers[index] ?? "") : [] }));
-    setError(""); setErrorField(null); setNotice("");
+    setError(""); setErrorCode(null); setErrorField(null); setNotice("");
   }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (inFlight.current || disabled) return;
-    setError(""); setErrorField(null); setNotice("");
+    setError(""); setErrorCode(null); setErrorField(null); setNotice("");
     let profile: GameProfile;
     try {
       profile = makeProfile(draft);
       if (profiles.some(({ profile: saved }) => saved.profile_id === profile.profile_id && saved.revision === profile.revision)) {
-        fail("profile-revision", "Ese ID y revisión ya están guardados. Elegí una revisión nueva; no se modifica una versión existente.");
+        fail("profile-revision", "Ese ID y revisión ya existen. Elegí una revisión nueva.");
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Revisá los campos del perfil.");
@@ -137,52 +138,53 @@ export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange,
       const item = await apiClient.registerProfile(profile);
       if (!live.current) return;
       onRegistered(item);
-      setNotice("Perfil registrado y seleccionado para importar. La respuesta del servidor confirma su hash y disponibilidad; no se calculan premios en el navegador.");
+      setNotice("Perfil guardado y seleccionado.");
     } catch (cause) {
       if (!live.current) return;
+      setErrorCode(cause instanceof ApiError ? cause.status : null);
       if (cause instanceof ApiError && cause.status === 409) {
-        setError(/quota/i.test(cause.detail) ? "No hay espacio de cuota para guardar el perfil. Revisá almacenamiento antes de volver a intentarlo." :
-          "Ese ID y revisión ya tienen contenido diferente. Elegí una revisión nueva; no se sobrescriben perfiles guardados.");
+        setError(/quota/i.test(cause.detail) ? "No hay espacio para guardar el perfil. Liberá almacenamiento y reintentá." :
+          "Ese ID y revisión ya existen con otro contenido. Elegí una revisión nueva.");
       } else if (cause instanceof ApiError && cause.status === 422) {
-        setError("El servidor rechazó el perfil (422). Revisá todos los campos y sus límites; no se guardó esta versión.");
+        setError("El servidor rechazó el perfil. Revisá los campos; no se guardó.");
       } else if (cause instanceof NetworkError) {
-        setError("No llegó una respuesta del servidor. La solicitud podría haberse guardado; verificá el catálogo antes de volver a enviarla.");
-      } else setError("No se pudo confirmar el registro. Comprobá el catálogo antes de intentar de nuevo.");
+        setError("Sin respuesta del servidor. Puede que se haya guardado; revisá la lista antes de reenviar.");
+      } else setError("No se pudo confirmar el guardado. Revisá la lista antes de reintentar.");
     } finally {
       inFlight.current = false;
       if (live.current) { setPending(false); onBusyChange(false); }
     }
   }
   return <section aria-labelledby="profile-editor-heading" className="border-t border-border pt-5 space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 id="profile-editor-heading" className="section-header">Perfiles de juego</h3>
-      <p className="field-help max-w-prose">Registrá una versión completa e inmutable antes de importarla. Hasta 16 posiciones y 1.000 números son límites técnicos actuales, no una promesa de capacidad ilimitada.</p></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 id="profile-editor-heading" className="section-header">Perfiles de juego</h3></div>
       <button type="button" className="btn btn-secondary" aria-expanded={open} aria-controls="profile-editor-form" disabled={disabled || pending} onClick={() => setOpen(!open)}>{open ? "Cerrar editor" : "Crear perfil"}</button></div>
     {open && <div id="profile-editor-form" className="space-y-5">
-      <p className="max-w-prose text-sm text-text-secondary">Las plantillas son referencias incompletas. Solo se precargan campos documentados; declarás vos el resto, incluidos límites financieros. Registrar no ejecuta sesiones ni calcula pagos.</p>
-      <div className={field}><label htmlFor="profile-template" className="field-label">Referencia opcional</label><select id="profile-template" className={input} disabled={pending || disabled} value={templateIndex} onChange={(event) => { const value = event.target.value; setTemplateIndex(value); setDraft(value === "" ? empty : fromTemplate(templates[Number(value)])); setError(""); setNotice(""); }}><option value="">Empezar sin plantilla</option>{templates.map((template, index) => <option value={index} key={`${template.name}-${index}`}>{template.name} · parcial</option>)}</select>
-        {selectedTemplate && <div className="field-help"><p>Origen: {selectedTemplate.provenance}. Datos conocidos precargados donde corresponden; valores sin escala monetaria se muestran como unidades, no como importes.</p><p>Campos pendientes en la referencia: {selectedTemplate.missing_fields.join(", ")}.</p>{selectedTemplate.known_fields.minimum_stake !== undefined && <p>Apuesta mínima conocida: {selectedTemplate.known_fields.minimum_stake} unidad(es) sin escala declarada; ingresá su importe luego de elegir la escala.</p>}</div>}</div>
+            <div className={field}><label htmlFor="profile-template" className="field-label">Referencia opcional</label><select id="profile-template" className={input} disabled={pending || disabled} value={templateIndex} onChange={(event) => { const value = event.target.value; setTemplateIndex(value); setDraft(value === "" ? empty : fromTemplate(templates[Number(value)])); setError(""); setErrorCode(null); setNotice(""); }}><option value="">Empezar sin plantilla</option>{templates.map((template, index) => <option value={index} key={`${template.name}-${index}`}>{template.name} · parcial</option>)}</select>
+        {templates.length > 0 && <p className="field-help">Las plantillas de catálogo son parciales; completá los campos que faltan.</p>}
+        {selectedTemplate && <div className="field-help"><p>Origen: {selectedTemplate.provenance}.</p><p>Falta completar: {selectedTemplate.missing_fields.join(", ")}.</p>{selectedTemplate.known_fields.minimum_stake !== undefined && <p>Apuesta mínima conocida: {selectedTemplate.known_fields.minimum_stake} unidad(es) sin escala; ingresá el importe tras elegirla.</p>}</div>}</div>
       <form onSubmit={(event) => { void submit(event); }} noValidate>
         <fieldset disabled={pending || disabled} className="min-w-0 space-y-6"><legend className="sr-only">Perfil de juego completo</legend>
           <section aria-labelledby="profile-identity" className="border-t border-border pt-4"><h4 id="profile-identity" className="section-header">Identidad y sorteo</h4><div className="grid gap-x-5 sm:grid-cols-2">
-            <div className={field}><label htmlFor="profile-id" className="field-label">ID nuevo del perfil</label><input id="profile-id" className={input} {...bad("profile-id")} required pattern="[a-z][a-z0-9-]*" maxLength={80} value={draft.profile_id} onChange={(event) => update("profile_id", event.target.value)} /><p className="field-help">Una revisión guardada no se sobrescribe.</p></div>
+            <div className={field}><label htmlFor="profile-id" className="field-label">ID nuevo del perfil</label><input id="profile-id" className={input} {...bad("profile-id")} required pattern="[a-z][a-z0-9-]*" maxLength={80} value={draft.profile_id} onChange={(event) => update("profile_id", event.target.value)} /></div>
             <div className={field}><label htmlFor="profile-revision" className="field-label">Revisión (1–1.000.000)</label><input id="profile-revision" className={input} {...bad("profile-revision")} inputMode="numeric" required value={draft.revision} onChange={(event) => update("revision", event.target.value)} /></div>
             <div className={field}><label htmlFor="profile-universe" className="field-label">Tamaño del universo (1–1.000)</label><input id="profile-universe" className={input} {...bad("profile-universe")} inputMode="numeric" required value={draft.universe_size} onChange={(event) => update("universe_size", event.target.value)} /></div>
             <div className={field}><label htmlFor="profile-positions" className="field-label">Posiciones por sorteo (1–16)</label><input id="profile-positions" className={input} {...bad("profile-positions")} inputMode="numeric" required value={draft.positions} onChange={(event) => changePositions(event.target.value)} /></div>
             <div className={field}><label htmlFor="profile-repeats" className="field-label">¿Se repiten números en un sorteo?</label><select id="profile-repeats" className={input} {...bad("profile-repeats")} required value={draft.allows_repeats} onChange={(event) => update("allows_repeats", event.target.value)}><option value="">Elegí sí o no</option><option value="yes">Sí</option><option value="no">No</option></select></div>
           </div></section>
-          <section aria-labelledby="profile-prizes" className="border-t border-border pt-4"><h4 id="profile-prizes" className="section-header">Premios por posición</h4><p className="field-help mb-4">Multiplicador de pago total por unidad apostada, en orden. Entero, decimal exacto (ej. 1.25) o fracción (ej. 5/4). No incluye devolución adicional.</p>
+          <section aria-labelledby="profile-prizes" className="border-t border-border pt-4"><h4 id="profile-prizes" className="section-header">Premios por posición</h4><p className="field-help mb-4">Premio total por unidad apostada, sin devolución adicional de la apuesta: entero, decimal (1.25) o fracción (5/4).</p>
             <div className="grid gap-x-5 sm:grid-cols-3">{draft.multipliers.map((value, index) => <div key={index} className={field}><label htmlFor={`profile-multiplier-${index}`} className="field-label">Posición {index + 1} · multiplicador</label><input id={`profile-multiplier-${index}`} className={input} {...bad(`profile-multiplier-${index}`)} inputMode="decimal" required value={value} onChange={(event) => update("multipliers", draft.multipliers.map((item, at) => at === index ? event.target.value : item))} /></div>)}</div></section>
-          <section aria-labelledby="profile-money" className="border-t border-border pt-4"><h4 id="profile-money" className="section-header">Moneda y límites de apuesta</h4><p className="field-help mb-4">Importes humanos en la moneda elegida. La escala (0–6 decimales) convierte cada importe a unidades enteras exactas. Definí explícitamente cada límite; no hay política financiera predeterminada.</p><div className="grid gap-x-5 sm:grid-cols-2">
+          <section aria-labelledby="profile-money" className="border-t border-border pt-4"><h4 id="profile-money" className="section-header">Moneda y límites de apuesta</h4><p className="field-help mb-4">Importes en la moneda elegida; la escala son sus decimales.</p><div className="grid gap-x-5 sm:grid-cols-2">
             <div className={field}><label htmlFor="profile-currency" className="field-label">Moneda (código ISO de 3 letras)</label><input id="profile-currency" className={input} {...bad("profile-currency")} maxLength={3} required value={draft.currency} onChange={(event) => update("currency", event.target.value)} /></div>
             <div className={field}><label htmlFor="profile-scale" className="field-label">Escala decimal (0–6)</label><input id="profile-scale" className={input} {...bad("profile-scale")} inputMode="numeric" required value={draft.scale} onChange={(event) => update("scale", event.target.value)} /></div>
             {([ ["stake_increment", "Incremento de apuesta"], ["minimum_stake", "Apuesta mínima"], ["maximum_stake", "Apuesta máxima"], ["max_exposure", "Exposición máxima por sorteo"] ] as const).map(([key, label]) => <div key={key} className={field}><label htmlFor={`profile-${key}`} className="field-label">{label} (importe)</label><input id={`profile-${key}`} className={input} {...bad(`profile-${key}`)} inputMode="decimal" required value={draft[key]} onChange={(event) => update(key, event.target.value)} /></div>)}
             <div className={field}><label htmlFor="profile-coverage" className="field-label">Cobertura máxima (números por sorteo)</label><input id="profile-coverage" className={input} {...bad("profile-coverage")} inputMode="numeric" required value={draft.max_coverage} onChange={(event) => update("max_coverage", event.target.value)} /></div>
-          </div><p className="field-help">Regla de mejor premio para perfiles nuevos: máximo pago (maximum-payout/v1). Esquema: versión 1. Ambos son requeridos por el contrato actual.</p></section>
-          <button type="submit" className="btn btn-secondary">Registrar perfil inmutable</button>
+          </div></section>
+          <button type="submit" className="btn btn-secondary">Guardar perfil</button>
         </fieldset>
       </form>
-      {pending && <p role="status">Registro enviado; respuesta pendiente. No lo reenvíes hasta confirmar el resultado.</p>}
+      {pending && <p role="status">Guardando perfil; esperá la respuesta.</p>}
       {error && <p id="profile-error" ref={errorRef} tabIndex={-1} role="alert" className="border-y border-border py-3">{error}</p>}
+      {errorCode !== null && <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="text-sm">Código HTTP: <code>{errorCode}</code></p></details>}
       {notice && <p role="status" className="border-y border-border py-3">{notice}</p>}
     </div>}
   </section>;

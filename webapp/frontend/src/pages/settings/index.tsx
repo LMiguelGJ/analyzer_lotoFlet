@@ -31,7 +31,7 @@ function measured(value: number): string {
 }
 function validate(value: string): string | null {
   if (!/^[1-9][0-9]*$/.test(value) || value.length > 19 || BigInt(value) > MAX_QUOTA) {
-    return "Ingresá un entero decimal ASCII en bytes, entre 1 y 9,223,372,036,854,775,807, sin separadores, espacios ni ceros iniciales.";
+    return "Ingresá un entero en bytes, entre 1 y 9,223,372,036,854,775,807, sin separadores, espacios ni ceros iniciales.";
   }
   return null;
 }
@@ -98,7 +98,7 @@ export function SettingsPage() {
     }).catch((error: unknown) => {
       if (!live || sequence !== requestRef.current) return;
       setLoadError(error instanceof NetworkError
-        ? "No se pudo contactar al servidor local. La desconexión no demuestra que el servidor se haya detenido."
+        ? "No se pudo contactar al servidor."
         : "No se pudieron cargar los ajustes. Reintentá.");
       setLoading(false);
     });
@@ -146,11 +146,11 @@ export function SettingsPage() {
     } catch (failure) {
       if (sequence !== agentCredentialSequenceRef.current) return;
       if (failure instanceof NetworkError) {
-        setAgentCredentialError("No se pudo contactar al servidor local. Reintentá desde Ajustes.");
+        setAgentCredentialError("No se pudo contactar al servidor. Reintentá.");
       } else if (failure instanceof ApiError && failure.status === 403) {
-        setAgentCredentialError("El servidor rechazó el origen. Abrí la aplicación desde el mismo origen local del servidor e intentá de nuevo.");
+        setAgentCredentialError("El servidor rechazó el origen. Abrí la aplicación desde la dirección local del servidor.");
       } else if (failure instanceof ApiError && failure.status === 401) {
-        setAgentCredentialError("El servidor rechazó la solicitud de credencial (HTTP 401). Reintentá desde Ajustes.");
+        setAgentCredentialError("El servidor rechazó la solicitud. Reintentá.");
       } else {
         setAgentCredentialError("No se pudo consultar la credencial. Reintentá.");
       }
@@ -207,7 +207,7 @@ export function SettingsPage() {
     event.preventDefault();
     if (!view?.quota.writable || draft === null || saveRef.current) return;
     const error = validate(draft) ?? (BigInt(draft) < used
-      ? `El presupuesto no puede ser menor que el uso lógico de admisión actual (${bytes(used.toString())}). Ingresá ese valor o uno mayor.`
+      ? `El límite no puede ser menor que el uso actual (${bytes(used.toString())}).`
       : null);
     setFieldError(error ?? ""); setSaveError(""); setSaved(false);
     if (error) { inputRef.current?.focus(); return; }
@@ -224,17 +224,17 @@ export function SettingsPage() {
       if (sequence !== requestRef.current) return;
       if (failure instanceof ApiError && failure.status === 422 && failure.fieldErrors?.some((entry) =>
         entry.loc.map(String).join(".") === "body.quota_bytes")) {
-        setFieldError("El servidor rechazó el presupuesto en bytes. Revisá el valor e intentá de nuevo.");
+        setFieldError("El servidor rechazó el límite. Revisá el valor.");
       } else if (failure instanceof ApiError && failure.status === 409) {
         setSaveError(failure.detail === "environment quota is read-only"
-          ? "La variable de entorno tiene prioridad y bloquea cambios desde la web. Actualizá el estado antes de editar."
-          : "El presupuesto no puede ser menor que el uso lógico de admisión actual. No se liberó capacidad; actualizá el estado e ingresá un valor mayor.");
+          ? "El entorno fija el límite y no se puede cambiar desde la web. Actualizá el estado."
+          : "El límite no puede ser menor que el uso actual. Actualizá el estado e ingresá un valor mayor.");
       } else if (failure instanceof NetworkError) {
-        setSaveError("No se pudo contactar al servidor local. La solicitud podría haber llegado; actualizá el estado antes de reintentar.");
+        setSaveError("Sin respuesta del servidor. Puede que se haya guardado; actualizá el estado antes de reintentar.");
       } else if (failure instanceof ApiError && failure.status === 403) {
-        setSaveError("El servidor rechazó el origen de la solicitud. Abrí la aplicación desde su origen local autorizado.");
+        setSaveError("El servidor rechazó el origen. Abrí la aplicación desde la dirección local del servidor.");
       } else {
-        setSaveError("No se pudo guardar el presupuesto. Tus cambios siguen en el campo; reintentá.");
+        setSaveError("No se pudo guardar el límite. Tus cambios siguen en el campo; reintentá.");
       }
     } finally { saveRef.current = false; setSaving(false); }
   }
@@ -269,7 +269,7 @@ export function SettingsPage() {
           <p id="quota-help" className="field-help">Entero positivo, sin separadores. Mínimo {bytes(used.toString())}. Ej.: 5368709120 (5 GiB).</p>
           {fieldError && <p id="quota-error" className="mt-2 text-sm text-red-300">{fieldError}</p>}
           {saveError && <p role="alert" className="mt-2 text-sm text-red-300">{saveError}</p>}
-          {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado. El límite se actualizó.</p>}
+          {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado.</p>}
           <button type="submit" className="btn btn-primary mt-4 disabled:opacity-50" disabled={saving}>{saving ? "Guardando…" : "Guardar límite"}</button>
         </form> : <div className="max-w-prose text-text-secondary"><p>El entorno del servidor fija el límite; aquí es de solo lectura.</p>{dirty && <p className="mt-2 break-words">Borrador no guardado: <span className="font-mono">{draft}</span> bytes. No se envió.</p>}</div>}
       </section>
@@ -317,7 +317,7 @@ export function SettingsPage() {
       </details>
       <section aria-labelledby="agent-access-heading" className="border-t border-border pt-5">
         <h2 id="agent-access-heading" className="section-header">Acceso para agentes</h2>
-        <p className="max-w-prose text-sm text-text-secondary">Credencial Bearer para la API de agentes. Mantenéla privada: otros procesos locales pueden llamar la API sin ella.</p>
+        <p className="max-w-prose text-sm text-text-secondary">Credencial para la API de agentes. Mantenéla privada.</p>
         {!agentCredential && !agentCredentialLoading && <button ref={agentCredentialTriggerRef} type="button" className={`${action} mt-4`} onClick={() => { void retrieveAgentCredential(); }}>
           {agentCredentialError ? "Reintentar consulta" : "Consultar credencial de agente"}
         </button>}
@@ -353,6 +353,6 @@ export function SettingsPage() {
         </div>}
       </section>
     </>}
-    <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios del presupuesto que aún no guardaste." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onCancel={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
+    <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás el límite sin guardar." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onCancel={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
   </div>;
 }

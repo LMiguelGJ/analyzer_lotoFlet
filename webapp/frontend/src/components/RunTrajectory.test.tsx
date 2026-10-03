@@ -42,7 +42,7 @@ describe("whole-run trajectories", () => {
     render(<RunTrajectory {...props} onSelect={select} />);
     expect(await screen.findByText(/2 de 2 apuestas.*sin reducción/)).toBeInTheDocument();
     await user.click(screen.getByText("Consultar apuesta exacta de un punto"));
-    await user.click(screen.getByRole("button", { name: /Apuesta 2 · sorteo fuente 905/ }));
+    await user.click(screen.getByRole("button", { name: /Apuesta 2 · sorteo n.º 905/ }));
     expect(select).toHaveBeenLastCalledWith(1);
     expect(screen.getByRole("img").querySelectorAll("circle")).toHaveLength(3);
   });

@@ -31,26 +31,26 @@ function serverErrors(entries: ApiFieldError[]): Errors {
     const loc = entry.loc.map(String);
     const root = loc.indexOf("request");
     const path = root < 0 ? loc : loc.slice(root + 1);
-    if (root < 0) { errors.form = { message: "La solicitud fue rechazada; revisá los datos.", detail: entry.msg }; continue; }
+    if (root < 0) { errors.form = { message: "Solicitud rechazada; revisá los datos.", detail: entry.msg }; continue; }
     if (path[0] === "conditions") {
       if (path.length === 1) {
-        errors.conditions = { message: "El servidor rechazó las condiciones comunes; revisá esta sección.", detail: entry.msg };
+        errors.conditions = { message: "Condiciones rechazadas; revisá esta sección.", detail: entry.msg };
       } else {
         const key = path[1];
-        errors[key] = { message: `El servidor rechazó ${key}; revisá este campo.`, detail: entry.msg };
+        errors[key] = { message: "Valor rechazado; revisá este campo.", detail: entry.msg };
       }
     } else if (path[0] === "strategies" && /^\d+$/.test(path[1] ?? "")) {
       const index = path[1];
       if (path.length === 2) {
-        errors[`strategies.${index}`] = { message: "El servidor rechazó esta estrategia; revisá sus valores.", detail: entry.msg };
+        errors[`strategies.${index}`] = { message: "Estrategia rechazada; revisá sus valores.", detail: entry.msg };
       } else {
         const field = path.slice(2).join(".");
-        errors[`strategies.${index}.${field}`] = { message: "El servidor rechazó este campo; revisá el valor.", detail: entry.msg };
+        errors[`strategies.${index}.${field}`] = { message: "Valor rechazado; revisá este campo.", detail: entry.msg };
       }
     } else if (path[0] === "name" && path.length === 1) {
-      errors.name = { message: "El servidor rechazó el nombre; revisá este campo.", detail: entry.msg };
+      errors.name = { message: "Nombre rechazado; revisá este campo.", detail: entry.msg };
     } else {
-      errors.form = { message: "El servidor rechazó la solicitud; revisá los datos.", detail: entry.msg };
+      errors.form = { message: "Solicitud rechazada; revisá los datos.", detail: entry.msg };
     }
   }
   return errors;
@@ -166,7 +166,7 @@ export function NewExperimentPage() {
       if (!alive) return;
       setCatalog(result); setCatalogError("");
     }).catch((error: unknown) => {
-      if (alive) setCatalogError(error instanceof NetworkError ? "No se pudo contactar al servidor local. Probá de nuevo; no sabemos si la cola sigue trabajando." : "No se pudo cargar el catálogo. Probá de nuevo.");
+      if (alive) setCatalogError(error instanceof NetworkError ? "No se pudo contactar al servidor. Reintentá." : "No se pudo cargar el catálogo. Reintentá.");
     }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [catalogRetry]);
@@ -206,7 +206,7 @@ export function NewExperimentPage() {
       setAvailability(result ?? null); setVerifiedDraw(verified);
     }).catch((error: unknown) => {
       if (live && generation === drawGeneration.current) setDrawError(error instanceof NetworkError
-        ? "No se pudo contactar al servidor local para cargar sorteos. Reintentá."
+        ? "No se pudo contactar al servidor. Reintentá."
         : "No se pudieron cargar los sorteos. Reintentá.");
     }).finally(() => {
       if (live && generation === drawGeneration.current) setDrawLoading(false);
@@ -240,7 +240,7 @@ export function NewExperimentPage() {
       if (!live) return;
       if (libraryOffset > 0 && page.items.length === 0 && page.total <= libraryOffset) { setLibraryOffset(Math.max(0, Math.ceil(page.total / 20) - 1) * 20); return; }
       setLibraryPage(page);
-    }).catch((error: unknown) => { if (live) setLibraryError(error instanceof NetworkError ? "No se pudo contactar al servidor local para cargar la biblioteca." : "No se pudo cargar la biblioteca."); });
+    }).catch((error: unknown) => { if (live) setLibraryError(error instanceof NetworkError ? "No se pudo contactar al servidor." : "No se pudo cargar la biblioteca."); });
     return () => { live = false; };
   }, [libraryOpen, libraryOffset, libraryRetry]);
 
@@ -298,11 +298,11 @@ export function NewExperimentPage() {
       const validation = validateStrategies([...strategies, draft], catalog);
       // Do not append invalid or duplicate catalog data, nor discard the current draft.
       if (Object.keys(validation).length && (validation[`strategies.${strategies.length}.name`] || Object.keys(validateStrategies([draft], catalog)).length)) {
-        setLibraryError(validation[`strategies.${strategies.length}.name`] ? "El nombre debe ser único entre las estrategias." : "La configuración guardada ya no coincide con el catálogo o contiene parámetros inválidos."); return;
+        setLibraryError(validation[`strategies.${strategies.length}.name`] ? "El nombre debe ser único entre las estrategias." : "Esta estrategia guardada ya no es válida."); return;
       }
       nextId.current += 1; setStrategies((previous) => [...previous, draft]); setActive(strategies.length); setDirty(true); setLibraryOpen(false); setErrors({}); setNotice("");
     } catch (error) {
-      setLibraryError(error instanceof ApiError && error.status === 404 ? "La configuración ya no existe. Actualizá la biblioteca." : error instanceof NetworkError ? "No se pudo contactar al servidor local. Reintentá." : "No se pudo cargar la configuración. Reintentá.");
+      setLibraryError(error instanceof ApiError && error.status === 404 ? "La estrategia ya no existe. Actualizá la biblioteca." : error instanceof NetworkError ? "No se pudo contactar al servidor. Reintentá." : "No se pudo cargar la estrategia. Reintentá.");
       if (error instanceof ApiError && error.status === 404) setLibraryRetry((value) => value + 1);
     } finally { libraryRef.current = false; setLibraryBusy(false); }
   }
@@ -315,7 +315,7 @@ export function NewExperimentPage() {
     saveStrategyRef.current = true; setSavingStrategy(true); setNotice("");
     try {
       await apiClient.createConfiguration(trimName(libraryName), buildStrategy(strategy, catalog));
-      setNotice("Estrategia guardada en la biblioteca. El experimento todavía no se creó."); setLibraryName(""); setLibraryNameError(undefined);
+      setNotice("Estrategia guardada. El experimento aún no se creó."); setLibraryName(""); setLibraryNameError(undefined);
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
         const mapped: Errors = {};
@@ -328,8 +328,8 @@ export function NewExperimentPage() {
           else mapped.form = { message: "El servidor rechazó la solicitud.", detail: entry.msg };
         }
         setErrors((previous) => ({ ...previous, ...mapped }));
-        setNotice("El servidor rechazó la estrategia de biblioteca. Revisá los campos señalados.");
-      } else setNotice(error instanceof NetworkError ? "No se pudo contactar al servidor local. Comprobá la biblioteca antes de reintentar; tu borrador sigue aquí." : "No se pudo guardar la estrategia. Tu borrador sigue aquí.");
+        setNotice("El servidor rechazó la estrategia. Revisá los campos señalados.");
+      } else setNotice(error instanceof NetworkError ? "No se pudo contactar al servidor. Revisá la biblioteca antes de reintentar; tu borrador sigue aquí." : "No se pudo guardar la estrategia. Tu borrador sigue aquí.");
     } finally { saveStrategyRef.current = false; setSavingStrategy(false); }
   }
   async function loadDraws() {
@@ -343,7 +343,7 @@ export function NewExperimentPage() {
       setDraws((previous) => [...previous, ...page.items.filter((item) => !previous.includes(item))]);
       setTotal(page.total);
     } catch (error) {
-      if (generation === drawGeneration.current) setDrawError(error instanceof NetworkError ? "No se pudo contactar al servidor local. Reintentá cargar sorteos." : "No se pudieron cargar más sorteos. Reintentá.");
+      if (generation === drawGeneration.current) setDrawError(error instanceof NetworkError ? "No se pudo contactar al servidor. Reintentá." : "No se pudieron cargar más sorteos. Reintentá.");
     } finally { if (generation === drawGeneration.current) setDrawLoading(false); }
   }
   function changeDrawDate(value: string) {
@@ -422,12 +422,12 @@ export function NewExperimentPage() {
         const strategyKey = Object.keys(mapped).find((key) => key.startsWith("strategies."));
         if (strategyKey) setActive(Number(strategyKey.split(".")[1]));
         setStep(strategyKey ? 1 : 0);
-        setNotice("El servidor encontró errores. Revisá los campos señalados.");
+        setNotice("Revisá los campos señalados.");
         setPendingFocus(firstFocusTarget(mapped));
-      } else if (error instanceof ApiError && error.status === 507) setNotice("No hay capacidad disponible para crear el experimento. Liberá espacio o consultá los ajustes; tus datos siguen aquí.");
-      else if (error instanceof ApiError && error.status === 409) setNotice("La cola no está disponible ahora. Reintentá más tarde; tus datos siguen aquí.");
-      else if (error instanceof NetworkError) setNotice("No se pudo contactar al servidor local. La solicitud podría haber llegado: comprobá Experimentos antes de reintentar para evitar duplicados.");
-      else setNotice(error instanceof ApiError ? `El servidor rechazó la solicitud (${error.status}): ${error.detail}` : "No se pudo crear el experimento. Comprobá el servidor antes de reintentar.");
+      } else if (error instanceof ApiError && error.status === 507) setNotice("No hay espacio para crear el experimento. Liberá espacio en Ajustes; tus datos siguen aquí.");
+      else if (error instanceof ApiError && error.status === 409) setNotice("La cola no está disponible. Reintentá más tarde; tus datos siguen aquí.");
+      else if (error instanceof NetworkError) setNotice("Sin respuesta del servidor. Puede que el experimento se haya creado: revisá Experimentos antes de reintentar.");
+      else setNotice(error instanceof ApiError ? `Solicitud rechazada: ${error.detail}` : "No se pudo crear el experimento. Reintentá.");
     } finally { postingRef.current = false; setPosting(false); }
   }
 
@@ -436,21 +436,21 @@ export function NewExperimentPage() {
     (offeredDraws.includes(conditions.start_draw) || verifiedDraw === conditions.start_draw);
   const staleDraw = !!knownDraw && conditions.start_draw === knownDraw && !drawLoading && !drawError && !selectedAvailable;
 
-  if (baseId && configurationId) return <div><Link to="/experimentos" className="text-accent underline">Volver a experimentos</Link><p role="alert" className="mt-4 text-red-300">Se indicaron dos orígenes (base y configuración). Elegí solo uno; no se reemplazó ningún borrador.</p></div>;
+  if (baseId && configurationId) return <div><Link to="/experimentos" className="text-accent underline">Volver a experimentos</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
 
   if (configurationId && (configurationState !== "ready" || catalogError)) return <div>
-    <Link to="/configuraciones" className="text-accent underline">Volver a configuraciones</Link>
-    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => setCatalogRetry((value) => value + 1)}>Reintentar</button></p> : configurationState === "loading" ? <p role="status">Cargando configuración guardada…</p> : <p role="alert" className="mt-4 text-red-300">{configurationState === "missing" ? "La configuración ya no existe." : configurationState === "network" ? "No se pudo contactar al servidor local para cargar la configuración." : configurationState === "invalid" ? "La configuración ya no coincide con el catálogo o contiene parámetros inválidos; no se reemplazaron valores." : "No se pudo cargar la configuración."} <button type="button" className="btn btn-tertiary" onClick={() => setConfigurationRetry((value) => value + 1)}>Reintentar</button></p>}
+    <Link to="/configuraciones" className="text-accent underline">Volver a estrategias guardadas</Link>
+    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => setCatalogRetry((value) => value + 1)}>Reintentar</button></p> : configurationState === "loading" ? <p role="status">Cargando estrategia…</p> : <p role="alert" className="mt-4 text-red-300">{configurationState === "missing" ? "La estrategia ya no existe." : configurationState === "network" ? "No se pudo contactar al servidor." : configurationState === "invalid" ? "Esta estrategia guardada ya no es válida." : "No se pudo cargar la estrategia."} <button type="button" className="btn btn-tertiary" onClick={() => setConfigurationRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   if (baseId && (baseState !== "ready" || catalogError)) return <div>
     <Link to="/experimentos" className="text-accent underline">Volver a experimentos</Link>
-    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base y confirmando el sorteo disponible…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor local para cargar el experimento base." : baseState === "invalid" ? "El experimento base no es compatible con este asistente legado o contiene parámetros inválidos; no se reemplazaron valores." : "No se pudo cargar el experimento base."} <button type="button" className="btn btn-tertiary" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
+    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor." : baseState === "invalid" ? "El experimento base no es compatible con este asistente." : "No se pudo cargar el experimento base."} <button type="button" className="btn btn-tertiary" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   return <>
     <Link to="/experimentos" className="mb-4 inline-block text-accent underline">Volver a experimentos</Link>
-    <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil registrado y datos locales importados? <Link to="/experimentos/nuevo/perfil" className="text-accent underline">Crear sesión con perfil</Link>.</p><p className="field-help">Este asistente clásico conserva el juego Quiniela 80 y sus estrategias con ranking.</p></div>
+    <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil y datos importados? <Link to="/experimentos/nuevo/perfil" className="text-accent underline">Crear sesión con perfil</Link>.</p></div>
     <nav aria-label="Pasos del asistente" className="mb-6 flex flex-wrap gap-3 border-b border-border pb-4 text-sm">
       {labels.map((label, i) => <span key={label} aria-current={step === i ? "step" : undefined} className={step === i ? "font-semibold text-accent" : "text-text-secondary"}>{i + 1} {label}</span>)}
     </nav>
@@ -476,42 +476,42 @@ export function NewExperimentPage() {
           <div className="field">
             <label htmlFor="draw_date" className="field-label">Filtrar sorteos por fecha</label>
             <input id="draw_date" type="date" className={`${control} max-w-md`} value={drawDate} aria-describedby="draw_date-help" onChange={(event) => changeDrawDate(event.target.value)} />
-            <p id="draw_date-help" className="field-help">Dejalo vacío para ver todas las fechas. Solo podés elegir sorteos con ranking.</p>
+            <p id="draw_date-help" className="field-help">Vacío: todas las fechas.</p>
           </div>
           {drawLoading && <p role="status" className="mb-4">Cargando sorteos disponibles…</p>}
           {drawError && <p role="alert" className="mb-4 text-red-300">{drawError} <button type="button" className="btn btn-tertiary" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
-          {staleDraw && <p role="status" className="mb-4 text-text-secondary">El sorteo elegido ya no está disponible con ranking. Elegí otro sorteo o fecha.</p>}
+          {staleDraw && <p role="status" className="mb-4 text-text-secondary">Ese sorteo ya no está disponible. Elegí otro.</p>}
           {catalog && !drawLoading && !drawError && offeredDraws.length === 0 && !knownDraw && <p role="status" className="mb-4">{drawDate && availability?.history_total === 0
-            ? "No hay sorteos históricos en esta fecha. Probá otra fecha."
+            ? "No hay sorteos en esta fecha. Probá otra."
             : drawDate && availability?.ranked_total === 0
-              ? "Hay sorteos históricos en esta fecha, pero ninguno tiene ranking disponible. Probá otra fecha."
-              : "No hay sorteos iniciales con ranking disponible."}</p>}
+              ? "Ningún sorteo de esta fecha tiene ranking. Probá otra."
+              : "No hay sorteos iniciales disponibles."}</p>}
           {field("start_draw", "Sorteo inicial", <select {...attrs("start_draw", true)} className={control} value={conditions.start_draw} disabled={!catalog || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable)} onChange={(event) => editCondition("start_draw", event.target.value)}>
             <option value="">Elegí un sorteo disponible</option>{offeredDraws.map((draw) => <option key={draw} value={draw}>{draw}</option>)}
             {knownDraw && !offeredDraws.includes(knownDraw) && (!drawDate || knownDraw.startsWith(`${drawDate} `)) && <option value={knownDraw} disabled={!selectedAvailable}>{knownDraw}{selectedAvailable ? "" : " (sin ranking disponible)"}</option>}
-          </select>, "Solo se ofrecen sorteos históricos con ranking disponible.")}
+          </select>)}
           {draws.length < total && <button type="button" className={`${secondary} mb-5`} disabled={drawLoading} onClick={() => { void loadDraws(); }}>{drawLoading ? "Cargando sorteos…" : "Cargar más sorteos"}</button>}
           </fieldset>
           <fieldset className="mb-6 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Objetivo</legend>
           {/* Capital and goal are the two amounts that define success; grouped together at sm+. */}
           <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
             {input("capital", "Capital inicial (RD$)", "Pesos enteros; mínimo RD$1.")}
-            {input("goal", "Meta de saldo final (RD$)", "La meta es el saldo final, no ganancia adicional: capital RD$2.000 y meta RD$2.800 buscan +RD$800.")}
+            {input("goal", "Meta de saldo final (RD$)", "Saldo final buscado, no ganancia: capital RD$2.000 y meta RD$2.800 buscan +RD$800.")}
           </div>
           </fieldset>
           <fieldset className="mb-6 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Reglas y límites</legend>
           {field("settlement", FIELD_LABEL_SETTLEMENT, <select {...attrs("settlement")} className={control} value={conditions.settlement} onChange={(event) => editCondition("settlement", event.target.value)}>{(Object.keys(SETTLEMENT_LABELS) as (keyof typeof SETTLEMENT_LABELS)[]).map((key) => <option value={key} key={key}>{SETTLEMENT_LABELS[key]}</option>)}</select>)}
           {/* Stop limits retain their original keyboard order before the seed. */}
           <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
-            {input("max_bets", "Máximo de apuestas", "Opcional: de 1 a 10.000.000; con otro límite se detiene al alcanzar el primero.")}
-            {input("max_minutes", "Máximo de minutos históricos", "Opcional: de 1 a 100.000.000; se excluye el sorteo en la hora límite.")}
+            {input("max_bets", "Máximo de apuestas", "Opcional (1 a 10.000.000). Se detiene al primer límite alcanzado.")}
+            {input("max_minutes", "Máximo de minutos históricos", "Opcional (1 a 100.000.000). No incluye el sorteo en la hora límite.")}
           </div>
           {input("seed", FIELD_LABEL_SEED, FIELD_HELP_SEED)}
           </fieldset>
-          {catalog && <p className="border-t border-border pt-4 text-sm text-text-secondary">Juego fijo: {catalog.game.name}, números 00–99, cinco posiciones con repetición; premios {catalog.game.prizes.join("/")}. No se editan en este MVP.</p>}
+          {catalog && <p className="border-t border-border pt-4 text-sm text-text-secondary">Juego: {catalog.game.name} · números 00–99 · premios {catalog.game.prizes.join("/")}.</p>}
         </section>}
         {step === 1 && catalog && <section aria-label="Estrategias">
-          <p className="mb-5 text-text-secondary">Hasta cinco estrategias comparten las condiciones. Cada nombre debe ser único.</p>
+          <p className="mb-5 text-text-secondary">Hasta cinco, con nombres distintos.</p>
           {strategies.map((strategy, i) => <section key={strategy.id} className="mb-4 border-b border-border pb-4">
             <div className="flex items-center gap-3"><button type="button" aria-expanded={active === i} className="min-h-control flex-1 text-left text-sm text-accent" onClick={() => setActive(i)}>Estrategia {i + 1}{strategy.name ? ` · ${trimName(strategy.name)}` : ""}</button>
               {strategies.length > 1 && <button type="button" className="btn btn-tertiary" onClick={() => { setStrategies((previous) => previous.filter((item) => item.id !== strategy.id)); setActive(0); setDirty(true); }}>Quitar {i + 1}</button>}</div>
@@ -529,10 +529,10 @@ export function NewExperimentPage() {
             {libraryPage && <>{libraryPage.total === 0 ? <p>No hay estrategias guardadas todavía.</p> : <ul className="divide-y divide-border">{libraryPage.items.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-2"><span>{item.name} · {item.strategy.name}</span><button type="button" className={secondary} disabled={libraryBusy || strategies.length >= 5} onClick={() => { void appendConfiguration(item.id); }}>Añadir {item.name}</button></li>)}</ul>}
               <nav aria-label="Páginas de biblioteca" className="mt-3 flex items-center gap-3"><button type="button" className={secondary} disabled={libraryOffset === 0} onClick={() => setLibraryOffset(Math.max(0, libraryOffset - 20))}>Anterior</button><span>{Math.floor(libraryOffset / 20) + 1} · {libraryPage.total}</span><button type="button" className={secondary} disabled={libraryOffset + 20 >= libraryPage.total} onClick={() => setLibraryOffset(libraryOffset + 20)}>Siguiente</button></nav></>}
           </section>}
-          <div className="mt-6 border-t border-border pt-4"><label htmlFor="libraryName" className="field-label">Nombre para guardar en biblioteca</label><input id="libraryName" className={`${control} max-w-md`} value={libraryName} aria-invalid={!!libraryNameError} aria-describedby={libraryNameError ? "libraryName-error" : undefined} onChange={(event) => { setLibraryName(event.target.value); setLibraryNameError(undefined); setDirty(true); }} />{libraryNameError && <p id="libraryName-error" className="mt-1 text-sm text-red-300">{errorMessage(libraryNameError)} <span className="text-xs text-text-secondary">{errorDetail(libraryNameError)}</span></p>}<p className="field-help my-2">Guarda solo esta estrategia, no las condiciones comunes ni crea un experimento.</p><button type="button" className={secondary} disabled={savingStrategy} onClick={() => { void saveToLibrary(); }}>{savingStrategy ? "Guardando…" : "Guardar estrategia en biblioteca"}</button></div>
+          <div className="mt-6 border-t border-border pt-4"><label htmlFor="libraryName" className="field-label">Nombre para guardar en biblioteca</label><input id="libraryName" className={`${control} max-w-md`} value={libraryName} aria-invalid={!!libraryNameError} aria-describedby={libraryNameError ? "libraryName-error" : undefined} onChange={(event) => { setLibraryName(event.target.value); setLibraryNameError(undefined); setDirty(true); }} />{libraryNameError && <p id="libraryName-error" className="mt-1 text-sm text-red-300">{errorMessage(libraryNameError)} <span className="text-xs text-text-secondary">{errorDetail(libraryNameError)}</span></p>}<p className="field-help my-2">Guarda solo esta estrategia.</p><button type="button" className={secondary} disabled={savingStrategy} onClick={() => { void saveToLibrary(); }}>{savingStrategy ? "Guardando…" : "Guardar estrategia en biblioteca"}</button></div>
         </section>}
         {step === 2 && <section aria-label="Revisión">
-          <p className="mb-5 text-text-secondary">Revisá los parámetros antes de agregar el experimento a la cola. Los importes y resultados se calculan solo en el servidor.</p>
+          <p className="mb-5 text-text-secondary">Revisá antes de agregar a la cola.</p>
           <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Condiciones comunes</h3><button type="button" className="btn btn-tertiary" onClick={() => setStep(0)}>Editar condiciones</button></div>
           <dl className="data-list py-4"><dt>Nombre</dt><dd>{trimName(conditions.name)}</dd><dt>Sorteo inicial</dt><dd>{conditions.start_draw}</dd><dt>Capital</dt><dd className="data-list-numeric">{money(conditions.capital)}</dd><dt>Meta de saldo final</dt><dd className="data-list-numeric">{money(conditions.goal)}</dd><dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd><dt>Límite de apuestas</dt><dd>{conditions.max_bets || "Sin límite"}</dd><dt>Minutos históricos</dt><dd>{conditions.max_minutes || "Sin límite"}</dd><dt>Semilla</dt><dd>{conditions.seed}</dd></dl>
           <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Estrategias</h3><button type="button" className="btn btn-tertiary" onClick={() => setStep(1)}>Editar estrategias</button></div>
@@ -546,7 +546,7 @@ export function NewExperimentPage() {
         </div>
       </div>
     </div>
-    <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios del asistente. Salir no cancela ningún cálculo que ya esté en la cola del servidor." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onConfirm={() => blocker.proceed?.()} onCancel={() => blocker.reset?.()} />
+    <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios. Lo que ya está en la cola sigue su curso." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onConfirm={() => blocker.proceed?.()} onCancel={() => blocker.reset?.()} />
   </>;
 }
 

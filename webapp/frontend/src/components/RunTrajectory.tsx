@@ -60,8 +60,8 @@ export function RunTrajectory({ id, ordinal, name, goal, money, onSelect, onLoad
     <details><summary className="disclosure-summary">Consultar apuesta exacta de un punto</summary>
       <ul className="max-h-40 overflow-auto text-sm">
         {data.points.map((point) => <li key={point.source_index}>{onSelect
-          ? <button type="button" className="text-accent underline" onClick={() => onSelect(localIndex(point))}>Apuesta {localIndex(point) + 1}{point.bet_index == null ? "" : ` · sorteo fuente ${point.source_index}`} · {point.label} · {money(point.balance)}</button>
-          : <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(id)}?run=${ordinal}&bet=${localIndex(point)}&from=comparison`}>Apuesta {localIndex(point) + 1}{point.bet_index == null ? "" : ` · sorteo fuente ${point.source_index}`} · {point.label} · {money(point.balance)}</Link>}</li>)}
+          ? <button type="button" className="text-accent underline" onClick={() => onSelect(localIndex(point))}>Apuesta {localIndex(point) + 1}{point.bet_index == null ? "" : ` · sorteo n.º ${point.source_index}`} · {point.label} · {money(point.balance)}</button>
+          : <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(id)}?run=${ordinal}&bet=${localIndex(point)}&from=comparison`}>Apuesta {localIndex(point) + 1}{point.bet_index == null ? "" : ` · sorteo n.º ${point.source_index}`} · {point.label} · {money(point.balance)}</Link>}</li>)}
       </ul>
     </details>
   </section>;

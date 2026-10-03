@@ -48,13 +48,13 @@ function encodeBytes(bytes: Uint8Array): string {
 }
 
 function failureMessage(error: unknown, action: string): string {
-  if (error instanceof NetworkError) return "No se pudo contactar al servidor local. La solicitud podría haber llegado; comprobá el estado antes de volver a intentarlo.";
-  if (error instanceof ApiError && error.status === 409) return "Conflicto: cambiaron los datos o no hay capacidad de cuota. Volvé a revisar el archivo y generá una vista previa nueva antes de intentar guardar.";
+  if (error instanceof NetworkError) return "No se pudo contactar al servidor. Puede que la solicitud haya llegado; comprobá antes de reintentar.";
+  if (error instanceof ApiError && error.status === 409) return "Los datos cambiaron o no hay espacio. Generá una vista previa nueva antes de guardar.";
   if (error instanceof ApiError && error.status === 413) return action.includes("historial")
     ? "El historial supera el límite de 32 MiB. Elegí uno más pequeño."
     : "El archivo supera el límite de 2 MiB. Elegí uno más pequeño.";
-  if (error instanceof ApiError && error.status === 422) return "El servidor rechazó la solicitud. Revisá el archivo, los campos y la vista previa.";
-  return `No se pudo ${action}. Revisá la conexión y los datos antes de intentar de nuevo.`;
+  if (error instanceof ApiError && error.status === 422) return "El servidor rechazó la solicitud. Revisá el archivo y los campos.";
+  return `No se pudo ${action}. Revisá la conexión y los datos.`;
 }
 
 type HistoryMetadata = {
@@ -149,16 +149,16 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: {
         !Number.isSafeInteger(meta.cantidad_sorteos) || !range || typeof range.desde !== "string" || typeof range.hasta !== "string") throw new Error();
       if (mounted.current && ticket === fileReadGeneration.current) setMetadata(meta as HistoryMetadata);
     } catch {
-      if (mounted.current && ticket === fileReadGeneration.current) setError("No se pudo leer metadata válida del historial anidado (metadata y sorteos_por_fecha). Revisá el archivo.");
+      if (mounted.current && ticket === fileReadGeneration.current) setError("No se pudo leer el historial. Revisá que sea el JSON correcto.");
     }
   }
   async function showPreview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     invalidate();
-    if (!file || !metadata) { setError("Elegí un historial JSON anidado válido."); return; }
+    if (!file || !metadata) { setError("Elegí un historial JSON válido."); return; }
     if (file.size > MAX_HISTORY_BYTES) { setError("El historial supera 32 MiB. Elegí un archivo más pequeño."); return; }
-    if (!selected) { setError("Elegí un perfil registrado completo para validar el historial."); return; }
-    if (!sourceConfirmed || !timezoneConfirmed) { setError("Leé y confirmá explícitamente la fuente y la zona horaria de la metadata."); return; }
+    if (!selected) { setError("Elegí un perfil de juego."); return; }
+    if (!sourceConfirmed || !timezoneConfirmed) { setError("Confirmá la fuente y la zona horaria."); return; }
     const ticket = generation.current;
     setBusy("preview"); setError("");
     try {
@@ -184,69 +184,64 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: {
     } finally { inFlight.current = false; if (mounted.current && ticket === generation.current) setBusy(null); }
   }
   const start = offset + 1;
-  const importReason = !file ? "Elegí primero el archivo del historial." : !metadata ? "El archivo todavía no tiene metadata válida." : !selected ? "Elegí un perfil guardado para poder validar el historial." : "";
+  const importReason = !file ? "Elegí primero el archivo del historial." : !metadata ? "El archivo no es un historial válido." : !selected ? "Elegí un perfil de juego." : "";
   const importSection = <section key="import" aria-labelledby="history-import-title" className="space-y-5 border-t border-border pt-5">
     <div><h2 id="history-import-title" className="section-header">Importar historial</h2>
-      <p className="field-help max-w-prose">Subí el archivo completo. Revisamos su metadata y el perfil; la zona horaria y el origen se confirman de forma explícita. Importar guarda datos, no ejecuta ni calcula pagos.</p>
-      <p className="field-help max-w-prose">Primero se valida y se muestra una vista previa; nada se guarda hasta que confirmes.</p></div>
+      <p className="field-help max-w-prose">Nada se guarda hasta confirmar; importar no ejecuta sesiones ni calcula pagos.</p></div>
     {datasets?.total === 0 && <ol aria-label="Cómo importar el primer historial" className="list-decimal space-y-1 pl-5 text-sm">
-      <li>Elegí el historial JSON anidado (con metadata y sorteos por fecha).</li>
-      <li>Elegí el perfil guardado con el que se valida; es obligatorio.{!profilesLoading && profiles.length === 0 && !profilesError && " Todavía no hay ninguno: registralo en Opciones avanzadas, dentro de Perfiles de juego."}</li>
-      <li>Confirmá la fuente y la zona horaria declaradas, y revisá la vista previa antes de guardar.</li>
+      <li>Elegí el historial JSON.</li>
+      <li>Elegí el perfil de juego.{!profilesLoading && profiles.length === 0 && !profilesError && " Todavía no hay ninguno: creálo en Opciones avanzadas."}</li>
+      <li>Confirmá fuente y zona horaria.</li>
     </ol>}
     <form onSubmit={(event) => { void showPreview(event); }} className="space-y-5">
-      <div className="field"><label htmlFor="history-file" className="field-label">Historial JSON anidado (máximo 32 MiB)</label>
+      <div className="field"><label htmlFor="history-file" className="field-label">Historial JSON (máximo 32 MiB)</label>
         <input id="history-file" type="file" accept=".json,application/json" className="control h-auto py-2" disabled={busy === "promote"}
           onChange={(event) => { void chooseFile(event.target.files?.[0] ?? null); }} />
         {file && <p className="field-help">Seleccionado: {file.name} · {file.size.toLocaleString("es-ES")} bytes</p>}</div>
       {metadata && <section aria-label="Metadata detectada" className="space-y-2 border-y border-border py-4">
-        <h3 className="field-label">Metadata detectada; confirmar no valida premios</h3>
-        <p>Juego declarado: {metadata.juego} · Origen: <strong>{metadata.origen}</strong> · Zona horaria: <strong>{metadata.zona_horaria}</strong></p>
-        <p>Rango declarado: {metadata.rango_seleccionado.desde} – {metadata.rango_seleccionado.hasta} · Cantidad declarada: {metadata.cantidad_sorteos.toLocaleString("es-ES")} (se contrasta con las filas leídas)</p>
+        <h3 className="field-label">Datos del archivo</h3>
+        <p>Juego: {metadata.juego} · Origen: <strong>{metadata.origen}</strong> · Zona horaria: <strong>{metadata.zona_horaria}</strong></p>
+        <p>Rango: {metadata.rango_seleccionado.desde} – {metadata.rango_seleccionado.hasta} · Sorteos: {metadata.cantidad_sorteos.toLocaleString("es-ES")}</p>
         <label className="control-choice"><input type="checkbox" className="control" checked={sourceConfirmed} disabled={busy === "promote"}
-          onChange={(event) => { invalidate(); setSourceConfirmed(event.target.checked); }} />Confirmo la fuente declarada: {metadata.origen}</label>
+          onChange={(event) => { invalidate(); setSourceConfirmed(event.target.checked); }} />Confirmo la fuente: {metadata.origen}</label>
         <label className="control-choice"><input type="checkbox" className="control" checked={timezoneConfirmed} disabled={busy === "promote"}
-          onChange={(event) => { invalidate(); setTimezoneConfirmed(event.target.checked); }} />Confirmo la zona horaria declarada: {metadata.zona_horaria}</label>
-        <p className="field-help">Las cantidades y los premios declarados por el archivo no se consideran verificados; el servidor vuelve a validar contenido y compatibilidad.</p>
+          onChange={(event) => { invalidate(); setTimezoneConfirmed(event.target.checked); }} />Confirmo la zona horaria: {metadata.zona_horaria}</label>
       </section>}
-      <div className="field"><label htmlFor="history-profile" className="field-label">Perfil guardado para validar el historial</label>
+      <div className="field"><label htmlFor="history-profile" className="field-label">Perfil de juego (obligatorio)</label>
         <select id="history-profile" className="control" value={profileKey} disabled={busy === "promote" || profilesLoading} onChange={(event) => { invalidate(); setProfileKey(event.target.value); }}>
-          <option value="">Elegí un perfil registrado</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.profile_id} · revisión {profile.revision} · {profile.universe_size} números · {profile.positions} posiciones</option>)}
+          <option value="">Elegí un perfil</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.profile_id} · revisión {profile.revision} · {profile.universe_size} números · {profile.positions} posiciones</option>)}
         </select>
-        <p className="field-help">Obligatorio: sin un perfil guardado no se puede validar el historial.</p>
-        {profilesLoading ? <p role="status" className="field-help">Cargando perfiles registrados…</p> : profilesError ? <p role="alert" className="field-help">{profilesError}</p> : profiles.length === 0 && <p className="field-help">No hay perfiles. Abrí el editor avanzado para registrar uno; los valores del archivo no sustituyen el perfil.</p>}</div>
+        {profilesLoading ? <p role="status" className="field-help">Cargando perfiles…</p> : profilesError ? <p role="alert" className="field-help">{profilesError}</p> : profiles.length === 0 && <p className="field-help">No hay perfiles. Creá uno en Opciones avanzadas.</p>}</div>
       {!preview && <div>
         <button type="submit" className="btn btn-primary" aria-busy={busy === "preview"} aria-describedby={importReason ? "history-import-reason" : undefined} disabled={busy !== null || promotionUncertain || !file || !metadata || !selected}>Importar historial</button>
         {importReason && <p id="history-import-reason" className="field-help">{importReason}</p>}
       </div>}
     </form>
-    {busy === "preview" && <p role="status">Validando historial completo…</p>}
+    {busy === "preview" && <p role="status">Validando historial…</p>}
     {error && <p ref={errorRef} tabIndex={-1} role="alert" className="border-y border-border py-3">{error}</p>}
-    {promotionUncertain && <p role="status">El guardado quedó sin confirmación. Se bloquean nuevos envíos para evitar duplicados; revisá la biblioteca local antes de decidir qué hacer.</p>}
+    {promotionUncertain && <p role="status">No se confirmó el guardado. Revisá la biblioteca antes de reintentar.</p>}
     {preview && <section aria-labelledby="history-preview-title" className="space-y-3 border-t border-border pt-4">
       <h3 id="history-preview-title" className="section-header">Vista previa · {preview.promotable ? "lista para confirmar" : "no válida"}</h3>
-      <p>Filas leídas: {preview.rows_seen.toLocaleString("es-ES")} · Registros conservados: {preview.records_total.toLocaleString("es-ES")} · Duplicados idénticos: {preview.duplicates_merged.toLocaleString("es-ES")} · Errores: {preview.error_count}</p>
-      <p>Compatibilidad de perfil registrada: {preview.profile_compatibility.registered ? "sí" : "no"} · {preview.profile_compatibility.profile_id} · revisión {preview.profile_compatibility.profile_revision}. Ejecución disponible: no.</p>
-      {preview.errors.length > 0 && <ul aria-label="Errores de importación" className="list-disc pl-5">{preview.errors.map((issue, index) => <li key={index}>{issue.row ?? "Archivo"} · {issue.code}: {issue.message}</li>)}</ul>}
-      {preview.dataset_sha256 && <p className="break-all">Hash de dataset: <code>{preview.dataset_sha256}</code></p>}
+      <p>Filas leídas: {preview.rows_seen.toLocaleString("es-ES")} · Sorteos: {preview.records_total.toLocaleString("es-ES")} · Duplicados: {preview.duplicates_merged.toLocaleString("es-ES")} · Errores: {preview.error_count}</p>
+      {preview.errors.length > 0 && <ul aria-label="Errores de importación" className="list-disc pl-5">{preview.errors.map((issue, index) => <li key={index}>{issue.row ?? "Archivo"}: {issue.message}</li>)}</ul>}
+      {preview.dataset_sha256 && <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="break-all text-sm">Huella del historial: <code>{preview.dataset_sha256}</code></p></details>}
       <button type="button" className="btn btn-primary" aria-busy={busy === "promote"} disabled={busy !== null || promotionUncertain || !preview.promotable || !preview.dataset_sha256 || !HASH.test(preview.dataset_sha256)} onClick={() => { void promote(); }}>Confirmar y guardar historial</button>
     </section>}
-    {busy === "promote" && <p role="status">Guardado enviado; resultado pendiente. No se reintentará automáticamente.</p>}
-    {saved && <p role="status" className="border-y border-border py-3">{saved.created ? "Importación guardada" : "Dataset ya guardado"}. La disponibilidad de ejecución sigue siendo no disponible en este recorrido.</p>}
+    {busy === "promote" && <p role="status">Guardando; esperá la respuesta.</p>}
+    {saved && <p role="status" className="border-y border-border py-3">{saved.created ? "Historial guardado." : "Este historial ya estaba guardado."}</p>}
   </section>;
   const librarySection = <section key="library" aria-labelledby="history-library-title" className="space-y-4 border-t border-border pt-5">
-      <div><h2 id="history-library-title" className="section-header">Biblioteca de historiales</h2><p className="field-help">Solo se muestran datos persistidos; importar no habilita todavía su ejecución ni completa el asistente pendiente.</p></div>
+      <div><h2 id="history-library-title" className="section-header">Biblioteca de historiales</h2></div>
       {libraryLoading && !datasets && <p role="status">Cargando historiales guardados…</p>}
       {libraryError && <div role="alert" className="space-y-2"><p>{libraryError}</p><button type="button" className="btn btn-secondary" onClick={() => setRetry((value) => value + 1)}>Reintentar biblioteca</button></div>}
-      {datasets && !libraryError && datasets.total === 0 && <p>No hay historiales guardados todavía. El primero aparecerá acá cuando lo importes.</p>}
+      {datasets && !libraryError && datasets.total === 0 && <p>Todavía no hay historiales guardados.</p>}
       {datasets && !libraryError && <ul aria-busy={libraryLoading} className="divide-y divide-border">{datasets.items.map((item) => <li key={item.dataset_sha256} className="space-y-2 py-4">
         <h3 className="font-medium">{item.source_id} · {item.source_revision} · {item.records_total.toLocaleString("es-ES")} sorteos · {item.source_format}</h3>
-        <p className="field-help">Perfil: {item.profile_id} · revisión {item.profile_revision} · tipo de fuente: {item.source_kind ?? "no declarado"} · rango {item.first_draw} – {item.last_draw}</p>
-        <p className="break-all text-sm">Dataset <code>{item.dataset_sha256}</code> · fuente <code>{item.source_sha256}</code></p>
+        <p className="field-help">Perfil: {item.profile_id} · revisión {item.profile_revision} · {item.source_kind ?? "fuente no declarada"} · {item.first_draw} – {item.last_draw}</p>
+        <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="break-all text-sm">Historial <code>{item.dataset_sha256}</code> · fuente <code>{item.source_sha256}</code></p></details>
         {item.profile_execution.ready
-          ? <><p className="field-help">Perfil registrado actualmente; esta pantalla no afirma que el historial pueda ejecutarse.</p>
-            <Link className="btn btn-tertiary" to={`/experimentos/nuevo/sesion?dataset_sha256=${encodeURIComponent(item.dataset_sha256)}`}>Continuar con este historial</Link></>
-          : <p className="field-help">El perfil asociado no está registrado o cambió; registralo de nuevo para usarlo. Por eso no hay continuación disponible desde acá.</p>}
+          ? <Link className="btn btn-tertiary" to={`/experimentos/nuevo/sesion?dataset_sha256=${encodeURIComponent(item.dataset_sha256)}`}>Continuar con este historial</Link>
+          : <p className="field-help">Su perfil ya no está registrado; registralo de nuevo para continuar.</p>}
       </li>)}</ul>}
       {datasets && !libraryError && datasets.total > DATASET_PAGE_SIZE && <nav aria-label="Páginas de historiales" className="flex items-center gap-3">
         <button type="button" className={button} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - DATASET_PAGE_SIZE))}>Anterior</button>
@@ -335,23 +330,23 @@ export function DataPage() {
     if (promotionInFlight.current || registering || activePreview.current === generation.current) return;
     invalidate();
     if (!file) { fail("Elegí un archivo CSV o JSON.", "import-file"); return; }
-    if (!draft.format || !draft.clockMode) { fail("Elegí explícitamente el formato del archivo y la interpretación de su hora.", !draft.format ? "import-format" : "clock-mode"); return; }
+    if (!draft.format || !draft.clockMode) { fail("Elegí el formato del archivo y cómo interpretar su hora.", !draft.format ? "import-format" : "clock-mode"); return; }
     if (file.size > MAX_BYTES) { fail("El archivo supera 2 MiB. Elegí uno más pequeño.", "import-file"); return; }
     const selected = profiles.find((item) => `${item.profile.profile_id}@${item.profile.revision}` === draft.profileKey);
-    if (!selected) { fail("Elegí un perfil guardado completo; las plantillas parciales no se pueden importar.", "import-profile"); return; }
+    if (!selected) { fail("Elegí un perfil guardado.", "import-profile"); return; }
     const names = [draft.date, draft.time, ...draft.positions];
     const columns: [string, string][] = [["map-date", draft.date], ["map-time", draft.time],
       ...draft.positions.map((value, index): [string, string] => [`map-position-${index}`, value])];
     const seen = new Set<string>();
     const badColumn = columns.find(([, name]) => { const invalid = !name || name.trim() !== name || seen.has(name); seen.add(name); return invalid; });
     if (selected.profile.positions > 30 || names.length !== selected.profile.positions + 2 || badColumn) {
-      fail("Indicá nombres de columnas distintos y sin espacios alrededor para fecha, hora y cada posición (máximo 30 posiciones).", badColumn?.[0] ?? "import-profile"); return;
+      fail("Indicá un nombre de columna distinto, sin espacios alrededor, para fecha, hora y cada posición.", badColumn?.[0] ?? "import-profile"); return;
     }
     const badSource = ([["sourceId", draft.sourceId], ["revision", draft.revision], ["provenance", draft.provenance]] as const)
       .find(([, value]) => !value || value.trim() !== value || value.length > 256)?.[0]
       ?? (draft.clockMode === "iana" && !draft.zone.trim() ? "clock-zone" : null);
     if (badSource) {
-      fail("Completá fuente, revisión, procedencia y, si corresponde, zona IANA; sin espacios alrededor (máximo 256 caracteres por dato de fuente).", badSource); return;
+      fail("Completá fuente, revisión, procedencia y, si corresponde, la zona horaria; sin espacios alrededor.", badSource); return;
     }
     setBusy("preview");
     const ticket = generation.current;
@@ -407,12 +402,13 @@ export function DataPage() {
     <section aria-labelledby="advanced-title" className="border-t border-border pt-5">
     <h2 id="advanced-title" className="section-header">Opciones avanzadas</h2>
     <details ref={advanced}>
-      <summary className="disclosure-summary font-medium">Importación avanzada · CSV y JSON plano (máximo 2 MiB, 10.000 filas)</summary>
+      <summary className="disclosure-summary font-medium">Importar CSV o JSON plano</summary>
       <div className="mt-5 space-y-8">
     {profilesLoading && <p role="status">Cargando perfiles guardados…</p>}
-    {profilesError && <p className="field-help">Los perfiles no están disponibles; el motivo figura en «Importar historial».</p>}
-    {!profilesLoading && !profilesError && profiles.length === 0 && <p role="status">No hay perfiles guardados para importar.</p>}
-    {profileTotal > 100 && <p role="status">Se muestran los primeros 100 perfiles guardados y los creados ahora. Otros perfiles no se pueden elegir desde esta pantalla.</p>}
+    {profilesError && <p className="field-help">Los perfiles no están disponibles; el motivo figura arriba.</p>}
+    {!profilesLoading && !profilesError && profiles.length === 0 && <p role="status">No hay perfiles guardados.</p>}
+    {profileTotal > 100 && <p role="status">Solo se pueden elegir los primeros 100 perfiles y los creados ahora.</p>}
+    {templates.length > 0 && <p className="field-help">Las plantillas de catálogo son parciales; completá los campos faltantes.</p>}
     <ProfileEditor templates={templates} profiles={profiles} disabled={profilesLoading || !!profilesError || busy === "promote"}
       onBusyChange={setRegistering} onRegistered={(item) => {
         const key = `${item.profile.profile_id}@${item.profile.revision}`;
@@ -427,25 +423,24 @@ export function DataPage() {
       <legend className="sr-only">Configuración de importación</legend>
       <section aria-labelledby="file-heading" className="border-t border-border pt-5 space-y-4">
         <h3 id="file-heading" className="section-header">Archivo y perfil</h3>
-        <div className="field"><label htmlFor="import-file" className="field-label">Archivo local CSV o JSON (máximo 2 MiB)</label>
+        <div className="field"><label htmlFor="import-file" className="field-label">Archivo CSV o JSON (máximo 2 MiB)</label>
           <input id="import-file" type="file" accept=".csv,.json,text/csv,application/json" className="control h-auto py-2" {...bad("import-file")} onChange={(event) => { if (promotionInFlight.current) return; invalidate(); setFile(event.target.files?.[0] ?? null); }} />
           {file && <p className="field-help">Seleccionado: {file.name} · {file.size} bytes</p>}</div>
-        <div className="field"><label htmlFor="import-format" className="field-label">Formato del archivo (selección explícita)</label>
+        <div className="field"><label htmlFor="import-format" className="field-label">Formato del archivo</label>
           <select id="import-format" className="control" {...bad("import-format")} value={draft.format} onChange={(event) => change({ format: event.target.value as Draft["format"] })}><option value="">Elegí un formato</option><option value="csv">CSV</option><option value="json">JSON (lista plana de objetos)</option></select></div>
         <div className="field"><label htmlFor="import-profile" className="field-label">Perfil guardado completo</label>
-          <select id="import-profile" className="control" {...bad("import-profile")} value={draft.profileKey} onChange={(event) => chooseProfile(event.target.value)}><option value="">Elegí un perfil</option>{profiles.map(({ profile, execution_supported }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.profile_id} · revisión {profile.revision}{execution_supported ? " · ejecutable en el motor heredado" : " · perfil registrado"}</option>)}</select>
-          <p className="field-help">Las plantillas de catálogo son parciales y no son perfiles guardados. Elegir un perfil no habilita la ejecución de datos importados.</p></div>
+          <select id="import-profile" className="control" {...bad("import-profile")} value={draft.profileKey} onChange={(event) => chooseProfile(event.target.value)}><option value="">Elegí un perfil</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.profile_id} · revisión {profile.revision}</option>)}</select></div>
       </section>
       <section aria-labelledby="source-heading" className="border-t border-border pt-5 space-y-4">
-        <h3 id="source-heading" className="section-header">Fuente y reloj</h3>
+        <h3 id="source-heading" className="section-header">Origen y hora</h3>
         {([ ["sourceId", "Identificador de fuente"], ["revision", "Revisión o corrección"], ["provenance", "Procedencia de los datos"] ] as const).map(([key, label]) => <div className="field" key={key}><label htmlFor={key} className="field-label">{label}</label><input id={key} className="control" {...bad(key)} maxLength={256} value={draft[key]} onChange={(event) => change({ [key]: event.target.value })} /></div>)}
         <div className="field"><label htmlFor="source-kind" className="field-label">Tipo de fuente</label><select id="source-kind" className="control" value={draft.kind} onChange={(event) => change({ kind: event.target.value as Draft["kind"] })}><option value="historical">Histórica</option><option value="artificial">Artificial</option></select></div>
-        <div className="field"><label htmlFor="clock-mode" className="field-label">Interpretación de la hora</label><select id="clock-mode" className="control" {...bad("clock-mode")} value={draft.clockMode} onChange={(event) => change({ clockMode: event.target.value as Draft["clockMode"], zone: "" })}><option value="">Elegí una interpretación</option><option value="naive_legacy">Hora local heredada, sin zona declarada</option><option value="iana">Zona IANA explícita</option></select><p className="field-help">La hora se conserva tal como aparece en el archivo: no se convierte a otra zona.</p></div>
-        {draft.clockMode === "iana" && <div className="field"><label htmlFor="clock-zone" className="field-label">Zona IANA (por ejemplo, America/Santo_Domingo)</label><input id="clock-zone" className="control" {...bad("clock-zone")} value={draft.zone} onChange={(event) => change({ zone: event.target.value })} /></div>}
+        <div className="field"><label htmlFor="clock-mode" className="field-label">Interpretación de la hora</label><select id="clock-mode" className="control" {...bad("clock-mode")} value={draft.clockMode} onChange={(event) => change({ clockMode: event.target.value as Draft["clockMode"], zone: "" })}><option value="">Elegí una interpretación</option><option value="naive_legacy">Hora local, sin zona</option><option value="iana">Zona horaria concreta</option></select></div>
+        {draft.clockMode === "iana" && <div className="field"><label htmlFor="clock-zone" className="field-label">Zona horaria (ej. America/Santo_Domingo)</label><input id="clock-zone" className="control" {...bad("clock-zone")} value={draft.zone} onChange={(event) => change({ zone: event.target.value })} /></div>}
       </section>
       <section aria-labelledby="mapping-heading" className="border-t border-border pt-5 space-y-4">
         <h3 id="mapping-heading" className="section-header">Columnas del archivo</h3>
-        <p className="field-help">Nombres sugeridos: date, time y pos1…posN. Cambialos para que coincidan exactamente con tu archivo; posiciones en orden de premio. Fecha YYYY-MM-DD, hora HH:MM. Máximo 10.000 filas y 32 columnas.</p>
+        <p className="field-help">Escribí el nombre exacto de cada columna. Fecha AAAA-MM-DD, hora HH:MM.</p>
         <div className="grid gap-4 sm:grid-cols-2">{([ ["date", "Columna de fecha"], ["time", "Columna de hora"] ] as const).map(([key, label]) => <div key={key}><label htmlFor={`map-${key}`} className="field-label">{label}</label><input id={`map-${key}`} className="control" {...bad(`map-${key}`)} value={draft[key]} onChange={(event) => change({ [key]: event.target.value })} /></div>)}</div>
         <div className="grid gap-4 sm:grid-cols-2">{draft.positions.map((value, index) => <div key={index}><label htmlFor={`map-position-${index}`} className="field-label">Columna de posición {index + 1}</label><input id={`map-position-${index}`} className="control" {...bad(`map-position-${index}`)} value={value} onChange={(event) => change({ positions: draft.positions.map((item, at) => at === index ? event.target.value : item) })} /></div>)}</div>
       </section>
@@ -456,15 +451,19 @@ export function DataPage() {
     {error && <p id="import-error" ref={errorRef} tabIndex={-1} role="alert" className="border-y border-border py-3 text-text">{error}</p>}
     {preview && <section aria-labelledby="preview-heading" className="border-t border-border pt-5 space-y-4">
       <h3 id="preview-heading" className="section-header">Vista previa · {preview.result.promotable ? "válida" : "no válida"}</h3>
-      <p>Filas leídas: {preview.result.rows_seen} · Registros: {preview.result.records_total} · Duplicados idénticos unidos: {preview.result.duplicates_merged} · Errores: {preview.result.error_count}{preview.result.errors_truncated ? " (lista truncada)" : ""}</p>
-      {preview.result.errors.length > 0 && <ul aria-label="Errores de importación" className="list-disc space-y-1 pl-5">{preview.result.errors.map((issue, index) => <li key={index}> {issue.row === null ? "Archivo" : `Fila ${issue.row}`} · {issue.code}: {issue.message}</li>)}</ul>}
+      <p>Filas leídas: {preview.result.rows_seen} · Sorteos: {preview.result.records_total} · Duplicados: {preview.result.duplicates_merged} · Errores: {preview.result.error_count}{preview.result.errors_truncated ? " (lista parcial)" : ""}</p>
+      {preview.result.errors.length > 0 && <ul aria-label="Errores de importación" className="list-disc space-y-1 pl-5">{preview.result.errors.map((issue, index) => <li key={index}> {issue.row === null ? "Archivo" : `Fila ${issue.row}`}: {issue.message}</li>)}</ul>}
       {preview.result.sample.length > 0 && <div><h4 className="field-label">Muestra (hasta 20 registros)</h4><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th scope="col" className="p-2">Fecha</th><th scope="col" className="p-2">Hora</th><th scope="col" className="p-2">Posiciones en orden</th></tr></thead><tbody>{preview.result.sample.map((record, index) => <tr key={index} className="border-t border-border"><td className="p-2">{record.date}</td><td className="p-2">{record.time}</td><td className="p-2">{record.numbers.join(", ")}</td></tr>)}</tbody></table></div></div>}
-      {preview.result.dataset_sha256 && <p className="break-all text-sm">Hash de dataset previsto: <code>{preview.result.dataset_sha256}</code></p>}
-      <p className="field-help">El archivo queda guardado en la biblioteca local y puede abrirse desde «Continuar con este historial»; esta importación aún no habilita su ejecución.</p>
+      <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><div className="space-y-2 pt-2 text-sm">
+        <p>Importar guarda el historial validado; no ejecuta una sesión ni calcula pagos.</p>
+        {preview.result.dataset_sha256 && <p className="break-all">Identidad canónica (SHA-256): <code>{preview.result.dataset_sha256}</code></p>}
+        {preview.result.source_sha256 && <p className="break-all">Archivo de origen (SHA-256): <code>{preview.result.source_sha256}</code></p>}
+        {preview.result.errors.length > 0 && <ul aria-label="Códigos técnicos de errores" className="list-disc pl-5">{preview.result.errors.map((issue, index) => <li key={index}>{issue.row === null ? "Archivo" : `Fila ${issue.row}`} · {issue.code}</li>)}</ul>}
+      </div></details>
       <button type="button" className={button} disabled={busy !== null || registering || !preview.result.promotable || !preview.result.dataset_sha256 || !HASH.test(preview.result.dataset_sha256)} onClick={() => { void promote(); }}>Confirmar y guardar importación</button>
     </section>}
-    {busy === "promote" && <p role="status">Solicitud de guardado enviada; respuesta pendiente. Todavía no se confirmó si se guardó. No cambies el contexto ni vuelvas a enviarla hasta recibir una respuesta.</p>}
-    {saved && <section aria-labelledby="saved-heading" role="status" className="border-t border-border pt-5 space-y-2"><h3 id="saved-heading" className="section-header">{saved.created ? "Importación guardada" : "Dataset ya guardado"}</h3><p className="break-all">Hash guardado: <code>{saved.dataset_sha256}</code></p><p>{saved.duplicate_source_differs ? "Ya existía el mismo dataset con bytes de origen diferentes. Se conserva la primera fuente guardada." : saved.created ? "Se guardó una versión inmutable." : "Ya existía este dataset; no se creó una copia nueva."}</p><p className="field-help">Este artefacto no se puede ejecutar todavía.</p></section>}
+    {busy === "promote" && <p role="status">Guardando; esperá la respuesta antes de volver a enviar.</p>}
+    {saved && <section aria-labelledby="saved-heading" role="status" className="border-t border-border pt-5 space-y-2"><h3 id="saved-heading" className="section-header">{saved.created ? "Importación guardada" : "Historial ya guardado"}</h3><p>{saved.duplicate_source_differs ? "Ya existía el mismo historial con otro archivo de origen; se conserva el primero." : saved.created ? "Guardado." : "Ya existía; no se creó una copia."}</p><details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><div className="space-y-2 pt-2 text-sm"><p>Importar guarda el historial; no ejecuta sesiones ni calcula pagos.</p><p className="break-all">Identidad canónica (SHA-256): <code>{saved.dataset_sha256}</code></p><p className="break-all">Archivo retenido (SHA-256): <code>{saved.retained_source_sha256}</code></p><p className="break-all">Archivo enviado (SHA-256): <code>{saved.submitted_source_sha256}</code></p></div></details></section>}
       </div>
     </details>
     </section>

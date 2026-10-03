@@ -78,7 +78,7 @@ function RowActions({ row, onDelete }: { row: ExperimentSummary; onDelete: () =>
     }}>Acciones</button>
     {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${experimentName(row)}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
       {!isProfileExperiment(row) && <Link ref={first} role="menuitem" className="btn btn-tertiary block w-full text-left" to={`/experimentos/nuevo?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
-      {isProfileExperiment(row) && <span className="block px-3 py-2 text-text-secondary">Usar como base no disponible para perfiles</span>}
+      {isProfileExperiment(row) && <span className="block px-3 py-2 text-text-secondary">No disponible como base</span>}
       <button ref={firstProfile} role="menuitem" type="button" className="btn btn-destructive block w-full text-left" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
     </div>, document.body)}
   </>;
@@ -168,7 +168,7 @@ export function ExperimentsPage() {
         setDeleteTarget(null);
         await load(queryRef.current, (queryRef.current.page - 1) * PAGE_SIZE);
         setRowError("Ese experimento ya no existía; el listado se actualizó.");
-      } else if (error instanceof NetworkError) setRowError("No se pudo contactar al servidor local. El experimento podría no haberse eliminado.");
+      } else if (error instanceof NetworkError) setRowError("Sin respuesta del servidor. Puede que no se haya eliminado.");
       else setRowError("No se pudo eliminar el experimento. Probá de nuevo.");
     } finally { setDeleting(false); }
   }
@@ -177,7 +177,7 @@ export function ExperimentsPage() {
     return { key: sort, header, headerClassName: `table-${sort === "created_at" ? "date" : sort}`, cellClassName: `table-${sort === "created_at" ? "date" : sort}`,
       sort: query.sort === sort ? query.order === "asc" ? "ascending" : "descending" : "none",
       onSort: () => update({ sort, order: query.sort === sort && query.order === "asc" ? "desc" : "asc", page: 1 }),
-      render: (row) => sort === "name" ? <><Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="text-accent underline">{isProfileExperiment(row) ? row.display.name : row.request.name}</Link>{isProfileExperiment(row) && <span className="block text-sm text-text-secondary">Perfil {row.profile.profile_id} · {row.profile.positions} posiciones · Capital {profileMoney(row, row.display.capital)} · Meta {profileMoney(row, row.display.goal)} · Perfil v{row.request.schema_version} · {row.display.staking_label}</span>}</>
+      render: (row) => sort === "name" ? <><Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="text-accent underline">{isProfileExperiment(row) ? row.display.name : row.request.name}</Link>{isProfileExperiment(row) && <span className="block text-sm text-text-secondary">Perfil {row.profile.profile_id} · {row.profile.positions} posiciones · Capital {profileMoney(row, row.display.capital)} · Meta {profileMoney(row, row.display.goal)} · {row.display.staking_label}</span>}</>
         : sort === "status" ? <StatusLabel kind="execution" value={row.status} /> : <span title={row.created_at ?? "Fecha no registrada"}>{createdAt(row.created_at)}</span> };
   }
   const columns: DataTableColumn<ExperimentSummary>[] = [
@@ -189,21 +189,20 @@ export function ExperimentsPage() {
   ];
   const hasFilters = !!(query.name || query.status);
   return <div>
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <p className="max-w-prose text-text-secondary">Simulaciones sobre datos congelados.</p>
+    <div className="mb-6 flex justify-end">
       <Link to="/experimentos/nuevo" className="btn btn-primary">Nuevo experimento</Link>
     </div>
-    {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">Activo en la última consulta{queueError ? " (estado no actualizado; puede haber cambiado)" : ""}: <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id) ? experimentName(items.find((item) => item.id === queue.active_id)!) : queue.active_id}</Link></p>}
+    {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">En curso{queueError ? " (puede haber cambiado)" : ""}: <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id) ? experimentName(items.find((item) => item.id === queue.active_id)!) : queue.active_id}</Link></p>}
     {notice && <p ref={noticeRef} tabIndex={-1} role="status" className="mb-4 border border-border-control p-3 text-sm text-accent focus:outline-none">{notice}</p>}
     {rowError && <p role="alert" className="mb-4 border border-border-control p-3 text-sm text-text">{rowError}</p>}
     {(total > 0 || hasFilters) && <div className="mb-5 flex flex-wrap items-end gap-4" role="group" aria-label="Filtros de experimentos">
       <div className="min-w-[220px] flex-1 sm:max-w-sm"><label htmlFor="experiment-name" className="field-label">Buscar por nombre</label><input id="experiment-name" type="search" maxLength={80} className="control" value={text} onChange={(event) => setText(event.target.value)} /></div>
-      <div className="min-w-[180px]"><label htmlFor="experiment-status" className="field-label">Estado de ejecución</label><select id="experiment-status" className="control" value={query.status ?? ""} onChange={(event) => update({ status: statuses.find((value) => value === event.target.value), page: 1 })}><option value="">Todos</option>{statuses.map((status) => <option key={status} value={status}>{statusNames[status]}</option>)}</select></div>
+      <div className="min-w-[180px]"><label htmlFor="experiment-status" className="field-label">Estado</label><select id="experiment-status" className="control" value={query.status ?? ""} onChange={(event) => update({ status: statuses.find((value) => value === event.target.value), page: 1 })}><option value="">Todos</option>{statuses.map((status) => <option key={status} value={status}>{statusNames[status]}</option>)}</select></div>
     </div>}
     {state === "loading" && <p role="status" className="text-text-secondary">Cargando experimentos…</p>}
-    {state === "network-error" && <p role="alert">No se pudo contactar al servidor local. <button type="button" className="btn btn-tertiary" onClick={() => load(query, offset)}>Reintentar</button></p>}
+    {state === "network-error" && <p role="alert">No se pudo contactar al servidor. <button type="button" className="btn btn-tertiary" onClick={() => load(query, offset)}>Reintentar</button></p>}
     {state === "server-error" && <p role="alert">No se pudo cargar el listado de experimentos. <button type="button" className="btn btn-tertiary" onClick={() => load(query, offset)}>Reintentar</button></p>}
-    {state === "ready" && total === 0 && (hasFilters ? <p role="status">Sin coincidencias para los filtros actuales. Cambiá el nombre o el estado para buscar de nuevo.</p> : <p role="status">Todavía no hay experimentos. <Link to="/experimentos/nuevo" className="btn btn-tertiary">Creá el primero</Link>.</p>)}
+    {state === "ready" && total === 0 && (hasFilters ? <p role="status">Sin coincidencias.</p> : <p role="status">Todavía no hay experimentos. <Link to="/experimentos/nuevo" className="btn btn-tertiary">Creá el primero</Link>.</p>)}
     {state === "ready" && total > 0 && <>
       <DataTable caption="Experimentos" columns={columns} rows={items} getRowKey={(row) => row.id} />
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -211,6 +210,6 @@ export function ExperimentsPage() {
         <div className="flex gap-3"><button type="button" className={secondary} disabled={offset === 0} onClick={() => update({ page: query.page - 1 })}>Anterior</button><button type="button" className={secondary} disabled={offset + PAGE_SIZE >= total} onClick={() => update({ page: query.page + 1 })}>Siguiente</button></div>
       </div>
     </>}
-    <ConfirmDialog open={!!deleteTarget} title={deleteTarget ? `¿Eliminar el experimento «${experimentName(deleteTarget)}»?` : "¿Eliminar experimento?"} description={deleteTarget ? `Se eliminará «${experimentName(deleteTarget)}» de forma permanente. Esta acción no se puede deshacer.` : ""} confirmLabel={deleting ? "Eliminando…" : "Eliminar experimento"} onConfirm={confirmDelete} onCancel={() => { setDeleteTarget(null); setRowError(""); }} />
+    <ConfirmDialog open={!!deleteTarget} title={deleteTarget ? `¿Eliminar el experimento «${experimentName(deleteTarget)}»?` : "¿Eliminar experimento?"} description={deleteTarget ? "Se elimina de forma permanente." : ""} confirmLabel={deleting ? "Eliminando…" : "Eliminar experimento"} onConfirm={confirmDelete} onCancel={() => { setDeleteTarget(null); setRowError(""); }} />
   </div>;
 }

@@ -46,7 +46,7 @@ describe("profile editor", () => {
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
     await fill(user, count);
     vi.mocked(apiClient.registerProfile).mockImplementationOnce(async (profile) => registered(profile));
-    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     await waitFor(() => expect(onRegistered).toHaveBeenCalledTimes(1));
     const sent = vi.mocked(apiClient.registerProfile).mock.calls[0][0];
     expect(sent).toMatchObject({ schema_version: 1, profile_id: "my-game", revision: 1, positions: count, universe_size: 100,
@@ -64,13 +64,13 @@ describe("profile editor", () => {
     expect(screen.getByLabelText("Posición 1 · multiplicador")).toHaveValue("60/1");
     expect(screen.getByText(/1 unidad\(es\) sin escala/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Apuesta mínima/)).toHaveValue("");
-    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/ID:/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "example");
     await user.type(screen.getByLabelText(/Revisión \(1/), "1");
     await user.type(screen.getByLabelText(/Escala decimal/), "0");
-    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Incremento/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
   });
@@ -80,11 +80,11 @@ describe("profile editor", () => {
     await fill(user, 1);
     await user.clear(screen.getByLabelText("Posición 1 · multiplicador"));
     await user.type(screen.getByLabelText("Posición 1 · multiplicador"), "1/3");
-    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/pagos enteros/);
     await user.clear(screen.getByLabelText("Posición 1 · multiplicador"));
     await user.type(screen.getByLabelText("Posición 1 · multiplicador"), "9007199254740992");
-    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/límite/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
   });
@@ -95,15 +95,19 @@ describe("profile editor", () => {
       stake_increment: 25, minimum_stake: 25, maximum_stake: 200, max_coverage: 3, max_exposure: 1000, best_rule: "maximum-payout/v1" });
     const view = render(<ProfileEditor templates={[]} profiles={[existing]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
     await fill(user, 1);
-    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(/ya están guardados/);
+    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/Ese ID y revisión ya existen/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
     view.rerender(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
-    for (const [status, detail, expected] of [[409, "profile quota has insufficient headroom", /cuota/],
-      [409, "profile version conflicts with registered content", /revisión nueva/], [422, "invalid game profile", /422/]] as const) {
+    for (const [status, detail, expected] of [[409, "profile quota has insufficient headroom", /No hay espacio/],
+      [409, "profile version conflicts with registered content", /revisión nueva/], [422, "invalid game profile", /El servidor rechazó el perfil/]] as const) {
       vi.mocked(apiClient.registerProfile).mockRejectedValueOnce(new ApiError(status, detail));
-      await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+      await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
       expect(await screen.findByRole("alert")).toHaveTextContent(expected);
+      if (status === 422) {
+        await user.click(screen.getByText("Detalles técnicos"));
+        expect(screen.getByText("Código HTTP:").parentElement).toHaveTextContent("422");
+      }
       expect(apiClient.registerProfile).toHaveBeenCalledTimes(status === 422 ? 3 : detail.startsWith("profile version") ? 2 : 1);
     }
   });
@@ -114,7 +118,7 @@ describe("profile editor", () => {
     await user.click(screen.getByRole("button", { name: "Crear perfil" }));
     await user.type(screen.getByLabelText(/Revisión \(1/), "7");
     host.open = false;
-    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(host.open).toBe(true);
     const alert = screen.getByRole("alert");
     expect(screen.getByLabelText("ID nuevo del perfil")).toHaveFocus();
@@ -129,7 +133,7 @@ describe("profile editor", () => {
     await user.click(screen.getByRole("button", { name: "Crear perfil" }));
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "my-game");
     await user.type(screen.getByLabelText(/Revisión \(1/), "1");
-    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByLabelText(/Tamaño del universo/)).toHaveFocus();
     expect(screen.getByLabelText(/Tamaño del universo/)).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByLabelText("ID nuevo del perfil")).not.toHaveAttribute("aria-invalid");
@@ -142,12 +146,12 @@ describe("profile editor", () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
     await fill(user, 1);
-    const button = screen.getByRole("button", { name: "Registrar perfil inmutable" });
+    const button = screen.getByRole("button", { name: "Guardar perfil" });
     fireEvent.click(button); fireEvent.click(button);
     expect(apiClient.registerProfile).toHaveBeenCalledTimes(1);
     expect(button).toBeDisabled();
     expect(screen.getByLabelText("ID nuevo del perfil")).toBeDisabled();
-    expect(screen.getByText(/respuesta pendiente/)).toBeInTheDocument();
+    expect(screen.getByText(/esperá la respuesta/)).toBeInTheDocument();
     const profile = vi.mocked(apiClient.registerProfile).mock.calls[0][0];
     await act(async () => { resolve(registered(profile)); });
     expect(onBusyChange).toHaveBeenCalledWith(false);

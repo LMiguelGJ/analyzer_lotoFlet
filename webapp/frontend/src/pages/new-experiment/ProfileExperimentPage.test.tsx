@@ -25,7 +25,7 @@ async function selectChoices(user: ReturnType<typeof userEvent.setup>, profileId
   await screen.findByRole("option", { name: new RegExp(`${profileId} · revisión 2`) });
   await user.selectOptions(screen.getByRole("combobox", { name: "Perfil y revisión" }), `${profileId}@2`);
   await screen.findByRole("option", { name: /local-json/ });
-  await user.selectOptions(screen.getByRole("combobox", { name: "Versión de datos compatible" }), datasetItem.dataset_sha256);
+  await user.selectOptions(screen.getByRole("combobox", { name: "Datos compatibles" }), datasetItem.dataset_sha256);
   await screen.findByRole("option", { name: "2025-01-01 05:10" });
 }
 async function fill(user: ReturnType<typeof userEvent.setup>, profileId = "local-game") {
@@ -35,7 +35,7 @@ async function fill(user: ReturnType<typeof userEvent.setup>, profileId = "local
   await user.type(screen.getByRole("textbox", { name: /Capital inicial/ }), "2000");
   await user.type(screen.getByRole("textbox", { name: /Meta de saldo final/ }), "2800");
   await user.type(screen.getByRole("textbox", { name: /Límite de sorteos transcurridos/ }), "12");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Liquidación explícita" }), "all");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
   await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "2");
   await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), "0,1");
   await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
@@ -53,9 +53,11 @@ describe("profile session creator", () => {
   it("keeps a library dataset URL as a read-only identity hint without auto-selecting another profile or dataset", async () => {
     const selectedHash = "f".repeat(64);
     setup(`/experimentos/nuevo/perfil?dataset_sha256=${selectedHash}`);
-    expect(await screen.findByRole("status")).toHaveTextContent(`Historial elegido desde la biblioteca: ${selectedHash}`);
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("Historial elegido desde la biblioteca.");
+    expect(status).toHaveTextContent(selectedHash);
     expect(screen.getByRole("combobox", { name: "Perfil y revisión" })).toHaveValue("");
-    expect(screen.getByRole("combobox", { name: "Versión de datos compatible" })).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "Datos compatibles" })).toHaveValue("");
   });
 
   it("submits explicitly selected Q80 cycling without fixed stake and blocks uncertain duplicate", async () => {
@@ -67,7 +69,7 @@ describe("profile session creator", () => {
     expect(screen.queryByRole("textbox", { name: /Apuesta fija por número/ })).not.toBeInTheDocument();
     vi.mocked(apiClient.createProfileExperiment).mockRejectedValueOnce(new NetworkError());
     await user.dblClick(screen.getByRole("button", { name: "Crear sesión y agregar a la cola" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/Podría estar en la cola/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Puede estar en la cola/);
     expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1);
     const body = vi.mocked(apiClient.createProfileExperiment).mock.calls[0][0];
     expect(body).toMatchObject({ schema_version: 2, staking: { capability: "q80-first-prize-cycling/v1" } });
@@ -184,7 +186,7 @@ describe("profile session creator", () => {
     await user.click(screen.getByRole("navigation", { name: "Páginas de perfiles" }).querySelector("button:last-child")!);
     await user.selectOptions(screen.getByRole("combobox", { name: "Perfil y revisión" }), "local-game@2");
     await user.click(screen.getByRole("navigation", { name: "Páginas de datos" }).querySelector("button:last-child")!);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Versión de datos compatible" }), datasetItem.dataset_sha256);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Datos compatibles" }), datasetItem.dataset_sha256);
     await screen.findByRole("option", { name: "2024-12-30 05:10" });
     await user.click(screen.getByRole("navigation", { name: "Páginas de sorteos" }).querySelector("button:last-child")!);
     expect(await screen.findByRole("option", { name: "2025-01-01 05:10" })).toBeInTheDocument();
@@ -215,10 +217,10 @@ describe("profile session creator", () => {
     const { user } = setup(); await fill(user);
     vi.mocked(apiClient.createProfileExperiment).mockRejectedValueOnce(new NetworkError());
     await user.dblClick(screen.getByRole("button", { name: "Crear sesión y agregar a la cola" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/Podría estar en la cola/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Puede estar en la cola/);
     expect(screen.getByRole("button", { name: "Crear sesión y agregar a la cola" })).toBeDisabled();
     expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("link", { name: "Comprobá Experimentos" })).toHaveAttribute("href", "/experimentos");
+    expect(screen.getByRole("link", { name: "Revisá Experimentos" })).toHaveAttribute("href", "/experimentos");
   });
   it("shows no false compatibility and keeps keyboard-labeled controls accessible", async () => {
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20,
@@ -226,7 +228,7 @@ describe("profile session creator", () => {
     const { user, container } = setup();
     await screen.findByRole("option", { name: /local-game/ });
     await user.selectOptions(screen.getByRole("combobox", { name: "Perfil y revisión" }), "local-game@2");
-    expect(screen.getByRole("combobox", { name: "Versión de datos compatible" }).querySelectorAll("option")).toHaveLength(1);
+    expect(screen.getByRole("combobox", { name: "Datos compatibles" }).querySelectorAll("option")).toHaveLength(1);
     expect(screen.getByText(/No hay datos compatibles/)).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });

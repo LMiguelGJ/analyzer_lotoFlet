@@ -64,7 +64,7 @@ export function ProfileExperimentPage() {
         item.profile_sha256 === datasetChoice.item.profile_sha256)) {
         setDatasetChoice(null); setDraws(null); setDraft((current) => ({ ...current, start_draw: "" }));
       }
-    }).catch(() => { if (live) setDatasetError("No se pudieron cargar los datos locales. Reintentá."); });
+    }).catch(() => { if (live) setDatasetError("No se pudieron cargar los datos. Reintentá."); });
     return () => { live = false; };
   }, [datasetOffset, datasetRetry]);
   useEffect(() => {
@@ -73,7 +73,7 @@ export function ProfileExperimentPage() {
     setDraws(null); setDrawError("");
     apiClient.getDatasetDraws(datasetChoice.item.dataset_sha256, drawOffset, 100, drawDate || undefined)
       .then((page) => { if (live) setDraws(page); })
-      .catch(() => { if (live) setDrawError("No se pudieron cargar los sorteos de estos datos. Reintentá."); });
+      .catch(() => { if (live) setDrawError("No se pudieron cargar los sorteos. Reintentá."); });
     return () => { live = false; };
   }, [datasetChoice, drawOffset, drawDate, drawRetry]);
 
@@ -129,14 +129,14 @@ export function ProfileExperimentPage() {
             body.selector.coverage > fresh.profile_execution.recovery_compatibility.maximum_compatible_coverage) ||
           !matchingDataset(fresh, currentDataset) || currentDataset.dataset_sha256 !== body.dataset_sha256 ||
           !found || !matchingDataset(profileChoice.item, currentDataset)) {
-        setError("El perfil, los datos o el sorteo cambiaron. Actualizá las listas y elegí de nuevo; no se envió la solicitud.");
+        setError("El perfil, los datos o el sorteo cambiaron. Elegí de nuevo; no se envió nada.");
         return;
       }
       submitted = true;
       const created = await apiClient.createProfileExperiment(body);
       if (!created || typeof created.id !== "string" || !/^[a-f0-9]{32}$/.test(created.id)) {
         setUncertain(true);
-        setError("No se pudo confirmar el ID de la sesión. Consultá Experimentos antes de iniciar una solicitud nueva.");
+        setError("No se pudo confirmar la sesión. Revisá Experimentos antes de crear otra.");
         return;
       }
       navigate(`/experimentos/${encodeURIComponent(created.id)}`, { replace: true });
@@ -144,19 +144,19 @@ export function ProfileExperimentPage() {
       if (submitted && (cause instanceof NetworkError || cause instanceof ApiError && cause.status >= 200 && cause.status < 300)) {
         // No safe idempotency key exists for this POST: never automatically retry.
         setUncertain(true);
-        setError("No llegó una confirmación de la sesión. Podría estar en la cola; consultá Experimentos antes de crear otra.");
+        setError("Sin confirmación de la sesión. Puede estar en la cola; revisá Experimentos antes de crear otra.");
       } else if (!submitted && cause instanceof NetworkError) {
-        setError("No se pudo verificar el perfil o los datos. No se envió la sesión; reintentá cuando vuelva el servidor.");
+        setError("No se pudo verificar el perfil o los datos. No se envió la sesión; reintentá más tarde.");
       } else if (cause instanceof ApiError && cause.status === 409) {
-        setError("El perfil, los datos o la apuesta no pasaron la admisión, o la cola no está disponible. Revisá el catálogo y los importes antes de volver a intentar.");
+        setError("El perfil, los datos o la apuesta no fueron aceptados, o la cola no está disponible. Revisá los importes y reintentá.");
       } else if (cause instanceof ApiError && cause.status === 507) {
-        setError("No hay capacidad disponible. Revisá el almacenamiento antes de intentar de nuevo.");
+        setError("No hay espacio disponible. Liberá almacenamiento y reintentá.");
       } else if (cause instanceof ApiError && cause.status === 422) {
-        setError("El servidor rechazó el documento de sesión. Revisá los campos y las capacidades disponibles.");
+        setError("El servidor rechazó la sesión. Revisá los campos.");
       } else {
         if (submitted) setUncertain(true);
-        setError(submitted ? "No se pudo confirmar la creación. Consultá Experimentos antes de iniciar otra solicitud." :
-          "No se pudieron verificar las opciones. No se envió la sesión; actualizá las listas y reintentá.");
+        setError(submitted ? "No se pudo confirmar la creación. Revisá Experimentos antes de crear otra." :
+          "No se pudieron verificar las opciones. No se envió la sesión; reintentá.");
       }
     } finally { inFlight.current = false; setPosting(false); }
   }
@@ -165,41 +165,41 @@ export function ProfileExperimentPage() {
   const compatible = datasets?.items.filter((item) => profileChoice && matchingDataset(profileChoice.item, item)) ?? [];
   const disabled = posting || uncertain || !profiles || !datasets || !draws || !!profileError || !!datasetError || !!drawError;
   return <div className="max-w-prose space-y-7">
-    <div><h2 className="text-2xl">Sesión con perfil registrado</h2><div className="mt-2 flex flex-wrap gap-2"><Link to="/experimentos/nuevo/sesion" className="btn btn-tertiary">Probar el nuevo asistente de lote v5</Link><Link to="/experimentos/nuevo" className="btn btn-tertiary">Volver al asistente clásico</Link></div><p className="field-help">Usá un perfil inmutable y datos locales ya importados. Elegí una política de apuesta ofrecida por el servidor para este perfil. Los rankings y otras familias todavía no están disponibles para perfiles.</p>
-      {requestedDatasetHash && <p role="status" className="field-help break-all">Historial elegido desde la biblioteca: <code>{requestedDatasetHash}</code>. La identidad es una referencia; elegí manualmente un perfil y un dataset que coincidan. No se preselecciona otro dato ni se afirma que este historial permita ejecutar.</p>}
-      {requestedDataset && !requestedDatasetHash && <p role="alert">La referencia al dataset del enlace no es válida. Elegí los datos desde la biblioteca.</p>}</div>
+    <div><h2 className="text-2xl">Sesión con perfil registrado</h2><div className="mt-2 flex flex-wrap gap-2"><Link to="/experimentos/nuevo/sesion" className="btn btn-tertiary">Crear un lote de sesiones</Link><Link to="/experimentos/nuevo" className="btn btn-tertiary">Volver al asistente clásico</Link></div>
+      {requestedDatasetHash && <div role="status" className="field-help"><p>Historial elegido desde la biblioteca. Elegí el perfil y los datos que coincidan.</p><details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="break-all"><code>{requestedDatasetHash}</code></p></details></div>}
+      {requestedDataset && !requestedDatasetHash && <p role="alert">El enlace del historial no es válido. Elegí los datos manualmente.</p>}</div>
     <form onSubmit={(event) => { void submit(event); }} noValidate className="space-y-8">
       <section aria-labelledby="rules-title" className="space-y-4"><h3 id="rules-title" className="section-header">Reglas del sorteo</h3>
         <div className="grid gap-x-5 sm:grid-cols-2">
-          <div className="field"><label htmlFor="settlement" className="field-label">Liquidación explícita</label><select id="settlement" className={control} value={draft.settlement} onChange={(event) => edit("settlement", event.target.value)}><option value="">Elegí una regla</option>{profileChoice?.item.profile_execution.settlements.filter((mode) => mode === "all" || mode === "best").map((mode) => <option key={mode} value={mode}>{mode === "all" ? "Sumar premios de todas las posiciones" : "Mayor premio por número repetido"}</option>)}</select></div>
-          <div className="field"><label htmlFor="staking-policy" className="field-label">Política de apuesta</label><select id="staking-policy" className={control} value={policy} onChange={(event) => { setPolicy(event.target.value as ProfilePolicy); setError(""); }}><option value="fixed">Apuesta fija por número (v1)</option>{profileChoice?.item.profile_execution.staking_capabilities.includes("q80-first-prize-cycling/v1") && <option value="cycling">Q80 CYCLING · escalera cíclica de 10 rondas (v2)</option>}{profileChoice?.item.profile_execution.staking_capabilities.includes("profile-audaz/v1") && profileChoice.item.profile_execution.audaz_compatibility?.available && <option value="audaz">Audaz · apuesta dinámica por objetivo (v3)</option>}{profileChoice?.item.profile_execution.staking_capabilities.includes("profile-recovery-ladder/v1") && profileChoice.item.profile_execution.recovery_compatibility?.available && <option value="recovery">Escalera de recuperación por perfil (v4)</option>}</select></div>
+          <div className="field"><label htmlFor="settlement" className="field-label">Cómo contar los premios</label><select id="settlement" className={control} value={draft.settlement} onChange={(event) => edit("settlement", event.target.value)}><option value="">Elegí una regla</option>{profileChoice?.item.profile_execution.settlements.filter((mode) => mode === "all" || mode === "best").map((mode) => <option key={mode} value={mode}>{mode === "all" ? "Sumar premios de todas las posiciones" : "Mayor premio por número repetido"}</option>)}</select></div>
+          <div className="field"><label htmlFor="staking-policy" className="field-label">Política de apuesta</label><select id="staking-policy" className={control} value={policy} onChange={(event) => { setPolicy(event.target.value as ProfilePolicy); setError(""); }}><option value="fixed">Apuesta fija por número</option>{profileChoice?.item.profile_execution.staking_capabilities.includes("q80-first-prize-cycling/v1") && <option value="cycling">Escalera cíclica de 10 rondas</option>}{profileChoice?.item.profile_execution.staking_capabilities.includes("profile-audaz/v1") && profileChoice.item.profile_execution.audaz_compatibility?.available && <option value="audaz">Audaz · apuesta dinámica por objetivo</option>}{profileChoice?.item.profile_execution.staking_capabilities.includes("profile-recovery-ladder/v1") && profileChoice.item.profile_execution.recovery_compatibility?.available && <option value="recovery">Escalera de recuperación</option>}</select></div>
           {policy === "fixed" && <Field label={`Apuesta fija por número (${profile?.currency ?? "moneda"})`} id="stake" value={draft.per_number_stake} onChange={(value) => edit("per_number_stake", value)} numeric />}
-          {policy === "audaz" && profileChoice && <p className="field-help">Audaz dinámico: el servidor ofrece esta política hasta cobertura {profileChoice.item.profile_execution.audaz_compatibility?.maximum_compatible_coverage ?? "no disponible"} para el perfil seleccionado. La cobertura concreta debe seguir siendo compatible; el servidor valida la apuesta inicial y la financiación.</p>}
-          {policy === "recovery" && <><Field label={`Margen objetivo (${profile?.currency ?? "moneda"})`} id="target-margin" value={draft.target_margin} onChange={(value) => edit("target_margin", value)} numeric /><Field label="Rondas de recuperación (1–10.000)" id="recovery-rounds" value={draft.rounds} onChange={(value) => edit("rounds", value)} numeric /><div className="field"><label htmlFor="recovery-end-mode" className="field-label">Al completar las rondas</label><select id="recovery-end-mode" className={control} value={draft.end_mode} onChange={(event) => edit("end_mode", event.target.value)}><option value="">Elegí un comportamiento</option><option value="cycle">Reiniciar la escalera</option><option value="stop">Detener la sesión</option></select></div>{profileChoice && <p className="field-help">La compatibilidad de cobertura se deriva del multiplicador de primera posición y los límites del perfil; máximo {profileChoice.item.profile_execution.recovery_compatibility?.maximum_compatible_coverage ?? "no disponible"}. El servidor valida la escalera completa, incrementos, apuesta máxima, exposición y capital inicial.</p>}</>}
+          {policy === "audaz" && profileChoice && <p className="field-help">Audaz disponible hasta cobertura {profileChoice.item.profile_execution.audaz_compatibility?.maximum_compatible_coverage ?? "no disponible"}.</p>}
+          {policy === "recovery" && <><Field label={`Margen objetivo (${profile?.currency ?? "moneda"})`} id="target-margin" value={draft.target_margin} onChange={(value) => edit("target_margin", value)} numeric /><Field label="Rondas de recuperación (1–10.000)" id="recovery-rounds" value={draft.rounds} onChange={(value) => edit("rounds", value)} numeric /><div className="field"><label htmlFor="recovery-end-mode" className="field-label">Al completar las rondas</label><select id="recovery-end-mode" className={control} value={draft.end_mode} onChange={(event) => edit("end_mode", event.target.value)}><option value="">Elegí un comportamiento</option><option value="cycle">Reiniciar la escalera</option><option value="stop">Detener la sesión</option></select></div>{profileChoice && <p className="field-help">Cobertura máxima compatible: {profileChoice.item.profile_execution.recovery_compatibility?.maximum_compatible_coverage ?? "no disponible"}.</p>}</>}
         </div>
-        <p className="field-help">Entrada: todos los sorteos desde el inicio. Los topes se aplican al primero alcanzado. {policy === "cycling" ? "Q80 CYCLING: escalera completa de 10 rondas, ciclo tras diez fallos y reinicio al acertar el primer premio. La apuesta es dinámica; no ingreses un importe fijo. El servidor valida todas las rondas y que el capital alcance la primera apuesta antes de crear la sesión." : policy === "audaz" ? "Audaz ajusta dinámicamente la apuesta durante la sesión. No ingreses un importe fijo; el servidor valida la apuesta inicial y la financiación antes de crear la sesión." : policy === "recovery" ? "La escalera de recuperación calcula sus rondas en unidades exactas del perfil. Al agotarlas, el comportamiento elegido determina si reinicia o detiene. El servidor valida admisión, financiación y límites." : "El costo inicial y la exposición se validan al admitir la sesión; el servidor confirma la admisión."}</p>
+        <p className="field-help">{policy === "cycling" ? "La apuesta es dinámica: no hay importe fijo. Reinicia al acertar el primer premio." : policy === "audaz" ? "La apuesta es dinámica: no hay importe fijo." : policy === "recovery" ? "Al agotar las rondas, se reinicia o se detiene según lo elegido." : "El servidor valida el costo inicial al crear la sesión."} Se detiene al primer tope alcanzado.</p>
       </section>
       <section aria-labelledby="history-title" className="space-y-6"><h3 id="history-title" className="section-header">Historial</h3>
-      <section aria-labelledby="profile-choice-title"><h4 id="profile-choice-title" className="font-medium">Perfil registrado</h4>
+      <section aria-labelledby="profile-choice-title"><h4 id="profile-choice-title" className="font-medium">Perfil</h4>
         {!profiles && !profileError && <p role="status">Cargando perfiles…</p>}
         {profileError && <p role="alert">{profileError} <button type="button" className="btn btn-tertiary" onClick={() => setProfileRetry((n) => n + 1)}>Reintentar perfiles</button></p>}
-        {profiles && <><div className="field"><label htmlFor="profile-choice" className="field-label">Perfil y revisión</label><select id="profile-choice" className={control} value={profileChoice && profileChoice.offset === profileOffset ? `${profileChoice.item.profile.profile_id}@${profileChoice.item.profile.revision}` : ""} onChange={(event) => { const item = profiles.items.find((entry) => `${entry.profile.profile_id}@${entry.profile.revision}` === event.target.value); if (item) chooseProfile(item); }}><option value="">Elegí un perfil de esta página</option>{profiles.items.map((item) => <option key={`${item.profile.profile_id}@${item.profile.revision}`} value={`${item.profile.profile_id}@${item.profile.revision}`} disabled={!item.profile_execution.ready}>{item.profile.profile_id} · revisión {item.profile.revision}{!item.profile_execution.ready ? " (no disponible)" : ""}</option>)}</select></div>
-          {profiles.total === 0 && <p>No hay perfiles registrados. <Link to="/datos" className="btn btn-tertiary">Registrá uno en Datos</Link>.</p>}
+        {profiles && <><div className="field"><label htmlFor="profile-choice" className="field-label">Perfil y revisión</label><select id="profile-choice" className={control} value={profileChoice && profileChoice.offset === profileOffset ? `${profileChoice.item.profile.profile_id}@${profileChoice.item.profile.revision}` : ""} onChange={(event) => { const item = profiles.items.find((entry) => `${entry.profile.profile_id}@${entry.profile.revision}` === event.target.value); if (item) chooseProfile(item); }}><option value="">Elegí un perfil</option>{profiles.items.map((item) => <option key={`${item.profile.profile_id}@${item.profile.revision}`} value={`${item.profile.profile_id}@${item.profile.revision}`} disabled={!item.profile_execution.ready}>{item.profile.profile_id} · revisión {item.profile.revision}{!item.profile_execution.ready ? " (no disponible)" : ""}</option>)}</select></div>
+          {profiles.total === 0 && <p>No hay perfiles. <Link to="/datos" className="btn btn-tertiary">Creá uno en Datos</Link>.</p>}
           <Pager label="perfiles" offset={profileOffset} total={profiles.total} step={pageSize} onChange={setProfileOffset} /></>}
-        {profile && <p role="status" className="field-help">Seleccionado: {profile.profile_id} · {profile.currency}, escala {profile.scale}; universo {profile.universe_size}, cobertura máxima {profile.max_coverage}. Los importes se ingresan en {profile.currency}; el servidor conserva unidades enteras.</p>}
+        {profile && <p role="status" className="field-help">Moneda {profile.currency} · universo {profile.universe_size} · cobertura máxima {profile.max_coverage}.</p>}
       </section>
-      <section aria-labelledby="dataset-choice-title"><h4 id="dataset-choice-title" className="font-medium">Datos locales verificados</h4>
+      <section aria-labelledby="dataset-choice-title"><h4 id="dataset-choice-title" className="font-medium">Datos</h4>
         {!datasets && !datasetError && <p role="status">Cargando datos…</p>}
         {datasetError && <p role="alert">{datasetError} <button type="button" className="btn btn-tertiary" onClick={() => setDatasetRetry((n) => n + 1)}>Reintentar datos</button></p>}
-        {datasets && <><div className="field"><label htmlFor="dataset-choice" className="field-label">Versión de datos compatible</label><select id="dataset-choice" className={control} disabled={!profileChoice} value={datasetChoice?.offset === datasetOffset ? datasetChoice.item.dataset_sha256 : ""} onChange={(event) => { const item = datasets.items.find((entry) => entry.dataset_sha256 === event.target.value); if (item) chooseDataset(item); }}><option value="">Elegí datos de esta página</option>{compatible.map((item) => <option key={item.dataset_sha256} value={item.dataset_sha256}>{item.source_id} · {item.source_revision} · {item.records_total} sorteos · {item.dataset_sha256.slice(0, 12)}</option>)}</select></div>
-          {profileChoice && !compatible.length && <p className="field-help">No hay datos compatibles en esta página. Recorré las páginas o <Link to="/datos" className="btn btn-tertiary">importá JSON local en Datos</Link>.</p>}
+        {datasets && <><div className="field"><label htmlFor="dataset-choice" className="field-label">Datos compatibles</label><select id="dataset-choice" className={control} disabled={!profileChoice} value={datasetChoice?.offset === datasetOffset ? datasetChoice.item.dataset_sha256 : ""} onChange={(event) => { const item = datasets.items.find((entry) => entry.dataset_sha256 === event.target.value); if (item) chooseDataset(item); }}><option value="">Elegí datos</option>{compatible.map((item) => <option key={item.dataset_sha256} value={item.dataset_sha256}>{item.source_id} · {item.source_revision} · {item.records_total} sorteos</option>)}</select></div>
+          {profileChoice && !compatible.length && <p className="field-help">No hay datos compatibles en esta página. Probá otra o <Link to="/datos" className="btn btn-tertiary">importá un historial en Datos</Link>.</p>}
           <Pager label="datos" offset={datasetOffset} total={datasets.total} step={pageSize} onChange={setDatasetOffset} /></>}
       </section>
       {datasetChoice && <section aria-labelledby="draw-choice-title"><h4 id="draw-choice-title" className="font-medium">Inicio de la sesión</h4>
-        <div className="field"><label htmlFor="profile-draw-date" className="field-label">Filtrar sorteos por fecha</label><input id="profile-draw-date" type="date" className={control} value={drawDate} onChange={(event) => { setDrawDate(event.target.value); setDrawOffset(0); edit("start_draw", ""); }} /><p className="field-help">Buscá una fecha directa sin cargar el histórico anterior.</p></div>
+        <div className="field"><label htmlFor="profile-draw-date" className="field-label">Filtrar sorteos por fecha</label><input id="profile-draw-date" type="date" className={control} value={drawDate} onChange={(event) => { setDrawDate(event.target.value); setDrawOffset(0); edit("start_draw", ""); }} /></div>
         {!draws && !drawError && <p role="status">Cargando sorteos…</p>}
         {drawError && <p role="alert">{drawError} <button type="button" className="btn btn-tertiary" onClick={() => setDrawRetry((n) => n + 1)}>Reintentar sorteos</button></p>}
-        {draws && <><div className="field"><label htmlFor="profile-start-draw" className="field-label">Sorteo inicial</label><select id="profile-start-draw" className={control} value={draws.items.includes(draft.start_draw) ? draft.start_draw : ""} onChange={(event) => edit("start_draw", event.target.value)}><option value="">Elegí un sorteo de esta página</option>{draws.items.map((draw) => <option value={draw} key={draw}>{draw}</option>)}</select></div>
+        {draws && <><div className="field"><label htmlFor="profile-start-draw" className="field-label">Sorteo inicial</label><select id="profile-start-draw" className={control} value={draws.items.includes(draft.start_draw) ? draft.start_draw : ""} onChange={(event) => edit("start_draw", event.target.value)}><option value="">Elegí un sorteo</option>{draws.items.map((draw) => <option value={draw} key={draw}>{draw}</option>)}</select></div>
           {draws.total === 0 && <p>No hay sorteos para esta fecha.</p>}
           <Pager label="sorteos" offset={drawOffset} total={draws.total} step={100} onChange={(offset) => { setDrawOffset(offset); edit("start_draw", ""); }} /></>}
       </section>}
@@ -222,7 +222,7 @@ export function ProfileExperimentPage() {
         </div>
       </section>
       {error && <p ref={alertRef} tabIndex={-1} role="alert" className="border-y border-border py-3 text-red-300">{error}</p>}
-      {uncertain && <p role="status">El envío está bloqueado para evitar duplicados. <Link className="btn btn-tertiary" to="/experimentos">Comprobá Experimentos</Link>; para una nueva solicitud volvé a entrar al creador.</p>}
+      {uncertain && <p role="status">Envío bloqueado para evitar duplicados. <Link className="btn btn-tertiary" to="/experimentos">Revisá Experimentos</Link>.</p>}
       <button type="submit" className="btn btn-primary" disabled={disabled}>{posting ? "Enviando sesión…" : "Crear sesión y agregar a la cola"}</button>
     </form>
   </div>;

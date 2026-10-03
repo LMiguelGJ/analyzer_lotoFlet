@@ -180,7 +180,7 @@ describe("LW13 library templates", () => {
     second.unmount();
     vi.mocked(apiClient.getConfiguration).mockResolvedValue({ ...saved, strategy: { ...saved.strategy, system: "unknown" } });
     setup("/experimentos/nuevo?configuration=invalid");
-    expect(await screen.findByRole("alert")).toHaveTextContent(/catálogo|inválid/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Esta estrategia guardada ya no es válida/);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 });
@@ -329,7 +329,7 @@ describe("LW10 use as base", () => {
     first.unmount();
     vi.mocked(apiClient.getExperiment).mockRejectedValueOnce(new NetworkError());
     setup("/experimentos/nuevo?base=offline");
-    expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor local/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo contactar al servidor/);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 });
@@ -340,7 +340,7 @@ describe("ODD03b dated starting draws", () => {
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     expect(date).toHaveAttribute("type", "date");
-    expect(date).toHaveAccessibleDescription(/Dejalo vacío para ver todas las fechas/);
+    expect(date).toHaveAccessibleDescription(/Vacío: todas las fechas/);
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:15");
     fireEvent.change(date, { target: { value: "2025-09-02" } });
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-02 05:15"));
@@ -365,10 +365,11 @@ describe("ODD03b dated starting draws", () => {
     setup();
     const date = await screen.findByLabelText("Filtrar sorteos por fecha");
     fireEvent.change(date, { target: { value: "2025-09-03" } });
-    expect(await screen.findByText(/No hay sorteos históricos en esta fecha/)).toBeInTheDocument();
+    expect(await screen.findByText(/No hay sorteos en esta fecha/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
     fireEvent.change(date, { target: { value: "2025-09-04" } });
-    expect(await screen.findByText(/Hay sorteos históricos.*ninguno tiene ranking/)).toBeInTheDocument();
+    await waitFor(() => expect(apiClient.getStartingDrawAvailability).toHaveBeenCalledWith("2025-09-04"));
+    expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-04");
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeDisabled();
   });
 
@@ -420,7 +421,7 @@ describe("ODD03b dated starting draws", () => {
     fireEvent.change(date, { target: { value: "" } });
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
     fireEvent.change(date, { target: { value: "2025-09-02" } });
-    expect(await screen.findByText(/sorteo elegido ya no.*ranking/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Ese sorteo ya no está disponible/i)).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-02 05:10");
     expect(screen.getByRole("option", { name: /2025-09-02 05:10/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
@@ -490,7 +491,7 @@ describe("LW09 wizard", () => {
     vi.mocked(apiClient.getCatalog).mockRejectedValueOnce(new NetworkError());
     const second = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/experimentos/nuevo"] });
     const { unmount } = render(<RouterProvider router={second} />);
-    expect(await screen.findByText(/No se pudo contactar al servidor local/)).toBeInTheDocument();
+    expect(await screen.findByText(/No se pudo contactar al servidor/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByRole("option", { name: /2025-09-02 05:10/ })).toBeInTheDocument();
     unmount();
@@ -639,10 +640,10 @@ describe("LW09 wizard", () => {
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(507, "quota exceeded"));
     await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/capacidad/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/No hay espacio para crear el experimento/);
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new NetworkError());
     await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/contactar/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Sin respuesta del servidor\. Puede que el experimento se haya creado/);
     expect(screen.getByText("Una")).toBeInTheDocument();
   });
 
@@ -721,7 +722,7 @@ describe("LW09 wizard", () => {
     await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
     expect(await screen.findByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Estrategia 2/, expanded: true })).toBeInTheDocument();
-    expect(screen.getByText(/El servidor rechazó esta estrategia/i)).toBeInTheDocument();
+    expect(screen.getByText(/Estrategia rechazada/i)).toBeInTheDocument();
     expect(screen.getByText(/blend weights must add up to 100/)).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" })).not.toHaveAttribute("aria-invalid", "true");
   });
@@ -755,7 +756,7 @@ describe("LW09 wizard", () => {
     await screen.findByRole("heading", { name: "Condiciones" });
     expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("textbox", { name: "Máximo de apuestas" })).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("alert")).toHaveTextContent(/servidor encontró errores/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/Revisá los campos señalados/);
     await user.clear(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }));
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "3000");
     // The specific server notice cleared because the field just fixed had a server
@@ -763,7 +764,7 @@ describe("LW09 wizard", () => {
     // survive the edit.
     expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("textbox", { name: "Máximo de apuestas" })).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("alert")).not.toHaveTextContent(/servidor encontró errores/i);
+    expect(screen.getByRole("alert")).toHaveTextContent("Revisá los errores señalados junto a los campos antes de continuar.");
   });
 
   it("moves focus to the first offending field after a server error, not just the alert", async () => {

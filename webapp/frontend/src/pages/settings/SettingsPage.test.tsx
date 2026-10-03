@@ -73,7 +73,7 @@ it("loads the actual view, distinguishing logical quota, physical files and free
 it("distinguishes disconnected from generic errors and retries", async () => {
   vi.mocked(apiClient.getSettings).mockRejectedValueOnce(new NetworkError()).mockRejectedValueOnce(new ApiError(500, "oops")).mockResolvedValueOnce(base);
   const { user } = setup();
-  expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo contactar al servidor local/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo contactar al servidor/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudieron cargar los ajustes/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
@@ -88,8 +88,8 @@ it.each(["", "0", "01", " 5", "+5", "-1", "1.5", "1e3", "９", "9223372036854775
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(input).toHaveFocus();
   expect(input).toHaveAttribute("aria-invalid", "true");
-  expect(screen.getByText(/Ingresá un entero decimal ASCII/, { selector: "#quota-error" })).toBeInTheDocument();
-  expect(input).toHaveAccessibleDescription(/Entero positivo.*Ingresá un entero decimal ASCII/s);
+  expect(screen.getByText(/Ingresá un entero en bytes/, { selector: "#quota-error" })).toBeInTheDocument();
+  expect(input).toHaveAccessibleDescription(/Entero positivo.*Mínimo.*Ingresá un entero en bytes/s);
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
 });
 
@@ -121,12 +121,12 @@ it("keeps the draft after 422, 409 below usage, and network failure; 422 focuses
   const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(input); await user.type(input, "2000");
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
-  expect(await screen.findByText(/El servidor rechazó el presupuesto/)).toBeInTheDocument();
+  expect(await screen.findByText(/El servidor rechazó el límite/)).toBeInTheDocument();
   expect(input).toHaveFocus();
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/menor que el uso lógico de admisión actual/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/El límite no puede ser menor que el uso actual/);
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/podría haber llegado/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/Puede que se haya guardado/);
   expect(input).toHaveValue("2000");
 });
 
@@ -163,7 +163,7 @@ it("rejects a quota above historical bytes but below aggregate admission usage, 
   expect(input).toHaveFocus();
   expect(input).toHaveAttribute("aria-invalid", "true");
   expect(screen.getByText(/Mínimo 1,536 bytes/)).toBeInTheDocument();
-  expect(screen.getByText(/no puede ser menor que el uso lógico de admisión actual.*1,536 bytes/, { selector: "#quota-error" })).toBeInTheDocument();
+  expect(screen.getByText(/no puede ser menor que el uso actual.*1,536 bytes/, { selector: "#quota-error" })).toBeInTheDocument();
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
   await user.clear(input); await user.type(input, "1536");
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
@@ -258,9 +258,9 @@ it("does not block clean navigation and explains 403 and a raced read-only 409 w
   await user.clear(edited); await user.type(edited, "7000000000");
   vi.mocked(apiClient.updateSettings).mockRejectedValueOnce(new ApiError(403, "forbidden")).mockRejectedValueOnce(new ApiError(409, "environment quota is read-only"));
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/origen de la solicitud/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/El servidor rechazó el origen/);
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/variable de entorno tiene prioridad/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/El entorno fija el límite y no se puede cambiar desde la web/);
   expect(edited).toHaveValue("7000000000");
   expect(input).not.toBeInTheDocument();
 });

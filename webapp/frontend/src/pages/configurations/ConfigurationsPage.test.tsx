@@ -28,7 +28,7 @@ beforeEach(() => {
 it("shows empty, disconnected and retry states honestly", async () => {
   vi.mocked(apiClient.listConfigurations).mockRejectedValueOnce(new NetworkError()).mockResolvedValueOnce({ total: 0, offset: 0, limit: 20, items: [] });
   const { user } = setup();
-  expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor local/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
   expect(await screen.findByText(/Todavía no hay estrategias guardadas/)).toBeInTheDocument();
 });
@@ -92,7 +92,7 @@ it("lists a bounded page, offers use and edit, and preserves distinct library an
   await user.click(screen.getByRole("button", { name: /Editar/ }));
   const templateName = screen.getByRole("textbox", { name: "Nombre guardado" });
   expect(templateName).toHaveValue("Mi plantilla");
-  expect(templateName).toHaveAccessibleDescription(/en esta lista/i);
+  expect(templateName).toHaveAccessibleName("Nombre guardado");
   expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Fríos");
   await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
   await waitFor(() => expect(apiClient.updateConfiguration).toHaveBeenCalledWith("cfg-1", "Mi plantilla", strategy));
@@ -138,7 +138,7 @@ it("deletes only after confirmation with exact ID; missing row refreshes, and ne
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   vi.mocked(apiClient.deleteConfiguration).mockRejectedValueOnce(new NetworkError());
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar estrategia guardada" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor/);
+  expect(await screen.findByRole("alert")).toHaveTextContent(/Sin respuesta del servidor/);
   expect(screen.queryByText(/Estrategia guardada eliminada/)).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   vi.mocked(apiClient.deleteConfiguration).mockRejectedValueOnce(new ApiError(404, "missing"));
@@ -154,7 +154,7 @@ it("keeps focus on the success status after the deleted row is removed asynchron
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar estrategia guardada" }));
-  const status = await screen.findByText("Estrategia guardada eliminada. Los resultados históricos se conservan.");
+  const status = await screen.findByText("Estrategia eliminada. Los resultados se conservan.");
   expect(status).toHaveAttribute("role", "status");
   expect(status).toHaveFocus();
   await waitFor(() => expect(apiClient.listConfigurations).toHaveBeenCalledTimes(2));
@@ -178,7 +178,7 @@ it("keeps success focus through asynchronous last-page recovery after deletion",
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar estrategia guardada" }));
-  const status = await screen.findByText("Estrategia guardada eliminada. Los resultados históricos se conservan.");
+  const status = await screen.findByText("Estrategia eliminada. Los resultados se conservan.");
   expect(status).toHaveFocus();
   await waitFor(() => expect(apiClient.listConfigurations).toHaveBeenCalledWith(20, 20));
   resolveEmpty({ total: 20, offset: 20, limit: 20, items: [] });

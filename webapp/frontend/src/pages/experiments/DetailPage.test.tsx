@@ -100,7 +100,7 @@ describe("profile detail READ", () => {
       runs: [{ ...cyclingSnapshot.runs[0], status: status === "held" ? "pending" : status, result: null, bets_count: 0 }] });
     const { user, unmount } = setup();
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
-    expect(within(run).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+    expect(within(run).getByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
     await user.click(within(run).getByRole("tab", { name: "Parámetros y datos" }));
     expect(within(run).getByText("Escalera cíclica Q80 · apuesta dinámica por sorteo")).toBeInTheDocument();
     expect(apiClient.getReplay).not.toHaveBeenCalled();
@@ -125,7 +125,7 @@ describe("profile detail READ", () => {
         runs: [{ ...audazSnapshot.runs[0], status: runStatus, result: null, bets_count: 0 }] });
       const { unmount } = setup();
       const run = await screen.findByRole("region", { name: "Ejecución 1" });
-      expect(within(run).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+      expect(within(run).getByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
       expect(within(run).getByText(status === "held" ? "Pendiente" : status === "pending" ? "Pendiente" : status === "running" ? "En curso" : "Con error")).toBeInTheDocument();
       expect(apiClient.getReplay).not.toHaveBeenCalled();
       unmount();
@@ -154,9 +154,11 @@ describe("profile detail READ", () => {
     vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 4, total: 1, offset: 0, limit: 20,
       items: [{ label: "2025-01-01 05:10", stakes: [[7, 125]], results: [7, 8, 9], wagered: 125, paid: 0, balance: 9875 }] });
     const { user } = setup();
-    await screen.findByText("Perfil v4");
-    expect(screen.getByText("Perfil v4")).toBeInTheDocument();
+    expect(await screen.findByText("Cambio respecto del inicio")).toBeInTheDocument();
+    expect(screen.queryByText("Versión del resultado")).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    await user.click(screen.getByText("Detalles técnicos"));
+    expect(screen.getAllByText("Perfil v4")).toHaveLength(2);
     expect(screen.getByText("Escalera de recuperación · parámetros explícitos por perfil")).toBeInTheDocument();
     expect(screen.getByText("USD 12.50")).toBeInTheDocument();
     expect(screen.getByText("Rondas de recuperación").nextElementSibling).toHaveTextContent("3");
@@ -207,7 +209,7 @@ describe("profile detail READ", () => {
     for (const status of ["held", "failed"] as const) {
       vi.mocked(apiClient.getExperiment).mockResolvedValueOnce({ ...profileSnapshot, status, runs: [{ ...profileSnapshot.runs[0], status: status === "held" ? "pending" : "failed", result: null, bets_count: 0 }] });
       const view = setup();
-      expect(await screen.findByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+      expect(await screen.findByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
       expect(apiClient.getReplay).toHaveBeenCalledTimes(1);
       view.unmount();
     }
@@ -221,17 +223,27 @@ describe("profile batch v5 detail", () => {
       { label: "2025-01-01 05:10", stakes: [[7, 125], [8, 125]], results: [7, 8, 9], wagered: 250, paid: 0, balance: 9750, source_index: 5, bet_index: 0 },
     ] });
     const { user } = setup();
-    await screen.findByRole("region", { name: "Ejecución 1" });
+    const run = await screen.findByRole("region", { name: "Ejecución 1" });
     expect(screen.getByRole("heading", { name: "Lote guardado · Snapshot cold" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Snapshot cold" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ver comparación" })).toHaveAttribute("href", "/experimentos/exp/comparacion");
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
-    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Límite configurado · max_bet_draws");
+    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Límite configurado");
+    const stopDetails = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Categoría de parada (código)"));
+    expect(stopDetails).toBeDefined();
+    await user.click(within(stopDetails!).getByText("Detalles técnicos"));
+    expect(screen.getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("configured_limit");
+    expect(screen.getByText("Motivo informado").nextElementSibling).toHaveTextContent("max_bet_draws");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
-    expect(screen.getByText("Snapshot cold · ID strategy-old · revisión 2")).toBeInTheDocument();
-    expect(screen.getByText("c".repeat(64))).toBeInTheDocument();
-    expect(screen.getByText("e".repeat(64))).toBeInTheDocument();
-    expect(screen.getByText("Filas de la fuente guardada").nextElementSibling).toHaveTextContent("8");
+    expect(screen.getByText("Estrategia").nextElementSibling).toHaveTextContent("Snapshot cold · revisión 2");
+    const parameters = screen.getByRole("region", { name: "Ejecución 1" });
+    const identityDetails = Array.from(parameters.querySelectorAll("details")).find((details) => details.textContent?.includes("ID de estrategia"));
+    expect(identityDetails).toBeDefined();
+    await user.click(within(identityDetails!).getByText("Detalles técnicos"));
+    expect(within(identityDetails!).getByText("ID de estrategia").nextElementSibling).toHaveTextContent("strategy-old");
+    expect(within(identityDetails!).getByText("SHA-256 de definición").nextElementSibling).toHaveTextContent("c".repeat(64));
+    expect(within(identityDetails!).getByText("Fuente canónica SHA-256").nextElementSibling).toHaveTextContent("e".repeat(64));
+    expect(screen.getByText("Filas de la fuente").nextElementSibling).toHaveTextContent("8");
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
     const table = await screen.findByRole("table", { name: "Apuestas del experimento" });
     expect(within(table).getByText("5")).toBeInTheDocument();
@@ -252,7 +264,7 @@ describe("profile batch v5 detail", () => {
     }] });
     const { unmount } = setup();
     const view = await screen.findByRole("region", { name: "Ejecución 1" });
-    expect(within(view).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+    expect(within(view).getByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
     expect(within(view).queryByRole("region", { name: "Métricas financieras" })).not.toBeInTheDocument();
     expect(apiClient.getReplay).not.toHaveBeenCalled();
     unmount();
@@ -270,34 +282,48 @@ describe("profile batch v5 detail", () => {
     await screen.findByRole("region", { name: "Ejecución 1" });
     await user.click(screen.getByRole("button", { name: /2\. Estrategia 2/ }));
     const run = screen.getByRole("region", { name: "Ejecución 2" });
-    expect(within(run).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
-    expect(within(run).getByText(/unknown · failed · strategy failed/)).toBeInTheDocument();
+    expect(within(run).getByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
+    await user.click(within(run).getByText("Detalles técnicos"));
+    expect(within(run).getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("unknown");
+    expect(within(run).getByText("Motivo informado").nextElementSibling).toHaveTextContent("failed");
+    expect(within(run).getByText("Error").nextElementSibling).toHaveTextContent("strategy failed");
     expect(within(run).queryByRole("region", { name: "Métricas financieras" })).not.toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 0, 20);
   });
   it("labels history_exhausted as an incomplete operational window when the backend category says so", async () => {
-    const run = batchV5Snapshot.runs[0];
-    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, batch_admission: { ...batchV5Snapshot.batch_admission, source_identity: { ...batchV5Snapshot.batch_admission.source_identity, row_count: 10 } }, runs: [{ ...run,
+    const savedRun = batchV5Snapshot.runs[0];
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, batch_admission: { ...batchV5Snapshot.batch_admission, source_identity: { ...batchV5Snapshot.batch_admission.source_identity, row_count: 10 } }, runs: [{ ...savedRun,
       complete: false, completion: "incomplete" as const, stop_category: "operational_window" as const, stop_reason: "bounded draw window ended before source end",
-      result: { ...run.result!, outcome: "history_exhausted", collisions: [], elapsed_draws: 3, source_count: 10, complete: false, stop_category: "operational_window" as const, stop_reason: "bounded draw window ended before source end" },
+      result: { ...savedRun.result!, outcome: "history_exhausted", collisions: [], elapsed_draws: 3, source_count: 10, complete: false, stop_category: "operational_window" as const, stop_reason: "bounded draw window ended before source end" },
     }] });
-    setup();
-    await screen.findByText(/bounded draw window ended before source end/);
+    const { user } = setup();
+    const run = await screen.findByRole("region", { name: "Ejecución 1" });
     expect(screen.getByText("Motivo de cierre").nextElementSibling).toHaveTextContent("Ventana operativa; fuente incompleta");
     expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Ventana operativa; fuente incompleta");
+    const stopDetails = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Categoría de parada (código)"));
+    expect(stopDetails).toBeDefined();
+    await user.click(within(stopDetails!).getByText("Detalles técnicos"));
+    expect(screen.getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("operational_window");
+    expect(screen.getByText("Motivo informado").nextElementSibling).toHaveTextContent("bounded draw window ended before source end");
     expect(screen.queryByText("Historial agotado")).not.toBeInTheDocument();
     expect(screen.queryByText("Fin de la fuente guardada")).not.toBeInTheDocument();
   });
   it("keeps Historial agotado when v5 reports the actual full-source end", async () => {
-    const run = batchV5Snapshot.runs[0];
-    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, runs: [{ ...run, complete: true, completion: "complete" as const,
+    const savedRun = batchV5Snapshot.runs[0];
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, runs: [{ ...savedRun, complete: true, completion: "complete" as const,
       stop_category: "source_end" as const, stop_reason: "full saved source ended",
-      result: { ...run.result!, outcome: "history_exhausted", collisions: [], elapsed_draws: 3, complete: true, stop_category: "source_end" as const, stop_reason: "full saved source ended" },
+      result: { ...savedRun.result!, outcome: "history_exhausted", collisions: [], elapsed_draws: 3, complete: true, stop_category: "source_end" as const, stop_reason: "full saved source ended" },
     }] });
-    setup();
+    const { user } = setup();
     await screen.findByText("Historial agotado");
-    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Fin de la fuente guardada · full saved source ended");
+    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Fin de la fuente guardada");
     expect(screen.queryByText("Ventana operativa; fuente incompleta")).not.toBeInTheDocument();
+    const run = screen.getByRole("region", { name: "Ejecución 1" });
+    const stopDetails = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Categoría de parada (código)"));
+    expect(stopDetails).toBeDefined();
+    await user.click(within(stopDetails!).getByText("Detalles técnicos"));
+    expect(within(stopDetails!).getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("source_end");
+    expect(within(stopDetails!).getByText("Motivo informado").nextElementSibling).toHaveTextContent("full saved source ended");
   });
 });
 
@@ -348,7 +374,7 @@ describe("LW11 detail", () => {
     await screen.findByText("Prueba");
     await user.click(screen.getByRole("button", { name: /Segunda/ }));
     const run = screen.getByRole("region", { name: "Ejecución 2" });
-    expect(within(run).getByText(/no tiene un resultado completo guardado/i)).toBeInTheDocument();
+    expect(within(run).getByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
     expect(within(run).queryByText("Cambio respecto del inicio")).not.toBeInTheDocument();
   });
 
