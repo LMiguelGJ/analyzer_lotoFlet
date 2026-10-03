@@ -34,4 +34,4 @@ No se aplicaron las propuestas opcionales de cambiar anchos máximos o rediseña
 
 - No se inició navegador/servidor ni se inspeccionó una vista renderizada: screenshots, hover/foco visual, zoom, tablet/coarse-pointer, reduced-motion real, overflow y aceptación manual siguen pendientes para el usuario.
 - El script de contexto de Impeccable falló por una aserción ambiental; el detector no se ejecutó. No se reintentó ni se instalaron herramientas.
-- Sin aprobación nativa ni revisión visual independiente en este trabajo. Los resultados de test, typecheck, build e inspección CSS no equivalen a aceptación visual en dispositivo.
+- Revisión nativa de la unidad visual `6059825` aprobada mediante `review-reliability`, linaje `review-b47a15db372bc4d9`, y acknowledgment exacto completado (autoridad consumida). Esta aprobación no cubre CVPI-07 ni constituye revisión visual independiente o aceptación en dispositivo. Los resultados de test, typecheck, build e inspección CSS tampoco equivalen a aceptación visual.
