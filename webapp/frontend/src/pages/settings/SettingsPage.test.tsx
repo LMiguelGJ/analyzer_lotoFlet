@@ -31,6 +31,10 @@ function setup() {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/ajustes"] });
   return { user: userEvent.setup(), router, ...render(<RouterProvider router={router} />) };
 }
+async function openAgentAccess(user: ReturnType<typeof userEvent.setup>) {
+  await screen.findByRole("heading", { name: "Capacidad" });
+  await user.click(screen.getByText("Acceso para agentes"));
+}
 beforeEach(() => {
   vi.mocked(apiClient.getSettings).mockReset().mockResolvedValue(base);
   vi.mocked(apiClient.updateSettings).mockReset().mockResolvedValue(base);
@@ -53,6 +57,10 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   expect(screen.getByText("1,536 bytes")).toBeInTheDocument();
   expect(screen.getByText("5,368,707,584 bytes")).toBeInTheDocument();
   expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "0");
+  const diagnostics = screen.getByText("Diagnóstico técnico").closest("details")!;
+  expect(diagnostics).not.toHaveAttribute("open");
+  expect(within(diagnostics).getByText("Experimentos y ejecuciones históricos")).not.toBeVisible();
+  await userEvent.setup().click(within(diagnostics).getByText("Diagnóstico técnico"));
   expect(screen.getByText("Experimentos y ejecuciones históricos")).toBeInTheDocument();
   expect(screen.getByText("Artefactos de perfiles (copias JSON)")).toBeInTheDocument();
   expect(screen.getByText("Artefactos de datasets")).toBeInTheDocument();
@@ -61,7 +69,6 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   expect(screen.getByText(/SQLite y archivos locales \(total informado\)/)).toBeInTheDocument();
   expect(screen.getByText("Espacio en disco libre")).toBeInTheDocument();
   expect(screen.getByText(/El límite no es el espacio libre en disco/)).toBeInTheDocument();
-  expect(screen.getByText("Diagnóstico técnico")).toBeInTheDocument();
   expect(screen.getByText("iniciar-laboratorio.bat")).toBeInTheDocument();
   expect(screen.getByText(/Ctrl\+C en su consola/)).toBeInTheDocument();
   expect(screen.queryByText(/LW16/)).not.toBeInTheDocument();
@@ -265,11 +272,17 @@ it("does not block clean navigation and explains 403 and a raced read-only 409 w
   expect(input).not.toBeInTheDocument();
 });
 
-it("does not retrieve an agent credential until the operator explicitly asks", async () => {
+it("keeps agent access closed, secret-free, and retrieves a credential only after explicit request", async () => {
   const { user } = setup();
-  expect(await screen.findByRole("heading", { name: "Capacidad" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Administración del laboratorio" })).toBeInTheDocument();
   expect(agentApi.getAgentCredential).not.toHaveBeenCalled();
-  expect(screen.getByRole("heading", { name: "Acceso para agentes" })).toBeInTheDocument();
+  const access = screen.getByText("Acceso para agentes").closest("details")!;
+  expect(access).not.toHaveAttribute("open");
+  expect(screen.queryByLabelText("Credencial de agente")).not.toBeInTheDocument();
+  const warning = within(access).getByText("No compartas esta credencial de acceso a la API.");
+  expect(warning).not.toBeVisible();
+  await user.click(within(access).getByText("Acceso para agentes"));
+  expect(warning).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Consultar credencial de agente" }));
   expect(agentApi.getAgentCredential).toHaveBeenCalledTimes(1);
 });
@@ -280,6 +293,7 @@ it("keeps a retrieved token masked until revealed and copies only on explicit ac
   vi.mocked(agentApi.getAgentCredential).mockResolvedValueOnce({ token });
   const { user } = setup();
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  await openAgentAccess(user);
   await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
   const input = await screen.findByLabelText("Credencial de agente");
   expect(input).toHaveValue(token);
@@ -309,6 +323,7 @@ it("explains clipboard denial and reveals/selects the token for manual copy", as
   vi.mocked(agentApi.getAgentCredential).mockResolvedValueOnce({ token });
   const { user } = setup();
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  await openAgentAccess(user);
   await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
   await user.click(screen.getByRole("button", { name: "Copiar credencial" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/seleccioná y copiá el texto mostrado manualmente/i);
@@ -325,6 +340,7 @@ it("ignores credential responses dismissed while pending", async () => {
   let resolve!: (value: { token: string }) => void;
   vi.mocked(agentApi.getAgentCredential).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
   const { user } = setup();
+  await openAgentAccess(user);
   await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
   expect(screen.getByRole("button", { name: "Consultando credencial…" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Cancelar" }));
@@ -344,6 +360,7 @@ it("restores focus to credential consultation after clearing the manual-copy fal
     configurable: true,
     value: { writeText: vi.fn().mockRejectedValue(new Error("permission denied")) },
   });
+  await openAgentAccess(user);
   await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
   await user.click(screen.getByRole("button", { name: "Copiar credencial" }));
   const input = screen.getByLabelText("Credencial de agente");
@@ -359,6 +376,7 @@ it("ignores a credential response after the settings screen unmounts", async () 
   let resolve!: (value: { token: string }) => void;
   vi.mocked(agentApi.getAgentCredential).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
   const { user, unmount } = setup();
+  await openAgentAccess(user);
   await user.click(await screen.findByRole("button", { name: "Consultar credencial de agente" }));
   unmount();
   resolve({ token: "unmounted-agent-token" });

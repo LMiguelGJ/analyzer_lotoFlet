@@ -317,6 +317,23 @@ describe("LW15 queue drawer", () => {
     expect(within(dialog).getByRole("button", { name: "Cancelar pending-1" })).toBeDisabled();
   });
 
+  it("uses plain queue states and keeps protocol details closed until requested", async () => {
+    vi.mocked(apiClient.getQueue).mockResolvedValue(queue(["pending-1"], ["held-1"], "run-1"));
+    const { user } = setup();
+    const dialog = await open(user);
+    expect(within(dialog).getByRole("heading", { name: "En curso" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("heading", { name: /Esperando/ })).toBeInTheDocument();
+    expect(within(dialog).getByRole("heading", { name: /Detenido/ })).toBeInTheDocument();
+    const technical = within(dialog).getByText("Detalles técnicos").closest("details")!;
+    expect(technical).not.toHaveAttribute("open");
+    const protocol = within(technical).getByText(/reintentos|páginas|reinicio/i);
+    expect(protocol).not.toBeVisible();
+    expect(within(dialog).queryByText(/Pendientes y retenidos se consultan por páginas independientes/)).not.toBeInTheDocument();
+    await user.click(within(technical).getByText("Detalles técnicos"));
+    expect(technical).toHaveAttribute("open");
+    expect(protocol).toBeVisible();
+  });
+
   it("opens on demand, traps Tab, Escape closes and returns focus, with no closed portal", async () => {
     const { user } = setup();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

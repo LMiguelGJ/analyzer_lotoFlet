@@ -315,9 +315,9 @@ export function SettingsPage() {
           </section>
         </div>
       </details>
-      <section aria-labelledby="agent-access-heading" className="border-t border-border pt-5">
-        <h2 id="agent-access-heading" className="section-header">Acceso para agentes</h2>
-        <p className="max-w-prose text-sm text-text-secondary">Credencial para la API de agentes. Mantenéla privada.</p>
+      <details className="border-y border-border py-3">
+        <summary id="agent-access-heading" className="disclosure-summary">Acceso para agentes</summary>
+        <p className="mt-3 max-w-prose text-sm text-text-secondary">No compartas esta credencial de acceso a la API.</p>
         {!agentCredential && !agentCredentialLoading && <button ref={agentCredentialTriggerRef} type="button" className={`${action} mt-4`} onClick={() => { void retrieveAgentCredential(); }}>
           {agentCredentialError ? "Reintentar consulta" : "Consultar credencial de agente"}
         </button>}
@@ -351,7 +351,7 @@ export function SettingsPage() {
           </div>
           {agentCredentialCopied && <p role="status" className="mt-3 text-sm text-accent">Credencial copiada al portapapeles.</p>}
         </div>}
-      </section>
+      </details>
     </>}
     <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás el límite sin guardar." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onCancel={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
   </div>;

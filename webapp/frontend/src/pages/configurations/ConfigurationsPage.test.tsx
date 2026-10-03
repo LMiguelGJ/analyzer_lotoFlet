@@ -25,6 +25,18 @@ beforeEach(() => {
   vi.mocked(apiClient.updateConfiguration).mockReset().mockResolvedValue(item);
   vi.mocked(apiClient.deleteConfiguration).mockReset().mockResolvedValue();
 });
+it("frames saved strategies as an optional reusable library", async () => {
+  const { user } = setup();
+  expect(await screen.findByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
+  expect(screen.getByText("Guardá un método para reutilizarlo.")).toBeInTheDocument();
+  const use = screen.getByRole("link", { name: /Usar/ });
+  expect(use).toHaveClass("btn-secondary");
+  expect(screen.getByRole("button", { name: /Editar/ })).toHaveClass("btn-tertiary");
+  expect(screen.getByRole("button", { name: /Eliminar/ })).toHaveClass("btn-destructive");
+  await user.click(screen.getByRole("button", { name: /Eliminar/ }));
+  expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+});
+
 it("shows empty, disconnected and retry states honestly", async () => {
   vi.mocked(apiClient.listConfigurations).mockRejectedValueOnce(new NetworkError()).mockResolvedValueOnce({ total: 0, offset: 0, limit: 20, items: [] });
   const { user } = setup();
@@ -50,7 +62,7 @@ it("hides search and pagination while the library is empty", async () => {
   setup();
   expect(await screen.findByText(/Todavía no hay estrategias guardadas/)).toBeInTheDocument();
   expect(screen.queryByRole("textbox", { name: "Buscar estrategia guardada" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("navigation", { name: "Páginas de configuraciones" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("navigation", { name: "Páginas de estrategias guardadas" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Nueva estrategia guardada" })).toBeInTheDocument();
 });
 

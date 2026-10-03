@@ -155,7 +155,8 @@ export function ConfigurationsPage() {
   }
   const visible = page?.items.filter((item) => item.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())) ?? [];
   return <>
-    <div className="mb-6 flex justify-end">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <p className="text-sm text-text-secondary">Guardá un método para reutilizarlo.</p>
       <button type="button" className="btn btn-primary" onClick={create}>Nueva estrategia guardada</button>
     </div>
     {success && <p ref={successRef} tabIndex={-1} role="status" className="mb-4 text-sm text-accent focus:outline-none" onBlur={() => setSuccess("")}>{success}</p>}
