@@ -14,6 +14,37 @@ function readToken(name: string): string {
   return match[1];
 }
 
+function readRemToken(name: string): number {
+  const match = tokensCss.match(new RegExp(`${name}:\\s*([\\d.]+)rem`));
+  if (!match) {
+    throw new Error(`token ${name} not found as a rem value in tokens.css`);
+  }
+  return Number(match[1]);
+}
+
+describe("typographic scale", () => {
+  const scale = [
+    "--type-small",
+    "--type-body",
+    "--type-subsection",
+    "--type-section",
+    "--type-large",
+    "--type-display",
+    "--type-h1",
+  ].map(readRemToken);
+
+  it("uses a consistent 1.125–1.2 ratio and keeps desktop H1 within 32–40px", () => {
+    for (let index = 1; index < scale.length; index += 1) {
+      const ratio = scale[index] / scale[index - 1];
+      expect(ratio).toBeGreaterThanOrEqual(1.125);
+      expect(ratio).toBeLessThanOrEqual(1.2);
+    }
+
+    expect(scale.at(-1)! * 16).toBeGreaterThanOrEqual(32);
+    expect(scale.at(-1)! * 16).toBeLessThanOrEqual(40);
+  });
+});
+
 // UX3: 4.5:1 for text on its background, 3:1 for UI-component borders. This test
 // measures the actual tokens.css values, it does not assert a hardcoded claim of
 // conformance without checking the file.
