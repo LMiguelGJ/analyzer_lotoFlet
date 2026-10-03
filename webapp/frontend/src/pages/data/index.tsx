@@ -76,7 +76,7 @@ function boundedText(file: File): Promise<string> {
   });
 }
 
-function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: { profiles: ProfileListing[]; profilesLoading: boolean; profilesError: string }) {
+function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onCreateProfile }: { profiles: ProfileListing[]; profilesLoading: boolean; profilesError: string; onCreateProfile: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [metadata, setMetadata] = useState<HistoryMetadata | null>(null);
   const [profileKey, setProfileKey] = useState("");
@@ -92,9 +92,6 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: {
   const [promotionUncertain, setPromotionUncertain] = useState(false);
   const [libraryError, setLibraryError] = useState("");
   const [libraryLoading, setLibraryLoading] = useState(true);
-  // Region order is decided once, after the first list load resolves, and never again (paging, refresh).
-  // Until then neither ordered region renders, so no rendered region ever changes position.
-  const [order, setOrder] = useState<"pending" | "library-first" | "import-first">("pending");
   const generation = useRef(0);
   const fileReadGeneration = useRef(0);
   const mounted = useRef(true);
@@ -109,13 +106,9 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: {
     apiClient.getDatasets(offset, DATASET_PAGE_SIZE).then((page) => {
       if (!live) return;
       setDatasets(page); setLibraryLoading(false);
-      // An empty library puts import first; a populated one keeps the library first.
-      setOrder((current) => current !== "pending" ? current : page.total === 0 ? "import-first" : "library-first");
     }).catch(() => {
       if (!live) return;
       setDatasets(null); setLibraryLoading(false); setLibraryError("No se pudo cargar la biblioteca local. Reintentá.");
-      // A failed load shows its cause and retry first, then import.
-      setOrder((current) => current === "pending" ? "library-first" : current);
     });
     return () => { live = false; };
   }, [offset, retry]);
@@ -187,10 +180,10 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: {
   const importReason = !file ? "Elegí primero el archivo del historial." : !metadata ? "El archivo no es un historial válido." : !selected ? "Elegí un perfil de juego." : "";
   const importSection = <section key="import" aria-labelledby="history-import-title" className="space-y-5 border-t border-border pt-5">
     <div><h2 id="history-import-title" className="section-header">Importar historial</h2>
-      <p className="field-help max-w-prose">Nada se guarda hasta confirmar; importar no ejecuta sesiones ni calcula pagos.</p></div>
+      <p className="field-help max-w-prose">Importar guarda datos, no ejecuta ni calcula pagos.</p></div>
     {datasets?.total === 0 && <ol aria-label="Cómo importar el primer historial" className="list-decimal space-y-1 pl-5 text-sm">
       <li>Elegí el historial JSON.</li>
-      <li>Elegí el perfil de juego.{!profilesLoading && profiles.length === 0 && !profilesError && " Todavía no hay ninguno: creálo en Opciones avanzadas."}</li>
+      <li>Elegí un perfil de juego.</li>
       <li>Confirmá fuente y zona horaria.</li>
     </ol>}
     <form onSubmit={(event) => { void showPreview(event); }} className="space-y-5">
@@ -211,7 +204,7 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: {
         <select id="history-profile" className="control" value={profileKey} disabled={busy === "promote" || profilesLoading} onChange={(event) => { invalidate(); setProfileKey(event.target.value); }}>
           <option value="">Elegí un perfil</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.profile_id} · revisión {profile.revision} · {profile.universe_size} números · {profile.positions} posiciones</option>)}
         </select>
-        {profilesLoading ? <p role="status" className="field-help">Cargando perfiles…</p> : profilesError ? <p role="alert" className="field-help">{profilesError}</p> : profiles.length === 0 && <p className="field-help">No hay perfiles. Creá uno en Opciones avanzadas.</p>}</div>
+        {profilesLoading ? <p role="status" className="field-help">Cargando perfiles…</p> : profilesError ? <p role="alert" className="field-help">{profilesError}</p> : profiles.length === 0 && <div className="field-help space-y-2"><p>No hay perfiles todavía; creá uno para importar este historial.</p><button type="button" className="btn btn-secondary" onClick={onCreateProfile}>Crear perfil de juego</button><a className="link ml-3" href="#perfiles">Ver Perfiles de juego</a></div>}</div>
       {!preview && <div>
         <button type="submit" className="btn btn-primary" aria-busy={busy === "preview"} aria-describedby={importReason ? "history-import-reason" : undefined} disabled={busy !== null || promotionUncertain || !file || !metadata || !selected}>Importar historial</button>
         {importReason && <p id="history-import-reason" className="field-help">{importReason}</p>}
@@ -230,7 +223,7 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: {
     {busy === "promote" && <p role="status">Guardando; esperá la respuesta.</p>}
     {saved && <p role="status" className="border-y border-border py-3">{saved.created ? "Historial guardado." : "Este historial ya estaba guardado."}</p>}
   </section>;
-  const librarySection = <section key="library" aria-labelledby="history-library-title" className="space-y-4 border-t border-border pt-5">
+  const librarySection = <section key="library" id="historiales" aria-labelledby="history-library-title" className="space-y-4 border-t border-border pt-5">
       <div><h2 id="history-library-title" className="section-header">Biblioteca de historiales</h2></div>
       {libraryLoading && !datasets && <p role="status">Cargando historiales guardados…</p>}
       {libraryError && <div role="alert" className="space-y-2"><p>{libraryError}</p><button type="button" className="btn btn-secondary" onClick={() => setRetry((value) => value + 1)}>Reintentar biblioteca</button></div>}
@@ -249,14 +242,14 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError }: {
         <button type="button" className={button} disabled={offset + DATASET_PAGE_SIZE >= datasets.total} onClick={() => setOffset(offset + DATASET_PAGE_SIZE)}>Siguiente</button>
       </nav>}
     </section>;
-  if (order === "pending") return <p role="status" className="field-help border-t border-border pt-5">Cargando historiales guardados…</p>;
-  return <>{order === "library-first" ? [librarySection, importSection] : [importSection, librarySection]}</>;
+  return <>{librarySection}{importSection}</>;
 }
 
 export function DataPage() {
   const [profiles, setProfiles] = useState<ProfileListing[]>([]);
   const [templates, setTemplates] = useState<PartialProfileTemplate[]>([]);
   const [registering, setRegistering] = useState(false);
+  const [profileOpenRequest, setProfileOpenRequest] = useState(0);
   const [profileTotal, setProfileTotal] = useState(0);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [profilesError, setProfilesError] = useState("");
@@ -398,26 +391,35 @@ export function DataPage() {
   }
 
   return <div className="max-w-4xl space-y-8">
-    <HistoryImportAndLibrary profiles={profiles} profilesLoading={profilesLoading} profilesError={profilesError} />
+    <section id="perfiles" aria-labelledby="profiles-title" className="space-y-4">
+      <h2 id="profiles-title" className="section-header">Perfiles de juego</h2>
+      {profilesLoading && <p role="status">Cargando perfiles guardados…</p>}
+      {profilesError && <p role="alert" className="field-help">{profilesError}</p>}
+      {!profilesLoading && !profilesError && profiles.length === 0 && <p>Todavía no hay perfiles guardados. Creá uno para definir las reglas del sorteo.</p>}
+      {profiles.length > 0 && <ul className="divide-y divide-border">{profiles.map(({ profile }) => <li key={`${profile.profile_id}@${profile.revision}`} className="py-3">
+        <h3 className="font-medium">{profile.profile_id} · {profile.universe_size} números · {profile.positions} posiciones</h3>
+        <p className="field-help">{profile.allows_repeats ? "Permite repeticiones" : "Sin repeticiones"} · {profile.currency} · escala {profile.scale}</p>
+        <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="text-sm">Revisión {profile.revision} · ID <code>{profile.profile_id}</code></p></details>
+      </li>)}</ul>}
+      {profileTotal > 100 && <p role="status">Solo se pueden elegir los primeros 100 perfiles y los creados ahora.</p>}
+      {templates.length > 0 && <p className="field-help">Las plantillas de catálogo son parciales; completá los campos faltantes.</p>}
+      <ProfileEditor templates={templates} profiles={profiles} disabled={profilesLoading || !!profilesError || busy === "promote"} openRequest={profileOpenRequest}
+        onBusyChange={setRegistering} onRegistered={(item) => {
+          const key = `${item.profile.profile_id}@${item.profile.revision}`;
+          setProfiles((current) => [item, ...current.filter(({ profile }) => `${profile.profile_id}@${profile.revision}` !== key)]);
+          setProfileTotal((total) => total + 1);
+          invalidate();
+          setDraft((current) => ({ ...current, profileKey: key,
+            positions: Array.from({ length: item.profile.positions }, (_, index) => `pos${index + 1}`) }));
+        }} />
+    </section>
+    <HistoryImportAndLibrary profiles={profiles} profilesLoading={profilesLoading} profilesError={profilesError}
+      onCreateProfile={() => setProfileOpenRequest((value) => value + 1)} />
     <section aria-labelledby="advanced-title" className="border-t border-border pt-5">
     <h2 id="advanced-title" className="section-header">Opciones avanzadas</h2>
     <details ref={advanced}>
       <summary className="disclosure-summary font-medium">Importar CSV o JSON plano</summary>
       <div className="mt-5 space-y-8">
-    {profilesLoading && <p role="status">Cargando perfiles guardados…</p>}
-    {profilesError && <p className="field-help">Los perfiles no están disponibles; el motivo figura arriba.</p>}
-    {!profilesLoading && !profilesError && profiles.length === 0 && <p role="status">No hay perfiles guardados.</p>}
-    {profileTotal > 100 && <p role="status">Solo se pueden elegir los primeros 100 perfiles y los creados ahora.</p>}
-    {templates.length > 0 && <p className="field-help">Las plantillas de catálogo son parciales; completá los campos faltantes.</p>}
-    <ProfileEditor templates={templates} profiles={profiles} disabled={profilesLoading || !!profilesError || busy === "promote"}
-      onBusyChange={setRegistering} onRegistered={(item) => {
-        const key = `${item.profile.profile_id}@${item.profile.revision}`;
-        setProfiles((current) => [item, ...current.filter(({ profile }) => `${profile.profile_id}@${profile.revision}` !== key)]);
-        setProfileTotal((total) => total + 1);
-        invalidate();
-        setDraft((current) => ({ ...current, profileKey: key,
-          positions: Array.from({ length: item.profile.positions }, (_, index) => `pos${index + 1}`) }));
-      }} />
     <form onSubmit={(event) => { void showPreview(event); }}>
       <fieldset disabled={busy === "promote" || registering} className="min-w-0 space-y-7">
       <legend className="sr-only">Configuración de importación</legend>
@@ -429,7 +431,8 @@ export function DataPage() {
         <div className="field"><label htmlFor="import-format" className="field-label">Formato del archivo</label>
           <select id="import-format" className="control" {...bad("import-format")} value={draft.format} onChange={(event) => change({ format: event.target.value as Draft["format"] })}><option value="">Elegí un formato</option><option value="csv">CSV</option><option value="json">JSON (lista plana de objetos)</option></select></div>
         <div className="field"><label htmlFor="import-profile" className="field-label">Perfil guardado completo</label>
-          <select id="import-profile" className="control" {...bad("import-profile")} value={draft.profileKey} onChange={(event) => chooseProfile(event.target.value)}><option value="">Elegí un perfil</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.profile_id} · revisión {profile.revision}</option>)}</select></div>
+          <select id="import-profile" className="control" {...bad("import-profile")} value={draft.profileKey} onChange={(event) => chooseProfile(event.target.value)}><option value="">Elegí un perfil</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.profile_id} · revisión {profile.revision}</option>)}</select>
+          {!profilesLoading && !profilesError && profiles.length === 0 && <div className="field-help space-y-2"><p>Necesitás un perfil para importar estos datos.</p><button type="button" className="btn btn-secondary" onClick={() => setProfileOpenRequest((value) => value + 1)}>Crear perfil de juego</button><a className="link ml-3" href="#perfiles">Ver Perfiles de juego</a></div>}</div>
       </section>
       <section aria-labelledby="source-heading" className="border-t border-border pt-5 space-y-4">
         <h3 id="source-heading" className="section-header">Origen y hora</h3>
@@ -455,7 +458,7 @@ export function DataPage() {
       {preview.result.errors.length > 0 && <ul aria-label="Errores de importación" className="list-disc space-y-1 pl-5">{preview.result.errors.map((issue, index) => <li key={index}> {issue.row === null ? "Archivo" : `Fila ${issue.row}`}: {issue.message}</li>)}</ul>}
       {preview.result.sample.length > 0 && <div><h4 className="field-label">Muestra (hasta 20 registros)</h4><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th scope="col" className="p-2">Fecha</th><th scope="col" className="p-2">Hora</th><th scope="col" className="p-2">Posiciones en orden</th></tr></thead><tbody>{preview.result.sample.map((record, index) => <tr key={index} className="border-t border-border"><td className="p-2">{record.date}</td><td className="p-2">{record.time}</td><td className="p-2">{record.numbers.join(", ")}</td></tr>)}</tbody></table></div></div>}
       <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><div className="space-y-2 pt-2 text-sm">
-        <p>Importar guarda el historial validado; no ejecuta una sesión ni calcula pagos.</p>
+        <p>Importar guarda datos, no ejecuta ni calcula pagos.</p>
         {preview.result.dataset_sha256 && <p className="break-all">Identidad canónica (SHA-256): <code>{preview.result.dataset_sha256}</code></p>}
         {preview.result.source_sha256 && <p className="break-all">Archivo de origen (SHA-256): <code>{preview.result.source_sha256}</code></p>}
         {preview.result.errors.length > 0 && <ul aria-label="Códigos técnicos de errores" className="list-disc pl-5">{preview.result.errors.map((issue, index) => <li key={index}>{issue.row === null ? "Archivo" : `Fila ${issue.row}`} · {issue.code}</li>)}</ul>}
@@ -463,7 +466,7 @@ export function DataPage() {
       <button type="button" className={button} disabled={busy !== null || registering || !preview.result.promotable || !preview.result.dataset_sha256 || !HASH.test(preview.result.dataset_sha256)} onClick={() => { void promote(); }}>Confirmar y guardar importación</button>
     </section>}
     {busy === "promote" && <p role="status">Guardando; esperá la respuesta antes de volver a enviar.</p>}
-    {saved && <section aria-labelledby="saved-heading" role="status" className="border-t border-border pt-5 space-y-2"><h3 id="saved-heading" className="section-header">{saved.created ? "Importación guardada" : "Historial ya guardado"}</h3><p>{saved.duplicate_source_differs ? "Ya existía el mismo historial con otro archivo de origen; se conserva el primero." : saved.created ? "Guardado." : "Ya existía; no se creó una copia."}</p><details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><div className="space-y-2 pt-2 text-sm"><p>Importar guarda el historial; no ejecuta sesiones ni calcula pagos.</p><p className="break-all">Identidad canónica (SHA-256): <code>{saved.dataset_sha256}</code></p><p className="break-all">Archivo retenido (SHA-256): <code>{saved.retained_source_sha256}</code></p><p className="break-all">Archivo enviado (SHA-256): <code>{saved.submitted_source_sha256}</code></p></div></details></section>}
+    {saved && <section aria-labelledby="saved-heading" role="status" className="border-t border-border pt-5 space-y-2"><h3 id="saved-heading" className="section-header">{saved.created ? "Importación guardada" : "Historial ya guardado"}</h3><p>{saved.duplicate_source_differs ? "Ya existía el mismo historial con otro archivo de origen; se conserva el primero." : saved.created ? "Guardado." : "Ya existía; no se creó una copia."}</p><details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><div className="space-y-2 pt-2 text-sm"><p>Importar guarda datos, no ejecuta ni calcula pagos.</p><p className="break-all">Identidad canónica (SHA-256): <code>{saved.dataset_sha256}</code></p><p className="break-all">Archivo retenido (SHA-256): <code>{saved.retained_source_sha256}</code></p><p className="break-all">Archivo enviado (SHA-256): <code>{saved.submitted_source_sha256}</code></p></div></details></section>}
       </div>
     </details>
     </section>

@@ -12,6 +12,9 @@ type Draft = {
 const empty: Draft = { profile_id: "", revision: "", universe_size: "", positions: "", allows_repeats: "",
   multipliers: [], currency: "", scale: "", stake_increment: "", minimum_stake: "",
   maximum_stake: "", max_coverage: "", max_exposure: "" };
+const quiniela80: Draft = { profile_id: "quiniela-80", revision: "1", universe_size: "100", positions: "3",
+  allows_repeats: "yes", multipliers: ["60", "10", "5"], currency: "DOP", scale: "0",
+  stake_increment: "1", minimum_stake: "1", maximum_stake: "100", max_coverage: "10", max_exposure: "1000" };
 const MAX_MONEY = 1_000_000_000_000n;
 
 /** A validation failure tied to the control that should receive focus (element id). */
@@ -78,16 +81,18 @@ function fromTemplate(template: PartialProfileTemplate): Draft {
 const field = "field";
 const input = "control";
 
-export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange, disabled = false }: {
+export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange, disabled = false, openRequest = 0 }: {
   templates: PartialProfileTemplate[];
   profiles: ProfileListing[];
   onRegistered: (item: ProfileListing) => void;
   onBusyChange: (busy: boolean) => void;
   disabled?: boolean;
+  openRequest?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [templateIndex, setTemplateIndex] = useState("");
-  const [draft, setDraft] = useState<Draft>(empty);
+  const [draft, setDraft] = useState<Draft>(quiniela80);
+
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState<number | null>(null);
   const [errorField, setErrorField] = useState<string | null>(null);
@@ -98,12 +103,13 @@ export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange,
   const live = useRef(true);
   const errorRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
+  useEffect(() => { if (openRequest) setOpen(true); }, [openRequest]);
   useEffect(() => {
     if (!error) return;
     // Validation inside a collapsed host disclosure must be visible before focus moves.
-    const host = errorRef.current?.closest("details");
-    if (host && !host.open) host.open = true;
     const invalid = errorField ? document.getElementById(errorField) : null;
+    let host = invalid?.closest("details") as HTMLDetailsElement | null;
+    while (host) { host.open = true; host = host.parentElement?.closest("details") as HTMLDetailsElement | null; }
     (invalid ?? errorRef.current)?.focus();
     // errorToken re-runs this for a repeated identical message; errorField is committed together with it.
   }, [error, errorToken]);
@@ -156,17 +162,15 @@ export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange,
     }
   }
   return <section aria-labelledby="profile-editor-heading" className="border-t border-border pt-5 space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 id="profile-editor-heading" className="section-header">Perfiles de juego</h3></div>
-      <button type="button" className="btn btn-secondary" aria-expanded={open} aria-controls="profile-editor-form" disabled={disabled || pending} onClick={() => setOpen(!open)}>{open ? "Cerrar editor" : "Crear perfil"}</button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 id="profile-editor-heading" className="section-header">Crear perfil de juego</h3></div>
+      <button type="button" className="btn btn-primary" aria-expanded={open} aria-controls="profile-editor-form" disabled={disabled || pending} onClick={() => setOpen(!open)}>{open ? "Cerrar editor" : "Crear perfil de juego"}</button></div>
     {open && <div id="profile-editor-form" className="space-y-5">
             <div className={field}><label htmlFor="profile-template" className="field-label">Referencia opcional</label><select id="profile-template" className={input} disabled={pending || disabled} value={templateIndex} onChange={(event) => { const value = event.target.value; setTemplateIndex(value); setDraft(value === "" ? empty : fromTemplate(templates[Number(value)])); setError(""); setErrorCode(null); setNotice(""); }}><option value="">Empezar sin plantilla</option>{templates.map((template, index) => <option value={index} key={`${template.name}-${index}`}>{template.name} · parcial</option>)}</select>
         {templates.length > 0 && <p className="field-help">Las plantillas de catálogo son parciales; completá los campos que faltan.</p>}
         {selectedTemplate && <div className="field-help"><p>Origen: {selectedTemplate.provenance}.</p><p>Falta completar: {selectedTemplate.missing_fields.join(", ")}.</p>{selectedTemplate.known_fields.minimum_stake !== undefined && <p>Apuesta mínima conocida: {selectedTemplate.known_fields.minimum_stake} unidad(es) sin escala; ingresá el importe tras elegirla.</p>}</div>}</div>
       <form onSubmit={(event) => { void submit(event); }} noValidate>
         <fieldset disabled={pending || disabled} className="min-w-0 space-y-6"><legend className="sr-only">Perfil de juego completo</legend>
-          <section aria-labelledby="profile-identity" className="border-t border-border pt-4"><h4 id="profile-identity" className="section-header">Identidad y sorteo</h4><div className="grid gap-x-5 sm:grid-cols-2">
-            <div className={field}><label htmlFor="profile-id" className="field-label">ID nuevo del perfil</label><input id="profile-id" className={input} {...bad("profile-id")} required pattern="[a-z][a-z0-9-]*" maxLength={80} value={draft.profile_id} onChange={(event) => update("profile_id", event.target.value)} /></div>
-            <div className={field}><label htmlFor="profile-revision" className="field-label">Revisión (1–1.000.000)</label><input id="profile-revision" className={input} {...bad("profile-revision")} inputMode="numeric" required value={draft.revision} onChange={(event) => update("revision", event.target.value)} /></div>
+          <section aria-labelledby="profile-identity" className="border-t border-border pt-4"><h4 id="profile-identity" className="section-header">Reglas del sorteo</h4><div className="grid gap-x-5 sm:grid-cols-2">
             <div className={field}><label htmlFor="profile-universe" className="field-label">Tamaño del universo (1–1.000)</label><input id="profile-universe" className={input} {...bad("profile-universe")} inputMode="numeric" required value={draft.universe_size} onChange={(event) => update("universe_size", event.target.value)} /></div>
             <div className={field}><label htmlFor="profile-positions" className="field-label">Posiciones por sorteo (1–16)</label><input id="profile-positions" className={input} {...bad("profile-positions")} inputMode="numeric" required value={draft.positions} onChange={(event) => changePositions(event.target.value)} /></div>
             <div className={field}><label htmlFor="profile-repeats" className="field-label">¿Se repiten números en un sorteo?</label><select id="profile-repeats" className={input} {...bad("profile-repeats")} required value={draft.allows_repeats} onChange={(event) => update("allows_repeats", event.target.value)}><option value="">Elegí sí o no</option><option value="yes">Sí</option><option value="no">No</option></select></div>
@@ -175,10 +179,14 @@ export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange,
             <div className="grid gap-x-5 sm:grid-cols-3">{draft.multipliers.map((value, index) => <div key={index} className={field}><label htmlFor={`profile-multiplier-${index}`} className="field-label">Posición {index + 1} · multiplicador</label><input id={`profile-multiplier-${index}`} className={input} {...bad(`profile-multiplier-${index}`)} inputMode="decimal" required value={value} onChange={(event) => update("multipliers", draft.multipliers.map((item, at) => at === index ? event.target.value : item))} /></div>)}</div></section>
           <section aria-labelledby="profile-money" className="border-t border-border pt-4"><h4 id="profile-money" className="section-header">Moneda y límites de apuesta</h4><p className="field-help mb-4">Importes en la moneda elegida; la escala son sus decimales.</p><div className="grid gap-x-5 sm:grid-cols-2">
             <div className={field}><label htmlFor="profile-currency" className="field-label">Moneda (código ISO de 3 letras)</label><input id="profile-currency" className={input} {...bad("profile-currency")} maxLength={3} required value={draft.currency} onChange={(event) => update("currency", event.target.value)} /></div>
-            <div className={field}><label htmlFor="profile-scale" className="field-label">Escala decimal (0–6)</label><input id="profile-scale" className={input} {...bad("profile-scale")} inputMode="numeric" required value={draft.scale} onChange={(event) => update("scale", event.target.value)} /></div>
+            <div className={field}><label htmlFor="profile-scale" className="field-label">Escala decimal (0–6)</label><input id="profile-scale" className={input} {...bad("profile-scale")} inputMode="numeric" required value={draft.scale} onChange={(event) => update("scale", event.target.value)} /><p className="field-help">0 = sin escala.</p></div>
             {([ ["stake_increment", "Incremento de apuesta"], ["minimum_stake", "Apuesta mínima"], ["maximum_stake", "Apuesta máxima"], ["max_exposure", "Exposición máxima por sorteo"] ] as const).map(([key, label]) => <div key={key} className={field}><label htmlFor={`profile-${key}`} className="field-label">{label} (importe)</label><input id={`profile-${key}`} className={input} {...bad(`profile-${key}`)} inputMode="decimal" required value={draft[key]} onChange={(event) => update(key, event.target.value)} /></div>)}
             <div className={field}><label htmlFor="profile-coverage" className="field-label">Cobertura máxima (números por sorteo)</label><input id="profile-coverage" className={input} {...bad("profile-coverage")} inputMode="numeric" required value={draft.max_coverage} onChange={(event) => update("max_coverage", event.target.value)} /></div>
           </div></section>
+          <details><summary className="disclosure-summary">Detalles técnicos</summary><section aria-label="Identificadores del perfil" className="grid gap-x-5 pt-4 sm:grid-cols-2">
+            <div className={field}><label htmlFor="profile-id" className="field-label">ID nuevo del perfil</label><input id="profile-id" className={input} {...bad("profile-id")} required pattern="[a-z][a-z0-9-]*" maxLength={80} value={draft.profile_id} onChange={(event) => update("profile_id", event.target.value)} /></div>
+            <div className={field}><label htmlFor="profile-revision" className="field-label">Revisión (1–1.000.000)</label><input id="profile-revision" className={input} {...bad("profile-revision")} inputMode="numeric" required value={draft.revision} onChange={(event) => update("revision", event.target.value)} /></div>
+          </section></details>
           <button type="submit" className="btn btn-secondary">Guardar perfil</button>
         </fieldset>
       </form>

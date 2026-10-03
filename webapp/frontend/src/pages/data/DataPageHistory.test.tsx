@@ -255,40 +255,43 @@ const emptyLibrary = { total: 0, offset: 0, limit: 20, items: [] };
 const primaries = () => Array.from(document.querySelectorAll<HTMLElement>(".btn-primary"));
 
 describe("regions, resolved-state order and single dominant action", () => {
-  it("shows the library first, then import and advanced options, when the library has histories", async () => {
+  it("shows Perfiles, Historiales, Importar and advanced options in task order", async () => {
     mount();
     await screen.findByText(/1 sorteos · history_json/);
+    const profiles = screen.getByRole("region", { name: "Perfiles de juego" });
+    expect(profiles).toHaveAttribute("id", "perfiles");
+    expect(library()).toHaveAttribute("id", "historiales");
+    expect(follows(profiles, library())).toBe(true);
     expect(follows(library(), importRegion())).toBe(true);
     expect(follows(importRegion(), advancedRegion())).toBe(true);
     expect(within(importRegion()).queryByRole("list", { name: "Cómo importar el primer historial" })).not.toBeInTheDocument();
   });
 
-  it("puts import first with first-import guidance and the required profile when the library is empty", async () => {
+  it("keeps Historiales before Importar and gives first-import guidance when empty", async () => {
     vi.mocked(apiClient.getDatasets).mockResolvedValue(emptyLibrary);
     mount();
     await screen.findByText(/Todavía no hay historiales guardados/);
-    expect(follows(importRegion(), library())).toBe(true);
-    expect(follows(library(), advancedRegion())).toBe(true);
+    expect(follows(library(), importRegion())).toBe(true);
+    expect(follows(importRegion(), advancedRegion())).toBe(true);
     const steps = within(importRegion()).getByRole("list", { name: "Cómo importar el primer historial" });
     expect(steps).toHaveTextContent(/perfil de juego/i);
     expect(within(importRegion()).getByLabelText("Perfil de juego (obligatorio)")).toBeInTheDocument();
-    expect(within(importRegion()).getByText(/no ejecuta sesiones ni calcula pagos/i)).toBeInTheDocument();
+    expect(within(importRegion()).getByText("Importar guarda datos, no ejecuta ni calcula pagos.")).toBeInTheDocument();
   });
 
-  it("renders no ordered region while the first list load is pending, then decides the order once", async () => {
+  it("keeps task sections in place while the first history list is pending", async () => {
     let resolveList!: (value: typeof emptyLibrary) => void;
     vi.mocked(apiClient.getDatasets).mockImplementationOnce(() => new Promise((resolve) => { resolveList = resolve; }));
     mount();
-    // A provisional order would later be swapped (library -> import), so neither region exists yet.
     expect(screen.getByText("Cargando historiales guardados…")).toHaveAttribute("role", "status");
-    expect(screen.queryByRole("region", { name: "Biblioteca de historiales" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Importar historial" })).not.toBeInTheDocument();
+    expect(library()).toBeInTheDocument();
+    expect(importRegion()).toBeInTheDocument();
+    expect(follows(library(), importRegion())).toBe(true);
     expect(screen.queryByText(/Todavía no hay historiales guardados/)).not.toBeInTheDocument();
-    expect(follows(screen.getByText("Cargando historiales guardados…"), advancedRegion())).toBe(true);
     await act(async () => { resolveList(emptyLibrary); });
     expect(screen.queryByText("Cargando historiales guardados…")).not.toBeInTheDocument();
-    expect(follows(importRegion(), library())).toBe(true);
-    expect(follows(library(), advancedRegion())).toBe(true);
+    expect(follows(library(), importRegion())).toBe(true);
+    expect(follows(importRegion(), advancedRegion())).toBe(true);
   });
 
   it("does not present loading as an empty library and offers the import form once resolved", async () => {
@@ -326,7 +329,7 @@ describe("regions, resolved-state order and single dominant action", () => {
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
     await user.click(await screen.findByRole("button", { name: /Confirmar y guardar historial/i }));
     expect(await screen.findByText(/1 sorteos · history_json/)).toBeInTheDocument();
-    expect(follows(importRegion(), library())).toBe(true);
+    expect(follows(library(), importRegion())).toBe(true);
   });
 
   it("keeps the pagination controls mounted while the next page loads", async () => {
@@ -353,11 +356,11 @@ describe("regions, resolved-state order and single dominant action", () => {
     expect(within(library()).getByText(/ya no está registrado/i)).toBeInTheDocument();
   });
 
-  it("has exactly one dominant action per state and the confirm step replaces import", async () => {
+  it("keeps profile creation available while confirmation replaces the history import action", async () => {
     const user = userEvent.setup(); mount();
     await screen.findByText(/1 sorteos · history_json/);
     await user.click(screen.getByText(/Importar CSV o JSON plano/));
-    expect(primaries().map((item) => item.textContent)).toEqual(["Importar historial"]);
+    expect(primaries().map((item) => item.textContent)).toEqual(["Crear perfil de juego", "Importar historial"]);
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
     await user.upload(screen.getByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
@@ -366,7 +369,7 @@ describe("regions, resolved-state order and single dominant action", () => {
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: "Importar historial" }));
     await screen.findByRole("button", { name: /Confirmar y guardar historial/i });
-    expect(primaries().map((item) => item.textContent)).toEqual(["Confirmar y guardar historial"]);
+    expect(primaries().map((item) => item.textContent)).toEqual(["Crear perfil de juego", "Confirmar y guardar historial"]);
     expect(screen.queryByRole("button", { name: "Importar historial" })).not.toBeInTheDocument();
   });
 

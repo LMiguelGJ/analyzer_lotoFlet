@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
@@ -51,6 +51,29 @@ beforeEach(() => {
     duplicates_merged: 1, execution_supported: false });
 });
 
+describe("visible game profiles", () => {
+  it("shows profile creation before import and opens it without an advanced disclosure", async () => {
+    vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 0, offset: 0, limit: 100, items: [], templates: [] });
+    render(<DataPage />);
+    const profiles = await screen.findByRole("region", { name: "Perfiles de juego" });
+    const create = within(profiles).getByRole("button", { name: "Crear perfil de juego" });
+    expect(create).toBeVisible();
+    const importing = await screen.findByRole("region", { name: "Importar historial" });
+    expect(profiles.compareDocumentPosition(importing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("Importar CSV o JSON plano")?.closest("details")).not.toHaveAttribute("open");
+    await userEvent.setup().click(create);
+    expect(screen.getByLabelText(/Tamaño del universo/)).toBeVisible();
+  });
+
+  it("offers profile creation in context when importing without a saved profile", async () => {
+    vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 0, offset: 0, limit: 100, items: [], templates: [] });
+    render(<DataPage />);
+    const importing = await screen.findByRole("region", { name: "Importar historial" });
+    expect(within(importing).getByRole("button", { name: "Crear perfil de juego" })).toBeVisible();
+    expect(within(importing).getByRole("link", { name: /Ver Perfiles de juego/ })).toHaveAttribute("href", "#perfiles");
+  });
+});
+
 describe("bounded local import", () => {
   it("selects a newly registered profile for import and invalidates an earlier preview", async () => {
     const user = await setup();
@@ -58,16 +81,18 @@ describe("bounded local import", () => {
     const created = { ...profile, profile_id: "new-profile", revision: 1, positions: 1, multipliers: [{ numerator: 1, denominator: 1 }] };
     vi.mocked(apiClient.registerProfile).mockResolvedValueOnce({ profile: created, profile_sha256: hash,
       profile_execution: readiness, execution_supported: false });
-    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
+    await user.click(within(screen.getByRole("region", { name: "Perfiles de juego" })).getByRole("button", { name: "Crear perfil de juego" }));
+    await user.clear(screen.getByLabelText("ID nuevo del perfil"));
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "new-profile");
-    await user.type(screen.getByLabelText(/Revisión \(1/), "1");
-    await user.type(screen.getByLabelText(/Tamaño del universo/), "100");
+    await user.clear(screen.getByLabelText(/Posiciones por sorteo/));
     await user.type(screen.getByLabelText(/Posiciones por sorteo/), "1");
-    await user.selectOptions(screen.getByLabelText(/Se repiten números/), "yes");
+    await user.clear(screen.getByLabelText("Posición 1 · multiplicador"));
     await user.type(screen.getByLabelText("Posición 1 · multiplicador"), "1");
-    await user.type(screen.getByLabelText(/Moneda \(código/), "DOP");
-    await user.type(screen.getByLabelText(/Escala decimal/), "0");
-    for (const label of [/Incremento de apuesta/, /Apuesta mínima/, /Apuesta máxima/, /Exposición máxima/]) await user.type(screen.getByLabelText(label), "1");
+    await user.clear(screen.getByLabelText(/Apuesta máxima/));
+    await user.type(screen.getByLabelText(/Apuesta máxima/), "1");
+    await user.clear(screen.getByLabelText(/Exposición máxima/));
+    await user.type(screen.getByLabelText(/Exposición máxima/), "1");
+    await user.clear(screen.getByLabelText(/Cobertura máxima/));
     await user.type(screen.getByLabelText(/Cobertura máxima/), "1");
     await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     await waitFor(() => expect(screen.getByLabelText("Perfil guardado completo")).toHaveValue("new-profile@1"));
@@ -88,8 +113,8 @@ describe("bounded local import", () => {
     await user.clear(screen.getByLabelText("Columna de posición 1"));
     await user.type(screen.getByLabelText("Columna de posición 1"), "first");
     await preview(user);
-    await user.click(screen.getByText("Detalles técnicos"));
-    expect(screen.getByText(/Importar guarda el historial validado; no ejecuta una sesión ni calcula pagos/i)).toBeInTheDocument();
+    await user.click(screen.getAllByText("Detalles técnicos").at(-1)!);
+    expect(within(screen.getByRole("region", { name: /Vista previa/ })).getByText("Importar guarda datos, no ejecuta ni calcula pagos.")).toBeInTheDocument();
     expect(apiClient.previewImport).toHaveBeenCalledWith({ raw_base64: "AP8K", format: "csv",
       mapping: { date: "date", time: "time", positions: ["first", "pos2"] },
       source: { source_id: "ledger", kind: "artificial", revision: "r1", provenance: "manual" },
@@ -97,9 +122,9 @@ describe("bounded local import", () => {
     expect(screen.getByText(/Filas leídas: 2/)).toHaveTextContent(/Duplicados: 1/);
     await user.click(screen.getByRole("button", { name: "Confirmar y guardar importación" }));
     expect(await screen.findByRole("heading", { name: "Importación guardada" })).toBeInTheDocument();
-    await user.click(screen.getByText("Detalles técnicos"));
+    await user.click(screen.getAllByText("Detalles técnicos").at(-1)!);
     expect(screen.getByText(/Identidad canónica \(SHA-256\):/)).toHaveTextContent(hash);
-    expect(screen.getByText(/Importar guarda el historial; no ejecuta sesiones ni calcula pagos/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Importar guarda datos, no ejecuta ni calcula pagos.")).toHaveLength(2);
     expect(apiClient.promoteImport).toHaveBeenCalledWith({ ...vi.mocked(apiClient.previewImport).mock.calls[0][0], expected_dataset_sha256: hash });
   });
 
@@ -128,7 +153,7 @@ describe("bounded local import", () => {
     const user = await setup();
     await preview(user);
     expect(screen.getByText(/Fila 2: date must be YYYY-MM-DD/)).toBeInTheDocument();
-    await user.click(screen.getByText("Detalles técnicos"));
+    await user.click(screen.getAllByText("Detalles técnicos").at(-1)!);
     expect(screen.getByText("Fila 2 · date")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirmar y guardar importación" })).toBeDisabled();
     expect(apiClient.promoteImport).not.toHaveBeenCalled();
@@ -205,7 +230,7 @@ describe("bounded local import", () => {
     await user.click(screen.getByRole("button", { name: "Confirmar y guardar importación" }));
     expect(await screen.findByRole("heading", { name: "Historial ya guardado" })).toBeInTheDocument();
     expect(screen.getByText(/otro archivo de origen/)).toBeInTheDocument();
-    await user.click(screen.getByText("Detalles técnicos"));
+    await user.click(screen.getAllByText("Detalles técnicos").at(-1)!);
     expect(screen.getByText(/Identidad canónica \(SHA-256\):/)).toHaveTextContent(hash);
     expect(screen.getByText(/Archivo retenido \(SHA-256\):/)).toHaveTextContent("c".repeat(64));
     expect(screen.getByText(/Archivo enviado \(SHA-256\):/)).toHaveTextContent("b".repeat(64));

@@ -20,16 +20,29 @@ const onRegistered = vi.fn();
 const onBusyChange = vi.fn();
 
 async function fill(user: ReturnType<typeof userEvent.setup>, positions: number, useTemplate = false) {
-  await user.click(screen.getByRole("button", { name: "Crear perfil" }));
+  await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
   if (useTemplate) await user.selectOptions(screen.getByLabelText("Referencia opcional"), "0");
+  await user.click(screen.getByText("Detalles técnicos"));
+  await user.clear(screen.getByLabelText("ID nuevo del perfil"));
   await user.type(screen.getByLabelText("ID nuevo del perfil"), "my-game");
+  await user.clear(screen.getByLabelText(/Revisión \(1/));
   await user.type(screen.getByLabelText(/Revisión \(1/), "1");
   if (!useTemplate) {
+    await user.clear(screen.getByLabelText(/Tamaño del universo/));
     await user.type(screen.getByLabelText(/Tamaño del universo/), "100");
+    await user.clear(screen.getByLabelText(/Posiciones por sorteo/));
     await user.type(screen.getByLabelText(/Posiciones por sorteo/), String(positions));
     await user.selectOptions(screen.getByLabelText(/Se repiten números/), "yes");
+    await user.clear(screen.getByLabelText(/Moneda \(código/));
     await user.type(screen.getByLabelText(/Moneda \(código/), "DOP");
-    for (let index = 0; index < positions; index++) await user.type(screen.getByLabelText(`Posición ${index + 1} · multiplicador`), ["60", "10", "5", "2", "1"][index] ?? "0");
+    for (let index = 0; index < positions; index++) {
+      const multiplier = screen.getByLabelText(`Posición ${index + 1} · multiplicador`);
+      await user.clear(multiplier);
+      await user.type(multiplier, ["60", "10", "5", "2", "1"][index] ?? "0");
+    }
+  }
+  for (const label of [/Escala decimal/, /Incremento de apuesta/, /Apuesta mínima/, /Apuesta máxima/, /Cobertura máxima/, /Exposición máxima/]) {
+    await user.clear(screen.getByLabelText(label));
   }
   await user.type(screen.getByLabelText(/Escala decimal/), "2");
   await user.type(screen.getByLabelText(/Incremento de apuesta/), "0.25");
@@ -41,6 +54,25 @@ async function fill(user: ReturnType<typeof userEvent.setup>, positions: number,
 
 beforeEach(() => { vi.mocked(apiClient.registerProfile).mockReset(); onRegistered.mockReset(); onBusyChange.mockReset(); });
 describe("profile editor", () => {
+  it("opens with an editable Quiniela 80 profile ready to register", async () => {
+    const user = userEvent.setup();
+    render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
+    await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    expect(screen.getByLabelText("ID nuevo del perfil")).toHaveValue("quiniela-80");
+    expect(screen.getByLabelText(/Revisión \(1/)).toHaveValue("1");
+    expect(screen.getByLabelText(/Tamaño del universo/)).toHaveValue("100");
+    expect(screen.getByLabelText(/Posiciones por sorteo/)).toHaveValue("3");
+    expect(screen.getByLabelText(/Se repiten números/)).toHaveValue("yes");
+    expect(screen.getByLabelText("Posición 1 · multiplicador")).toHaveValue("60");
+    expect(screen.getByLabelText("Posición 2 · multiplicador")).toHaveValue("10");
+    expect(screen.getByLabelText("Posición 3 · multiplicador")).toHaveValue("5");
+    expect(screen.getByLabelText(/Moneda \(código/)).toHaveValue("DOP");
+    expect(screen.getByLabelText(/Escala decimal/)).toHaveValue("0");
+    expect(screen.getByText("0 = sin escala.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Apuesta mínima/)).toHaveValue("1");
+    expect(screen.getByText(/sin devolución adicional de la apuesta/)).toBeInTheDocument();
+    expect(screen.getByText("Detalles técnicos").closest("details")).not.toHaveAttribute("open");
+  });
   it.each([1, 3, 5])("creates %i position documents with explicit money policy and server-derived digest", async (count) => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
@@ -58,7 +90,7 @@ describe("profile editor", () => {
   it("prefills only documented template fields and requires missing financial fields", async () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[template]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
-    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
+    await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
     await user.selectOptions(screen.getByLabelText("Referencia opcional"), "0");
     expect(screen.getByLabelText(/Posiciones por sorteo/)).toHaveValue("3");
     expect(screen.getByLabelText("Posición 1 · multiplicador")).toHaveValue("60/1");
@@ -67,6 +99,7 @@ describe("profile editor", () => {
     await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/ID:/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
+    await user.click(screen.getByText("Detalles técnicos"));
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "example");
     await user.type(screen.getByLabelText(/Revisión \(1/), "1");
     await user.type(screen.getByLabelText(/Escala decimal/), "0");
@@ -105,7 +138,7 @@ describe("profile editor", () => {
       await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
       expect(await screen.findByRole("alert")).toHaveTextContent(expected);
       if (status === 422) {
-        await user.click(screen.getByText("Detalles técnicos"));
+        await user.click(screen.getAllByText("Detalles técnicos").at(-1)!);
         expect(screen.getByText("Código HTTP:").parentElement).toHaveTextContent("422");
       }
       expect(apiClient.registerProfile).toHaveBeenCalledTimes(status === 422 ? 3 : detail.startsWith("profile version") ? 2 : 1);
@@ -114,11 +147,15 @@ describe("profile editor", () => {
   it("opens a collapsed host disclosure, keeps typed values and focuses the first invalid field linked to the error", async () => {
     const user = userEvent.setup();
     render(<details><summary>Host</summary><ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} /></details>);
-    const host = document.querySelector("details") as HTMLDetailsElement;
-    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
+    const host = screen.getByText("Host").closest("details") as HTMLDetailsElement;
+    host.open = true;
+    await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    await user.click(screen.getByText("Detalles técnicos"));
+    await user.clear(screen.getByLabelText("ID nuevo del perfil"));
+    await user.clear(screen.getByLabelText(/Revisión \(1/));
     await user.type(screen.getByLabelText(/Revisión \(1/), "7");
     host.open = false;
-    await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
+    fireEvent.submit(screen.getByRole("button", { name: "Guardar perfil" }).closest("form") as HTMLFormElement);
     expect(host.open).toBe(true);
     const alert = screen.getByRole("alert");
     expect(screen.getByLabelText("ID nuevo del perfil")).toHaveFocus();
@@ -130,9 +167,13 @@ describe("profile editor", () => {
   it("focuses the field that actually fails, and clears its invalid state when edited", async () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
-    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
+    await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    await user.click(screen.getByText("Detalles técnicos"));
+    await user.clear(screen.getByLabelText("ID nuevo del perfil"));
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "my-game");
+    await user.clear(screen.getByLabelText(/Revisión \(1/));
     await user.type(screen.getByLabelText(/Revisión \(1/), "1");
+    await user.clear(screen.getByLabelText(/Tamaño del universo/));
     await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByLabelText(/Tamaño del universo/)).toHaveFocus();
     expect(screen.getByLabelText(/Tamaño del universo/)).toHaveAttribute("aria-invalid", "true");
