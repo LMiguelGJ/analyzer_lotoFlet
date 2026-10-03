@@ -36,13 +36,10 @@
 }
 
 /*
- * Shared Operate-surface primitives (plan claridad-interfaz-80-20, decisions
- * 10-11; Impeccable operate/layout/typeset/craft-floor). Defined here so
- * later units can adopt them page by page; nothing in src/pages consumes
- * these yet. Scoped to explicit class names only, never bare element
- * selectors, so SVG/chart rendering (BalanceChart, ComparisonChart) is
- * unaffected. Colors, radii, and heights all reference tokens.css; no new
- * color, gradient, glass, or shadow values are introduced.
+ * Shared Operate-surface primitives (plan claridad visual, CVPI-01).
+ * Scoped to explicit classes/native controls carrying .control or .btn, so
+ * unowned elements and SVG/chart rendering remain unaffected. Colors, fonts,
+ * radii, and heights reference tokens.css; no alternate visual system added.
  */
 @layer components {
   .field {
@@ -57,6 +54,15 @@
     color: var(--color-text);
   }
 
+  /* Use on a label wrapping a choice control to make the whole target tappable. */
+  .control-choice {
+    display: inline-flex;
+    min-height: var(--control-height);
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text);
+  }
+
   .field-help {
     margin-top: 0.25rem;
     font-family: var(--font-body);
@@ -64,11 +70,11 @@
     color: var(--color-text-secondary);
   }
 
-  /* Body font for ordinary inputs/selects; use font-mono only where a value itself is technical (IDs, hashes, seeds). */
+  /* Body font for ordinary form fields; keep the shared class off SVG and non-controls. */
   .control {
     display: block;
     width: 100%;
-    height: var(--control-height);
+    min-height: var(--control-height);
     padding: 0 0.75rem;
     border: 1px solid var(--color-border-control);
     border-radius: var(--radius-control);
@@ -76,6 +82,47 @@
     color: var(--color-text);
     font-family: var(--font-body);
     font-size: 0.875rem;
+    transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out;
+  }
+
+  .control:is(input:not([type="checkbox"]):not([type="radio"]), select) {
+    height: var(--control-height);
+  }
+
+  .control:is(textarea) {
+    height: auto;
+    min-height: 7rem;
+    padding-block: 0.625rem;
+    resize: vertical;
+  }
+
+  .control:is(input[type="checkbox"], input[type="radio"]) {
+    display: inline-block;
+    width: 1rem;
+    min-width: 1rem;
+    min-height: 1rem;
+    height: 1rem;
+    padding: 0;
+    accent-color: var(--color-accent);
+  }
+
+  .control:disabled {
+    cursor: not-allowed;
+    color: var(--color-text-secondary);
+  }
+
+  .control[aria-invalid="true"] {
+    border-color: var(--color-accent);
+    border-style: dashed;
+  }
+
+  .control:focus-visible {
+    border-color: var(--color-accent);
+    border-style: solid;
+  }
+
+  .control[aria-busy="true"] {
+    cursor: progress;
   }
 
   .btn {
@@ -85,34 +132,147 @@
     gap: 0.5rem;
     min-height: var(--control-height);
     padding: 0 1rem;
+    border: 1px solid transparent;
     border-radius: var(--radius-control);
     font-family: var(--font-body);
     font-size: 0.875rem;
+    line-height: 1.25rem;
+    text-align: center;
+    text-decoration: none;
+    transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out, text-decoration-color 150ms ease-out;
   }
 
-  /* Primary is distinguished by fill and weight together, not color alone (decision 11). */
   .btn-primary {
-    border: 1px solid var(--color-accent);
+    border-color: var(--color-accent);
     background-color: var(--color-accent);
     color: var(--color-bg);
     font-weight: 600;
   }
 
   .btn-secondary {
-    border: 1px solid var(--color-border-control);
+    border-color: var(--color-border-control);
     background-color: transparent;
     color: var(--color-text);
     font-weight: 400;
   }
 
-  /* Destructive reads unambiguous from its own text/weight, never from color alone; the action word itself must name the consequence. */
+  .btn-tertiary {
+    border-color: transparent;
+    background-color: transparent;
+    color: var(--color-accent);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Destructive uses explicit wording/weight as well as its underline; no warning palette is introduced. */
   .btn-destructive {
-    border: 1px solid var(--color-border-control);
+    border-color: var(--color-border-control);
     background-color: transparent;
     color: var(--color-text);
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    .btn-primary:not(:disabled):not([aria-disabled="true"]):hover {
+      border-color: var(--color-text);
+      background-color: var(--color-text);
+      color: var(--color-bg);
+    }
+
+    .btn-secondary:not(:disabled):not([aria-disabled="true"]):hover,
+    .btn-destructive:not(:disabled):not([aria-disabled="true"]):hover {
+      border-color: var(--color-accent);
+      background-color: var(--color-field);
+      color: var(--color-text);
+    }
+
+    .btn-tertiary:not(:disabled):not([aria-disabled="true"]):hover {
+      color: var(--color-text);
+      text-decoration-color: var(--color-text);
+    }
+
+    .control:not(:disabled):hover {
+      border-color: var(--color-accent);
+    }
+  }
+
+  .btn-primary:not(:disabled):not([aria-disabled="true"]):active {
+    border-color: var(--color-text-secondary);
+    background-color: var(--color-text-secondary);
+  }
+
+  .btn-secondary:not(:disabled):not([aria-disabled="true"]):active,
+  .btn-destructive:not(:disabled):not([aria-disabled="true"]):active {
+    border-color: var(--color-accent);
+    background-color: var(--color-surface);
+  }
+
+  .btn-tertiary:not(:disabled):not([aria-disabled="true"]):active {
+    color: var(--color-text);
+  }
+
+  .btn.btn:disabled,
+  .btn.btn[aria-disabled="true"] {
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  /* Inactive controls use the decorative border (WCAG 1.4.11 exempts them) so a disabled
+     action never reads like an enabled secondary one, which keeps the functional border. */
+  .btn-primary:disabled,
+  .btn-primary[aria-disabled="true"] {
+    border-color: var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text-secondary);
+  }
+
+  .btn-secondary:disabled,
+  .btn-secondary[aria-disabled="true"],
+  .btn-destructive:disabled,
+  .btn-destructive[aria-disabled="true"] {
+    border-color: var(--color-border);
+    background-color: transparent;
+    color: var(--color-text-secondary);
+    text-decoration-color: var(--color-text-secondary);
+  }
+
+  .btn-tertiary:disabled,
+  .btn-tertiary[aria-disabled="true"] {
+    color: var(--color-text-secondary);
+    text-decoration-color: var(--color-text-secondary);
+  }
+
+  .btn[aria-busy="true"] {
+    cursor: progress;
+  }
+
+  @media (any-pointer: coarse) {
+    .btn,
+    .control-choice {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
+
+    .control:is(input:not([type="checkbox"]):not([type="radio"]), select) {
+      min-height: 2.75rem;
+    }
+
+    .control-choice .control:is(input[type="checkbox"], input[type="radio"]) {
+      width: 1.25rem;
+      min-width: 1.25rem;
+      min-height: 1.25rem;
+      height: 1.25rem;
+    }
+
+    .field-label,
+    .shell-nav-link {
+      display: flex;
+      min-height: 2.75rem;
+      align-items: center;
+    }
   }
 
   .section-header {
@@ -196,6 +356,14 @@
     font-family: var(--font-mono);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
+  }
+
+  .shell-nav-link {
+    transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out;
+  }
+
+  .shell-nav-link[aria-current="page"] {
+    background-color: var(--color-field);
   }
 
   .queue-section + .queue-section {

@@ -27,7 +27,7 @@ const NAV_ITEMS = [
 ] as const;
 
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
-  const base = "block border-l-2 px-4 py-2 text-sm";
+  const base = "shell-nav-link block border-l-2 px-4 py-2 text-sm";
   return isActive
     ? `${base} border-accent text-text`
     : `${base} border-transparent text-text-secondary hover:text-text`;
