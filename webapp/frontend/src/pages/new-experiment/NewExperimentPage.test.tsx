@@ -22,6 +22,15 @@ function setup(path = "/experimentos/nuevo") {
   const view = render(<RouterProvider router={router} />);
   return { user: userEvent.setup(), router, ...view };
 }
+async function openAdvanced(user: ReturnType<typeof userEvent.setup>) {
+  const summary = screen.getByText("Ajustes avanzados");
+  const details = summary.closest("details");
+  if (!details?.open) await user.click(summary);
+}
+async function revealSeed(user: ReturnType<typeof userEvent.setup>) {
+  await openAdvanced(user);
+  if (!screen.queryByRole("textbox", { name: "Código de repetición" })) await user.click(screen.getByRole("button", { name: "Cambiar" }));
+}
 async function conditions(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("option", { name: /2025-09-02 05:10/ });
   await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Prueba Q80");
@@ -29,8 +38,9 @@ async function conditions(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "2000");
   await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "2800");
   await user.type(screen.getByRole("textbox", { name: "Máximo de apuestas" }), "12");
+  await revealSeed(user);
+  await user.clear(screen.getByRole("textbox", { name: "Código de repetición" }));
   await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "42");
-  await user.click(screen.getByRole("button", { name: "Continuar" }));
 }
 
 beforeEach(() => {
@@ -51,11 +61,34 @@ beforeEach(() => {
   vi.mocked(apiClient.createConfiguration).mockReset();
 });
 
+describe("RED-02 single-form creation", () => {
+  it("shows three groups, keeps seed advanced and closed, and offers one create action", async () => {
+    const { user } = setup();
+    await screen.findByRole("option", { name: /2025-09-02 05:10/ });
+
+    for (const group of ["Reglas del sorteo", "Selección", "Límites"]) {
+      expect(screen.getByRole("group", { name: group })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Código de repetición" })).not.toBeInTheDocument();
+    const advanced = screen.getByText("Ajustes avanzados").closest("details");
+    expect(advanced).not.toHaveAttribute("open");
+    await user.click(within(advanced!).getByText("Ajustes avanzados"));
+    expect(within(advanced!).getByText(/Código de repetición:/)).toBeInTheDocument();
+    expect(within(advanced!).getByText(/El mismo código permite repetir la selección aleatoria/)).toBeInTheDocument();
+    await user.click(within(advanced!).getByRole("button", { name: "Cambiar" }));
+    expect(within(advanced!).getByRole("textbox", { name: "Código de repetición" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Crear simulación" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveClass("btn-primary");
+  });
+});
+
 describe("profile creator discovery", () => {
   it("links to the dedicated route without changing the legacy form", async () => {
     const { user, router } = setup();
     expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: "Crear sesión con perfil" });
+    const link = screen.getByRole("link", { name: "Crear simulación con perfil" });
     expect(link).toHaveAttribute("href", "/experimentos/nuevo/perfil");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     // The link is navigation only; existing legacy inputs remain usable.
@@ -71,8 +104,9 @@ describe("LW13 library templates", () => {
     const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
     expect(await screen.findByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("");
     expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveValue("");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByRole("heading", { name: "Condiciones" })).toBeInTheDocument();
+    await openAdvanced(user);
+    expect(Number.isSafeInteger(Number(document.getElementById("seed-summary")?.textContent))).toBe(true);
+    expect(screen.getByRole("group", { name: "Selección" })).toBeInTheDocument();
     expect(apiClient.getConfiguration).toHaveBeenCalledWith("cfg-1");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
@@ -87,10 +121,8 @@ describe("LW13 library templates", () => {
     await user.click(screen.getByRole("button", { name: "Agregar desde biblioteca" }));
     await user.click(screen.getByRole("button", { name: "Añadir Biblioteca" }));
     expect(await screen.findByRole("button", { name: /Estrategia 2.*Fríos/ })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Atrás" }));
     expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Prueba Q80");
     expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveValue("2000");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     await user.click(screen.getByRole("button", { name: "Agregar desde biblioteca" }));
     await user.click(screen.getByRole("button", { name: "Añadir Biblioteca" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/nombre.*único/i);
@@ -126,8 +158,8 @@ describe("LW13 library templates", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
     await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "100");
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "200");
+    await revealSeed(user);
     await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "0");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Nueva");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     expect(apiClient.getConfiguration).toHaveBeenCalledTimes(2);
@@ -204,11 +236,11 @@ describe("LW10 use as base", () => {
     await act(async () => { resolveBase(saved); });
     expect(await screen.findByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Original");
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-03 05:10");
+    await revealSeed(user);
     expect(screen.getByRole("textbox", { name: "Código de repetición" })).toHaveValue("9007199254740991");
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-03");
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100, "2025-09-03");
     expect(vi.mocked(apiClient.getStartingDraws).mock.calls.filter(([, , date]) => !date)).toHaveLength(1);
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Mix");
     expect(screen.getByRole("combobox", { name: "Método de la estrategia 1" })).toHaveValue("blend");
     expect(screen.getByRole("textbox", { name: "Peso 1 (%)" })).toHaveValue("60");
@@ -217,10 +249,8 @@ describe("LW10 use as base", () => {
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" })).toHaveValue("Par");
     expect(screen.getByText(/50 números/)).toBeInTheDocument();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByRole("heading", { name: "Revisar" })).toBeInTheDocument();
-    expect(screen.getByText(/Combinación de sistemas: Transición 60% \+ Fríos 40%/)).toBeInTheDocument();
-    expect(screen.getByText(/Selección por paridad \(par\/impar\)/)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Resumen de selección" })).toHaveTextContent(/Mix: Combinación de sistemas/);
+    expect(screen.getByRole("region", { name: "Resumen de selección" })).toHaveTextContent(/Par: Selección por paridad/);
     await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -338,6 +368,7 @@ describe("ODD03b dated starting draws", () => {
   it("labels the date filter, keeps a same-day selection and clears it without choosing a different day", async () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await openAdvanced(user);
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     expect(date).toHaveAttribute("type", "date");
     expect(date).toHaveAccessibleDescription(/Vacío: todas las fechas/);
@@ -362,11 +393,13 @@ describe("ODD03b dated starting draws", () => {
     vi.mocked(apiClient.getStartingDrawAvailability).mockImplementation(async (date) => ({
       date, history_total: date === "2025-09-03" ? 0 : 4, ranked_total: 0,
     }));
-    setup();
-    const date = await screen.findByLabelText("Filtrar sorteos por fecha");
+    const { user } = setup();
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await openAdvanced(user);
+    const date = screen.getByLabelText("Filtrar sorteos por fecha");
     fireEvent.change(date, { target: { value: "2025-09-03" } });
     expect(await screen.findByText(/No hay sorteos en esta fecha/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeDisabled();
     fireEvent.change(date, { target: { value: "2025-09-04" } });
     await waitFor(() => expect(apiClient.getStartingDrawAvailability).toHaveBeenCalledWith("2025-09-04"));
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-04");
@@ -384,6 +417,7 @@ describe("ODD03b dated starting draws", () => {
     });
     const { user } = setup();
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await openAdvanced(user);
     await user.click(screen.getByRole("button", { name: "Cargar más sorteos" }));
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     fireEvent.change(date, { target: { value: "2025-09-03" } });
@@ -414,6 +448,8 @@ describe("ODD03b dated starting draws", () => {
       date, history_total: 1, ranked_total: datedLoads === 1 ? 1 : 0,
     }));
     const { user } = setup();
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await openAdvanced(user);
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     fireEvent.change(date, { target: { value: "2025-09-02" } });
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
@@ -424,7 +460,7 @@ describe("ODD03b dated starting draws", () => {
     expect(await screen.findByText(/Ese sorteo ya no está disponible/i)).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-02 05:10");
     expect(screen.getByRole("option", { name: /2025-09-02 05:10/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeDisabled();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
@@ -438,6 +474,8 @@ describe("ODD03b dated starting draws", () => {
     }));
     vi.mocked(apiClient.getStartingDrawAvailability).mockImplementation(async (date) => ({ date, history_total: 101, ranked_total: 101 }));
     const { user } = setup();
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await openAdvanced(user);
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     fireEvent.change(date, { target: { value: "2025-09-03" } });
     await screen.findByRole("option", { name: "2025-09-03 00:00" });
@@ -447,16 +485,17 @@ describe("ODD03b dated starting draws", () => {
     fireEvent.change(date, { target: { value: "" } });
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue(late));
     fireEvent.change(date, { target: { value: "2025-09-03" } });
-    await waitFor(() => expect(screen.getByRole("button", { name: "Continuar" })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Crear simulación" })).toBeEnabled());
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue(late);
     expect(screen.getByRole("option", { name: late })).toBeEnabled();
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100, "2025-09-03");
     await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Prueba");
     await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "100");
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "200");
+    await user.click(screen.getByText("Ajustes avanzados"));
+    await user.click(screen.getByRole("button", { name: "Cambiar" }));
     await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "0");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toBeInTheDocument();
   });
 
   it("paginates only the selected day and retries a failed dated request", async () => {
@@ -465,9 +504,11 @@ describe("ODD03b dated starting draws", () => {
       return { total: date ? 101 : 2, offset, limit, items: [date ? `${date} ${offset ? "05:15" : "05:10"}` : "2025-09-02 05:10"] };
     });
     const { user } = setup();
-    fireEvent.change(await screen.findByLabelText("Filtrar sorteos por fecha"), { target: { value: "2025-09-03" } });
+    await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await openAdvanced(user);
+    fireEvent.change(screen.getByLabelText("Filtrar sorteos por fecha"), { target: { value: "2025-09-03" } });
     expect(await screen.findByRole("alert")).toHaveTextContent(/Reintentá/);
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeDisabled();
     vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => ({
       total: date ? 101 : 2, offset, limit, items: [date ? `${date} ${offset ? "05:15" : "05:10"}` : "2025-09-02 05:10"],
     }));
@@ -479,13 +520,13 @@ describe("ODD03b dated starting draws", () => {
   });
 });
 
-describe("LW09 wizard", () => {
+describe("LW09 single-form creation", () => {
   it("shows empty and disconnected catalog states without inventing a default draw, then retries", async () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 0, offset: 0, limit: 100, items: [] });
     const { user, unmount: unmountFirst } = setup();
     expect(await screen.findByText(/No hay sorteos iniciales/)).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeDisabled();
     // A fresh visit after a disconnection retains no fake draw.
     unmountFirst();
     vi.mocked(apiClient.getCatalog).mockRejectedValueOnce(new NetworkError());
@@ -507,25 +548,30 @@ describe("LW09 wizard", () => {
     expect(apiClient.getStartingDraws).toHaveBeenNthCalledWith(2, 1, 100);
   });
 
-  it("keeps the original field order for keyboard navigation across stop limits and seed", async () => {
+  it("keeps the seed control inside the advanced disclosure", async () => {
     setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-    const fields = screen.getByRole("region", { name: "Condiciones comunes" }).querySelectorAll("input, select");
-    expect(Array.from(fields, (field) => field.id)).toEqual([
-      "name", "draw_date", "start_draw", "capital", "goal", "settlement", "max_bets", "max_minutes", "seed",
+    expect(screen.queryByRole("textbox", { name: "Código de repetición" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeInTheDocument();
+    expect(Array.from(document.querySelector("form")!.querySelectorAll("input, select"), (field) => field.id)).toEqual([
+      "name", "start_draw", "settlement", "strategies.0.name", "strategies.0.selector", "strategies.0.system",
+      "strategies.0.coverage", "strategies.0.staking", "libraryName", "capital", "goal", "max_bets", "max_minutes", "draw_date",
     ]);
   });
 
   it("announces the seed help together with validation errors, without losing either reference", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
+    await revealSeed(user);
     const seed = screen.getByRole("textbox", { name: "Código de repetición" });
     const help = screen.getByText(/El mismo código permite repetir la selección aleatoria/);
     expect(seed).toHaveAttribute("aria-describedby", "seed-help");
     expect(seed).toHaveAccessibleDescription(help.textContent!);
     expect(help).toHaveTextContent("0 a 9.007.199.254.740.991");
     expect(help).toHaveTextContent("por sorteo entre todas las estrategias");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.clear(seed);
+    await user.type(seed, "invalido");
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(seed).toHaveAttribute("aria-invalid", "true");
     expect(seed).toHaveAttribute("aria-describedby", "seed-help seed-error");
     expect(seed).toHaveAccessibleDescription(`${help.textContent} Ingresá un entero entre 0 y 9.007.199.254.740.991.`);
@@ -535,23 +581,17 @@ describe("LW09 wizard", () => {
     expect(draw).toHaveAccessibleDescription(/Elegí un sorteo con ranking disponible/);
   });
 
-  it("loads ranked starting draws via paginated endpoint; three steps preserve conditions and summary", async () => {
+  it("loads ranked starting draws and keeps conditions and settlement controls available", async () => {
     const { user } = setup();
     await conditions(user);
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100);
-    expect(screen.getByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
-    const summary = within(screen.getByRole("complementary", { name: "Resumen del experimento" }));
-    expect(summary.getAllByText(/2,000/).length).toBeGreaterThan(0);
-    expect(summary.getAllByText("Estrategias").length).toBeGreaterThan(0);
-    await user.click(screen.getByRole("button", { name: "Atrás" }));
     expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveValue("2000");
     expect(screen.getByRole("combobox", { name: "Cómo contar los premios" })).toHaveValue("all");
     expect(screen.getByRole("option", { name: "Sumar los premios" })).toHaveValue("all");
     expect(screen.getByRole("option", { name: "Contar solo el mayor premio por número" })).toHaveValue("best");
     expect(screen.getByText(/El mismo código permite repetir la selección aleatoria/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continuar" })).toHaveClass("btn-primary");
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveClass("btn-primary");
     expect(screen.getByRole("button", { name: "Salir" })).toHaveClass("btn-secondary");
-    expect(screen.getByText("1 Condiciones")).toHaveAttribute("aria-current", "step");
   });
 
   it("rejects invalid money, goal, start, limits and seed without rounding", async () => {
@@ -560,9 +600,10 @@ describe("LW09 wizard", () => {
     await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "2.5");
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "1");
     await user.type(screen.getByRole("textbox", { name: "Máximo de apuestas" }), "10000001");
+    await revealSeed(user);
+    await user.clear(screen.getByRole("textbox", { name: "Código de repetición" }));
     await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "9007199254740992");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByRole("heading", { name: "Condiciones" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/errores/i);
     expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("textbox", { name: "Código de repetición" })).toHaveValue("9007199254740992");
@@ -583,11 +624,8 @@ describe("LW09 wizard", () => {
     await user.clear(screen.getByRole("textbox", { name: "Peso 2 (%)" }));
     await user.type(screen.getByRole("textbox", { name: "Peso 2 (%)" }), "40");
     await user.selectOptions(screen.getByRole("combobox", { name: "Cobertura de la estrategia 1" }), "10");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByRole("heading", { name: "Revisar" })).toBeInTheDocument();
-    expect(screen.getByText(/Combinación de sistemas: Transición 60% \+ Fríos 40%/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
-    expect(screen.getByRole("button", { name: "Agregando…" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    expect(screen.getByRole("button", { name: "Creando…" })).toBeDisabled();
     expect(apiClient.createExperiment).toHaveBeenCalledTimes(1);
     expect(apiClient.createExperiment).toHaveBeenCalledWith({ request: {
       name: "Prueba Q80", conditions: { start_draw: "2025-09-02 05:10", capital: 2000, goal: 2800, settlement: "all", max_bets: 12, max_minutes: null, seed: 42 },
@@ -597,7 +635,7 @@ describe("LW09 wizard", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos/exp-1"));
   });
 
-  it("parity forces coverage 50; invalid mix sum and duplicate strategy names block review", async () => {
+  it("parity forces coverage 50 and duplicate strategy names block creation", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Par");
@@ -607,44 +645,38 @@ describe("LW09 wizard", () => {
     await user.click(screen.getByRole("button", { name: "Agregar estrategia" }));
     await user.click(screen.getByRole("button", { name: /Estrategia 2/ }));
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" }), " pAR ");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(screen.getByText(/El nombre debe ser único/i)).toBeInTheDocument();
   });
 
-  it("maps a field-located duplicate-name 422 to the offending strategy's name field and step", async () => {
+  it("maps a field-located duplicate-name 422 to the offending strategy name field", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "strategies", 0, "name"], msg: "Value error", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
-    expect(await screen.findByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveAttribute("aria-invalid", "true");
   });
 
-  it("maps 422 field errors to correct step; 507 and network failures preserve entered values", async () => {
+  it("maps 422 field errors; 507 and network failures preserve entered values", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [{ loc: ["body", "request", "conditions", "goal"], msg: "Value error", type: "value_error" }]));
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     await screen.findByRole("textbox", { name: "Meta de saldo final (RD$)" });
     expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).toHaveAttribute("aria-invalid", "true");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(507, "quota exceeded"));
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/No hay espacio para crear el experimento/);
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new NetworkError());
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/Sin respuesta del servidor\. Puede que el experimento se haya creado/);
-    expect(screen.getByText("Una")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Una");
   });
 
   it("blocks browser back while dirty, then proceeds when confirmed", async () => {
@@ -691,12 +723,11 @@ describe("LW09 wizard", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema 2" }), "cold");
     await user.type(screen.getByRole("textbox", { name: "Peso 1 (%)" }), "60");
     await user.type(screen.getByRole("textbox", { name: "Peso 2 (%)" }), "40");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "invalid", [
       { loc: ["body", "request", "strategies", 0, "components", 1], msg: "component rejected", type: "value_error" },
       { loc: ["body", "request", "strategies", 0, "staking"], msg: "staking rejected", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     const system = await screen.findByRole("combobox", { name: "Sistema 2" });
     expect(system).toHaveFocus();
     expect(screen.getByText(/component rejected/)).toBeInTheDocument();
@@ -715,12 +746,10 @@ describe("LW09 wizard", () => {
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" }), "Otra");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "cold");
     await user.click(screen.getByRole("button", { name: /Estrategia 1/ }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "strategies", 1], msg: "blend weights must add up to 100", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
-    expect(await screen.findByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(screen.getByRole("button", { name: /Estrategia 2/, expanded: true })).toBeInTheDocument();
     expect(screen.getByText(/Estrategia rechazada/i)).toBeInTheDocument();
     expect(screen.getByText(/blend weights must add up to 100/)).toBeInTheDocument();
@@ -732,12 +761,10 @@ describe("LW09 wizard", () => {
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "conditions"], msg: "goal is the final balance and must exceed capital", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
-    expect(await screen.findByRole("heading", { name: "Condiciones" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText(/goal is the final balance and must exceed capital/)).toBeInTheDocument();
   });
@@ -747,13 +774,11 @@ describe("LW09 wizard", () => {
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "conditions", "goal"], msg: "Value error", type: "value_error" },
       { loc: ["body", "request", "conditions", "max_bets"], msg: "Value error", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
-    await screen.findByRole("heading", { name: "Condiciones" });
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("textbox", { name: "Máximo de apuestas" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(/Revisá los campos señalados/);
@@ -764,7 +789,7 @@ describe("LW09 wizard", () => {
     // survive the edit.
     expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("textbox", { name: "Máximo de apuestas" })).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("alert")).toHaveTextContent("Revisá los errores señalados junto a los campos antes de continuar.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Revisá los errores señalados junto a los campos antes de crear la simulación.");
   });
 
   it("moves focus to the first offending field after a server error, not just the alert", async () => {
@@ -772,12 +797,10 @@ describe("LW09 wizard", () => {
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "strategies", 0, "name"], msg: "Value error", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Agregar a la cola" }));
-    await screen.findByRole("heading", { name: "Estrategias" });
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveFocus();
   });
 

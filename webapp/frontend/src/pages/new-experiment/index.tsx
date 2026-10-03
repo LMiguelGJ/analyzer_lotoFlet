@@ -13,14 +13,11 @@ import { FIELD_HELP_SEED, FIELD_LABEL_SEED, FIELD_LABEL_SETTLEMENT, SELECTOR_LAB
 const control = "control";
 const secondary = "btn btn-secondary";
 const primary = "btn btn-primary";
-const labels = ["Condiciones", "Estrategias", "Revisar"];
-const money = (value: string) => {
-  if (!value) return "—";
-  // Never round an invalid draft in the summary; only bounded safe integers are formatted.
-  return /^[0-9]+$/.test(value) && BigInt(value) <= BigInt(Number.MAX_SAFE_INTEGER)
-    ? `RD$ ${Number(value).toLocaleString("es-DO")}` : `RD$ ${value}`;
-};
-
+function generatedSeed(): string {
+  const values = new Uint32Array(2);
+  crypto.getRandomValues(values);
+  return String((values[0] & 0x1fffff) * 0x100000000 + values[1]);
+}
 /** Field-level errors map to their own field; a bare strategy loc (e.g. weights not
  * summing to 100) maps to that strategy's block; a bare conditions loc maps to the
  * conditions section; anything else falls back to the general notice. The server `msg`
@@ -92,11 +89,12 @@ export function NewExperimentPage() {
   const [libraryNameError, setLibraryNameError] = useState<Errors["libraryName"]>();
   const [baseState, setBaseState] = useState<"loading" | "ready" | "missing" | "network" | "invalid" | "error">(baseId ? "loading" : "ready");
   const [baseRetry, setBaseRetry] = useState(0);
-  const [conditions, setConditions] = useState<ConditionsDraft>(initialConditions);
+  const [conditions, setConditions] = useState<ConditionsDraft>(() => ({ ...initialConditions, seed: generatedSeed() }));
   const [strategies, setStrategies] = useState<StrategyDraft[]>([newStrategy(1)]);
   const nextId = useRef(2);
   const [active, setActive] = useState(0);
-  const [step, setStep] = useState(0);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [seedEditing, setSeedEditing] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [notice, setNotice] = useState("");
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -118,7 +116,6 @@ export function NewExperimentPage() {
   const [dirty, setDirty] = useState(false);
   const submitted = useRef(false);
   const errorRef = useRef<HTMLDivElement>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
   const [pendingFocus, setPendingFocus] = useState<string | null>(null);
   const blocker = useBlocker(({ currentLocation, nextLocation }) =>
     dirty && !submitted.current && (currentLocation.pathname !== nextLocation.pathname ||
@@ -132,10 +129,10 @@ export function NewExperimentPage() {
       drawGeneration.current += 1;
       setDrawDate(""); setDrawRetry((value) => value + 1);
       setKnownDraw(""); setVerifiedDraw(""); setDraws([]); setTotal(0); setAvailability(null);
-      setConditions(initialConditions); setStrategies([newStrategy(1)]); nextId.current = 2;
+      setConditions({ ...initialConditions, seed: generatedSeed() }); setStrategies([newStrategy(1)]); nextId.current = 2;
       setDirty(false); setBaseState(baseId ? "loading" : "ready");
       setConfigurationState(configurationId ? "loading" : "ready");
-      setStep(0); setActive(0); setErrors({}); setNotice(""); setLibraryOpen(false);
+      setActive(0); setErrors({}); setNotice(""); setLibraryOpen(false); setAdvancedOpen(false); setSeedEditing(false);
     }
     previousSource.current = sourceKey;
   }, [sourceKey, baseId, configurationId]);
@@ -149,7 +146,6 @@ export function NewExperimentPage() {
     return () => window.removeEventListener("beforeunload", warnBeforeUnload);
   }, [dirty]);
 
-  useEffect(() => { headingRef.current?.focus(); }, [step]);
   useEffect(() => { if (Object.keys(errors).length || notice) errorRef.current?.focus(); }, [errors, notice]);
   // Runs after the errorRef effect above, in the same commit: a server-error field
   // target wins over the alert box, while role="alert" keeps announcing regardless of
@@ -224,8 +220,8 @@ export function NewExperimentPage() {
       if (Object.keys(validateStrategies([draft], catalog)).length) { setConfigurationState("invalid"); return; }
       // A template has no conditions. Replace only the initial empty strategy slot;
       // never assign saved library name to experiment name or synthesize conditions.
-      setConditions(initialConditions); setStrategies([draft]); nextId.current = 2;
-      setDirty(false); setStep(0); setActive(0); setErrors({}); setNotice(""); setConfigurationState("ready");
+      setConditions({ ...initialConditions, seed: generatedSeed() }); setStrategies([draft]); nextId.current = 2;
+      setDirty(false); setActive(0); setErrors({}); setNotice(""); setConfigurationState("ready");
     }).catch((error: unknown) => {
       if (live) setConfigurationState(error instanceof ApiError && error.status === 404 ? "missing" : error instanceof NetworkError ? "network" : "error");
     });
@@ -276,7 +272,7 @@ export function NewExperimentPage() {
         drawGeneration.current += 1;
         setDrawDate(savedDate); setKnownDraw(savedDraw);
         setConditions(draft.conditions); setStrategies(draft.strategies); nextId.current = draft.strategies.length + 1;
-        setDirty(false); setBaseState("ready"); setStep(0); setActive(0);
+        setDirty(false); setBaseState("ready"); setActive(0);
         setErrors({}); setNotice("");
       } catch (error) {
         if (alive) setBaseState(error instanceof ApiError && error.status === 404 ? "missing" : error instanceof NetworkError ? "network" : "error");
@@ -379,18 +375,25 @@ export function NewExperimentPage() {
       setErrors(updated); setNotice("");
     }
   }
-  function check(target: number): boolean {
+  function validateAll(): boolean {
     if (!catalog) return false;
     const available = drawDate && availability?.ranked_total === 0 ? [] : [...draws, ...(verifiedDraw ? [verifiedDraw] : [])];
-    const found = target === 0 ? validateConditions(conditions, drawLoading || drawError ? [] : available) : validateStrategies(strategies, catalog);
+    const found = {
+      ...validateConditions(conditions, drawLoading || drawError ? [] : available),
+      ...validateStrategies(strategies, catalog),
+    };
     setErrors(found); setNotice("");
-    if (Object.keys(found).length) { setStep(target); if (target === 1) {
-      const match = Object.keys(found).find((key) => key.startsWith("strategies."));
-      if (match) setActive(Number(match.split(".")[1]));
-    } return false; }
+    const first = Object.keys(found)[0];
+    if (first) {
+      const strategyMatch = first.match(/^strategies\.(\d+)/);
+      if (strategyMatch) setActive(Number(strategyMatch[1]));
+      if (Object.keys(found).some((key) => key === "seed" || key === "max_minutes")) setAdvancedOpen(true);
+      if (Object.hasOwn(found, "seed")) setSeedEditing(true);
+      if (first !== "conditions" && first !== "strategies") setPendingFocus(first);
+      return false;
+    }
     return true;
   }
-  function next() { if (check(step)) setStep(step + 1); }
   function field(key: keyof ConditionsDraft, label: string, element: React.ReactNode, help?: string) {
     const entry = errors[key];
     return <div className="field" key={key}>
@@ -410,7 +413,7 @@ export function NewExperimentPage() {
   }
   async function submit() {
     if (postingRef.current || !catalog || baseId && configurationId || baseId && baseState !== "ready" || configurationId && configurationState !== "ready" || catalogError) return;
-    if (!check(0) || !check(1)) return;
+    if (!validateAll()) return;
     postingRef.current = true; setPosting(true);
     try {
       const created = await apiClient.createExperiment({ request: buildRequest(conditions, strategies, catalog) });
@@ -421,9 +424,13 @@ export function NewExperimentPage() {
         const mapped = serverErrors(error.fieldErrors); setErrors(mapped);
         const strategyKey = Object.keys(mapped).find((key) => key.startsWith("strategies."));
         if (strategyKey) setActive(Number(strategyKey.split(".")[1]));
-        setStep(strategyKey ? 1 : 0);
+        const target = firstFocusTarget(mapped);
+        if (target === "seed" || target === "max_minutes") {
+          setAdvancedOpen(true);
+          if (target === "seed") setSeedEditing(true);
+        }
         setNotice("Revisá los campos señalados.");
-        setPendingFocus(firstFocusTarget(mapped));
+        setPendingFocus(target);
       } else if (error instanceof ApiError && error.status === 507) setNotice("No hay espacio para crear el experimento. Liberá espacio en Ajustes; tus datos siguen aquí.");
       else if (error instanceof ApiError && error.status === 409) setNotice("La cola no está disponible. Reintentá más tarde; tus datos siguen aquí.");
       else if (error instanceof NetworkError) setNotice("Sin respuesta del servidor. Puede que el experimento se haya creado: revisá Experimentos antes de reintentar.");
@@ -450,69 +457,44 @@ export function NewExperimentPage() {
 
   return <>
     <Link to="/experimentos" className="mb-4 inline-block link">Volver a experimentos</Link>
-    <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil y datos importados? <Link to="/experimentos/nuevo/perfil" className="link">Crear sesión con perfil</Link>.</p></div>
-    <nav aria-label="Pasos del asistente" className="mb-6 flex flex-wrap gap-3 border-b border-border pb-4 text-sm">
-      {labels.map((label, i) => <span key={label} aria-current={step === i ? "step" : undefined} className={step === i ? "font-semibold text-accent" : "text-text-secondary"}>{i + 1} {label}</span>)}
-    </nav>
-    <div className="wide:grid wide:grid-cols-[minmax(0,1fr)_300px] wide:gap-8">
-      <aside aria-label="Resumen del experimento" className="mb-6 min-w-0 wide:order-2 wide:mb-0">
-        <div className="hidden border-t border-border pt-3 wide:block wide:sticky wide:top-6">
-          <h2 className="section-header">Resumen</h2><Summary conditions={conditions} count={strategies.length} />
-        </div>
-        <details className="border-y border-border py-3 wide:hidden"><summary className="disclosure-summary text-sm">Resumen · {strategies.length} estrategias</summary><div className="pt-3"><Summary conditions={conditions} count={strategies.length} /></div></details>
-      </aside>
-      <div className="min-w-0 wide:order-1">
-        <h2 ref={headingRef} tabIndex={-1} className="mb-5 text-2xl focus:outline-none">{labels[step]}</h2>
+    <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil y datos importados? <Link to="/experimentos/nuevo/perfil" className="link">Crear simulación con perfil</Link>.</p></div>
+    <form className="max-w-4xl" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         {(Object.keys(errors).length > 0 || notice) && <div ref={errorRef} tabIndex={-1} role="alert" className="mb-5 border border-border-control p-3 text-sm focus:outline-accent">
-          {notice || "Revisá los errores señalados junto a los campos antes de continuar."}
+          {notice || "Revisá los errores señalados junto a los campos antes de crear la simulación."}
           {errorDetail(errors.form) && <p className="mt-1 text-xs text-text-secondary">{errorDetail(errors.form)}</p>}
         </div>}
-        {step === 0 && <section aria-label="Condiciones comunes">
-          {errors.conditions && <p className="mb-4 text-sm text-red-300">{errorMessage(errors.conditions)}{errorDetail(errors.conditions) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors.conditions)}</span>}</p>}
-          {loading && <p role="status">Cargando catálogo…</p>}
-          {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
-          <fieldset className="mb-6 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Inicio de la simulación</legend>
+        {errors.conditions && <p className="mb-4 text-sm text-red-300">{errorMessage(errors.conditions)}{errorDetail(errors.conditions) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors.conditions)}</span>}</p>}
+        {loading && <p role="status">Cargando catálogo…</p>}
+        {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
+
+        <div className="mb-8 sm:grid sm:grid-cols-2 sm:gap-x-4">
           {input("name", "Nombre del experimento")}
-          <div className="field">
-            <label htmlFor="draw_date" className="field-label">Filtrar sorteos por fecha</label>
-            <input id="draw_date" type="date" className={`${control} max-w-md`} value={drawDate} aria-describedby="draw_date-help" onChange={(event) => changeDrawDate(event.target.value)} />
-            <p id="draw_date-help" className="field-help">Vacío: todas las fechas.</p>
-          </div>
-          {drawLoading && <p role="status" className="mb-4">Cargando sorteos disponibles…</p>}
-          {drawError && <p role="alert" className="mb-4 text-red-300">{drawError} <button type="button" className="btn btn-tertiary" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
-          {staleDraw && <p role="status" className="mb-4 text-text-secondary">Ese sorteo ya no está disponible. Elegí otro.</p>}
-          {catalog && !drawLoading && !drawError && offeredDraws.length === 0 && !knownDraw && <p role="status" className="mb-4">{drawDate && availability?.history_total === 0
-            ? "No hay sorteos en esta fecha. Probá otra."
-            : drawDate && availability?.ranked_total === 0
-              ? "Ningún sorteo de esta fecha tiene ranking. Probá otra."
-              : "No hay sorteos iniciales disponibles."}</p>}
           {field("start_draw", "Sorteo inicial", <select {...attrs("start_draw", true)} className={control} value={conditions.start_draw} disabled={!catalog || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable)} onChange={(event) => editCondition("start_draw", event.target.value)}>
             <option value="">Elegí un sorteo disponible</option>{offeredDraws.map((draw) => <option key={draw} value={draw}>{draw}</option>)}
             {knownDraw && !offeredDraws.includes(knownDraw) && (!drawDate || knownDraw.startsWith(`${drawDate} `)) && <option value={knownDraw} disabled={!selectedAvailable}>{knownDraw}{selectedAvailable ? "" : " (sin ranking disponible)"}</option>}
           </select>)}
+        </div>
+        <fieldset className="mb-8 min-w-0 border-0 p-0">
+          <legend className="section-header mb-3 p-0">Reglas del sorteo</legend>
+          {catalog && <dl className="data-list mb-3">
+            <dt>Universo</dt><dd>{String(catalog.game.numbers).padStart(2, "0")} números (00–{String(catalog.game.numbers - 1).padStart(2, "0")})</dd>
+            <dt>Posiciones por sorteo</dt><dd>{catalog.game.positions}</dd>
+            <dt>Repeticiones</dt><dd>{catalog.game.allows_repeats ? "Permitidas" : "No permitidas"}</dd>
+            <dt>Premios por posición</dt><dd>{catalog.game.prizes.map((prize, index) => `${index + 1}: ${prize}`).join(" · ")}</dd>
+            <dt>Apuesta mínima</dt><dd>No indicada en el catálogo</dd>
+          </dl>}
+          <Link to="/datos#perfiles" className="link text-sm">Editar reglas</Link>
+        </fieldset>
+
+        <fieldset className="mb-8 min-w-0 border-0 p-0">
+          <legend className="section-header mb-3 p-0">Selección</legend>
+          {drawLoading && <p role="status" className="mb-4">Cargando sorteos disponibles…</p>}
+          {drawError && <p role="alert" className="mb-4 text-red-300">{drawError} <button type="button" className="btn btn-tertiary" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
+          {staleDraw && <p role="status" className="mb-4 text-text-secondary">Ese sorteo ya no está disponible. Elegí otro.</p>}
+          {catalog && !drawLoading && !drawError && offeredDraws.length === 0 && !knownDraw && <p role="status" className="mb-4">{drawDate && availability?.history_total === 0 ? "No hay sorteos en esta fecha. Probá otra." : drawDate && availability?.ranked_total === 0 ? "Ningún sorteo de esta fecha tiene ranking. Probá otra." : "No hay sorteos iniciales disponibles."}</p>}
           {draws.length < total && <button type="button" className={`${secondary} mb-5`} disabled={drawLoading} onClick={() => { void loadDraws(); }}>{drawLoading ? "Cargando sorteos…" : "Cargar más sorteos"}</button>}
-          </fieldset>
-          <fieldset className="mb-6 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Objetivo</legend>
-          {/* Capital and goal are the two amounts that define success; grouped together at sm+. */}
-          <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
-            {input("capital", "Capital inicial (RD$)", "Pesos enteros; mínimo RD$1.")}
-            {input("goal", "Meta de saldo final (RD$)", "Saldo final buscado, no ganancia: capital RD$2.000 y meta RD$2.800 buscan +RD$800.")}
-          </div>
-          </fieldset>
-          <fieldset className="mb-6 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Reglas y límites</legend>
           {field("settlement", FIELD_LABEL_SETTLEMENT, <select {...attrs("settlement")} className={control} value={conditions.settlement} onChange={(event) => editCondition("settlement", event.target.value)}>{(Object.keys(SETTLEMENT_LABELS) as (keyof typeof SETTLEMENT_LABELS)[]).map((key) => <option value={key} key={key}>{SETTLEMENT_LABELS[key]}</option>)}</select>)}
-          {/* Stop limits retain their original keyboard order before the seed. */}
-          <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
-            {input("max_bets", "Máximo de apuestas", "Opcional (1 a 10.000.000). Se detiene al primer límite alcanzado.")}
-            {input("max_minutes", "Máximo de minutos históricos", "Opcional (1 a 100.000.000). No incluye el sorteo en la hora límite.")}
-          </div>
-          {input("seed", FIELD_LABEL_SEED, FIELD_HELP_SEED)}
-          </fieldset>
-          {catalog && <p className="border-t border-border pt-4 text-sm text-text-secondary">Juego: {catalog.game.name} · números 00–99 · premios {catalog.game.prizes.join("/")}.</p>}
-        </section>}
-        {step === 1 && catalog && <section aria-label="Estrategias">
-          <p className="mb-5 text-text-secondary">Hasta cinco, con nombres distintos.</p>
-          {strategies.map((strategy, i) => <section key={strategy.id} className="mb-4 border-b border-border pb-4">
+          {catalog && <div className="mt-5">{strategies.map((strategy, i) => <section key={strategy.id} className="mb-4 border-b border-border pb-4">
             <div className="flex items-center gap-3"><button type="button" aria-expanded={active === i} className="min-h-control flex-1 text-left text-sm text-accent" onClick={() => setActive(i)}>Estrategia {i + 1}{strategy.name ? ` · ${trimName(strategy.name)}` : ""}</button>
               {strategies.length > 1 && <button type="button" className="btn btn-tertiary" onClick={() => { setStrategies((previous) => previous.filter((item) => item.id !== strategy.id)); setActive(0); setDirty(true); }}>Quitar {i + 1}</button>}</div>
             {active === i && <div className="pt-4">
@@ -530,32 +512,32 @@ export function NewExperimentPage() {
               <nav aria-label="Páginas de biblioteca" className="mt-3 flex items-center gap-3"><button type="button" className={secondary} disabled={libraryOffset === 0} onClick={() => setLibraryOffset(Math.max(0, libraryOffset - 20))}>Anterior</button><span>{Math.floor(libraryOffset / 20) + 1} · {libraryPage.total}</span><button type="button" className={secondary} disabled={libraryOffset + 20 >= libraryPage.total} onClick={() => setLibraryOffset(libraryOffset + 20)}>Siguiente</button></nav></>}
           </section>}
           <div className="mt-6 border-t border-border pt-4"><label htmlFor="libraryName" className="field-label">Nombre para guardar en biblioteca</label><input id="libraryName" className={`${control} max-w-md`} value={libraryName} aria-invalid={!!libraryNameError} aria-describedby={libraryNameError ? "libraryName-error" : undefined} onChange={(event) => { setLibraryName(event.target.value); setLibraryNameError(undefined); setDirty(true); }} />{libraryNameError && <p id="libraryName-error" className="mt-1 text-sm text-red-300">{errorMessage(libraryNameError)} <span className="text-xs text-text-secondary">{errorDetail(libraryNameError)}</span></p>}<p className="field-help my-2">Guarda solo esta estrategia.</p><button type="button" className={secondary} disabled={savingStrategy} onClick={() => { void saveToLibrary(); }}>{savingStrategy ? "Guardando…" : "Guardar estrategia en biblioteca"}</button></div>
-        </section>}
-        {step === 2 && <section aria-label="Revisión">
-          <p className="mb-5 text-text-secondary">Revisá antes de agregar a la cola.</p>
-          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Condiciones comunes</h3><button type="button" className="btn btn-tertiary" onClick={() => setStep(0)}>Editar condiciones</button></div>
-          <dl className="data-list py-4"><dt>Nombre</dt><dd>{trimName(conditions.name)}</dd><dt>Sorteo inicial</dt><dd>{conditions.start_draw}</dd><dt>Capital</dt><dd className="data-list-numeric">{money(conditions.capital)}</dd><dt>Meta de saldo final</dt><dd className="data-list-numeric">{money(conditions.goal)}</dd><dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd><dt>Límite de apuestas</dt><dd>{conditions.max_bets || "Sin límite"}</dd><dt>Minutos históricos</dt><dd>{conditions.max_minutes || "Sin límite"}</dd><dt>Semilla</dt><dd>{conditions.seed}</dd></dl>
-          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Estrategias</h3><button type="button" className="btn btn-tertiary" onClick={() => setStep(1)}>Editar estrategias</button></div>
-          <ul className="divide-y divide-border">{strategies.map((strategy) => <li key={strategy.id} className="py-3"><strong>{trimName(strategy.name)}</strong> · {SELECTOR_LABELS[strategy.selector]}{strategy.selector === "system" ? `: ${catalog?.systems[strategy.system] ?? strategy.system}` : strategy.selector === "blend" ? `: ${strategy.components.map((c) => `${catalog?.systems[c.system] ?? c.system} ${c.weight}%`).join(" + ")}` : ""} · cobertura {strategy.selector === "parity" ? 50 : strategy.coverage} · {STAKING_LABELS[strategy.staking]}</li>)}</ul>
-        </section>}
+          </div>}
+        </fieldset>
+
+        <fieldset className="mb-8 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Límites</legend>
+          <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">{input("capital", "Capital inicial (RD$)", "Pesos enteros; mínimo RD$1.")}{input("goal", "Meta de saldo final (RD$)", "Saldo final buscado, no ganancia: capital RD$2.000 y meta RD$2.800 buscan +RD$800.")}</div>
+          {input("max_bets", "Máximo de apuestas", "Opcional (1 a 10.000.000). Se detiene al primer límite alcanzado.")}
+        </fieldset>
+
+        <details open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)} className="mb-8 border-y border-border py-3">
+          <summary className="disclosure-summary">Ajustes avanzados</summary>
+          <div className="pt-4">
+            <p className="mb-2 text-sm">{FIELD_LABEL_SEED}: <output id="seed-summary">{conditions.seed}</output></p>
+            {seedEditing ? input("seed", FIELD_LABEL_SEED, FIELD_HELP_SEED) : <><p id="seed-help" className="field-help mb-3">{FIELD_HELP_SEED}</p><button type="button" className={secondary} onClick={() => setSeedEditing(true)}>Cambiar</button></>}
+            <div className="mt-5 max-w-md">{input("max_minutes", "Máximo de minutos históricos", "Opcional (1 a 100.000.000). No incluye el sorteo en la hora límite.")}</div>
+            <div className="field max-w-md"><label htmlFor="draw_date" className="field-label">Filtrar sorteos por fecha</label><input id="draw_date" type="date" className={control} value={drawDate} aria-describedby="draw_date-help" onChange={(event) => changeDrawDate(event.target.value)} /><p id="draw_date-help" className="field-help">Vacío: todas las fechas.</p></div>
+          </div>
+        </details>
+        <section aria-label="Resumen de selección" className="mb-6 border-t border-border pt-4">
+          <h2 className="section-header mb-3">Resumen</h2>
+          <p>{strategies.map((strategy) => `${trimName(strategy.name) || "Sin nombre"}: ${SELECTOR_LABELS[strategy.selector]}${strategy.selector === "system" ? ` (${catalog?.systems[strategy.system] ?? strategy.system})` : strategy.selector === "blend" ? ` (${strategy.components.map((c) => `${catalog?.systems[c.system] ?? c.system} ${c.weight}%`).join(" + ")})` : ""}, cobertura ${strategy.selector === "parity" ? 50 : strategy.coverage}, ${STAKING_LABELS[strategy.staking]}`).join(" · ")}</p>
+        </section>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
           <button type="button" className={secondary} onClick={() => navigate("/experimentos")}>Salir</button>
-          <div className="flex gap-3">{step > 0 && <button type="button" className={secondary} onClick={() => { setErrors({}); setNotice(""); setStep(step - 1); }}>Atrás</button>}
-            {step < 2 ? <button type="button" className={primary} disabled={!catalog || step === 0 && (drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable))} onClick={next}>Continuar</button> : <button type="button" className={primary} disabled={posting} onClick={submit}>{posting ? "Agregando…" : "Agregar a la cola"}</button>}
-          </div>
+          <button type="submit" className={primary} disabled={!catalog || loading || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable) || posting}>{posting ? "Creando…" : "Crear simulación"}</button>
         </div>
-      </div>
-    </div>
+    </form>
     <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios. Lo que ya está en la cola sigue su curso." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onConfirm={() => blocker.proceed?.()} onCancel={() => blocker.reset?.()} />
   </>;
-}
-
-function Summary({ conditions, count }: { conditions: ConditionsDraft; count: number }) {
-  return <dl className="data-list">
-    <dt>Inicio</dt><dd className="break-words">{conditions.start_draw || "Sin elegir"}</dd>
-    <dt>Capital</dt><dd className="data-list-numeric break-words">{money(conditions.capital)}</dd>
-    <dt>Meta de saldo final</dt><dd className="data-list-numeric break-words">{money(conditions.goal)}</dd>
-    <dt>Límites</dt><dd className="break-words">{[conditions.max_bets && `${conditions.max_bets} apuestas`, conditions.max_minutes && `${conditions.max_minutes} min`].filter(Boolean).join(" · ") || "Sin límite"}</dd>
-    <dt>Estrategias</dt><dd className="data-list-numeric">{count}</dd>
-  </dl>;
 }
