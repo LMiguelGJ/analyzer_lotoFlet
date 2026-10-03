@@ -20,10 +20,11 @@ import { useQueue } from "./QueueProvider";
  */
 
 const NAV_ITEMS = [
-  { to: "/experimentos", label: "Experimentos" },
-  { to: "/configuraciones", label: "Estrategias guardadas" },
-  { to: "/datos", label: "Datos" },
-  { to: "/ajustes", label: "Ajustes" },
+  { to: "/experimentos", label: "Simulaciones" },
+  { to: "/datos#perfiles", label: "Perfiles de juego" },
+  { to: "/datos#historiales", label: "Historiales" },
+  { to: "/configuraciones", label: "Estrategias" },
+  { to: "/ajustes", label: "Administración" },
 ] as const;
 
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
@@ -96,7 +97,8 @@ export function Shell({ title, children }: ShellProps) {
             navOpen ? "block" : "hidden nav:block"
           }`}
         >
-          <p className="mb-4 px-4 font-heading text-2xl">Laboratorio</p>
+          <p className="mb-1 px-4 font-heading text-2xl">Laboratorio</p>
+          <p className="mb-4 px-4 text-sm text-text-secondary">Simulaciones honestas con datos históricos.</p>
           <ul>
             {NAV_ITEMS.map((item) => (
               <li key={item.to}>

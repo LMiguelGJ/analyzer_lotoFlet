@@ -222,11 +222,11 @@ it("guards dirty navigation and unload while a refresh keeps the draft across se
   await waitFor(() => expect(apiClient.getSettings).toHaveBeenCalledTimes(2));
   expect((await screen.findAllByText(/6,000,000,000 bytes/)).length).toBeGreaterThanOrEqual(2);
   expect(input).toHaveValue("7000000000");
-  await user.click(screen.getByRole("link", { name: "Experimentos" }));
+  await user.click(screen.getByRole("link", { name: "Simulaciones" }));
   expect(router.state.location.pathname).toBe("/ajustes");
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Seguir editando" }));
   expect(input).toHaveValue("7000000000");
-  await user.click(screen.getByRole("link", { name: "Experimentos" }));
+  await user.click(screen.getByRole("link", { name: "Simulaciones" }));
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   add.mockRestore();
@@ -242,7 +242,7 @@ it("preserves an unsaved draft when a refresh changes quota to environment read-
   await user.click(screen.getByRole("button", { name: "Actualizar estado" }));
   expect(await screen.findByText(/Borrador no guardado:/)).toHaveTextContent("7000000000");
   expect(screen.queryByRole("button", { name: "Guardar límite" })).not.toBeInTheDocument();
-  await user.click(screen.getByRole("link", { name: "Experimentos" }));
+  await user.click(screen.getByRole("link", { name: "Simulaciones" }));
   expect(router.state.location.pathname).toBe("/ajustes");
   expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 });
@@ -250,10 +250,10 @@ it("preserves an unsaved draft when a refresh changes quota to environment read-
 it("does not block clean navigation and explains 403 and a raced read-only 409 without losing the draft", async () => {
   const { user, router } = setup();
   const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
-  await user.click(screen.getByRole("link", { name: "Experimentos" }));
+  await user.click(screen.getByRole("link", { name: "Simulaciones" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-  await user.click(screen.getByRole("link", { name: "Ajustes" }));
+  await user.click(screen.getByRole("link", { name: "Administración" }));
   const edited = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(edited); await user.type(edited, "7000000000");
   vi.mocked(apiClient.updateSettings).mockRejectedValueOnce(new ApiError(403, "forbidden")).mockRejectedValueOnce(new ApiError(409, "environment quota is read-only"));

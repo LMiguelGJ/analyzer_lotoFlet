@@ -13,25 +13,25 @@ function renderAt(path: string) {
 describe("routing", () => {
   it("redirects the root path to /experimentos", () => {
     renderAt("/");
-    expect(screen.getByRole("heading", { name: "Experimentos" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Simulaciones" })).toBeInTheDocument();
   });
 
   it("renders stable URLs including the data-import destination", () => {
     renderAt("/configuraciones");
-    expect(screen.getByRole("heading", { name: "Estrategias guardadas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
 
     renderAt("/datos");
-    expect(screen.getByRole("heading", { name: "Datos" })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Datos" }).at(-1)).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("heading", { name: "Datos del laboratorio" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Simulaciones" }).at(-1)).toHaveAttribute("href", "/experimentos");
 
     renderAt("/ajustes");
-    expect(screen.getByRole("heading", { name: "Ajustes" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Administración del laboratorio" })).toBeInTheDocument();
 
     renderAt("/experimentos/nuevo");
-    expect(screen.getByRole("heading", { name: "Nuevo experimento" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Crear simulación" })).toBeInTheDocument();
 
     renderAt("/experimentos/nuevo/perfil");
-    expect(screen.getByRole("heading", { name: "Nueva sesión con perfil" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Simulación con perfil" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Sesión con perfil registrado" })).toBeInTheDocument();
   });
 
@@ -39,11 +39,12 @@ describe("routing", () => {
     renderAt("/algo-inexistente");
     expect(screen.getByRole("heading", { name: "Página no encontrada" })).toBeInTheDocument();
     expect(screen.getByText(/Elegí una sección de la navegación/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ir a Simulaciones" })).toHaveAttribute("href", "/experimentos");
   });
 
   it("marks the current nav destination as active", () => {
     renderAt("/configuraciones");
-    const link = screen.getByRole("link", { name: "Estrategias guardadas" });
+    const link = screen.getByRole("link", { name: "Estrategias" });
     expect(link).toHaveAttribute("aria-current", "page");
   });
 });
@@ -69,10 +70,11 @@ describe("keyboard focus order", () => {
     const order = [
       "Saltar al contenido principal",
       "Abrir navegación",
-      "Experimentos",
-      "Estrategias guardadas",
-      "Datos",
-      "Ajustes",
+      "Simulaciones",
+      "Perfiles de juego",
+      "Historiales",
+      "Estrategias",
+      "Administración",
     ];
 
     for (const name of order) {

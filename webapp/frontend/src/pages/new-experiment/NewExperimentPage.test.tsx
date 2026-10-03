@@ -29,7 +29,7 @@ async function conditions(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "2000");
   await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "2800");
   await user.type(screen.getByRole("textbox", { name: "Máximo de apuestas" }), "12");
-  await user.type(screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" }), "42");
+  await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "42");
   await user.click(screen.getByRole("button", { name: "Continuar" }));
 }
 
@@ -126,7 +126,7 @@ describe("LW13 library templates", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
     await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "100");
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "200");
-    await user.type(screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" }), "0");
+    await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "0");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Nueva");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
@@ -204,7 +204,7 @@ describe("LW10 use as base", () => {
     await act(async () => { resolveBase(saved); });
     expect(await screen.findByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Original");
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-03 05:10");
-    expect(screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" })).toHaveValue("9007199254740991");
+    expect(screen.getByRole("textbox", { name: "Código de repetición" })).toHaveValue("9007199254740991");
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-03");
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100, "2025-09-03");
     expect(vi.mocked(apiClient.getStartingDraws).mock.calls.filter(([, , date]) => !date)).toHaveLength(1);
@@ -454,7 +454,7 @@ describe("ODD03b dated starting draws", () => {
     await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Prueba");
     await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "100");
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "200");
-    await user.type(screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" }), "0");
+    await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "0");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
   });
@@ -519,7 +519,7 @@ describe("LW09 wizard", () => {
   it("announces the seed help together with validation errors, without losing either reference", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-    const seed = screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" });
+    const seed = screen.getByRole("textbox", { name: "Código de repetición" });
     const help = screen.getByText(/El mismo código permite repetir la selección aleatoria/);
     expect(seed).toHaveAttribute("aria-describedby", "seed-help");
     expect(seed).toHaveAccessibleDescription(help.textContent!);
@@ -560,12 +560,12 @@ describe("LW09 wizard", () => {
     await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "2.5");
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "1");
     await user.type(screen.getByRole("textbox", { name: "Máximo de apuestas" }), "10000001");
-    await user.type(screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" }), "9007199254740992");
+    await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "9007199254740992");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByRole("heading", { name: "Condiciones" })).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent(/errores/i);
     expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("textbox", { name: "Código para repetir el azar (semilla)" })).toHaveValue("9007199254740992");
+    expect(screen.getByRole("textbox", { name: "Código de repetición" })).toHaveValue("9007199254740992");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
@@ -668,7 +668,7 @@ describe("LW09 wizard", () => {
     const before = add.mock.calls.filter(([name]) => name === "beforeunload").length;
     await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Borrador");
     expect(add.mock.calls.filter(([name]) => name === "beforeunload").length).toBeGreaterThan(before);
-    await user.click(screen.getByRole("link", { name: "Ajustes" }));
+    await user.click(screen.getByRole("link", { name: "Administración" }));
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(remove.mock.calls.some(([name]) => name === "beforeunload")).toBe(true));
     add.mockRestore(); remove.mockRestore();
@@ -677,7 +677,7 @@ describe("LW09 wizard", () => {
   it("does not block a clean wizard navigation", async () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-    await user.click(screen.getByRole("link", { name: "Ajustes" }));
+    await user.click(screen.getByRole("link", { name: "Administración" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/ajustes"));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
@@ -785,12 +785,12 @@ describe("LW09 wizard", () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Borrador");
-    await user.click(screen.getByRole("link", { name: "Ajustes" }));
+    await user.click(screen.getByRole("link", { name: "Administración" }));
     const dialog = screen.getByRole("alertdialog");
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
     await user.click(within(dialog).getByRole("button", { name: "Seguir editando" }));
     expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Borrador");
-    await user.click(screen.getByRole("link", { name: "Ajustes" }));
+    await user.click(screen.getByRole("link", { name: "Administración" }));
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/ajustes"));
     expect(apiClient.createExperiment).not.toHaveBeenCalled();

@@ -57,9 +57,9 @@ describe("LW15 queue drawer", () => {
     await waitFor(() => expect(apiClient.getQueue).toHaveBeenCalledTimes(2));
     await user.click(within(dialog).getByRole("link", { name: "Inspeccionar pending-1" }));
     expect(await screen.findByText("Detalle de prueba")).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Ajustes" }));
+    await user.click(screen.getByRole("link", { name: "Administración" }));
     expect(await screen.findByText("Ajustes de prueba")).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Experimentos" }));
+    await user.click(screen.getByRole("link", { name: "Simulaciones" }));
     expect(await screen.findByText("Lista de prueba")).toBeInTheDocument();
     const reopened = await open(user);
     expect(within(reopened).getByRole("button", { name: "Cancelar pending-1" })).toBeDisabled();
@@ -80,7 +80,7 @@ describe("LW15 queue drawer", () => {
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Confirmar cancelación" }));
     await user.click(within(dialog).getByRole("link", { name: "Inspeccionar pending-1" }));
     expect(await screen.findByText("Detalle de prueba")).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Experimentos" }));
+    await user.click(screen.getByRole("link", { name: "Simulaciones" }));
     const reopened = await open(user);
     expect(within(reopened).getByRole("button", { name: "Cancelar pending-1" })).toBeDisabled();
     resolveCancel({ id: "pending-1", status: "cancellation_requested" });

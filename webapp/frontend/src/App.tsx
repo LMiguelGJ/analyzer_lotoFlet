@@ -18,7 +18,7 @@ export function App() {
       <Route
         path="/experimentos"
         element={
-          <Shell key="experiments" title="Experimentos">
+          <Shell key="experiments" title="Simulaciones">
             <ExperimentsPage />
           </Shell>
         }
@@ -26,7 +26,7 @@ export function App() {
       <Route
         path="/experimentos/nuevo"
         element={
-          <Shell key="new-experiment" title="Nuevo experimento">
+          <Shell key="new-experiment" title="Crear simulación">
             <NewExperimentPage />
           </Shell>
         }
@@ -34,7 +34,7 @@ export function App() {
       <Route
         path="/experimentos/nuevo/sesion"
         element={
-          <Shell key="new-profile-batch" title="Nuevo lote de sesiones">
+          <Shell key="new-profile-batch" title="Lote de simulaciones">
             <ProfileBatchPage />
           </Shell>
         }
@@ -42,7 +42,7 @@ export function App() {
       <Route
         path="/experimentos/nuevo/perfil"
         element={
-          <Shell key="new-profile-experiment" title="Nueva sesión con perfil">
+          <Shell key="new-profile-experiment" title="Simulación con perfil">
             <ProfileExperimentPage />
           </Shell>
         }
@@ -50,7 +50,7 @@ export function App() {
       <Route
         path="/experimentos/:id/comparacion"
         element={
-          <Shell key="comparison" title="Comparación">
+          <Shell key="comparison" title="Comparación de simulaciones">
             <ComparisonPage />
           </Shell>
         }
@@ -58,7 +58,7 @@ export function App() {
       <Route
         path="/experimentos/:id"
         element={
-          <Shell key="detail" title="Experimento">
+          <Shell key="detail" title="Resultado de la simulación">
             <DetailPage />
           </Shell>
         }
@@ -66,7 +66,7 @@ export function App() {
       <Route
         path="/configuraciones"
         element={
-          <Shell key="configurations" title="Estrategias guardadas">
+          <Shell key="configurations" title="Estrategias">
             <ConfigurationsPage />
           </Shell>
         }
@@ -74,7 +74,7 @@ export function App() {
       <Route
         path="/datos"
         element={
-          <Shell key="data" title="Datos">
+          <Shell key="data" title="Datos del laboratorio">
             <DataPage />
           </Shell>
         }
@@ -82,7 +82,7 @@ export function App() {
       <Route
         path="/ajustes"
         element={
-          <Shell key="settings" title="Ajustes">
+          <Shell key="settings" title="Administración del laboratorio">
             <SettingsPage />
           </Shell>
         }
@@ -91,7 +91,8 @@ export function App() {
         path="*"
         element={
           <Shell key="not-found" title="Página no encontrada">
-            <p className="max-w-prose text-text-secondary">Esta dirección no corresponde a una página del laboratorio. Elegí una sección de la navegación para continuar.</p>
+            <p className="mb-4 max-w-prose text-text-secondary">Esta dirección no corresponde a una página del laboratorio. Elegí una sección de la navegación para continuar.</p>
+            <a className="btn btn-primary" href="/experimentos">Ir a Simulaciones</a>
           </Shell>
         }
       />

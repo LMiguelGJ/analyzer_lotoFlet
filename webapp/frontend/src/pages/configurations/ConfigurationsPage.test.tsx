@@ -62,7 +62,7 @@ it("does not discard a dirty edit on cancel or navigation without confirmation",
   await user.type(screen.getByRole("textbox", { name: "Nombre guardado" }), " editada");
   await user.click(screen.getByRole("button", { name: "Cancelar edición" }));
   expect(screen.getByRole("textbox", { name: "Nombre guardado" })).toHaveValue("Mi plantilla editada");
-  await user.click(screen.getByRole("link", { name: "Ajustes" }));
+  await user.click(screen.getByRole("link", { name: "Administración" }));
   expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/configuraciones");
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Seguir editando" }));

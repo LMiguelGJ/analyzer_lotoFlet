@@ -20,15 +20,15 @@ export const SELECTOR_LABELS: Record<SelectorKind, string> = {
 /** Decision 4: staking style names are kept as-is ("Plana", "Escalera", "Audaz"). */
 export const STAKING_LABELS: Record<StakingStyle, string> = {
   flat: "Plana",
-  ladder: "Escalera",
-  bold: "Audaz",
+  ladder: "Aumentar por pasos",
+  bold: "Apuesta más alta",
 };
 
 /** Decision 4: restates only the mechanics already described in StrategyEditor.tsx; no new claims. */
 export const STAKING_DESCRIPTIONS: Record<StakingStyle, string> = {
   flat: "Importe base constante por número.",
-  ladder: "Ajusta la apuesta según la secuencia histórica.",
-  bold: "Apuesta más agresiva según la regla del motor.",
+  ladder: "Ajusta la apuesta según los resultados anteriores.",
+  bold: "Aumenta la apuesta según la estrategia elegida.",
 };
 
 /** Decision 5: `all`/`best` values and settlement rules are unchanged; only the presented text is new. */
@@ -44,7 +44,7 @@ export const FIELD_LABEL_STAKING = "Forma de ajustar la apuesta";
 export const FIELD_LABEL_SETTLEMENT = "Cómo contar los premios";
 
 /** Decision 6: still the same required field, no new generation or defaults. */
-export const FIELD_LABEL_SEED = "Código para repetir el azar (semilla)";
+export const FIELD_LABEL_SEED = "Código de repetición";
 export const FIELD_HELP_SEED = "El mismo código permite repetir la selección aleatoria con las mismas condiciones. Ingresá un entero de 0 a 9.007.199.254.740.991; se comparte por sorteo entre todas las estrategias.";
 
 /** Decision 7: shows exclusively `result.delta` received from the API, no frontend subtraction. */
