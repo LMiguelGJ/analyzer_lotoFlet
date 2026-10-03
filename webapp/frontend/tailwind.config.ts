@@ -3,12 +3,11 @@ import type { Config } from "tailwindcss";
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
-    // UX16: the sidebar collapses and the shell stacks below 800px (`nav`);
-    // `wide` remains 1100px for content such as the wizard summary. These
-    // replace Tailwind's default `sm/md/lg/xl/2xl` (unused elsewhere) so
-    // there is one breakpoint per concern and no 768px/800px dead zone.
+    // Keep Tailwind's 640px form-layout breakpoint alongside the shell's
+    // 800px navigation and 1100px wide-content breakpoints.
     // Tailwind 3.4+ derives `max-nav:`/`max-wide:` automatically.
     screens: {
+      sm: "640px",
       nav: "800px",
       wide: "1100px",
     },

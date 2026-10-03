@@ -13,7 +13,7 @@ import { StatusLabel } from "../../components/StatusLabel";
 import { profileMoney } from "../../lib/profile-display";
 
 const PAGE_SIZE = 20;
-const secondary = "btn btn-secondary disabled:opacity-50";
+const secondary = "btn btn-secondary";
 const statuses: ExperimentStatus[] = ["pending", "held", "running", "completed", "cancelled", "interrupted", "failed"];
 const statusNames: Record<ExperimentStatus, string> = { pending: "Pendiente", held: "Retenido", running: "En curso", completed: "Ejecución completada", cancelled: "Cancelado", interrupted: "Interrumpido", failed: "Error" };
 type Sort = "created_at" | "name" | "status";
@@ -177,7 +177,7 @@ export function ExperimentsPage() {
     return { key: sort, header, headerClassName: `table-${sort === "created_at" ? "date" : sort}`, cellClassName: `table-${sort === "created_at" ? "date" : sort}`,
       sort: query.sort === sort ? query.order === "asc" ? "ascending" : "descending" : "none",
       onSort: () => update({ sort, order: query.sort === sort && query.order === "asc" ? "desc" : "asc", page: 1 }),
-      render: (row) => sort === "name" ? <><Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="text-accent underline">{isProfileExperiment(row) ? row.display.name : row.request.name}</Link>{isProfileExperiment(row) && <span className="block text-sm text-text-secondary">Perfil {row.profile.profile_id} · {row.profile.positions} posiciones · Capital {profileMoney(row, row.display.capital)} · Meta {profileMoney(row, row.display.goal)} · {row.display.staking_label}</span>}</>
+      render: (row) => sort === "name" ? <><Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="link">{isProfileExperiment(row) ? row.display.name : row.request.name}</Link>{isProfileExperiment(row) && <span className="block text-sm text-text-secondary">Perfil {row.profile.profile_id} · {row.profile.positions} posiciones · Capital {profileMoney(row, row.display.capital)} · Meta {profileMoney(row, row.display.goal)} · {row.display.staking_label}</span>}</>
         : sort === "status" ? <StatusLabel kind="execution" value={row.status} /> : <span title={row.created_at ?? "Fecha no registrada"}>{createdAt(row.created_at)}</span> };
   }
   const columns: DataTableColumn<ExperimentSummary>[] = [
@@ -192,7 +192,7 @@ export function ExperimentsPage() {
     <div className="mb-6 flex justify-end">
       <Link to="/experimentos/nuevo" className="btn btn-primary">Nuevo experimento</Link>
     </div>
-    {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">En curso{queueError ? " (puede haber cambiado)" : ""}: <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id) ? experimentName(items.find((item) => item.id === queue.active_id)!) : queue.active_id}</Link></p>}
+    {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">En curso{queueError ? " (puede haber cambiado)" : ""}: <Link className="link" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id) ? experimentName(items.find((item) => item.id === queue.active_id)!) : queue.active_id}</Link></p>}
     {notice && <p ref={noticeRef} tabIndex={-1} role="status" className="mb-4 border border-border-control p-3 text-sm text-accent focus:outline-none">{notice}</p>}
     {rowError && <p role="alert" className="mb-4 border border-border-control p-3 text-sm text-text">{rowError}</p>}
     {(total > 0 || hasFilters) && <div className="mb-5 flex flex-wrap items-end gap-4" role="group" aria-label="Filtros de experimentos">

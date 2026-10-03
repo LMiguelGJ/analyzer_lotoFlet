@@ -6,7 +6,7 @@ import { ConfirmDialog } from "../../components/ConfirmDialog";
 
 const MAX_QUOTA = 9223372036854775807n;
 const GIB = 1073741824n;
-const action = "btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50";
+const action = "btn btn-secondary disabled:cursor-not-allowed";
 const metric = "metric-item";
 
 function grouped(value: bigint): string {
@@ -242,7 +242,7 @@ export function SettingsPage() {
   const sourceName = view?.quota.source === "environment" ? "Variable de entorno" : view?.quota.source === "persisted" ? "Preferencia guardada" : "Por defecto";
   return <div className="max-w-5xl space-y-8">
     {view && <div className="flex justify-end">
-      <button type="button" className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50" disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>
+      <button type="button" className="btn btn-secondary disabled:cursor-not-allowed" disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>
     </div>}
     {loading && <p role="status" className="border-y border-border py-5 text-text-secondary">Cargando ajustes…</p>}
     {loadError && <p role="alert" className="text-red-300">{loadError} <button type="button" className="btn btn-tertiary" onClick={() => setRefresh((previous) => previous + 1)}>Reintentar</button></p>}
@@ -270,7 +270,7 @@ export function SettingsPage() {
           {fieldError && <p id="quota-error" className="mt-2 text-sm text-red-300">{fieldError}</p>}
           {saveError && <p role="alert" className="mt-2 text-sm text-red-300">{saveError}</p>}
           {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado.</p>}
-          <button type="submit" className="btn btn-primary mt-4 disabled:opacity-50" disabled={saving}>{saving ? "Guardando…" : "Guardar límite"}</button>
+          <button type="submit" className="btn btn-primary mt-4" disabled={saving}>{saving ? "Guardando…" : "Guardar límite"}</button>
         </form> : <div className="max-w-prose text-text-secondary"><p>El entorno del servidor fija el límite; aquí es de solo lectura.</p>{dirty && <p className="mt-2 break-words">Borrador no guardado: <span className="font-mono">{draft}</span> bytes. No se envió.</p>}</div>}
       </section>
       <details className="border-y border-border py-3"><summary className="disclosure-summary">Diagnóstico técnico</summary>

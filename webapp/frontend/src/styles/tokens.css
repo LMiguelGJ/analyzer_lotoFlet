@@ -26,6 +26,10 @@
   --color-accent: #7eb3da;
   --color-border: #3b4652;
   --color-border-control: #6c7f92;
+  --chart-1: #876c42;
+  --chart-2: #6a7e9c;
+  --chart-3: #925e6d;
+  --chart-4: #60877a;
 
   --font-heading: Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, Consolas, "SFMono-Regular", Menlo, monospace;
@@ -33,7 +37,7 @@
 
   --space-page-margin: 28px;
   --space-section-gap: 24px;
-  --radius-control: 4px;
+  --radius-control: 0;
   --control-height: 42px;
 
   --motion-fast: 150ms;
@@ -44,9 +48,8 @@
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation: none !important;
+    transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
 }

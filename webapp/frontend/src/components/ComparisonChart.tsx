@@ -4,7 +4,7 @@ export interface ComparisonPoint { ordinal: number; label: string; balance: numb
 export interface ComparisonSeries { ordinal: number; name: string; visible: boolean; total: number; points: ComparisonPoint[]; reductionMethod?: string; initialCapital?: number; startLabel?: string }
 
 const patterns = ["none", "8 5", "2 5", "12 4 2 4", "4 3 1 3"];
-const colors = ["var(--color-accent, currentColor)", "#876c42", "#6a7e9c", "#925e6d", "#60877a"];
+const colors = ["var(--color-accent, currentColor)", "var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
 const markers = ["circle", "square", "diamond", "triangle", "cross"];
 function time(label: string) { return Date.parse(label.replace(" ", "T")); }
 

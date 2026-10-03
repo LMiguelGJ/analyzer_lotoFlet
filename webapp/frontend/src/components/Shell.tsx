@@ -96,7 +96,7 @@ export function Shell({ title, children }: ShellProps) {
             navOpen ? "block" : "hidden nav:block"
           }`}
         >
-          <p className="mb-4 px-4 font-heading text-2xl italic">Laboratorio</p>
+          <p className="mb-4 px-4 font-heading text-2xl">Laboratorio</p>
           <ul>
             {NAV_ITEMS.map((item) => (
               <li key={item.to}>
@@ -110,7 +110,7 @@ export function Shell({ title, children }: ShellProps) {
 
         <div className="min-w-0 flex-1">
           <header className="flex min-w-0 items-center justify-between gap-3 border-b border-border px-page-margin py-4">
-            <h1 className="min-w-0 break-words font-heading text-4xl italic">{title}</h1>
+            <h1 className="min-w-0 break-words font-heading text-4xl">{title}</h1>
             <button
               ref={queueRef}
               type="button"

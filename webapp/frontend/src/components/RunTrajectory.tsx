@@ -53,15 +53,15 @@ export function RunTrajectory({ id, ordinal, name, goal, money, onSelect, onLoad
     {chart && data.total > 0 && <BalanceChart points={plottedPoints} goal={goal} total={data.total} formatMoney={money} initialCapital={data.initial_capital} reductionMethod={data.reduction_method} />}
     {data.total > 0 && <div className="flex flex-wrap items-center gap-2">
       <label htmlFor={`trajectory-jump-${ordinal}`}>Ir a apuesta exacta (1–{data.total})</label>
-      <input id={`trajectory-jump-${ordinal}`} type="number" min={1} max={data.total} value={jump} onChange={(event) => setJump(event.target.value)} className="w-28 rounded-control border border-border-control bg-field p-2" />
+      <input id={`trajectory-jump-${ordinal}`} type="number" min={1} max={data.total} value={jump} onChange={(event) => setJump(event.target.value)} className="w-28 border border-border-control bg-field p-2" />
       {onSelect ? <button type="button" disabled={!canJump} className="btn btn-secondary" onClick={() => onSelect(jumpIndex)}>Ver apuesta exacta</button>
         : canJump ? <Link className="btn btn-tertiary" to={`/experimentos/${encodeURIComponent(id)}?run=${ordinal}&bet=${jumpIndex}&from=comparison`}>Ver apuesta exacta</Link> : <span>Elegí un número válido</span>}
     </div>}
     <details><summary className="disclosure-summary">Consultar apuesta exacta de un punto</summary>
       <ul className="max-h-40 overflow-auto text-sm">
         {data.points.map((point) => <li key={point.source_index}>{onSelect
-          ? <button type="button" className="text-accent underline" onClick={() => onSelect(localIndex(point))}>Apuesta {localIndex(point) + 1}{point.bet_index == null ? "" : ` · sorteo n.º ${point.source_index}`} · {point.label} · {money(point.balance)}</button>
-          : <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(id)}?run=${ordinal}&bet=${localIndex(point)}&from=comparison`}>Apuesta {localIndex(point) + 1}{point.bet_index == null ? "" : ` · sorteo n.º ${point.source_index}`} · {point.label} · {money(point.balance)}</Link>}</li>)}
+          ? <button type="button" className="link" onClick={() => onSelect(localIndex(point))}>Apuesta {localIndex(point) + 1}{point.bet_index == null ? "" : ` · sorteo n.º ${point.source_index}`} · {point.label} · {money(point.balance)}</button>
+          : <Link className="link" to={`/experimentos/${encodeURIComponent(id)}?run=${ordinal}&bet=${localIndex(point)}&from=comparison`}>Apuesta {localIndex(point) + 1}{point.bet_index == null ? "" : ` · sorteo n.º ${point.source_index}`} · {point.label} · {money(point.balance)}</Link>}</li>)}
       </ul>
     </details>
   </section>;

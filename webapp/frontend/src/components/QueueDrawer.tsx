@@ -6,7 +6,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { useQueue } from "./QueueProvider";
 import type { QueueAction } from "./QueueProvider";
 
-const control = "btn btn-secondary disabled:opacity-50";
+const control = "btn btn-secondary";
 const focusable = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 type Confirmation = QueueAction & { repeat?: boolean };
@@ -99,7 +99,7 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
   const row = (id: string, kind: "active" | "pending" | "held") => (
     <li key={`${kind}-${id}`} className="queue-row py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link to={`/experimentos/${encodeURIComponent(id)}`} onClick={onClose} className="min-w-0 break-all font-mono text-sm text-accent underline" aria-label={`Inspeccionar ${id}`}>{id}</Link>
+        <Link to={`/experimentos/${encodeURIComponent(id)}`} onClick={onClose} className="min-w-0 break-all font-mono text-sm link" aria-label={`Inspeccionar ${id}`}>{id}</Link>
         <div className="flex gap-2">
           {kind === "held" && <button className={control} type="button" disabled={!!busy || !!requests[id]} onClick={() => submit({ id, kind: "start" })} aria-label={`Iniciar ${id}`}>Iniciar</button>}
           <button className={control} type="button" disabled={!!busy || !!requests[id]} onClick={(event) => requestConfirmation(event, { id, kind: "cancel" })} aria-label={`Cancelar ${id}`}>Cancelar</button>
@@ -127,7 +127,7 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
   return createPortal(<>
     <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} aria-hidden="true" />
     <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-border-control bg-surface p-6 text-text focus:outline-none">
-      <div className="flex items-center justify-between gap-3"><h2 id={titleId} className="font-heading text-2xl italic">Cola de experimentos</h2><button type="button" className={control} onClick={onClose}>Cerrar cola</button></div>
+      <div className="flex items-center justify-between gap-3"><h2 id={titleId} className="font-heading text-2xl">Cola de experimentos</h2><button type="button" className={control} onClick={onClose}>Cerrar cola</button></div>
       <p className="mt-2 text-sm text-text-secondary">Un cálculo a la vez. Pendientes y retenidos se consultan por páginas independientes; su estado puede cambiar.</p>
       {error && <p role="status" className="mt-4 text-sm text-text-secondary">{error === "network" ? "No se pudo contactar al servidor local. El cálculo podría continuar; se muestra el último estado conocido." : "No se pudo actualizar la cola; se muestra el último estado conocido."}</p>}
       <button type="button" className={`${control} mt-3`} onClick={refresh}>Reintentar cola</button>

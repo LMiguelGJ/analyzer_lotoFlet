@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import tailwindConfig from "../../tailwind.config";
 import { Shell } from "./Shell";
 import { QueueProvider } from "./QueueProvider";
 
@@ -86,7 +85,6 @@ describe("Shell breakpoint wiring (class presence only; real reflow needs a brow
   it("places the sidebar beside content at the 800px nav breakpoint, independently of the 1100px content breakpoint", () => {
     renderShell();
     const layout = screen.getByTestId("shell-layout");
-    expect(tailwindConfig.theme.screens).toEqual({ nav: "800px", wide: "1100px" });
     expect(layout.className).toMatch(/\bnav:flex-row\b/);
     expect(layout.className).not.toMatch(/\bwide:flex-row\b|\bmd:flex-row\b/);
   });

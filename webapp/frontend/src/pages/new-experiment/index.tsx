@@ -436,21 +436,21 @@ export function NewExperimentPage() {
     (offeredDraws.includes(conditions.start_draw) || verifiedDraw === conditions.start_draw);
   const staleDraw = !!knownDraw && conditions.start_draw === knownDraw && !drawLoading && !drawError && !selectedAvailable;
 
-  if (baseId && configurationId) return <div><Link to="/experimentos" className="text-accent underline">Volver a experimentos</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
+  if (baseId && configurationId) return <div><Link to="/experimentos" className="link">Volver a experimentos</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
 
   if (configurationId && (configurationState !== "ready" || catalogError)) return <div>
-    <Link to="/configuraciones" className="text-accent underline">Volver a estrategias guardadas</Link>
+    <Link to="/configuraciones" className="link">Volver a estrategias guardadas</Link>
     {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => setCatalogRetry((value) => value + 1)}>Reintentar</button></p> : configurationState === "loading" ? <p role="status">Cargando estrategia…</p> : <p role="alert" className="mt-4 text-red-300">{configurationState === "missing" ? "La estrategia ya no existe." : configurationState === "network" ? "No se pudo contactar al servidor." : configurationState === "invalid" ? "Esta estrategia guardada ya no es válida." : "No se pudo cargar la estrategia."} <button type="button" className="btn btn-tertiary" onClick={() => setConfigurationRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   if (baseId && (baseState !== "ready" || catalogError)) return <div>
-    <Link to="/experimentos" className="text-accent underline">Volver a experimentos</Link>
+    <Link to="/experimentos" className="link">Volver a experimentos</Link>
     {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor." : baseState === "invalid" ? "El experimento base no es compatible con este asistente." : "No se pudo cargar el experimento base."} <button type="button" className="btn btn-tertiary" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   return <>
-    <Link to="/experimentos" className="mb-4 inline-block text-accent underline">Volver a experimentos</Link>
-    <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil y datos importados? <Link to="/experimentos/nuevo/perfil" className="text-accent underline">Crear sesión con perfil</Link>.</p></div>
+    <Link to="/experimentos" className="mb-4 inline-block link">Volver a experimentos</Link>
+    <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil y datos importados? <Link to="/experimentos/nuevo/perfil" className="link">Crear sesión con perfil</Link>.</p></div>
     <nav aria-label="Pasos del asistente" className="mb-6 flex flex-wrap gap-3 border-b border-border pb-4 text-sm">
       {labels.map((label, i) => <span key={label} aria-current={step === i ? "step" : undefined} className={step === i ? "font-semibold text-accent" : "text-text-secondary"}>{i + 1} {label}</span>)}
     </nav>

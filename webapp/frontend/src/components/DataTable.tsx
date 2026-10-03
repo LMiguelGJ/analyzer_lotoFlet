@@ -34,7 +34,7 @@ export function DataTable<T>({ caption, columns, rows, getRowKey }: DataTablePro
       role="region"
       aria-label={caption}
       tabIndex={0}
-      className="data-table-region overflow-x-auto rounded-control border border-border-control"
+      className="data-table-region overflow-x-auto border border-border-control"
     >
       <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">{caption}</caption>
@@ -47,7 +47,7 @@ export function DataTable<T>({ caption, columns, rows, getRowKey }: DataTablePro
                 className={`px-4 py-3 text-text-secondary ${column.headerClassName ?? ""}`}
                 aria-sort={column.onSort ? column.sort ?? "none" : undefined}
               >
-                {column.onSort ? <button type="button" className="min-h-control text-left text-accent hover:underline" onClick={column.onSort}>{column.header}</button> : column.header}
+                {column.onSort ? <button type="button" className="min-h-control text-left link" onClick={column.onSort}>{column.header}</button> : column.header}
               </th>
             ))}
           </tr>

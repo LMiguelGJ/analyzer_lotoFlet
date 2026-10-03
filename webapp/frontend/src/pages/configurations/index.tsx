@@ -9,7 +9,7 @@ import { buildStrategy, diffStrategyKey, draftFromStrategy, errorDetail, errorMe
 import type { Errors, StrategyDraft } from "../new-experiment/model";
 
 const control = "control";
-const action = "btn btn-secondary disabled:opacity-50";
+const action = "btn btn-secondary";
 const pageSize = 20;
 type Editor = { id: string | null; name: string; strategy: StrategyDraft; dirty: boolean };
 
@@ -177,7 +177,7 @@ export function ConfigurationsPage() {
         }} />}
       </div>
       </fieldset>
-      <div className="flex flex-wrap gap-3"><button type="button" className="btn btn-primary disabled:opacity-50" disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar estrategia"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
+      <div className="flex flex-wrap gap-3"><button type="button" className="btn btn-primary" disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar estrategia"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
     </section>}
     {page && page.total > 0 && <>
       <label htmlFor="configSearch" className="field-label">Buscar estrategia guardada</label>
@@ -188,7 +188,7 @@ export function ConfigurationsPage() {
     {page && <>
       {page.total === 0 ? <p role="status">Todavía no hay estrategias guardadas.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">Sin coincidencias en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Limpiar búsqueda</button></div> : <ul className="divide-y divide-border border-t border-border">{visible.map((item) => <li key={item.id} className="saved-strategy-row border-b border-border py-4">
         <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
-        <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className="btn btn-tertiary" onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-destructive disabled:opacity-50" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
+        <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className="btn btn-tertiary" onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-destructive" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
       </li>)}</ul>}
       {page.total > 0 && <nav aria-label="Páginas de estrategias guardadas" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {page.total} en total</span><button type="button" className={action} disabled={offset + pageSize >= page.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>}
     </>}
