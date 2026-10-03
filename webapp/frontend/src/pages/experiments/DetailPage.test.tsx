@@ -178,6 +178,20 @@ describe("profile detail READ", () => {
     expect(within(run).queryByText(/Resultados históricos/)).not.toBeInTheDocument();
   });
 
+  it("leads with Desenlace and keeps secondary metrics closed until technical details open", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, net: -250, max_drawdown: 400, roi: -0.25, return_per_wagered: 0.75 } }] });
+    const { user } = setup();
+    await screen.findByRole("region", { name: "Ejecución 1" });
+    const headings = screen.getAllByRole("heading");
+    expect(headings.findIndex((heading) => heading.textContent === "Desenlace")).toBeLessThan(headings.findIndex((heading) => heading.textContent === "Evolución"));
+    expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
+    const technical = screen.getByText("Detalles técnicos · métricas complementarias");
+    expect(technical.closest("details")).not.toHaveAttribute("open");
+    await user.click(technical);
+    expect(screen.getByText("ROI neto").nextElementSibling).toHaveTextContent("-0.250000");
+    expect(screen.getByText("Máximo drawdown absoluto").nextElementSibling).toHaveTextContent("USD 4.00");
+  });
+
   it("shows server delta, elapsed/bet counts, 3 positions and per-number stakes in USD cents", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(profileSnapshot);
     vi.mocked(apiClient.getReplay).mockResolvedValue(profilePage);
@@ -229,9 +243,7 @@ describe("profile batch v5 detail", () => {
     expect(screen.getByRole("link", { name: "Ver comparación" })).toHaveAttribute("href", "/experimentos/exp/comparacion");
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
     expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Límite configurado");
-    const stopDetails = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Categoría de parada (código)"));
-    expect(stopDetails).toBeDefined();
-    await user.click(within(stopDetails!).getByText("Detalles técnicos"));
+    await user.click(within(run).getByText("Detalles técnicos · métricas complementarias"));
     expect(screen.getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("configured_limit");
     expect(screen.getByText("Motivo informado").nextElementSibling).toHaveTextContent("max_bet_draws");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
@@ -300,9 +312,7 @@ describe("profile batch v5 detail", () => {
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
     expect(screen.getByText("Motivo de cierre").nextElementSibling).toHaveTextContent("Ventana operativa; fuente incompleta");
     expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Ventana operativa; fuente incompleta");
-    const stopDetails = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Categoría de parada (código)"));
-    expect(stopDetails).toBeDefined();
-    await user.click(within(stopDetails!).getByText("Detalles técnicos"));
+    await user.click(within(run).getByText("Detalles técnicos · métricas complementarias"));
     expect(screen.getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("operational_window");
     expect(screen.getByText("Motivo informado").nextElementSibling).toHaveTextContent("bounded draw window ended before source end");
     expect(screen.queryByText("Historial agotado")).not.toBeInTheDocument();
@@ -319,11 +329,9 @@ describe("profile batch v5 detail", () => {
     expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Fin de la fuente guardada");
     expect(screen.queryByText("Ventana operativa; fuente incompleta")).not.toBeInTheDocument();
     const run = screen.getByRole("region", { name: "Ejecución 1" });
-    const stopDetails = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Categoría de parada (código)"));
-    expect(stopDetails).toBeDefined();
-    await user.click(within(stopDetails!).getByText("Detalles técnicos"));
-    expect(within(stopDetails!).getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("source_end");
-    expect(within(stopDetails!).getByText("Motivo informado").nextElementSibling).toHaveTextContent("full saved source ended");
+    await user.click(within(run).getByText("Detalles técnicos · métricas complementarias"));
+    expect(within(run).getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("source_end");
+    expect(within(run).getByText("Motivo informado").nextElementSibling).toHaveTextContent("full saved source ended");
   });
 });
 

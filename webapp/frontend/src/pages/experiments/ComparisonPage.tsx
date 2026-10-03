@@ -111,16 +111,24 @@ export function ComparisonPage() {
       <div className="border-b border-border pb-5"><h2 className="font-heading text-2xl">{comparisonTitle(data.detail)}</h2><p className="mt-2 text-sm">{data.comparison.complete ? "Comparación completa" : "Comparación incompleta"} · {data.comparison.completed}/{data.comparison.requested} terminadas</p>
         <p className="mt-2 text-sm text-text-secondary">Estado: <StatusLabel kind="execution" value={data.comparison.status} />{nonterminal(data.comparison.status) ? " · Se actualiza solo." : ""}</p>
       </div>
-      <section className="space-y-3"><h3 className="section-header">Resultados guardados</h3>
+      <section aria-label="Desenlaces guardados" className="space-y-3"><h3 className="section-header">Desenlaces</h3>
         {!data.comparison.complete && <p role="status" className="text-sm">Resultado incompleto · {data.comparison.completed}/{data.comparison.requested}</p>}
-        <DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} />
+        {runs.map((run) => <article key={run.ordinal} className="border-b border-border pb-4">
+          <h4 className="font-heading text-lg"><Link className="link" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`}>{names(run.ordinal)}</Link></h4>
+          <dl className="data-list">
+            <dt>Saldo final</dt><dd>{run.result ? money(run.result.final_balance) : missingMetric()}</dd>
+            <dt>Neto</dt><dd>{run.result?.net == null ? "N/A" : money(run.result.net)}</dd>
+            <dt>Motivo de cierre</dt><dd>{run.result ? isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : missingMetric()}</dd>
+          </dl>
+        </article>)}
+        <details><summary className="disclosure-summary">Comparación detallada</summary><div className="pt-2"><DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} /></div></details>
         <details><summary className="disclosure-summary">Detalles técnicos</summary><div className="space-y-2 pt-2"><p className="field-help">Métricas del backend por corrida guardada; ratios adimensionales, redondeo HALF_UP a seis decimales. Denominador cero: N/A. Drawdown desde el capital inicial. Un resultado guardado no completa un lote con otras corridas pendientes.</p><dl className="data-list break-all"><dt>Versión de solicitud</dt><dd>{profileDetail ? `Perfil v${profileDetail.request.schema_version}` : batchDetail ? `Perfil v${batchDetail.request.schema_version}` : "No disponible"}</dd>{runs.map((run) => <Fragment key={run.ordinal}><dt>Resultado · {names(run.ordinal)}</dt><dd>{isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd>{batchDetail && isProfileBatchRun(run) && <><dt>Parada · {names(run.ordinal)}</dt><dd>{run.stop_category} · {run.stop_code} · {run.stop_reason}</dd></>}</Fragment>)}</dl></div></details>
         <p className="text-sm text-text-secondary">{profileContext ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
       </section>
       <section className="min-w-0 space-y-4"><ComparisonChart series={series} formatMoney={money} onToggle={(ordinal) => updateView({ ...view, hidden: view.hidden.includes(ordinal) ? view.hidden.filter((n) => n !== ordinal) : [...view.hidden, ordinal] })} />
         {runs.filter((run) => run.status === "completed" && !!run.result).map((run) => <RunTrajectory key={`${id}:${run.ordinal}`} id={id} ordinal={run.ordinal} name={names(run.ordinal)} money={money} goal={data.detail.request.conditions.goal} chart={false} onLoad={onTrajectory} />)}
       </section>
-      <details className="space-y-3 text-sm"><summary className="disclosure-summary">Condiciones y datos de origen</summary>
+      <details className="space-y-3 text-sm"><summary className="disclosure-summary">Detalles técnicos · condiciones y datos de origen</summary>
         <dl className="data-list break-all">
           <dt>Sorteo inicial</dt><dd>{data.detail.request.conditions.start_draw}</dd>
           <dt>Capital</dt><dd className="data-list-numeric">{money(isProfileExperiment(data.detail) ? data.detail.display.capital : data.detail.request.conditions.capital)}</dd>

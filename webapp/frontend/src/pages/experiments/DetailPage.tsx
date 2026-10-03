@@ -265,6 +265,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
             </dl>
             <p id="detail-delta-help" className="field-help mt-2">{FIELD_HELP_DELTA}</p>
           </section>
+          <h4 className="section-header mt-6">Evolución</h4>
           <RunTrajectory id={data.id} ordinal={run.ordinal} name={runName} goal={isProfileExperiment(data) ? data.display.goal : data.request.conditions.goal} money={money} onSelect={(index) => { setPlaying(false); setCursor(index); setOffset(pageOffset(index)); setTab("Apuestas"); }} />
           <div className="border-t border-border pt-5" aria-label="Reproducción visual">
             <h4 className="section-header">Reproducción visual</h4>
@@ -277,11 +278,13 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
             </div>
             {typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches && <p className="mt-2 text-sm">Movimiento reducido: usá anterior y siguiente.</p>}
           </div>
-          <dl className="data-list mt-5 border-t border-border pt-5">
-            {isProfileRun(run) ? <><dt>Sorteos transcurridos</dt><dd>{run.result.elapsed_draws}</dd><dt>Sorteos apostados</dt><dd>{run.result.bet_draws}</dd>{isProfileBatchRun(run) && <><dt>Alcance del resultado</dt><dd>{run.result.complete ? "Completo según el límite configurado" : "Incompleto; no equivale al fin de la fuente"}</dd></>}</> : <><dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd></>}
-          </dl>
-          <FinancialMetrics result={run.result} money={money} omitNet />
-          {isProfileBatchRun(run) && <details><summary className="disclosure-summary">Detalles técnicos</summary><dl className="data-list break-all pt-2"><dt>Versión de solicitud</dt><dd>{isProfileBatchExperiment(data) ? `Perfil v${data.request.schema_version}` : "No disponible"}</dd><dt>Versión del resultado</dt><dd>{run.result.schema_version}</dd><dt>Categoría de parada (código)</dt><dd>{run.result.stop_category}</dd><dt>Motivo informado</dt><dd>{run.result.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd><dt>Índice de inicio en la fuente</dt><dd>{run.result.start_draw_index}</dd></dl></details>}
+          <details className="mt-5 border-t border-border pt-5"><summary className="disclosure-summary">Detalles técnicos · métricas complementarias</summary>
+            <dl className="data-list pt-2">
+              {isProfileRun(run) ? <><dt>Sorteos transcurridos</dt><dd>{run.result.elapsed_draws}</dd><dt>Sorteos apostados</dt><dd>{run.result.bet_draws}</dd>{isProfileBatchRun(run) && <><dt>Alcance del resultado</dt><dd>{run.result.complete ? "Completo según el límite configurado" : "Incompleto; no equivale al fin de la fuente"}</dd></>}</> : <><dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd></>}
+            </dl>
+            <FinancialMetrics result={run.result} money={money} omitNet />
+            {isProfileBatchRun(run) && <dl className="data-list break-all pt-2"><dt>Versión de solicitud</dt><dd>{isProfileBatchExperiment(data) ? `Perfil v${data.request.schema_version}` : "No disponible"}</dd><dt>Versión del resultado</dt><dd>{run.result.schema_version}</dd><dt>Categoría de parada (código)</dt><dd>{run.result.stop_category}</dd><dt>Motivo informado</dt><dd>{run.result.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd><dt>Índice de inicio en la fuente</dt><dd>{run.result.start_draw_index}</dd></dl>}
+          </details>
           <p className="mt-3 text-sm text-text-secondary">{isProfileExperiment(data) ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
         </>}
         {tab === "Apuestas" && <>
