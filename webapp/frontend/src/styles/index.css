@@ -56,11 +56,16 @@
 
   /* Use on a label wrapping a choice control to make the whole target tappable. */
   .control-choice {
-    display: inline-flex;
+    display: flex;
     min-height: var(--control-height);
     align-items: center;
     gap: 0.5rem;
     color: var(--color-text);
+  }
+
+  /* Use on a <summary> so the disclosure toggle reaches the touch target size. */
+  .disclosure-summary {
+    cursor: pointer;
   }
 
   .field-help {
@@ -265,6 +270,12 @@
       min-width: 1.25rem;
       min-height: 1.25rem;
       height: 1.25rem;
+    }
+
+    .disclosure-summary {
+      display: flex;
+      min-height: 2.75rem;
+      align-items: center;
     }
 
     .field-label,

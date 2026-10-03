@@ -209,8 +209,42 @@ describe("bounded local import", () => {
       new File([new Uint8Array(2 * 1024 * 1024 + 1)], "huge.csv"));
     await user.click(screen.getByRole("button", { name: "Generar vista previa" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/2 MiB/);
-    expect(screen.getByRole("alert")).toHaveFocus();
+    // Field-level validation lands on the invalid field, linked to the error; server failures keep focusing the alert.
+    expect(screen.getByLabelText(/Archivo local CSV o JSON/)).toHaveFocus();
+    expect(screen.getByLabelText(/Archivo local CSV o JSON/)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText(/Archivo local CSV o JSON/)).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
     expect(apiClient.previewImport).not.toHaveBeenCalled();
+  });
+
+  it("opens a collapsed advanced disclosure on validation failure, keeps typed values and focuses the first invalid field", async () => {
+    const user = userEvent.setup();
+    render(<DataPage />);
+    const summary = screen.getByText(/Importación avanzada/);
+    const details = summary.closest("details") as HTMLDetailsElement;
+    await user.click(summary);
+    await screen.findByLabelText("Perfil guardado completo");
+    await user.type(screen.getByLabelText("Identificador de fuente"), "ledger");
+    details.open = false;
+    expect(details.open).toBe(false);
+    fireEvent.submit(screen.getByRole("button", { name: "Generar vista previa" }).closest("form") as HTMLFormElement);
+    expect(details.open).toBe(true);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/Elegí un archivo CSV o JSON/);
+    expect(screen.getByLabelText(/Archivo local CSV o JSON/)).toHaveFocus();
+    expect(screen.getByLabelText(/Archivo local CSV o JSON/)).toHaveAttribute("aria-describedby", alert.id);
+    expect(screen.getByLabelText("Identificador de fuente")).toHaveValue("ledger");
+    expect(apiClient.previewImport).not.toHaveBeenCalled();
+  });
+
+  it("points at the first field that fails a later check, not the first field of the form", async () => {
+    const user = await setup();
+    await user.clear(screen.getByLabelText("Revisión o corrección"));
+    await user.click(screen.getByRole("button", { name: "Generar vista previa" }));
+    expect(screen.getByLabelText("Revisión o corrección")).toHaveFocus();
+    expect(screen.getByLabelText("Revisión o corrección")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Identificador de fuente")).not.toHaveAttribute("aria-invalid");
+    await user.type(screen.getByLabelText("Revisión o corrección"), "r1");
+    expect(screen.getByLabelText("Revisión o corrección")).not.toHaveAttribute("aria-invalid");
   });
 
   it("does not assume an uncertain network promotion failed and never retries automatically", async () => {

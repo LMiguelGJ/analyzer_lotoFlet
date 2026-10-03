@@ -107,6 +107,35 @@ describe("profile editor", () => {
       expect(apiClient.registerProfile).toHaveBeenCalledTimes(status === 422 ? 3 : detail.startsWith("profile version") ? 2 : 1);
     }
   });
+  it("opens a collapsed host disclosure, keeps typed values and focuses the first invalid field linked to the error", async () => {
+    const user = userEvent.setup();
+    render(<details><summary>Host</summary><ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} /></details>);
+    const host = document.querySelector("details") as HTMLDetailsElement;
+    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
+    await user.type(screen.getByLabelText(/Revisión \(1/), "7");
+    host.open = false;
+    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    expect(host.open).toBe(true);
+    const alert = screen.getByRole("alert");
+    expect(screen.getByLabelText("ID nuevo del perfil")).toHaveFocus();
+    expect(screen.getByLabelText("ID nuevo del perfil")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("ID nuevo del perfil")).toHaveAttribute("aria-describedby", alert.id);
+    expect(screen.getByLabelText(/Revisión \(1/)).toHaveValue("7");
+    expect(apiClient.registerProfile).not.toHaveBeenCalled();
+  });
+  it("focuses the field that actually fails, and clears its invalid state when edited", async () => {
+    const user = userEvent.setup();
+    render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
+    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
+    await user.type(screen.getByLabelText("ID nuevo del perfil"), "my-game");
+    await user.type(screen.getByLabelText(/Revisión \(1/), "1");
+    await user.click(screen.getByRole("button", { name: "Registrar perfil inmutable" }));
+    expect(screen.getByLabelText(/Tamaño del universo/)).toHaveFocus();
+    expect(screen.getByLabelText(/Tamaño del universo/)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("ID nuevo del perfil")).not.toHaveAttribute("aria-invalid");
+    await user.type(screen.getByLabelText(/Tamaño del universo/), "100");
+    expect(screen.getByLabelText(/Tamaño del universo/)).not.toHaveAttribute("aria-invalid");
+  });
   it("holds the pending register lock until the single response completes", async () => {
     let resolve!: (value: ProfileListing) => void;
     vi.mocked(apiClient.registerProfile).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
