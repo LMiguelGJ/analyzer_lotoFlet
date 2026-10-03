@@ -11,8 +11,8 @@ import type { ConditionsDraft, Errors, StrategyDraft } from "./model";
 import { FIELD_HELP_SEED, FIELD_LABEL_SEED, FIELD_LABEL_SETTLEMENT, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 
 const control = "control";
-const secondary = "btn btn-secondary hover:bg-field disabled:opacity-50";
-const primary = "btn btn-primary disabled:opacity-50";
+const secondary = "btn btn-secondary";
+const primary = "btn btn-primary";
 const labels = ["Condiciones", "Estrategias", "Revisar"];
 const money = (value: string) => {
   if (!value) return "—";
@@ -440,12 +440,12 @@ export function NewExperimentPage() {
 
   if (configurationId && (configurationState !== "ready" || catalogError)) return <div>
     <Link to="/configuraciones" className="text-accent underline">Volver a configuraciones</Link>
-    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="text-accent underline" onClick={() => setCatalogRetry((value) => value + 1)}>Reintentar</button></p> : configurationState === "loading" ? <p role="status">Cargando configuración guardada…</p> : <p role="alert" className="mt-4 text-red-300">{configurationState === "missing" ? "La configuración ya no existe." : configurationState === "network" ? "No se pudo contactar al servidor local para cargar la configuración." : configurationState === "invalid" ? "La configuración ya no coincide con el catálogo o contiene parámetros inválidos; no se reemplazaron valores." : "No se pudo cargar la configuración."} <button type="button" className="text-accent underline" onClick={() => setConfigurationRetry((value) => value + 1)}>Reintentar</button></p>}
+    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => setCatalogRetry((value) => value + 1)}>Reintentar</button></p> : configurationState === "loading" ? <p role="status">Cargando configuración guardada…</p> : <p role="alert" className="mt-4 text-red-300">{configurationState === "missing" ? "La configuración ya no existe." : configurationState === "network" ? "No se pudo contactar al servidor local para cargar la configuración." : configurationState === "invalid" ? "La configuración ya no coincide con el catálogo o contiene parámetros inválidos; no se reemplazaron valores." : "No se pudo cargar la configuración."} <button type="button" className="btn btn-tertiary" onClick={() => setConfigurationRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   if (baseId && (baseState !== "ready" || catalogError)) return <div>
     <Link to="/experimentos" className="text-accent underline">Volver a experimentos</Link>
-    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="text-accent underline" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base y confirmando el sorteo disponible…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor local para cargar el experimento base." : baseState === "invalid" ? "El experimento base no es compatible con este asistente legado o contiene parámetros inválidos; no se reemplazaron valores." : "No se pudo cargar el experimento base."} <button type="button" className="text-accent underline" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
+    {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base y confirmando el sorteo disponible…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor local para cargar el experimento base." : baseState === "invalid" ? "El experimento base no es compatible con este asistente legado o contiene parámetros inválidos; no se reemplazaron valores." : "No se pudo cargar el experimento base."} <button type="button" className="btn btn-tertiary" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   return <>
@@ -459,7 +459,7 @@ export function NewExperimentPage() {
         <div className="hidden border-t border-border pt-3 wide:block wide:sticky wide:top-6">
           <h2 className="section-header">Resumen</h2><Summary conditions={conditions} count={strategies.length} />
         </div>
-        <details className="border-y border-border py-3 wide:hidden"><summary className="cursor-pointer text-sm">Resumen · {strategies.length} estrategias</summary><div className="pt-3"><Summary conditions={conditions} count={strategies.length} /></div></details>
+        <details className="border-y border-border py-3 wide:hidden"><summary className="disclosure-summary text-sm">Resumen · {strategies.length} estrategias</summary><div className="pt-3"><Summary conditions={conditions} count={strategies.length} /></div></details>
       </aside>
       <div className="min-w-0 wide:order-1">
         <h2 ref={headingRef} tabIndex={-1} className="mb-5 text-2xl focus:outline-none">{labels[step]}</h2>
@@ -470,7 +470,8 @@ export function NewExperimentPage() {
         {step === 0 && <section aria-label="Condiciones comunes">
           {errors.conditions && <p className="mb-4 text-sm text-red-300">{errorMessage(errors.conditions)}{errorDetail(errors.conditions) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors.conditions)}</span>}</p>}
           {loading && <p role="status">Cargando catálogo…</p>}
-          {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="text-accent underline" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
+          {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
+          <fieldset className="mb-6 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Inicio de la simulación</legend>
           {input("name", "Nombre del experimento")}
           <div className="field">
             <label htmlFor="draw_date" className="field-label">Filtrar sorteos por fecha</label>
@@ -478,7 +479,7 @@ export function NewExperimentPage() {
             <p id="draw_date-help" className="field-help">Dejalo vacío para ver todas las fechas. Solo podés elegir sorteos con ranking.</p>
           </div>
           {drawLoading && <p role="status" className="mb-4">Cargando sorteos disponibles…</p>}
-          {drawError && <p role="alert" className="mb-4 text-red-300">{drawError} <button type="button" className="text-accent underline" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
+          {drawError && <p role="alert" className="mb-4 text-red-300">{drawError} <button type="button" className="btn btn-tertiary" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
           {staleDraw && <p role="status" className="mb-4 text-text-secondary">El sorteo elegido ya no está disponible con ranking. Elegí otro sorteo o fecha.</p>}
           {catalog && !drawLoading && !drawError && offeredDraws.length === 0 && !knownDraw && <p role="status" className="mb-4">{drawDate && availability?.history_total === 0
             ? "No hay sorteos históricos en esta fecha. Probá otra fecha."
@@ -490,11 +491,15 @@ export function NewExperimentPage() {
             {knownDraw && !offeredDraws.includes(knownDraw) && (!drawDate || knownDraw.startsWith(`${drawDate} `)) && <option value={knownDraw} disabled={!selectedAvailable}>{knownDraw}{selectedAvailable ? "" : " (sin ranking disponible)"}</option>}
           </select>, "Solo se ofrecen sorteos históricos con ranking disponible.")}
           {draws.length < total && <button type="button" className={`${secondary} mb-5`} disabled={drawLoading} onClick={() => { void loadDraws(); }}>{drawLoading ? "Cargando sorteos…" : "Cargar más sorteos"}</button>}
+          </fieldset>
+          <fieldset className="mb-6 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Objetivo</legend>
           {/* Capital and goal are the two amounts that define success; grouped together at sm+. */}
           <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
             {input("capital", "Capital inicial (RD$)", "Pesos enteros; mínimo RD$1.")}
             {input("goal", "Meta de saldo final (RD$)", "La meta es el saldo final, no ganancia adicional: capital RD$2.000 y meta RD$2.800 buscan +RD$800.")}
           </div>
+          </fieldset>
+          <fieldset className="mb-6 min-w-0 border-0 p-0"><legend className="section-header mb-3 p-0">Reglas y límites</legend>
           {field("settlement", FIELD_LABEL_SETTLEMENT, <select {...attrs("settlement")} className={control} value={conditions.settlement} onChange={(event) => editCondition("settlement", event.target.value)}>{(Object.keys(SETTLEMENT_LABELS) as (keyof typeof SETTLEMENT_LABELS)[]).map((key) => <option value={key} key={key}>{SETTLEMENT_LABELS[key]}</option>)}</select>)}
           {/* Stop limits retain their original keyboard order before the seed. */}
           <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
@@ -502,13 +507,14 @@ export function NewExperimentPage() {
             {input("max_minutes", "Máximo de minutos históricos", "Opcional: de 1 a 100.000.000; se excluye el sorteo en la hora límite.")}
           </div>
           {input("seed", FIELD_LABEL_SEED, FIELD_HELP_SEED)}
+          </fieldset>
           {catalog && <p className="border-t border-border pt-4 text-sm text-text-secondary">Juego fijo: {catalog.game.name}, números 00–99, cinco posiciones con repetición; premios {catalog.game.prizes.join("/")}. No se editan en este MVP.</p>}
         </section>}
         {step === 1 && catalog && <section aria-label="Estrategias">
           <p className="mb-5 text-text-secondary">Hasta cinco estrategias comparten las condiciones. Cada nombre debe ser único.</p>
           {strategies.map((strategy, i) => <section key={strategy.id} className="mb-4 border-b border-border pb-4">
             <div className="flex items-center gap-3"><button type="button" aria-expanded={active === i} className="min-h-control flex-1 text-left text-sm text-accent" onClick={() => setActive(i)}>Estrategia {i + 1}{strategy.name ? ` · ${trimName(strategy.name)}` : ""}</button>
-              {strategies.length > 1 && <button type="button" className="text-sm text-accent" onClick={() => { setStrategies((previous) => previous.filter((item) => item.id !== strategy.id)); setActive(0); setDirty(true); }}>Quitar {i + 1}</button>}</div>
+              {strategies.length > 1 && <button type="button" className="btn btn-tertiary" onClick={() => { setStrategies((previous) => previous.filter((item) => item.id !== strategy.id)); setActive(0); setDirty(true); }}>Quitar {i + 1}</button>}</div>
             {active === i && <div className="pt-4">
               {errors[`strategies.${i}`] && <p className="mb-4 text-sm text-red-300">{errorMessage(errors[`strategies.${i}`])}{errorDetail(errors[`strategies.${i}`]) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors[`strategies.${i}`])}</span>}</p>}
               <StrategyEditor value={strategy} index={i} catalog={catalog} errors={errors} onChange={(value) => editStrategy(i, value)} />
@@ -518,7 +524,7 @@ export function NewExperimentPage() {
           <button type="button" disabled={strategies.length >= 5} className={secondary} onClick={() => setLibraryOpen((value) => !value)}>Agregar desde biblioteca</button></div>
           {libraryOpen && <section aria-label="Seleccionar de biblioteca" className="mt-5 border-t border-border pt-4">
             <h3 className="section-header">Biblioteca de estrategias</h3>
-            {libraryError && <p role="alert" className="mb-3 text-sm text-red-300">{libraryError} <button type="button" className="text-accent underline" onClick={() => setLibraryRetry((value) => value + 1)}>Reintentar</button></p>}
+            {libraryError && <p role="alert" className="mb-3 text-sm text-red-300">{libraryError} <button type="button" className="btn btn-tertiary" onClick={() => setLibraryRetry((value) => value + 1)}>Reintentar</button></p>}
             {!libraryPage && !libraryError && <p role="status">Cargando biblioteca…</p>}
             {libraryPage && <>{libraryPage.total === 0 ? <p>No hay estrategias guardadas todavía.</p> : <ul className="divide-y divide-border">{libraryPage.items.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-2"><span>{item.name} · {item.strategy.name}</span><button type="button" className={secondary} disabled={libraryBusy || strategies.length >= 5} onClick={() => { void appendConfiguration(item.id); }}>Añadir {item.name}</button></li>)}</ul>}
               <nav aria-label="Páginas de biblioteca" className="mt-3 flex items-center gap-3"><button type="button" className={secondary} disabled={libraryOffset === 0} onClick={() => setLibraryOffset(Math.max(0, libraryOffset - 20))}>Anterior</button><span>{Math.floor(libraryOffset / 20) + 1} · {libraryPage.total}</span><button type="button" className={secondary} disabled={libraryOffset + 20 >= libraryPage.total} onClick={() => setLibraryOffset(libraryOffset + 20)}>Siguiente</button></nav></>}
@@ -527,9 +533,9 @@ export function NewExperimentPage() {
         </section>}
         {step === 2 && <section aria-label="Revisión">
           <p className="mb-5 text-text-secondary">Revisá los parámetros antes de agregar el experimento a la cola. Los importes y resultados se calculan solo en el servidor.</p>
-          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Condiciones comunes</h3><button type="button" className="text-accent underline" onClick={() => setStep(0)}>Editar condiciones</button></div>
+          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Condiciones comunes</h3><button type="button" className="btn btn-tertiary" onClick={() => setStep(0)}>Editar condiciones</button></div>
           <dl className="data-list py-4"><dt>Nombre</dt><dd>{trimName(conditions.name)}</dd><dt>Sorteo inicial</dt><dd>{conditions.start_draw}</dd><dt>Capital</dt><dd className="data-list-numeric">{money(conditions.capital)}</dd><dt>Meta de saldo final</dt><dd className="data-list-numeric">{money(conditions.goal)}</dd><dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd><dt>Límite de apuestas</dt><dd>{conditions.max_bets || "Sin límite"}</dd><dt>Minutos históricos</dt><dd>{conditions.max_minutes || "Sin límite"}</dd><dt>Semilla</dt><dd>{conditions.seed}</dd></dl>
-          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Estrategias</h3><button type="button" className="text-accent underline" onClick={() => setStep(1)}>Editar estrategias</button></div>
+          <div className="flex items-center justify-between border-b border-border pb-2"><h3 className="section-header">Estrategias</h3><button type="button" className="btn btn-tertiary" onClick={() => setStep(1)}>Editar estrategias</button></div>
           <ul className="divide-y divide-border">{strategies.map((strategy) => <li key={strategy.id} className="py-3"><strong>{trimName(strategy.name)}</strong> · {SELECTOR_LABELS[strategy.selector]}{strategy.selector === "system" ? `: ${catalog?.systems[strategy.system] ?? strategy.system}` : strategy.selector === "blend" ? `: ${strategy.components.map((c) => `${catalog?.systems[c.system] ?? c.system} ${c.weight}%`).join(" + ")}` : ""} · cobertura {strategy.selector === "parity" ? 50 : strategy.coverage} · {STAKING_LABELS[strategy.staking]}</li>)}</ul>
         </section>}
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
