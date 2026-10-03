@@ -16,10 +16,21 @@ function renderShell() {
 }
 
 describe("Shell nav toggle", () => {
-  it("names the saved-strategy destination without changing its URL", () => {
+  it("exposes five task destinations at their existing or section URLs", () => {
     renderShell();
-    expect(screen.getByRole("link", { name: "Estrategias guardadas" })).toHaveAttribute("href", "/configuraciones");
-    expect(screen.getByRole("link", { name: "Datos" })).toHaveAttribute("href", "/datos");
+    const destinations = [
+      ["Simulaciones", "/experimentos"],
+      ["Perfiles de juego", "/datos#perfiles"],
+      ["Historiales", "/datos#historiales"],
+      ["Estrategias", "/configuraciones"],
+      ["Administración", "/ajustes"],
+    ];
+    expect(screen.getAllByRole("navigation", { name: "Navegación principal" })).toHaveLength(1);
+    for (const [name, href] of destinations) {
+      expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
+    expect(screen.getAllByRole("link")).toHaveLength(6);
+    expect(screen.getByText("Simulaciones honestas con datos históricos.")).toBeInTheDocument();
   });
   it("starts closed: aria-expanded=false, aria-controls points at the nav, nav marked closed", () => {
     renderShell();
