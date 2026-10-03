@@ -107,7 +107,7 @@ describe("profile comparison READ", () => {
       items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] });
     setup();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
-    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*1.*3.*Límite de sesión/);
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*Límite de sesión.*1.*3/);
     expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
     expect(apiClient.getTrajectory).toHaveBeenCalledWith("exp", 0, 500);
   });
@@ -149,7 +149,7 @@ describe("profile comparison READ", () => {
     vi.mocked(apiClient.getReplay).mockResolvedValue(profileReplay);
     setup();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
-    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*1.*3.*Límite de sesión/);
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*Límite de sesión.*1.*3/);
     expect(screen.getByText("Capital").nextElementSibling).toHaveTextContent("EUR 100.00");
     expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Datos textuales del gráfico" })).toHaveTextContent("EUR 99.00");
@@ -236,7 +236,7 @@ describe("LW12 comparison", () => {
     expect(await screen.findByText("Comparación incompleta · 1/2 terminadas")).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     const rows = within(table).getAllByRole("row");
-    expect(rows[1]).toHaveTextContent(/Primera.*Ejecución completada.*RD\$150.*RD\$50.*2.*Meta alcanzada/);
+    expect(rows[1]).toHaveTextContent(/Primera.*Ejecución completada.*RD\$150.*RD\$50.*Meta alcanzada.*2/);
     expect(rows[2]).toHaveTextContent(/Segunda.*En curso.*—.*—.*—.*—/);
     expect(within(rows[2]).queryByText("Meta alcanzada")).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Comparación de ejecuciones" })).toHaveClass("overflow-x-auto");

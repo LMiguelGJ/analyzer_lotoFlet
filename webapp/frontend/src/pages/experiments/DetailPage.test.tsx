@@ -333,6 +333,16 @@ describe("LW11 detail", () => {
     expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).not.toHaveTextContent("No disponible");
   });
 
+  it("shows an absent net as N/A without confusing it with the delta or a zero", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed", runs: [{ ...snapshot.runs[0], result: { ...snapshot.runs[0].result!, delta: 40 } }, snapshot.runs[1]] });
+    setup();
+    await screen.findByText("Prueba");
+    expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("N/A");
+    expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).toHaveTextContent("RD$40");
+    expect(screen.getByText("Neto").nextElementSibling).not.toHaveTextContent("RD$");
+    expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).not.toHaveTextContent("N/A");
+  });
+
   it("does not invent a delta for an incomplete run in a partially completed experiment", async () => {
     const { user } = setup();
     await screen.findByText("Prueba");

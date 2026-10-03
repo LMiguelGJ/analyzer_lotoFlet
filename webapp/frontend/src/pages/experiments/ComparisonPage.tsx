@@ -87,13 +87,14 @@ export function ComparisonPage() {
   const money = profileContext ? (amount: number) => profileMoney(profileContext, amount) : formatDOP;
   const missingMetric = () => batchDetail ? "N/A" : "—";
   const columns: DataTableColumn<AnyRunSummary>[] = [
-    { key: "strategy", header: "Estrategia", render: (run) => <Link className="text-accent underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`} aria-label={`Detalle de ${names(run.ordinal)}`}>{names(run.ordinal)}</Link> },
+    { key: "strategy", header: "Estrategia", render: (run) => <Link className="btn btn-tertiary" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`} aria-label={`Detalle de ${names(run.ordinal)}`}>{names(run.ordinal)}</Link> },
     { key: "status", header: "Estado de ejecución", render: (run) => <StatusLabel kind="execution" value={run.status} /> },
     { key: "balance", header: "Saldo final", render: (run) => run.result ? money(run.result.final_balance) : missingMetric() },
     { key: "delta", header: FIELD_LABEL_DELTA, render: (run) => run.result ? money(run.result.delta) : missingMetric() },
+    { key: "net", header: "Neto", render: (run) => run.result?.net == null ? "N/A" : money(run.result.net) },
+    { key: "outcome", header: "Motivo de cierre", render: (run) => run.result ? isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : missingMetric() },
     { key: "wagered", header: "Total apostado", render: (run) => run.result ? money(run.result.wagered) : missingMetric() },
     { key: "paid", header: "Total pagado", render: (run) => run.result ? money(run.result.paid) : missingMetric() },
-    { key: "net", header: "Neto", render: (run) => run.result?.net == null ? "N/A" : money(run.result.net) },
     { key: "return", header: "Retorno por peso", render: (run) => metricRatio(run.result?.return_per_wagered) },
     { key: "roi", header: "ROI neto", render: (run) => metricRatio(run.result?.roi) },
     { key: "drawdown", header: "Drawdown absoluto", render: (run) => run.result?.max_drawdown == null ? "N/A" : money(run.result.max_drawdown) },
@@ -102,26 +103,26 @@ export function ComparisonPage() {
       { key: "schema", header: "Versión del resultado", render: (run: AnyRunSummary) => isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : missingMetric() }] : []),
     ...(batchDetail ? [{ key: "stop", header: "Clasificación de parada", render: (run: AnyRunSummary) => isProfileBatchRun(run) ? `${stopLabel(run.stop_category)} · ${run.stop_reason}${run.error ? ` · ${run.error}` : ""}` : "N/A" },
       { key: "frozen", header: "Definición congelada", render: (run: AnyRunSummary) => { const reference = batchDetail.batch_admission.strategy_refs[run.ordinal]; return reference ? `${reference.id} · revisión ${reference.revision} · SHA-256 ${reference.definition_sha256}` : "N/A"; } }] : []),
-    { key: "outcome", header: "Motivo de cierre", render: (run) => run.result ? isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : missingMetric() },
   ];
   const series: ComparisonSeries[] = runs.filter((run) => run.status === "completed" && !!run.result).map((run) => ({ ordinal: run.ordinal, name: names(run.ordinal), visible: !view.hidden.includes(run.ordinal), total: isProfileRun(run) ? run.result!.bet_draws : run.result!.bets_count, points: trajectories.id === id ? (trajectories.runs[run.ordinal]?.points ?? []).map((point) => ({ ordinal: point.bet_index == null ? point.source_index + 1 : point.bet_index + 1, label: point.label, balance: point.balance })) : [], reductionMethod: trajectories.id === id ? trajectories.runs[run.ordinal]?.reduction_method : undefined, initialCapital: data?.detail.request.conditions.capital, startLabel: data?.detail.request.conditions.start_draw }));
   return <div className="min-w-0 space-y-7">
-    <Link to="/experimentos" className="text-sm text-accent underline">Volver a Experimentos</Link>
+    <Link to="/experimentos" className="btn btn-tertiary">Volver a Experimentos</Link>
     {!data && !error && <p role="status">Cargando comparación…</p>}
-    {error && <p role="alert">{error} <button type="button" className="text-accent underline" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></p>}
+    {error && <p role="alert">{error} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></p>}
     {data && <>
       <div className="border-b border-border pb-5"><h2 className="font-heading text-2xl">{comparisonTitle(data.detail)}</h2><p className="mt-2 text-sm">{data.comparison.complete ? "Comparación completa" : "Comparación incompleta"} · {data.comparison.completed}/{data.comparison.requested} terminadas</p>
         <p className="mt-2 text-sm text-text-secondary">ID: <span className="font-mono">{id}</span> · Estado del experimento: <StatusLabel kind="execution" value={data.comparison.status} />. {nonterminal(data.comparison.status) ? "Consultando el progreso guardado; una desconexión no detiene la ejecución." : "Estado guardado del experimento."}</p>
       </div>
       <section className="space-y-3"><h3 className="section-header">Resultados guardados</h3>
+        {!data.comparison.complete && <p role="status" className="text-sm">Resultado incompleto · {data.comparison.completed}/{data.comparison.requested}</p>}
         <DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} />
-        <p className="field-help">Métricas del backend por corrida guardada; ratios adimensionales, redondeo HALF_UP a seis decimales. Denominador cero: N/A. Drawdown desde el capital inicial. Un resultado guardado no completa un lote con otras corridas pendientes.</p>
+        <details><summary className="disclosure-summary">Detalles técnicos</summary><p className="field-help">Métricas del backend por corrida guardada; ratios adimensionales, redondeo HALF_UP a seis decimales. Denominador cero: N/A. Drawdown desde el capital inicial. Un resultado guardado no completa un lote con otras corridas pendientes.</p></details>
         <p className="text-sm text-text-secondary">{profileContext ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
       </section>
       <section className="min-w-0 space-y-4"><ComparisonChart series={series} formatMoney={money} onToggle={(ordinal) => updateView({ ...view, hidden: view.hidden.includes(ordinal) ? view.hidden.filter((n) => n !== ordinal) : [...view.hidden, ordinal] })} />
         {runs.filter((run) => run.status === "completed" && !!run.result).map((run) => <RunTrajectory key={`${id}:${run.ordinal}`} id={id} ordinal={run.ordinal} name={names(run.ordinal)} money={money} goal={data.detail.request.conditions.goal} chart={false} onLoad={onTrajectory} />)}
       </section>
-      <section className="space-y-3 text-sm"><h3 className="section-header">Condiciones y datos de origen</h3>
+      <details className="space-y-3 text-sm"><summary className="disclosure-summary">Condiciones y datos de origen</summary>
         <dl className="data-list break-all">
           <dt>Sorteo inicial</dt><dd>{data.detail.request.conditions.start_draw}</dd>
           <dt>Capital</dt><dd className="data-list-numeric">{money(isProfileExperiment(data.detail) ? data.detail.display.capital : data.detail.request.conditions.capital)}</dd>
@@ -142,7 +143,7 @@ export function ComparisonPage() {
           <dt>Política congelada</dt><dd>Revisión {batchDetail.batch_admission.policy_revision} · <code>{JSON.stringify(batchDetail.batch_admission.policy)}</code></dd>
         </dl>}
         <p className="text-text-secondary">{profileContext ? "Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito." : "Resultados históricos sobre datos ya investigados: no constituyen validación independiente de rentabilidad."}</p>
-      </section>
+      </details>
     </>}
   </div>;
 }

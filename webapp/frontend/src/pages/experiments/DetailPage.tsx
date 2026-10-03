@@ -14,7 +14,7 @@ import { profileBatchOutcome, profileMoney, profileOutcome } from "../../lib/pro
 import { FIELD_HELP_DELTA, FIELD_LABEL_DELTA, HISTORICAL_CAVEAT, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 import { PAGE_SIZE, pageOffset, replayIndex } from "./replay";
 
-const button = "btn btn-secondary hover:bg-field disabled:opacity-50";
+const button = "btn btn-secondary";
 const tabs = ["Resultado", "Apuestas", "Parámetros y datos"] as const;
 type Tab = typeof tabs[number];
 const numberList = (values: number[]) => values.map(formatTwoDigit).join(", ");
@@ -40,7 +40,7 @@ function replayError(error: unknown) {
 function BetDetails({ bet }: { bet: Bet }) {
   const [open, setOpen] = useState(false);
   return <div>
-    <button type="button" className="text-accent underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ocultar detalle" : "Detalle"}</button>
+    <button type="button" className="btn btn-tertiary" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ocultar detalle" : "Detalle"}</button>
     {open && <dl className="data-list mt-2 min-w-[220px]">
       <dt>Fecha y hora</dt><dd>{storedDate(bet.label)}</dd>
       <dt>Números elegidos</dt><dd>{numberList(bet.numbers)}</dd>
@@ -54,7 +54,7 @@ function BetDetails({ bet }: { bet: Bet }) {
 
 function ProfileBetDetails({ bet, data }: { bet: ProfileBet; data: ProfileExperimentSummary }) {
   const [open, setOpen] = useState(false);
-  return <div><button type="button" className="text-accent underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ocultar detalle" : "Detalle"}</button>
+  return <div><button type="button" className="btn btn-tertiary" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ocultar detalle" : "Detalle"}</button>
     {open && <dl className="data-list mt-2 min-w-[220px]">
       <dt>Fecha y hora</dt><dd>{storedDate(bet.label)}</dd>
       <dt>Apuestas por número</dt><dd>{bet.stakes.map(([number, stake]) => `${number}: ${profileMoney(data, stake)}`).join(", ")}</dd>
@@ -163,7 +163,7 @@ function ProfileBatchParameters({ data, run }: { data: ProfileBatchExperimentSum
     <dt>Estrategia congelada</dt><dd>{strategyName ?? definition?.name ?? "No disponible"} · ID {strategyRef?.id ?? "—"} · revisión {strategyRef?.revision ?? "—"}</dd>
     <dt>SHA-256 de definición</dt><dd className="font-mono">{strategyRef?.definition_sha256 ?? "—"}</dd>
     <dt>Selector y apuesta guardados</dt><dd>{definition ? `${definition.selector} · cobertura ${definition.coverage} · ${definition.staking}` : "No disponible"}</dd>
-    {definition && <><dt>Definición de estrategia guardada</dt><dd><details><summary className="cursor-pointer text-accent">Ver parámetros congelados</summary><pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(definition, null, 2)}</pre></details></dd></>}
+    {definition && <><dt>Definición de estrategia guardada</dt><dd><details><summary className="disclosure-summary">Ver parámetros congelados</summary><pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(definition, null, 2)}</pre></details></dd></>}
     <dt>Dataset SHA-256</dt><dd className="font-mono">{identity.dataset_sha256}</dd>
     <dt>Fuente SHA-256</dt><dd className="font-mono">{identity.source_sha256}</dd>
     <dt>Fuente canónica SHA-256</dt><dd className="font-mono">{identity.canonical_sha256}</dd>
@@ -246,24 +246,28 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
   const current = visiblePage?.items[cursor - offset];
   const canonicalSourceIndex = current && "source_index" in current && typeof current.source_index === "number" ? current.source_index : null;
   return <section className="mt-6" aria-label={`Ejecución ${run.ordinal + 1}`}>
-    <div className="flex flex-wrap items-center gap-4"><h2 className="font-heading text-2xl">{runName}</h2><StatusLabel kind="execution" value={run.status} /></div>
+    <div className="flex flex-wrap items-center gap-4"><h3 className="font-heading text-xl">{runName}</h3><StatusLabel kind="execution" value={run.status} /></div>
     <div role="tablist" aria-label="Secciones del detalle" className="mt-6 flex flex-wrap gap-2 border-b border-border">
       {tabs.map((name, index) => <button key={name} ref={(node) => { tabRefs.current[index] = node; }} type="button" role="tab" id={`detail-tab-${index}`} aria-controls={`detail-panel-${index}`} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => selectTab(name)} onKeyDown={(event) => onTabKey(event, index)} className={`min-h-control px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${tab === name ? "border-b-2 border-accent text-text" : "text-text-secondary hover:text-text"}`}>{name}</button>)}
     </div>
     <div role="tabpanel" id={`detail-panel-${tabs.indexOf(tab)}`} aria-labelledby={`detail-tab-${tabs.indexOf(tab)}`} tabIndex={0} className="pt-5">
-      {tab === "Parámetros y datos" ? isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null : !run.result ? <><p role="status">Esta ejecución no tiene un resultado completo guardado. No hay desenlace ni reproducción para mostrar.</p>{isProfileBatchRun(run) && <p className="mt-2 text-sm">Sin métricas financieras. Estado guardado: {run.stop_category} · {run.stop_reason}{run.error ? ` · ${run.error}` : ""}</p>}</> : <>
+      {tab === "Parámetros y datos" ? isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null : !run.result ? <><p role="status">Esta ejecución no tiene un resultado completo guardado. No hay desenlace ni reproducción para mostrar.</p>{isProfileBatchRun(run) && <p className="mt-2 text-sm">{stopCategoryLabel(run.stop_category)} · {run.stop_category} · {run.stop_reason}{run.error ? ` · ${run.error}` : ""}</p>}</> : <>
         {tab === "Resultado" && <>
-          <dl className="data-list border-b border-border pb-5">
-            <dt>Saldo final</dt><dd className="data-list-numeric">{money(run.result.final_balance)}</dd>
-            <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help">{money(run.result.delta)}</dd>
-            {isProfileRun(run) ? <><dt>Versión del resultado</dt><dd>Perfil v{run.result.schema_version}</dd><dt>Sorteos transcurridos</dt><dd>{run.result.elapsed_draws}</dd><dt>Sorteos apostados</dt><dd>{run.result.bet_draws}</dd><dt>Motivo de cierre</dt><dd>{isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result)}</dd>{isProfileBatchRun(run) && <><dt>Alcance del resultado</dt><dd>{run.result.complete ? "Completo según el límite configurado" : "Incompleto; no equivale al fin de la fuente"}</dd><dt>Clasificación de parada</dt><dd>{stopCategoryLabel(run.result.stop_category)} · {run.result.stop_reason}</dd></>}</> : <><dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd><dt>Motivo de cierre</dt><dd><StatusLabel kind="outcome" value={run.result.outcome} /></dd></>}
-          </dl>
-          <FinancialMetrics result={run.result} money={money} />
-          <p id="detail-delta-help" className="field-help mt-2">{FIELD_HELP_DELTA}</p>
-          <p className="mt-3 text-sm text-text-secondary">{isProfileExperiment(data) ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
+          {isProfileBatchRun(run) && !run.result.complete && <p role="status" className="mb-4 text-sm">Resultado incompleto · {stopCategoryLabel(run.result.stop_category)}</p>}
+          <section aria-label="Desenlace" className="border-b border-border pb-5">
+            <h4 className="section-header">Desenlace</h4>
+            <dl className="data-list">
+              <dt>Saldo final</dt><dd className="data-list-numeric">{money(run.result.final_balance)}</dd>
+              <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help">{money(run.result.delta)}</dd>
+              <dt>Neto</dt><dd className="data-list-numeric">{run.result.net == null ? "N/A" : money(run.result.net)}</dd>
+              <dt>Motivo de cierre</dt><dd>{isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} />}</dd>
+              {isProfileBatchRun(run) && <><dt>Clasificación de parada</dt><dd>{stopCategoryLabel(run.result.stop_category)} · {run.result.stop_reason}</dd></>}
+            </dl>
+            <p id="detail-delta-help" className="field-help mt-2">{FIELD_HELP_DELTA}</p>
+          </section>
           <RunTrajectory id={data.id} ordinal={run.ordinal} name={runName} goal={isProfileExperiment(data) ? data.display.goal : data.request.conditions.goal} money={money} onSelect={(index) => { setPlaying(false); setCursor(index); setOffset(pageOffset(index)); setTab("Apuestas"); }} />
           <div className="border-t border-border pt-5" aria-label="Reproducción visual">
-            <h3 className="section-header">Reproducción visual</h3>
+            <h4 className="section-header">Reproducción visual</h4>
             <p className="mb-3 text-sm text-text-secondary">El sorteo mostrado es una posición de lectura; no cambia el resultado final guardado.</p>
             <p aria-live="polite" className="mb-3 text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)}${isProfileBatchRun(run) && canonicalSourceIndex != null ? ` · índice fuente ${canonicalSourceIndex}` : ""} · saldo en ese sorteo ${money(current.balance)}` : ""}</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -274,6 +278,11 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
             </div>
             {typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches && <p className="mt-2 text-sm">Movimiento reducido: usá anterior y siguiente; reproducción automática desactivada.</p>}
           </div>
+          <dl className="data-list mt-5 border-t border-border pt-5">
+            {isProfileRun(run) ? <><dt>Versión del resultado</dt><dd>Perfil v{run.result.schema_version}</dd><dt>Sorteos transcurridos</dt><dd>{run.result.elapsed_draws}</dd><dt>Sorteos apostados</dt><dd>{run.result.bet_draws}</dd>{isProfileBatchRun(run) && <><dt>Alcance del resultado</dt><dd>{run.result.complete ? "Completo según el límite configurado" : "Incompleto; no equivale al fin de la fuente"}</dd></>}</> : <><dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd></>}
+          </dl>
+          <FinancialMetrics result={run.result} money={money} omitNet />
+          <p className="mt-3 text-sm text-text-secondary">{isProfileExperiment(data) ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
         </>}
         {tab === "Apuestas" && <>
           {current && <p role="status">Apuesta seleccionada {cursor + 1}: {storedDate(current.label)} · {money(current.balance)}</p>}
@@ -285,7 +294,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm"><span>Mostrando {total ? offset + 1 : 0}–{Math.min(offset + (visiblePage?.items.length ?? 0), total)} de {total}</span><button type="button" className={button} disabled={offset === 0} onClick={() => { const previous = Math.max(0, offset - PAGE_SIZE); setPlaying(false); setOffset(previous); setCursor(previous); }}>Página anterior</button><button type="button" className={button} disabled={offset + PAGE_SIZE >= total} onClick={() => { const next = offset + PAGE_SIZE; setPlaying(false); setOffset(next); setCursor(next); }}>Página siguiente</button></div>
         </>}
         {loading && <p role="status" className="mt-3">Cargando página de apuestas…</p>}
-        {error && <p role="alert" className="mt-3">{error} <button type="button" className="text-accent underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
+        {error && <p role="alert" className="mt-3">{error} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
       </>}
     </div>
     {tabs.map((name, index) => name !== tab && <div key={name} role="tabpanel" id={`detail-panel-${index}`} aria-labelledby={`detail-tab-${index}`} hidden />)}
@@ -328,18 +337,18 @@ export function DetailPage() {
   const selected = data?.runs.find((run) => run.ordinal === ordinal) ?? requested ?? data?.runs[0];
   return <div>
     {!data && !error && <p role="status">Cargando experimento…</p>}
-    {error && <p role="alert" className="mb-4">{error} <button type="button" className="text-accent underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
+    {error && <p role="alert" className="mb-4">{error} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
     {data && <>
-      <nav aria-label="Navegación del experimento" className="mb-5 flex flex-wrap gap-5 text-sm text-accent underline">
-        <Link to="/experimentos">Volver a Experimentos</Link>
-        <Link to={`/experimentos/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Ver comparación"}</Link>
+      <nav aria-label="Navegación del experimento" className="mb-5 flex flex-wrap gap-2 text-sm">
+        <Link className="btn btn-tertiary" to="/experimentos">Volver a Experimentos</Link>
+        <Link className="btn btn-tertiary" to={`/experimentos/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Ver comparación"}</Link>
       </nav>
       {requestedRun !== null && !requested && <p role="status" className="mb-4">La ejecución solicitada no existe en este experimento; se muestra la primera disponible.</p>}
       <div className="flex flex-wrap items-center gap-4 border-b border-border pb-5"><h2 className="font-heading text-2xl">{isProfileBatchExperiment(data) ? data.display.name : isProfileExperiment(data) ? data.request.name : data.request.name}</h2><StatusLabel kind="execution" value={data.status} /></div>
       <p className="mt-3 text-sm text-text-secondary">ID: <span className="font-mono">{data.id}</span>. {data.status === "running" || data.status === "pending" || data.status === "held" ? "Consultando el progreso guardado; salir de esta página no cancela la ejecución." : "Estado guardado del experimento."}</p>
-      <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
+      {data.runs.length > 1 && <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
         {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {isProfileBatchRun(run) ? run.strategy.name ?? `Estrategia ${run.ordinal + 1}` : isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? "Estrategia"} · <StatusLabel kind="execution" value={run.status} /></button>)}
-      </div>
+      </div>}
       {selected && <RunView key={`${id}:${selected.ordinal}`} data={data} run={selected} />}
     </>}
   </div>;
