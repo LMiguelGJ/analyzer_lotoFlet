@@ -21,7 +21,7 @@ function validationErrors(error: ApiError): Errors {
     const path = body < 0 ? loc : loc.slice(body + 1);
     const key = path[0] === "name" && path.length === 1 ? "libraryName"
       : path[0] === "strategy" ? path.length === 1 ? "strategies.0" : `strategies.0.${path.slice(1).join(".")}` : "form";
-    mapped[key] = { message: key === "libraryName" ? "El servidor rechazó el nombre de la plantilla." : key === "form" ? "El servidor rechazó la solicitud." : "El servidor rechazó este valor de la estrategia.", detail: entry.msg };
+    mapped[key] = { message: key === "libraryName" ? "El servidor rechazó el nombre guardado." : key === "form" ? "El servidor rechazó la solicitud." : "El servidor rechazó este valor de la estrategia.", detail: entry.msg };
   }
   return mapped;
 }
@@ -110,7 +110,7 @@ export function ConfigurationsPage() {
       setEditor({ id: saved.id, name: saved.name, strategy: draftFromStrategy(saved.strategy, 1), dirty: false });
     } catch (error) {
       if (request === editorRequest.current) {
-        setMessage(error instanceof ApiError && error.status === 404 ? "La plantilla ya no existe. Actualizá el listado." : error instanceof NetworkError ? "No se pudo contactar al servidor local para editar la plantilla." : "No se pudo cargar la plantilla. Reintentá.");
+        setMessage(error instanceof ApiError && error.status === 404 ? "La estrategia guardada ya no existe. Actualizá el listado." : error instanceof NetworkError ? "No se pudo contactar al servidor local para editar la estrategia guardada." : "No se pudo cargar la estrategia guardada. Reintentá.");
         if (error instanceof ApiError && error.status === 404) setRetry((value) => value + 1);
       }
     } finally { if (request === editorRequest.current) setEditorLoading(false); }
@@ -118,7 +118,7 @@ export function ConfigurationsPage() {
   async function save() {
     if (!editor || !catalog || saveRef.current) return;
     const found = validateStrategies([editor.strategy], catalog);
-    if (!trimName(editor.name) || trimName(editor.name).length > 80) found.libraryName = "Ingresá un nombre de plantilla de 1 a 80 caracteres.";
+    if (!trimName(editor.name) || trimName(editor.name).length > 80) found.libraryName = "Ingresá un nombre guardado de 1 a 80 caracteres.";
     setErrors(found); setMessage("");
     if (Object.keys(found).length) return;
     saveRef.current = true; setEditorLoading(true);
@@ -133,7 +133,7 @@ export function ConfigurationsPage() {
       if (error instanceof ApiError && error.status === 422) {
         const mapped = validationErrors(error); setErrors(mapped);
         setMessage("El servidor encontró errores. Revisá los campos señalados.");
-      } else setMessage(error instanceof ApiError && error.status === 404 ? "La plantilla ya no existe. Tus cambios siguen aquí." : error instanceof NetworkError ? "No se pudo contactar al servidor local. La solicitud podría haber llegado; comprobá el listado antes de reintentar." : "No se pudo guardar la estrategia. Tus cambios siguen aquí.");
+      } else setMessage(error instanceof ApiError && error.status === 404 ? "La estrategia guardada ya no existe. Tus cambios siguen aquí." : error instanceof NetworkError ? "No se pudo contactar al servidor local. La solicitud podría haber llegado; comprobá el listado antes de reintentar." : "No se pudo guardar la estrategia. Tus cambios siguen aquí.");
     } finally { saveRef.current = false; setEditorLoading(false); }
   }
   async function remove() {
@@ -149,26 +149,26 @@ export function ConfigurationsPage() {
     } catch (error) {
       if (!mountedRef.current) return;
       setDeleting(null);
-      setMessage(error instanceof ApiError && error.status === 404 ? "La plantilla ya no existe; se actualizó el listado." : error instanceof ApiError && error.status === 400 ? "La confirmación no coincidió; no se eliminó la plantilla." : error instanceof NetworkError ? "No se pudo contactar al servidor local. Comprobá el listado antes de reintentar." : "No se pudo eliminar la plantilla.");
+      setMessage(error instanceof ApiError && error.status === 404 ? "La estrategia guardada ya no existe; se actualizó el listado." : error instanceof ApiError && error.status === 400 ? "La confirmación no coincidió; no se eliminó la estrategia guardada." : error instanceof NetworkError ? "No se pudo contactar al servidor local. Comprobá el listado antes de reintentar." : "No se pudo eliminar la estrategia guardada.");
       if (error instanceof ApiError && error.status === 404) setRetry((value) => value + 1);
     } finally { deleteRef.current = false; if (mountedRef.current) setDeletingBusy(false); }
   }
   const visible = page?.items.filter((item) => item.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())) ?? [];
   return <>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <p className="max-w-prose text-text-secondary">Reutilizá estrategias en nuevos experimentos. El nombre de la plantilla puede diferir del nombre de la estrategia.</p>
+      <p className="max-w-prose text-text-secondary">Estrategias para reutilizar en nuevos experimentos.</p>
       <button type="button" className="btn btn-primary" onClick={create}>Nueva estrategia guardada</button>
     </div>
     {success && <p ref={successRef} tabIndex={-1} role="status" className="mb-4 text-sm text-accent focus:outline-none" onBlur={() => setSuccess("")}>{success}</p>}
     {message && <p role="alert" className="mb-4 text-sm text-red-300">{message}</p>}
-    {catalogError && <p role="alert" className="mb-4 text-sm text-red-300">{catalogError} <button type="button" className="text-accent underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
+    {catalogError && <p role="alert" className="mb-4 text-sm text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
     {editorLoading && !editor && <p role="status">Cargando configuración…</p>}
     {editor && <section aria-label="Editor de estrategia guardada" className="mb-8 max-w-2xl border-t border-border pt-5">
       <h2 className="section-header">{editor.id ? "Editar estrategia guardada" : "Nueva estrategia guardada"}</h2>
       <fieldset disabled={editorLoading}>
-      <label htmlFor="libraryName" className="field-label">Nombre de la plantilla</label>
+      <label htmlFor="libraryName" className="field-label">Nombre guardado</label>
       <input id="libraryName" className={control} value={editor.name} maxLength={81} aria-invalid={!!errors.libraryName} aria-describedby={errors.libraryName ? "libraryName-help libraryName-error" : "libraryName-help"} onChange={(event) => { setEditor({ ...editor, name: event.target.value, dirty: true }); setErrors((previous) => { const next = { ...previous }; delete next.libraryName; return next; }); setMessage(""); }} />
-      <p id="libraryName-help" className="field-help">Identifica la plantilla en esta biblioteca; la estrategia tiene su propio nombre.</p>
+      <p id="libraryName-help" className="field-help">Cómo aparece en esta lista.</p>
       {errors.libraryName && <p id="libraryName-error" className="mt-1 text-sm text-red-300">{errorMessage(errors.libraryName)} <span className="text-xs text-text-secondary">{errorDetail(errors.libraryName)}</span></p>}
       <div className="mt-5 pt-5">
         {errors["strategies.0"] && <p className="mb-3 text-sm text-red-300">{errorMessage(errors["strategies.0"])} <span className="text-xs text-text-secondary">{errorDetail(errors["strategies.0"])}</span></p>}
@@ -181,18 +181,20 @@ export function ConfigurationsPage() {
       </fieldset>
       <div className="flex flex-wrap gap-3"><button type="button" className="btn btn-primary disabled:opacity-50" disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar estrategia"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
     </section>}
-    <label htmlFor="configSearch" className="field-label">Buscar plantilla por nombre en esta página</label>
-    <input id="configSearch" className={`${control} mb-4 max-w-md`} value={search} onChange={(event) => setSearch(event.target.value)} />
-    {!page && !listError && <p role="status">Cargando estrategias guardadas…</p>}
-    {listError && <p role="alert" className="text-red-300">{listError} <button type="button" className="text-accent underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
-    {page && <>
-      {page.total === 0 ? <p role="status">Todavía no hay estrategias guardadas. Creá la primera para reutilizarla.</p> : visible.length === 0 ? <p role="status">Sin coincidencias en esta página. Probá otra página o cambiá la búsqueda.</p> : <ul className="divide-y divide-border border-t border-border">{visible.map((item) => <li key={item.id} className="saved-strategy-row border-b border-border py-4">
-        <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
-        <div className="flex flex-wrap gap-2"><Link className={action} to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className={action} onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-destructive disabled:opacity-50" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
-      </li>)}</ul>}
-      <nav aria-label="Páginas de configuraciones" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {page.total} en total</span><button type="button" className={action} disabled={offset + pageSize >= page.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>
+    {page && page.total > 0 && <>
+      <label htmlFor="configSearch" className="field-label">Buscar estrategia guardada</label>
+      <input id="configSearch" className={`${control} mb-4 max-w-md`} value={search} onChange={(event) => setSearch(event.target.value)} />
     </>}
-    <ConfirmDialog open={!!deleting && !deletingBusy} title={deleting ? `¿Eliminar la plantilla «${deleting.name}»?` : "¿Eliminar plantilla?"} description={`Se eliminará «${deleting?.name ?? "esta plantilla"}» de las estrategias guardadas. Los resultados de experimentos anteriores se conservan. Esta acción no se puede deshacer.`} confirmLabel="Eliminar plantilla" onCancel={() => setDeleting(null)} onConfirm={() => { void remove(); }} />
+    {!page && !listError && <p role="status">Cargando estrategias guardadas…</p>}
+    {listError && <p role="alert" className="text-red-300">{listError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
+    {page && <>
+      {page.total === 0 ? <p role="status">Todavía no hay estrategias guardadas.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">Sin coincidencias en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Limpiar búsqueda</button></div> : <ul className="divide-y divide-border border-t border-border">{visible.map((item) => <li key={item.id} className="saved-strategy-row border-b border-border py-4">
+        <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
+        <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className="btn btn-tertiary" onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-destructive disabled:opacity-50" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
+      </li>)}</ul>}
+      {page.total > 0 && <nav aria-label="Páginas de configuraciones" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {page.total} en total</span><button type="button" className={action} disabled={offset + pageSize >= page.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>}
+    </>}
+    <ConfirmDialog open={!!deleting && !deletingBusy} title={deleting ? `¿Eliminar la estrategia guardada «${deleting.name}»?` : "¿Eliminar estrategia guardada?"} description={`Los resultados de experimentos anteriores se conservan. Esta acción no se puede deshacer.`} confirmLabel="Eliminar estrategia guardada" onCancel={() => setDeleting(null)} onConfirm={() => { void remove(); }} />
     <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios de la estrategia guardada que aún no guardaste." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onCancel={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
   </>;
 }

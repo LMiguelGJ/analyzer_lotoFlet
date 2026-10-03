@@ -48,7 +48,7 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   setup();
   expect(screen.getByRole("status")).toHaveTextContent(/Cargando ajustes/);
   resolve(base);
-  expect(await screen.findByText("Uso lógico de admisión")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Capacidad" })).toBeInTheDocument();
   expect(screen.getByText("5 GiB (5,368,709,120 bytes)")).toBeInTheDocument();
   expect(screen.getByText("1,536 bytes")).toBeInTheDocument();
   expect(screen.getByText("5,368,707,584 bytes")).toBeInTheDocument();
@@ -60,9 +60,8 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   expect(within(screen.getByText("Artefactos de datasets").parentElement!).getByText("0 bytes")).toBeInTheDocument();
   expect(screen.getByText(/SQLite y archivos locales \(total informado\)/)).toBeInTheDocument();
   expect(screen.getByText("Espacio en disco libre")).toBeInTheDocument();
-  expect(screen.getByText(/JSON y rankings originales no se incluyen/i)).toBeInTheDocument();
-  expect(screen.getByText(/borrar registros no garantiza reducir/i)).toBeInTheDocument();
-  expect(screen.getByText(/próxima admisión o escritura/i)).toBeInTheDocument();
+  expect(screen.getByText(/El límite no es el espacio libre en disco/)).toBeInTheDocument();
+  expect(screen.getByText("Diagnóstico técnico")).toBeInTheDocument();
   expect(screen.getByText("iniciar-laboratorio.bat")).toBeInTheDocument();
   expect(screen.getByText(/Ctrl\+C en su consola/)).toBeInTheDocument();
   expect(screen.queryByText(/LW16/)).not.toBeInTheDocument();
@@ -78,19 +77,19 @@ it("distinguishes disconnected from generic errors and retries", async () => {
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudieron cargar los ajustes/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
-  expect(await screen.findByText(/Uso lógico/)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Capacidad" })).toBeInTheDocument();
 });
 
 it.each(["", "0", "01", " 5", "+5", "-1", "1.5", "1e3", "９", "9223372036854775808"])("rejects invalid byte input %j with focus and no PUT", async (value) => {
   const { user } = setup();
-  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(input);
   if (value) await user.type(input, value);
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(input).toHaveFocus();
   expect(input).toHaveAttribute("aria-invalid", "true");
   expect(screen.getByText(/Ingresá un entero decimal ASCII/, { selector: "#quota-error" })).toBeInTheDocument();
-  expect(input).toHaveAccessibleDescription(/entero decimal ASCII positivo.*Ingresá un entero decimal ASCII/s);
+  expect(input).toHaveAccessibleDescription(/Entero positivo.*Ingresá un entero decimal ASCII/s);
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
 });
 
@@ -98,11 +97,11 @@ it("sends max int64 exactly as a string, disables duplicate saving, then trusts 
   let resolve!: (view: SettingsView) => void;
   vi.mocked(apiClient.updateSettings).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
   const { user } = setup();
-  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(input);
-  expect(input).toHaveAccessibleDescription(/entero decimal ASCII positivo.*9,223,372,036,854,775,807/i);
+  expect(input).toHaveAccessibleDescription(/Entero positivo.*Mínimo 1,536 bytes/i);
   await user.type(input, "9223372036854775807");
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(apiClient.updateSettings).toHaveBeenCalledWith("9223372036854775807");
   expect(screen.getByRole("button", { name: /Guardando/ })).toBeDisabled();
   expect(input).toBeDisabled();
@@ -119,14 +118,14 @@ it("keeps the draft after 422, 409 below usage, and network failure; 422 focuses
     .mockRejectedValueOnce(new ApiError(409, "quota cannot be below current logical usage"))
     .mockRejectedValueOnce(new NetworkError());
   const { user } = setup();
-  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(input); await user.type(input, "2000");
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(await screen.findByText(/El servidor rechazó el presupuesto/)).toBeInTheDocument();
   expect(input).toHaveFocus();
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/menor que el uso lógico de admisión actual/);
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/podría haber llegado/);
   expect(input).toHaveValue("2000");
 });
@@ -137,8 +136,8 @@ it("shows an environment quota as read-only, with persisted preference distinct"
   expect(await screen.findByText(/Variable de entorno/)).toBeInTheDocument();
   expect(screen.getByText("1,536 bytes")).toBeInTheDocument();
   expect(screen.getByText(/2,147,483,648 bytes/)).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Guardar presupuesto" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("textbox", { name: /Límite lógico en bytes/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Guardar límite" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("textbox", { name: /Nuevo límite en bytes/ })).not.toBeInTheDocument();
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
 });
 
@@ -153,21 +152,21 @@ it("presents max int64 and aggregate usage exactly with es-DO grouping while kee
   expect(screen.getByText("9,007,199,254,741,000 bytes")).toBeInTheDocument();
   expect(screen.getByText("9,214,364,837,600,034,807 bytes")).toBeInTheDocument();
   expect(screen.getByText("9,007,199,254,740,993 bytes")).toBeInTheDocument();
-  expect(screen.getByRole("textbox", { name: /Límite lógico en bytes/ })).toHaveValue("9223372036854775807");
+  expect(screen.getByRole("textbox", { name: /Nuevo límite en bytes/ })).toHaveValue("9223372036854775807");
 });
 
 it("rejects a quota above historical bytes but below aggregate admission usage, then allows equality", async () => {
   const { user } = setup();
-  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(input); await user.type(input, "1500");
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(input).toHaveFocus();
   expect(input).toHaveAttribute("aria-invalid", "true");
-  expect(screen.getByText(/al menos 1,536 bytes de uso lógico de admisión/)).toBeInTheDocument();
+  expect(screen.getByText(/Mínimo 1,536 bytes/)).toBeInTheDocument();
   expect(screen.getByText(/no puede ser menor que el uso lógico de admisión actual.*1,536 bytes/, { selector: "#quota-error" })).toBeInTheDocument();
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
   await user.clear(input); await user.type(input, "1536");
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(apiClient.updateSettings).toHaveBeenCalledWith("1536");
   expect(screen.queryByText(/no puede ser menor/, { selector: "#quota-error" })).not.toBeInTheDocument();
 });
@@ -187,19 +186,19 @@ it("clamps remaining and progress when aggregate usage exceeds the effective lim
   });
   setup();
   expect(await screen.findByText("0 bytes", { selector: "span" })).toBeInTheDocument();
-  expect(screen.getByText(/uso superior al límite por 336 bytes/)).toBeInTheDocument();
+  expect(screen.getByText(/Uso superior al límite por 336 bytes/)).toBeInTheDocument();
   expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "100");
 });
 
 it("marks historical-only responses as incomplete instead of claiming an aggregate", async () => {
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce(fixture as SettingsView);
   const { user } = setup();
-  expect(await screen.findByText(/total de admisión y el espacio restante pueden estar incompletos/)).toBeInTheDocument();
+  expect(await screen.findByText(/Uso incompleto: este servidor no informa el total/)).toBeInTheDocument();
   expect(screen.queryByRole("progressbar", { name: "Cuota lógica utilizada" })).not.toBeInTheDocument();
   expect(screen.queryByText("Artefactos de perfiles (copias JSON)")).not.toBeInTheDocument();
-  const input = screen.getByRole("textbox", { name: /Límite lógico en bytes/ });
+  const input = screen.getByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(input); await user.type(input, "1023");
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
 });
 
@@ -216,7 +215,7 @@ it("guards dirty navigation and unload while a refresh keeps the draft across se
   });
   const add = vi.spyOn(window, "addEventListener");
   const { user, router } = setup();
-  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(input); await user.type(input, "7000000000");
   expect(add.mock.calls.some(([name]) => name === "beforeunload")).toBe(true);
   await user.click(screen.getByRole("button", { name: "Actualizar estado" }));
@@ -238,11 +237,11 @@ it("preserves an unsaved draft when a refresh changes quota to environment read-
     ...base, quota: { effective_bytes: "6000000000", persisted_bytes: null, source: "environment", writable: false },
   });
   const { user, router } = setup();
-  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(input); await user.type(input, "7000000000");
   await user.click(screen.getByRole("button", { name: "Actualizar estado" }));
   expect(await screen.findByText(/Borrador no guardado:/)).toHaveTextContent("7000000000");
-  expect(screen.queryByRole("button", { name: "Guardar presupuesto" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Guardar límite" })).not.toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Experimentos" }));
   expect(router.state.location.pathname).toBe("/ajustes");
   expect(screen.getByRole("alertdialog")).toBeInTheDocument();
@@ -250,17 +249,17 @@ it("preserves an unsaved draft when a refresh changes quota to environment read-
 
 it("does not block clean navigation and explains 403 and a raced read-only 409 without losing the draft", async () => {
   const { user, router } = setup();
-  const input = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  const input = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.click(screen.getByRole("link", { name: "Experimentos" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Ajustes" }));
-  const edited = await screen.findByRole("textbox", { name: /Límite lógico en bytes/ });
+  const edited = await screen.findByRole("textbox", { name: /Nuevo límite en bytes/ });
   await user.clear(edited); await user.type(edited, "7000000000");
   vi.mocked(apiClient.updateSettings).mockRejectedValueOnce(new ApiError(403, "forbidden")).mockRejectedValueOnce(new ApiError(409, "environment quota is read-only"));
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/origen de la solicitud/);
-  await user.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/variable de entorno tiene prioridad/);
   expect(edited).toHaveValue("7000000000");
   expect(input).not.toBeInTheDocument();
@@ -268,7 +267,7 @@ it("does not block clean navigation and explains 403 and a raced read-only 409 w
 
 it("does not retrieve an agent credential until the operator explicitly asks", async () => {
   const { user } = setup();
-  expect(await screen.findByText("Uso lógico de admisión")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Capacidad" })).toBeInTheDocument();
   expect(agentApi.getAgentCredential).not.toHaveBeenCalled();
   expect(screen.getByRole("heading", { name: "Acceso para agentes" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Consultar credencial de agente" }));
@@ -369,6 +368,6 @@ it("ignores a credential response after the settings screen unmounts", async () 
 
 it("has no axe violations in loaded settings", async () => {
   const { container } = setup();
-  await screen.findByText("Uso lógico de admisión");
+  await screen.findByRole("heading", { name: "Capacidad" });
   expect(await axe(container)).toHaveNoViolations();
 });

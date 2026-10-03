@@ -239,77 +239,85 @@ export function SettingsPage() {
     } finally { saveRef.current = false; setSaving(false); }
   }
 
+  const sourceName = view?.quota.source === "environment" ? "Variable de entorno" : view?.quota.source === "persisted" ? "Preferencia guardada" : "Por defecto";
   return <div className="max-w-5xl space-y-8">
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <p className="max-w-prose text-text-secondary">Límite y uso lógico de admisión, separados del tamaño de archivos y del espacio libre en disco.</p>
-      {view && <button type="button" className={action} disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>}
-    </div>
+    {view && <div className="flex justify-end">
+      <button type="button" className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-50" disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>
+    </div>}
     {loading && <p role="status" className="border-y border-border py-5 text-text-secondary">Cargando ajustes…</p>}
-    {loadError && <p role="alert" className="text-red-300">{loadError} <button type="button" className="text-accent underline" onClick={() => setRefresh((previous) => previous + 1)}>Reintentar</button></p>}
+    {loadError && <p role="alert" className="text-red-300">{loadError} <button type="button" className="btn btn-tertiary" onClick={() => setRefresh((previous) => previous + 1)}>Reintentar</button></p>}
     {view && <>
       <section aria-labelledby="storage-heading" className="border-t border-border pt-5">
-        <h2 id="storage-heading" className="section-header">Límite y uso lógico</h2>
+        <h2 id="storage-heading" className="section-header">Capacidad</h2>
         <div className="metric-grid">
-          <div className={metric}><h3 className="field-label">Límite lógico efectivo</h3><p className="metric-value">{budget(view.quota.effective_bytes)}</p><p className="field-help">{view.quota.source === "environment" ? "Variable de entorno (prioridad máxima)" : view.quota.source === "persisted" ? "Preferencia guardada" : "Por defecto: 5 GiB"}</p></div>
-          <div className={metric}><h3 className="field-label">Uso lógico de admisión</h3><p className="metric-value">{bytes(used.toString())}</p><p className="field-help">{hasAdmission ? "Incluye experimentos, ejecuciones y copias de perfiles guardados; no equivale al tamaño físico de SQLite." : "Este servidor solo informa el uso histórico de experimentos y ejecuciones. El total de admisión y el espacio restante pueden estar incompletos; actualizá el servidor para verlos."}</p></div>
+          <div className={metric}><h3 className="field-label">Límite</h3><p className="metric-value">{budget(view.quota.effective_bytes)}</p></div>
+          <div className={metric}><h3 className="field-label">Usado</h3><p className="metric-value">{bytes(used.toString())}</p></div>
+          {hasAdmission && <div className={metric}><h3 className="field-label">Disponible</h3><p className="metric-value"><span className="tabular-nums">{bytes(remaining.toString())}</span></p></div>}
         </div>
-        {hasAdmission && <>
-          <p className="mt-4 text-sm text-text-secondary">Capacidad restante según cuota: <span className="font-mono tabular-nums">{bytes(remaining.toString())}</span>{used > limit ? ` (uso superior al límite por ${bytes((used - limit).toString())})` : ""}. El margen para escrituras y el disco libre también pueden limitar nuevas admisiones.</p>
-          <progress className="mt-3 w-full accent-accent" aria-label="Cuota lógica utilizada" value={progress} max={100} />
-          <dl className="metric-grid mt-4 text-sm">
-            <div className={metric}><dt>Experimentos y ejecuciones históricos</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.logical_used_bytes_exact)}</dd></div>
-            <div className={metric}><dt>Artefactos de perfiles (copias JSON)</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.profile_artifact_bytes_exact)}</dd></div>
-            <div className={metric}><dt>Artefactos de datasets</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.dataset_artifact_bytes_exact)}</dd></div>
-          </dl>
-        </>}
-        <p className="mt-4 text-sm text-text-secondary">Preferencia persistida: {view.quota.persisted_bytes === null ? "ninguna" : bytes(view.quota.persisted_bytes)}. {view.quota.source === "environment" ? "La variable de entorno prevalece sobre la preferencia persistida." : "Se conserva entre reinicios del servidor."}</p>
-        {view.storage.warning && <p role="alert" className="mt-4 border border-border-control bg-field p-3 text-sm">Advertencia: el servidor señala proximidad al límite o falta de disco para nuevas escrituras. No se borra nada automáticamente.</p>}
-        <p className="mt-4 max-w-prose text-sm text-text-secondary">El cambio se aplica en la próxima admisión o escritura; no cancela retroactivamente una ejecución activa. La cuota usa un margen para escrituras y metadatos. El servidor decide si hay capacidad suficiente; no se aumenta sola.</p>
-        {view.quota.writable ? <form onSubmit={(event) => { void save(event); }} noValidate className="mt-6 max-w-xl">
-          <label htmlFor="quota-bytes" className="field-label">Límite lógico en bytes</label>
+        {hasAdmission
+          ? <progress className="mt-4 w-full accent-accent" aria-label="Cuota lógica utilizada" value={progress} max={100} />
+          : <p className="mt-4 text-sm text-text-secondary">Uso incompleto: este servidor no informa el total.</p>}
+        {hasAdmission && used > limit && <p className="mt-2 text-sm text-text-secondary">Uso superior al límite por {bytes((used - limit).toString())}.</p>}
+        <p className="mt-3 text-sm text-text-secondary">El límite no es el espacio libre en disco.</p>
+        {view.storage.warning && <p role="alert" className="mt-4 border border-border-control bg-field p-3 text-sm">El servidor avisa: cerca del límite o falta de disco.</p>}
+      </section>
+      <section aria-labelledby="quota-form-heading" className="border-t border-border pt-5">
+        <h2 id="quota-form-heading" className="section-header">Cambiar límite</h2>
+        {view.quota.writable ? <form onSubmit={(event) => { void save(event); }} noValidate className="max-w-xl">
+          <label htmlFor="quota-bytes" className="field-label">Nuevo límite en bytes</label>
           <input ref={inputRef} id="quota-bytes" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={draft ?? ""} disabled={saving} aria-invalid={!!fieldError} aria-describedby={fieldError ? "quota-help quota-error" : "quota-help"} onChange={(event) => { setDraft(event.target.value); setFieldError(""); setSaveError(""); setSaved(false); }} className="control font-mono tabular-nums" />
-          <p id="quota-help" className="field-help">Ingresá un entero decimal ASCII positivo en bytes (1 a 9,223,372,036,854,775,807), sin separadores, espacios ni ceros iniciales. El nuevo límite debe ser al menos {bytes(used.toString())}{hasAdmission ? " de uso lógico de admisión" : " de uso histórico informado (el total de admisión no está disponible)"}. 1 GiB = 1,073,741,824 bytes; 5 GiB = 5,368,709,120 bytes.</p>
+          <p id="quota-help" className="field-help">Entero positivo, sin separadores. Mínimo {bytes(used.toString())}. Ej.: 5368709120 (5 GiB).</p>
           {fieldError && <p id="quota-error" className="mt-2 text-sm text-red-300">{fieldError}</p>}
           {saveError && <p role="alert" className="mt-2 text-sm text-red-300">{saveError}</p>}
-          {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado. El presupuesto efectivo se actualizó con la respuesta del servidor.</p>}
-          <button type="submit" className="btn btn-primary mt-4 disabled:opacity-50" disabled={saving}>{saving ? "Guardando…" : "Guardar presupuesto"}</button>
-        </form> : <div className="mt-6 max-w-prose text-text-secondary"><p>La cuota está fijada por LABORATORIO_QUOTA_BYTES en el entorno del proceso. Esta pantalla es de solo lectura mientras esa variable tenga prioridad; cambiar la preferencia guardada aquí no tendría efecto.</p>{dirty && <p className="mt-2 break-words">Borrador no guardado: <span className="font-mono">{draft}</span> bytes. Copialo antes de salir si lo necesitás; no se envió al servidor.</p>}</div>}
+          {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado. El límite se actualizó.</p>}
+          <button type="submit" className="btn btn-primary mt-4 disabled:opacity-50" disabled={saving}>{saving ? "Guardando…" : "Guardar límite"}</button>
+        </form> : <div className="max-w-prose text-text-secondary"><p>El entorno del servidor fija el límite; aquí es de solo lectura.</p>{dirty && <p className="mt-2 break-words">Borrador no guardado: <span className="font-mono">{draft}</span> bytes. No se envió.</p>}</div>}
       </section>
-      <section aria-labelledby="physical-heading" className="border-t border-border pt-5">
-        <h2 id="physical-heading" className="section-header">Archivos físicos y disco</h2>
-        <p className="mb-4 max-w-prose text-sm text-text-secondary">Estos tamaños son distintos del uso lógico. El disco libre corresponde al volumen de la base, no a espacio recuperable al borrar registros. Borrar registros no garantiza reducir inmediatamente el archivo SQLite. Los JSON y rankings originales no se incluyen.</p>
-        <dl className="metric-grid">
-          <div className={metric}><dt>SQLite y archivos locales (total informado)</dt><dd className="break-words font-mono">{measured(view.storage.sqlite_bytes)}</dd></div>
-          <div className={metric}><dt>Espacio en disco libre</dt><dd className="break-words font-mono">{measured(view.storage.free_disk_bytes)}</dd></div>
-          <div className={metric}><dt>Base SQLite</dt><dd className="break-words font-mono">{measured(view.storage.database_bytes)}</dd></div>
-          <div className={metric}><dt>WAL</dt><dd className="break-words font-mono">{measured(view.storage.wal_bytes)}</dd></div>
-          <div className={metric}><dt>SHM</dt><dd className="break-words font-mono">{measured(view.storage.shm_bytes)}</dd></div>
-          <div className={metric}><dt>Temporales locales</dt><dd className="break-words font-mono">{measured(view.storage.temp_bytes)}</dd></div>
-        </dl>
-        <p className="mt-3 max-w-prose text-sm text-text-secondary">El total físico informado incluye los archivos locales conocidos; no mide temporales de SQLite administrados por el sistema operativo. No se estima espacio recuperable ni se compacta la base desde esta pantalla.</p>
-      </section>
-      <section aria-labelledby="sources-heading" className="border-t border-border pt-5">
-        <h2 id="sources-heading" className="section-header">Datos de origen</h2>
-        <p className="max-w-prose text-sm text-text-secondary">Fuentes congeladas de solo lectura. La API no informa un período de cobertura; no se infiere a partir de los nombres. No se pueden importar datos ni agregar juegos aquí.</p>
-        <details className="mt-4 border-y border-border py-3"><summary className="cursor-pointer text-sm text-accent">Ver identificadores, huellas y versión</summary>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div><dt className="text-text-secondary">Historial · identificador</dt><dd className="break-all font-mono">{view.sources.history_id}</dd></div>
-            <div><dt className="text-text-secondary">Historial · SHA-256</dt><dd className="break-all font-mono">{view.sources.history_sha256}</dd></div>
-            <div><dt className="text-text-secondary">Rankings · identificador</dt><dd className="break-all font-mono">{view.sources.rankings_id}</dd></div>
-            <div><dt className="text-text-secondary">Rankings · SHA-256</dt><dd className="break-all font-mono">{view.sources.rankings_sha256}</dd></div>
-            <div><dt className="text-text-secondary">Versión de código</dt><dd className="break-all font-mono">{view.sources.code_version}</dd></div>
+      <details className="border-y border-border py-3"><summary className="disclosure-summary">Diagnóstico técnico</summary>
+        <div className="mt-4 space-y-6 text-sm">
+          <dl className="metric-grid">
+            <div className={metric}><dt>Origen del límite</dt><dd>{sourceName}</dd></div>
+            <div className={metric}><dt>Preferencia persistida</dt><dd className="break-words font-mono tabular-nums">{view.quota.persisted_bytes === null ? "ninguna" : bytes(view.quota.persisted_bytes)}</dd></div>
+            {hasAdmission && <>
+              <div className={metric}><dt>Experimentos y ejecuciones históricos</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.logical_used_bytes_exact)}</dd></div>
+              <div className={metric}><dt>Artefactos de perfiles (copias JSON)</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.profile_artifact_bytes_exact)}</dd></div>
+              <div className={metric}><dt>Artefactos de datasets</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.dataset_artifact_bytes_exact)}</dd></div>
+            </>}
           </dl>
-        </details>
-      </section>
-      <section aria-labelledby="connection-heading" className="border-t border-border pt-5">
-        <h2 id="connection-heading" className="section-header">Conexión local</h2>
-        <p className="text-sm">Respuesta del servidor local: <span className="font-mono">{view.connection.host}:{view.connection.port}</span> · versión <span className="font-mono">{view.connection.version}</span>.</p>
-        <p className="mt-3 max-w-prose text-sm text-text-secondary">En Windows, hacé doble clic en <code>iniciar-laboratorio.bat</code> después de completar la preparación inicial indicada en README. Para detener el servidor, presioná Ctrl+C en su consola y esperá la salida; cerrar el navegador no detiene la cola.</p>
-      </section>
+          <section aria-labelledby="physical-heading">
+            <h3 id="physical-heading" className="field-label">Archivos físicos y disco</h3>
+            <dl className="metric-grid">
+              <div className={metric}><dt>SQLite y archivos locales (total informado)</dt><dd className="break-words font-mono">{measured(view.storage.sqlite_bytes)}</dd></div>
+              <div className={metric}><dt>Espacio en disco libre</dt><dd className="break-words font-mono">{measured(view.storage.free_disk_bytes)}</dd></div>
+              <div className={metric}><dt>Base SQLite</dt><dd className="break-words font-mono">{measured(view.storage.database_bytes)}</dd></div>
+              <div className={metric}><dt>WAL</dt><dd className="break-words font-mono">{measured(view.storage.wal_bytes)}</dd></div>
+              <div className={metric}><dt>SHM</dt><dd className="break-words font-mono">{measured(view.storage.shm_bytes)}</dd></div>
+              <div className={metric}><dt>Temporales locales</dt><dd className="break-words font-mono">{measured(view.storage.temp_bytes)}</dd></div>
+            </dl>
+          </section>
+          <section aria-labelledby="sources-heading">
+            <h3 id="sources-heading" className="field-label">Datos de origen</h3>
+            <dl className="space-y-3">
+              <div><dt className="text-text-secondary">Historial · identificador</dt><dd className="break-all font-mono">{view.sources.history_id}</dd></div>
+              <div><dt className="text-text-secondary">Historial · SHA-256</dt><dd className="break-all font-mono">{view.sources.history_sha256}</dd></div>
+              <div><dt className="text-text-secondary">Rankings · identificador</dt><dd className="break-all font-mono">{view.sources.rankings_id}</dd></div>
+              <div><dt className="text-text-secondary">Rankings · SHA-256</dt><dd className="break-all font-mono">{view.sources.rankings_sha256}</dd></div>
+              <div><dt className="text-text-secondary">Versión de código</dt><dd className="break-all font-mono">{view.sources.code_version}</dd></div>
+            </dl>
+          </section>
+          <section aria-labelledby="connection-heading">
+            <h3 id="connection-heading" className="field-label">Conexión local</h3>
+            <dl className="metric-grid">
+              <div className={metric}><dt>Servidor</dt><dd className="font-mono">{view.connection.host}:{view.connection.port}</dd></div>
+              <div className={metric}><dt>Versión</dt><dd className="font-mono">{view.connection.version}</dd></div>
+            </dl>
+            <p className="mt-3 text-text-secondary">Iniciar: <code>iniciar-laboratorio.bat</code>. Detener: Ctrl+C en su consola.</p>
+          </section>
+        </div>
+      </details>
       <section aria-labelledby="agent-access-heading" className="border-t border-border pt-5">
         <h2 id="agent-access-heading" className="section-header">Acceso para agentes</h2>
-        <p className="max-w-prose text-sm text-text-secondary">La API de agentes requiere una credencial Bearer. Consultala solo cuando vayas a usarla; se mantiene en esta pantalla y queda oculta al terminar.</p>
-        <p className="mt-3 max-w-prose border border-border-control bg-field p-3 text-sm">Mantené privada la credencial. La aplicación confía en clientes locales: otro proceso local puede llamar la API nativa sin esta credencial y puede simular un origen permitido. Host y Origin no aíslan procesos locales.</p>
+        <p className="max-w-prose text-sm text-text-secondary">Credencial Bearer para la API de agentes. Mantenéla privada: otros procesos locales pueden llamar la API sin ella.</p>
         {!agentCredential && !agentCredentialLoading && <button ref={agentCredentialTriggerRef} type="button" className={`${action} mt-4`} onClick={() => { void retrieveAgentCredential(); }}>
           {agentCredentialError ? "Reintentar consulta" : "Consultar credencial de agente"}
         </button>}
@@ -331,7 +339,7 @@ export function SettingsPage() {
             spellCheck={false}
             aria-describedby="agent-credential-help"
           />
-          <p id="agent-credential-help" className="field-help mt-2">El navegador no la guarda. Copiarla requiere tu acción; ocultarla la borra de la pantalla.</p>
+          <p id="agent-credential-help" className="field-help mt-2">Ocultarla la borra de la pantalla.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" className={action} onClick={() => { setAgentCredentialVisible((value) => !value); setManualCopyFallback(false); }}>
               {agentCredentialVisible ? "Ocultar credencial" : "Mostrar credencial"}

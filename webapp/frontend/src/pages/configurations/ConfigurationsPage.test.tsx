@@ -35,12 +35,23 @@ it("shows empty, disconnected and retry states honestly", async () => {
 it("keeps page-local search distinct from an empty library", async () => {
   const { user } = setup();
   await screen.findByText("Mi plantilla");
-  const search = screen.getByRole("textbox", { name: "Buscar plantilla por nombre en esta página" });
+  const search = screen.getByRole("textbox", { name: "Buscar estrategia guardada" });
   await user.type(search, "sin coincidencia");
   expect(screen.getByRole("status")).toHaveTextContent(/Sin coincidencias en esta página/);
   expect(screen.queryByText(/Todavía no hay estrategias guardadas/)).not.toBeInTheDocument();
   expect(apiClient.listConfigurations).toHaveBeenCalledWith(0, 20);
   expect(apiClient.listConfigurations).toHaveBeenCalledTimes(1);
+  await user.click(screen.getByRole("button", { name: "Limpiar búsqueda" }));
+  expect(search).toHaveValue("");
+  expect(screen.getByText("Mi plantilla")).toBeInTheDocument();
+});
+it("hides search and pagination while the library is empty", async () => {
+  vi.mocked(apiClient.listConfigurations).mockResolvedValueOnce({ total: 0, offset: 0, limit: 20, items: [] });
+  setup();
+  expect(await screen.findByText(/Todavía no hay estrategias guardadas/)).toBeInTheDocument();
+  expect(screen.queryByRole("textbox", { name: "Buscar estrategia guardada" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("navigation", { name: "Páginas de configuraciones" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Nueva estrategia guardada" })).toBeInTheDocument();
 });
 
 it("does not discard a dirty edit on cancel or navigation without confirmation", async () => {
@@ -48,14 +59,14 @@ it("does not discard a dirty edit on cancel or navigation without confirmation",
   const { user, router } = setup();
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Editar/ }));
-  await user.type(screen.getByRole("textbox", { name: "Nombre de la plantilla" }), " editada");
+  await user.type(screen.getByRole("textbox", { name: "Nombre guardado" }), " editada");
   await user.click(screen.getByRole("button", { name: "Cancelar edición" }));
-  expect(screen.getByRole("textbox", { name: "Nombre de la plantilla" })).toHaveValue("Mi plantilla editada");
+  expect(screen.getByRole("textbox", { name: "Nombre guardado" })).toHaveValue("Mi plantilla editada");
   await user.click(screen.getByRole("link", { name: "Ajustes" }));
   expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/configuraciones");
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Seguir editando" }));
-  expect(screen.getByRole("textbox", { name: "Nombre de la plantilla" })).toHaveValue("Mi plantilla editada");
+  expect(screen.getByRole("textbox", { name: "Nombre guardado" })).toHaveValue("Mi plantilla editada");
   confirm.mockRestore();
 });
 it("keeps saved data and actions in DOM order with a full-width data row and wrapping actions", async () => {
@@ -79,9 +90,9 @@ it("lists a bounded page, offers use and edit, and preserves distinct library an
   expect(screen.getByText("Plana")).toBeInTheDocument();
   expect(screen.getByText("Fríos", { selector: "dd" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: /Editar/ }));
-  const templateName = screen.getByRole("textbox", { name: "Nombre de la plantilla" });
+  const templateName = screen.getByRole("textbox", { name: "Nombre guardado" });
   expect(templateName).toHaveValue("Mi plantilla");
-  expect(templateName).toHaveAccessibleDescription(/la estrategia tiene su propio nombre/i);
+  expect(templateName).toHaveAccessibleDescription(/en esta lista/i);
   expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Fríos");
   await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
   await waitFor(() => expect(apiClient.updateConfiguration).toHaveBeenCalledWith("cfg-1", "Mi plantilla", strategy));
@@ -92,7 +103,7 @@ it("rejects invalid drafts locally and maps server 422 fields without losing the
   await user.click(screen.getByRole("button", { name: "Nueva estrategia guardada" }));
   await user.click(screen.getByRole("button", { name: "Guardar estrategia" }));
   expect(apiClient.createConfiguration).not.toHaveBeenCalled();
-  await user.type(screen.getByRole("textbox", { name: "Nombre de la plantilla" }), "Nueva biblioteca");
+  await user.type(screen.getByRole("textbox", { name: "Nombre guardado" }), "Nueva biblioteca");
   await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Otra");
   await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "cold");
   vi.mocked(apiClient.createConfiguration).mockRejectedValueOnce(new ApiError(422, "invalid", [{ loc: ["body", "strategy", "name"], msg: "server detail", type: "value_error" }]));
@@ -109,7 +120,7 @@ it("prevents a second save and changes during an in-flight request", async () =>
   await user.click(screen.getByRole("button", { name: /Editar/ }));
   await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
   expect(screen.getByRole("button", { name: "Guardar cambios" })).toBeDisabled();
-  expect(screen.getByRole("textbox", { name: "Nombre de la plantilla" })).toBeDisabled();
+  expect(screen.getByRole("textbox", { name: "Nombre guardado" })).toBeDisabled();
   expect(apiClient.updateConfiguration).toHaveBeenCalledTimes(1);
   resolveSave(item);
   expect(await screen.findByRole("status")).toHaveTextContent(/actualizada/);
@@ -119,19 +130,19 @@ it("deletes only after confirmation with exact ID; missing row refreshes, and ne
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   const dialog = screen.getByRole("alertdialog");
-  expect(dialog).toHaveAccessibleName("¿Eliminar la plantilla «Mi plantilla»?");
+  expect(dialog).toHaveAccessibleName("¿Eliminar la estrategia guardada «Mi plantilla»?");
   expect(dialog).toHaveTextContent(/resultados de experimentos anteriores se conservan/);
   await user.keyboard("{Escape}");
   expect(apiClient.deleteConfiguration).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: /Eliminar Mi plantilla/ })).toHaveFocus();
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   vi.mocked(apiClient.deleteConfiguration).mockRejectedValueOnce(new NetworkError());
-  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar plantilla" }));
+  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar estrategia guardada" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor/);
   expect(screen.queryByText(/Estrategia guardada eliminada/)).not.toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   vi.mocked(apiClient.deleteConfiguration).mockRejectedValueOnce(new ApiError(404, "missing"));
-  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar plantilla" }));
+  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar estrategia guardada" }));
   await waitFor(() => expect(apiClient.deleteConfiguration).toHaveBeenLastCalledWith("cfg-1", "cfg-1"));
   expect(screen.queryByText(/Estrategia guardada eliminada/)).not.toBeInTheDocument();
 });
@@ -142,7 +153,7 @@ it("keeps focus on the success status after the deleted row is removed asynchron
   const { user } = setup();
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
-  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar plantilla" }));
+  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar estrategia guardada" }));
   const status = await screen.findByText("Estrategia guardada eliminada. Los resultados históricos se conservan.");
   expect(status).toHaveAttribute("role", "status");
   expect(status).toHaveFocus();
@@ -166,7 +177,7 @@ it("keeps success focus through asynchronous last-page recovery after deletion",
   await user.click(screen.getByRole("button", { name: "Siguiente" }));
   await screen.findByText("Mi plantilla");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
-  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar plantilla" }));
+  await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar estrategia guardada" }));
   const status = await screen.findByText("Estrategia guardada eliminada. Los resultados históricos se conservan.");
   expect(status).toHaveFocus();
   await waitFor(() => expect(apiClient.listConfigurations).toHaveBeenCalledWith(20, 20));

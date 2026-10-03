@@ -72,14 +72,14 @@ function RowActions({ row, onDelete }: { row: ExperimentSummary; onDelete: () =>
     return () => { document.removeEventListener("keydown", dismiss); document.removeEventListener("pointerdown", outside); };
   }, [open, row.id]);
   return <>
-    <button ref={trigger} type="button" className={secondary} aria-label={`Acciones de ${experimentName(row)}`} aria-expanded={open} aria-controls={`actions-${row.id}`} onClick={() => {
+    <button ref={trigger} type="button" className="btn btn-tertiary" aria-label={`Acciones de ${experimentName(row)}`} aria-expanded={open} aria-controls={`actions-${row.id}`} onClick={() => {
       if (!open) { const rect = trigger.current!.getBoundingClientRect(); setPosition({ top: Math.min(rect.bottom, window.innerHeight - 100), left: Math.max(0, rect.right - 180) }); }
       setOpen(!open);
     }}>Acciones</button>
     {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${experimentName(row)}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
-      {!isProfileExperiment(row) && <Link ref={first} role="menuitem" className="block px-3 py-2 text-accent hover:bg-field" to={`/experimentos/nuevo?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
+      {!isProfileExperiment(row) && <Link ref={first} role="menuitem" className="btn btn-tertiary block w-full text-left" to={`/experimentos/nuevo?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
       {isProfileExperiment(row) && <span className="block px-3 py-2 text-text-secondary">Usar como base no disponible para perfiles</span>}
-      <button ref={firstProfile} role="menuitem" type="button" className="block w-full px-3 py-2 text-left hover:bg-field" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
+      <button ref={firstProfile} role="menuitem" type="button" className="btn btn-destructive block w-full text-left" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
     </div>, document.body)}
   </>;
 }
@@ -190,20 +190,20 @@ export function ExperimentsPage() {
   const hasFilters = !!(query.name || query.status);
   return <div>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <p className="max-w-prose text-text-secondary">Simulaciones sobre datos congelados del conjunto seleccionado.</p>
+      <p className="max-w-prose text-text-secondary">Simulaciones sobre datos congelados.</p>
       <Link to="/experimentos/nuevo" className="btn btn-primary">Nuevo experimento</Link>
     </div>
     {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">Activo en la última consulta{queueError ? " (estado no actualizado; puede haber cambiado)" : ""}: <Link className="text-accent underline" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id) ? experimentName(items.find((item) => item.id === queue.active_id)!) : queue.active_id}</Link></p>}
     {notice && <p ref={noticeRef} tabIndex={-1} role="status" className="mb-4 border border-border-control p-3 text-sm text-accent focus:outline-none">{notice}</p>}
     {rowError && <p role="alert" className="mb-4 border border-border-control p-3 text-sm text-text">{rowError}</p>}
-    <div className="mb-5 flex flex-wrap items-end gap-4" role="group" aria-label="Filtros de experimentos">
+    {(total > 0 || hasFilters) && <div className="mb-5 flex flex-wrap items-end gap-4" role="group" aria-label="Filtros de experimentos">
       <div className="min-w-[220px] flex-1 sm:max-w-sm"><label htmlFor="experiment-name" className="field-label">Buscar por nombre</label><input id="experiment-name" type="search" maxLength={80} className="control" value={text} onChange={(event) => setText(event.target.value)} /></div>
       <div className="min-w-[180px]"><label htmlFor="experiment-status" className="field-label">Estado de ejecución</label><select id="experiment-status" className="control" value={query.status ?? ""} onChange={(event) => update({ status: statuses.find((value) => value === event.target.value), page: 1 })}><option value="">Todos</option>{statuses.map((status) => <option key={status} value={status}>{statusNames[status]}</option>)}</select></div>
-    </div>
+    </div>}
     {state === "loading" && <p role="status" className="text-text-secondary">Cargando experimentos…</p>}
-    {state === "network-error" && <p role="alert">No se pudo contactar al servidor local. <button type="button" className="text-accent underline" onClick={() => load(query, offset)}>Reintentar</button></p>}
-    {state === "server-error" && <p role="alert">No se pudo cargar el listado de experimentos. <button type="button" className="text-accent underline" onClick={() => load(query, offset)}>Reintentar</button></p>}
-    {state === "ready" && total === 0 && (hasFilters ? <p role="status">Sin coincidencias para los filtros actuales. Cambiá el nombre o el estado para buscar de nuevo.</p> : <p role="status">Todavía no hay experimentos. <Link to="/experimentos/nuevo" className="text-accent underline">Creá el primero</Link>.</p>)}
+    {state === "network-error" && <p role="alert">No se pudo contactar al servidor local. <button type="button" className="btn btn-tertiary" onClick={() => load(query, offset)}>Reintentar</button></p>}
+    {state === "server-error" && <p role="alert">No se pudo cargar el listado de experimentos. <button type="button" className="btn btn-tertiary" onClick={() => load(query, offset)}>Reintentar</button></p>}
+    {state === "ready" && total === 0 && (hasFilters ? <p role="status">Sin coincidencias para los filtros actuales. Cambiá el nombre o el estado para buscar de nuevo.</p> : <p role="status">Todavía no hay experimentos. <Link to="/experimentos/nuevo" className="btn btn-tertiary">Creá el primero</Link>.</p>)}
     {state === "ready" && total > 0 && <>
       <DataTable caption="Experimentos" columns={columns} rows={items} getRowKey={(row) => row.id} />
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
