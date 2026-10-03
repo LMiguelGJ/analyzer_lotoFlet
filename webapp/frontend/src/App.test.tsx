@@ -31,8 +31,8 @@ describe("routing", () => {
     expect(screen.getByRole("heading", { name: "Crear simulación" })).toBeInTheDocument();
 
     renderAt("/experimentos/nuevo/perfil");
+    expect(screen.getByRole("heading", { name: "Crear simulación con perfil" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Simulación con perfil" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sesión con perfil registrado" })).toBeInTheDocument();
   });
 
   it("renders an honest not-found state for unknown paths", () => {

@@ -610,6 +610,22 @@ describe("LW09 single-form creation", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
+  it("names server failures in the alert and keeps technical details disclosed", async () => {
+    const { user } = setup();
+    await conditions(user);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Mi estrategia");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
+    vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(500, "internal failure"));
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/servidor/i);
+    expect(alert).toHaveTextContent(/revisá Simulaciones/i);
+    expect(within(alert).getByText("internal failure")).not.toBeVisible();
+    await user.click(within(alert).getByText("Detalles técnicos"));
+    expect(within(alert).getByText("internal failure")).toBeVisible();
+    expect(apiClient.createExperiment).toHaveBeenCalledTimes(1);
+  });
+
   it("builds accepted 60/40 mix K10 max12 and posts exact body once, then stable detail path", async () => {
     let resolve!: (value: { id: string; status: string }) => void;
     vi.mocked(apiClient.createExperiment).mockReturnValue(new Promise((r) => { resolve = r; }));

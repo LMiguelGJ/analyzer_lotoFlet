@@ -65,6 +65,13 @@ describe("visible game profiles", () => {
     expect(screen.getByLabelText(/Tamaño del universo/)).toBeVisible();
   });
 
+  it("gives the empty history library a direct import action", async () => {
+    render(<DataPage />);
+    const library = await screen.findByRole("region", { name: "Biblioteca de historiales" });
+    expect(within(library).getByRole("status")).toHaveTextContent(/Todavía no hay historiales guardados/);
+    expect(within(library).getByRole("link", { name: "Importá un historial" })).toHaveAttribute("href", "#history-import-title");
+  });
+
   it("offers profile creation in context when importing without a saved profile", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 0, offset: 0, limit: 100, items: [], templates: [] });
     render(<DataPage />);

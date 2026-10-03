@@ -157,7 +157,7 @@ export function ConfigurationsPage() {
   return <>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <p className="text-sm text-text-secondary">Guardá un método para reutilizarlo.</p>
-      <button type="button" className="btn btn-primary" onClick={create}>Nueva estrategia guardada</button>
+      <button type="button" className="btn btn-primary" onClick={create}>{page?.total === 0 ? "Crear estrategia guardada" : "Nueva estrategia guardada"}</button>
     </div>
     {success && <p ref={successRef} tabIndex={-1} role="status" className="mb-4 text-sm text-accent focus:outline-none" onBlur={() => setSuccess("")}>{success}</p>}
     {message && <p role="alert" className="mb-4 text-sm text-red-300">{message}</p>}
@@ -168,9 +168,9 @@ export function ConfigurationsPage() {
       <fieldset disabled={editorLoading}>
       <label htmlFor="libraryName" className="field-label">Nombre guardado</label>
       <input id="libraryName" className={control} value={editor.name} maxLength={81} aria-invalid={!!errors.libraryName} aria-describedby={errors.libraryName ? "libraryName-error" : undefined} onChange={(event) => { setEditor({ ...editor, name: event.target.value, dirty: true }); setErrors((previous) => { const next = { ...previous }; delete next.libraryName; return next; }); setMessage(""); }} />
-      {errors.libraryName && <p id="libraryName-error" className="mt-1 text-sm text-red-300">{errorMessage(errors.libraryName)} <span className="text-xs text-text-secondary">{errorDetail(errors.libraryName)}</span></p>}
+      {errors.libraryName && <div id="libraryName-error" className="mt-1 text-sm text-red-300"><p>{errorMessage(errors.libraryName)}</p>{errorDetail(errors.libraryName) && <details className="mt-1 text-xs text-text-secondary"><summary className="disclosure-summary">Detalles técnicos</summary><p className="mt-1">{errorDetail(errors.libraryName)}</p></details>}</div>}
       <div className="mt-5 pt-5">
-        {errors["strategies.0"] && <p className="mb-3 text-sm text-red-300">{errorMessage(errors["strategies.0"])} <span className="text-xs text-text-secondary">{errorDetail(errors["strategies.0"])}</span></p>}
+        {errors["strategies.0"] && <div className="mb-3 text-sm text-red-300"><p>{errorMessage(errors["strategies.0"])}</p>{errorDetail(errors["strategies.0"]) && <details className="mt-1 text-xs text-text-secondary"><summary className="disclosure-summary">Detalles técnicos</summary><p className="mt-1">{errorDetail(errors["strategies.0"])}</p></details>}</div>}
         {catalog && <StrategyEditor value={editor.strategy} index={0} catalog={catalog} errors={errors} onChange={(value) => {
           const changed = diffStrategyKey(editor.strategy, value);
           setEditor({ ...editor, strategy: value, dirty: true }); setMessage("");
@@ -187,7 +187,7 @@ export function ConfigurationsPage() {
     {!page && !listError && <p role="status">Cargando estrategias guardadas…</p>}
     {listError && <p role="alert" className="text-red-300">{listError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
     {page && <>
-      {page.total === 0 ? <p role="status">Todavía no hay estrategias guardadas.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">Sin coincidencias en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Limpiar búsqueda</button></div> : <ul className="divide-y divide-border border-t border-border">{visible.map((item) => <li key={item.id} className="saved-strategy-row border-b border-border py-4">
+      {page.total === 0 ? <p role="status">La biblioteca es opcional; guardá un método para reutilizarlo.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">Sin coincidencias en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Limpiar búsqueda</button></div> : <ul className="divide-y divide-border border-t border-border">{visible.map((item) => <li key={item.id} className="saved-strategy-row border-b border-border py-4">
         <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
         <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className="btn btn-tertiary" onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-destructive" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
       </li>)}</ul>}

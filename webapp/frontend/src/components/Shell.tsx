@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { QueueDrawer } from "./QueueDrawer";
 import { useQueue } from "./QueueProvider";
 
@@ -45,6 +45,16 @@ export function Shell({ title, children }: ShellProps) {
   const { status, error } = useQueue();
   const toggleRef = useRef<HTMLButtonElement>(null);
   const queueRef = useRef<HTMLButtonElement>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!location.hash) return;
+    const target = document.getElementById(location.hash.slice(1));
+    if (!target) return;
+    target.setAttribute("tabindex", "-1");
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.focus();
+  }, [location.pathname, location.search, location.hash]);
 
   useEffect(() => {
     if (!navOpen) return;

@@ -25,13 +25,13 @@ describe("shared bounded queue poll", () => {
     await waitFor(() => expect(apiClient.getQueue).toHaveBeenCalledTimes(1));
     await user.click(screen.getByRole("button", { name: "Cola" }));
     expect(await screen.findByRole("link", { name: "Inspeccionar pending-first" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Retenidos tras reinicio" })).toHaveTextContent("2");
+    expect(screen.getByRole("region", { name: "Detenido" })).toHaveTextContent("2");
     expect(apiClient.getQueue).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole("button", { name: "Siguiente cola" }));
     expect(await screen.findByRole("link", { name: "Inspeccionar pending-last" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Inspeccionar held-first" })).not.toBeInTheDocument();
     expect(apiClient.getQueue).toHaveBeenNthCalledWith(2, 20, 20);
-    expect(within(screen.getByRole("region", { name: "Retenidos tras reinicio" })).getByText(/No hay elementos en esta página/)).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Detenido" })).getByText(/No hay elementos en esta página/)).toBeInTheDocument();
   });
 
   it("discards an old page response and reconciles an out-of-range page after queue shrink", async () => {

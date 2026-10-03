@@ -67,6 +67,18 @@ describe("profile session creator", () => {
     expect(screen.queryByLabelText(/Semilla/)).not.toBeInTheDocument();
     expect(screen.queryByText(/schema_version/)).not.toBeInTheDocument();
   });
+  it("shows the chosen history identity and the scale context for summary amounts", async () => {
+    const { user } = setup();
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Historial compatible" }), datasetItem.dataset_sha256);
+    expect(screen.getByText(/unidades escaladas/i)).toHaveTextContent(/escala 2/i);
+    const details = screen.getAllByText("Detalles técnicos").map((node) => node.closest("details"));
+    const historyDetails = details.find((item) => item?.textContent?.includes("Identidad del historial"));
+    expect(historyDetails).toBeTruthy();
+    await user.click(within(historyDetails!).getByText("Identidad del historial"));
+    expect(within(historyDetails!).getByText(datasetItem.dataset_sha256)).toBeInTheDocument();
+  });
+
   it("keeps a library dataset URL as a read-only identity hint without auto-selecting another profile or dataset", async () => {
     const selectedHash = "f".repeat(64);
     setup(`/experimentos/nuevo/perfil?dataset_sha256=${selectedHash}`);

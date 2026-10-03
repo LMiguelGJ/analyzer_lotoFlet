@@ -89,8 +89,8 @@ describe("LW10 experiments list · states", () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(emptyPage());
     setup();
 
-    expect(await screen.findByText(/Todavía no hay experimentos/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Creá el primero" })).toHaveAttribute("href", "/experimentos/nuevo");
+    expect(await screen.findByText(/Las simulaciones muestran cómo se comportan tus estrategias con datos históricos/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Crear simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
   });
 
   it("shows a disconnected state with NetworkError wording, never claiming the server stopped, and retries", async () => {

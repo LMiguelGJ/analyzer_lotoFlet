@@ -401,7 +401,7 @@ export function NewExperimentPage() {
       {element}
       {help && <p id={`${key}-help`} className="field-help">{help}</p>}
       {entry && <p id={`${key}-error`} className="mt-1 text-sm text-red-300">{errorMessage(entry)}</p>}
-      {errorDetail(entry) && <p className="mt-1 text-xs text-text-secondary">{errorDetail(entry)}</p>}
+      {errorDetail(entry) && <details className="mt-1 text-xs text-text-secondary"><summary className="disclosure-summary">Detalles técnicos</summary><p className="mt-1">{errorDetail(entry)}</p></details>}
     </div>;
   }
   function attrs(key: keyof ConditionsDraft, hasHelp = false) {
@@ -434,7 +434,10 @@ export function NewExperimentPage() {
       } else if (error instanceof ApiError && error.status === 507) setNotice("No hay espacio para crear el experimento. Liberá espacio en Ajustes; tus datos siguen aquí.");
       else if (error instanceof ApiError && error.status === 409) setNotice("La cola no está disponible. Reintentá más tarde; tus datos siguen aquí.");
       else if (error instanceof NetworkError) setNotice("Sin respuesta del servidor. Puede que el experimento se haya creado: revisá Experimentos antes de reintentar.");
-      else setNotice(error instanceof ApiError ? `Solicitud rechazada: ${error.detail}` : "No se pudo crear el experimento. Reintentá.");
+      else if (error instanceof ApiError && error.status >= 500) {
+        setNotice("El servidor no confirmó la creación. Revisá Simulaciones antes de volver a intentarlo.");
+        setErrors({ form: { message: "No se pudo confirmar la creación.", detail: error.detail } });
+      } else setNotice("No se pudo crear la simulación. Revisá los datos e intentá de nuevo.");
     } finally { postingRef.current = false; setPosting(false); }
   }
 
@@ -461,9 +464,9 @@ export function NewExperimentPage() {
     <form className="max-w-4xl" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         {(Object.keys(errors).length > 0 || notice) && <div ref={errorRef} tabIndex={-1} role="alert" className="mb-5 border border-border-control p-3 text-sm focus:outline-accent">
           {notice || "Revisá los errores señalados junto a los campos antes de crear la simulación."}
-          {errorDetail(errors.form) && <p className="mt-1 text-xs text-text-secondary">{errorDetail(errors.form)}</p>}
+          {errorDetail(errors.form) && <details className="mt-2 text-xs text-text-secondary"><summary className="disclosure-summary">Detalles técnicos</summary><p className="mt-1">{errorDetail(errors.form)}</p></details>}
         </div>}
-        {errors.conditions && <p className="mb-4 text-sm text-red-300">{errorMessage(errors.conditions)}{errorDetail(errors.conditions) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors.conditions)}</span>}</p>}
+        {errors.conditions && <div className="mb-4 text-sm text-red-300"><p>{errorMessage(errors.conditions)}</p>{errorDetail(errors.conditions) && <details className="mt-1 text-xs text-text-secondary"><summary className="disclosure-summary">Detalles técnicos</summary><p className="mt-1">{errorDetail(errors.conditions)}</p></details>}</div>}
         {loading && <p role="status">Cargando catálogo…</p>}
         {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
 
@@ -498,7 +501,7 @@ export function NewExperimentPage() {
             <div className="flex items-center gap-3"><button type="button" aria-expanded={active === i} className="min-h-control flex-1 text-left text-sm text-accent" onClick={() => setActive(i)}>Estrategia {i + 1}{strategy.name ? ` · ${trimName(strategy.name)}` : ""}</button>
               {strategies.length > 1 && <button type="button" className="btn btn-tertiary" onClick={() => { setStrategies((previous) => previous.filter((item) => item.id !== strategy.id)); setActive(0); setDirty(true); }}>Quitar {i + 1}</button>}</div>
             {active === i && <div className="pt-4">
-              {errors[`strategies.${i}`] && <p className="mb-4 text-sm text-red-300">{errorMessage(errors[`strategies.${i}`])}{errorDetail(errors[`strategies.${i}`]) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors[`strategies.${i}`])}</span>}</p>}
+              {errors[`strategies.${i}`] && <div className="mb-4 text-sm text-red-300"><p>{errorMessage(errors[`strategies.${i}`])}</p>{errorDetail(errors[`strategies.${i}`]) && <details className="mt-1 text-xs text-text-secondary"><summary className="disclosure-summary">Detalles técnicos</summary><p className="mt-1">{errorDetail(errors[`strategies.${i}`])}</p></details>}</div>}
               <StrategyEditor value={strategy} index={i} catalog={catalog} errors={errors} onChange={(value) => editStrategy(i, value)} />
             </div>}
           </section>)}

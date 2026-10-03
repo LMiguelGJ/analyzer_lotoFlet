@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
@@ -55,7 +55,11 @@ const batchV5Detail: ProfileBatchExperimentSummary = {
 };
 const batchCompare: CompareResult = { id: "exp", status: "failed", request_kind: "profile", completed: 1, requested: 3, complete: false, runs: [batchFailed, batchSuccess, batchCancelled] };
 const page = (ordinal: number, offset = 0): Page<Bet> => ({ offset, limit: 100, total: ordinal ? 1 : 101, items: offset ? [bet("2025-01-01 11:00", 150)] : ordinal ? [bet("2025-01-01 10:30", 110)] : Array.from({ length: 100 }, (_, i) => bet(`2025-01-01 10:${String(i % 60).padStart(2, "0")}`, 101 + i)) });
-function openDetailedComparison() { void screen.findByText("Comparación detallada").then((summary) => fireEvent.click(summary)); }
+async function openDetailedComparison() {
+  const summary = await screen.findByText("Comparación detallada");
+  await userEvent.setup().click(summary);
+  await waitFor(() => expect(summary.closest("details")).toHaveAttribute("open", ""));
+}
 function setup(path = "/experimentos/exp/comparacion") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
   return { router, user: userEvent.setup(), ...render(<RouterProvider router={router} />) };
@@ -90,7 +94,7 @@ describe("profile comparison READ", () => {
     vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...profileCompare, runs: cycling.runs });
     vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 2, total: 1, offset: 0, limit: 100, items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] });
     setup();
-    openDetailedComparison();
+    await openDetailedComparison();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*1.*3/);
     expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
@@ -108,7 +112,7 @@ describe("profile comparison READ", () => {
     vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 3, total: 1, offset: 0, limit: 100,
       items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] });
     setup();
-    openDetailedComparison();
+    await openDetailedComparison();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*Límite de sesión.*1.*3/);
     expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
@@ -125,7 +129,7 @@ describe("profile comparison READ", () => {
     vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 4, total: 1, offset: 0, limit: 100,
       items: [{ label: "2025-01-01 10:00", stakes: [[7, 100]], results: [7, 8, 9], wagered: 100, paid: 0, balance: 9900 }] });
     setup();
-    openDetailedComparison();
+    await openDetailedComparison();
     await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     await userEvent.setup().click(screen.getByText("Detalles técnicos"));
     expect(screen.getByText("Versión de solicitud").nextElementSibling).toHaveTextContent("Perfil v4");
@@ -138,7 +142,7 @@ describe("profile comparison READ", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(profileDetail);
     vi.mocked(apiClient.compareExperiment).mockResolvedValue(profileCompare);
     setup();
-    openDetailedComparison();
+    await openDetailedComparison();
     await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(screen.getByText("Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
     expect(screen.getByText("Datos de origen")).toBeInTheDocument();
@@ -152,7 +156,7 @@ describe("profile comparison READ", () => {
     vi.mocked(apiClient.compareExperiment).mockResolvedValue(profileCompare);
     vi.mocked(apiClient.getReplay).mockResolvedValue(profileReplay);
     setup();
-    openDetailedComparison();
+    await openDetailedComparison();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*Límite de sesión.*1.*3/);
     expect(screen.getByText("Capital").nextElementSibling).toHaveTextContent("EUR 100.00");
@@ -183,7 +187,7 @@ describe("profile batch v5 comparison", () => {
     const { user } = setup();
     expect(await screen.findByText("Comparación incompleta · 1/3 terminadas")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Batch saved identity" })).toBeInTheDocument();
-    openDetailedComparison();
+    await openDetailedComparison();
     const experimentStatus = screen.getByText(/Estado:/).parentElement;
     expect(experimentStatus && within(experimentStatus).getByText("Con error")).toHaveAttribute("data-status-value", "failed");
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
@@ -228,7 +232,7 @@ describe("profile batch v5 comparison", () => {
     setup();
     expect(await screen.findByText("Comparación incompleta · 0/3 terminadas")).toBeInTheDocument();
     expect(screen.getByText(/Estado:/).parentElement).toHaveTextContent("En curso");
-    openDetailedComparison();
+    await openDetailedComparison();
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row").slice(1)).toHaveLength(3);
     expect(within(table).getAllByText("N/A").length).toBeGreaterThanOrEqual(3);
@@ -259,7 +263,7 @@ describe("LW12 comparison", () => {
   it("uses server N/M and delta, shows absent values as dashes, and separates outcome from execution", async () => {
     setup();
     expect(await screen.findByText("Comparación incompleta · 1/2 terminadas")).toBeInTheDocument();
-    openDetailedComparison();
+    await openDetailedComparison();
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     const rows = within(table).getAllByRole("row");
     expect(rows[1]).toHaveTextContent(/Primera.*Ejecución completada.*RD\$150.*RD\$50.*Meta alcanzada.*2/);
@@ -287,7 +291,7 @@ describe("LW12 comparison", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...detail, status: "completed", runs: [runs[0], second] });
     setup();
     expect(await screen.findByText("Comparación completa · 2/2 terminadas")).toBeInTheDocument();
-    openDetailedComparison();
+    await openDetailedComparison();
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row")[2]).toHaveTextContent("-RD$10");
     await waitFor(() => expect(apiClient.getTrajectory).toHaveBeenCalledWith("exp", 1, 500));

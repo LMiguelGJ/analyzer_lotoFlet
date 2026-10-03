@@ -42,7 +42,7 @@ it("shows empty, disconnected and retry states honestly", async () => {
   const { user } = setup();
   expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
-  expect(await screen.findByText(/Todavía no hay estrategias guardadas/)).toBeInTheDocument();
+  expect(await screen.findByText("La biblioteca es opcional; guardá un método para reutilizarlo.")).toBeInTheDocument();
 });
 it("keeps page-local search distinct from an empty library", async () => {
   const { user } = setup();
@@ -60,10 +60,10 @@ it("keeps page-local search distinct from an empty library", async () => {
 it("hides search and pagination while the library is empty", async () => {
   vi.mocked(apiClient.listConfigurations).mockResolvedValueOnce({ total: 0, offset: 0, limit: 20, items: [] });
   setup();
-  expect(await screen.findByText(/Todavía no hay estrategias guardadas/)).toBeInTheDocument();
+  expect(await screen.findByText("La biblioteca es opcional; guardá un método para reutilizarlo.")).toBeInTheDocument();
   expect(screen.queryByRole("textbox", { name: "Buscar estrategia guardada" })).not.toBeInTheDocument();
   expect(screen.queryByRole("navigation", { name: "Páginas de estrategias guardadas" })).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Nueva estrategia guardada" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Crear estrategia guardada" })).toBeInTheDocument();
 });
 
 it("does not discard a dirty edit on cancel or navigation without confirmation", async () => {
@@ -171,7 +171,7 @@ it("keeps focus on the success status after the deleted row is removed asynchron
   expect(status).toHaveFocus();
   await waitFor(() => expect(apiClient.listConfigurations).toHaveBeenCalledTimes(2));
   resolveReload({ total: 0, offset: 0, limit: 20, items: [] });
-  expect(await screen.findByText(/Todavía no hay estrategias guardadas/)).toBeInTheDocument();
+  expect(await screen.findByText("La biblioteca es opcional; guardá un método para reutilizarlo.")).toBeInTheDocument();
   expect(screen.queryByText("Mi plantilla")).not.toBeInTheDocument();
   expect(status).toHaveFocus();
   expect(document.activeElement).not.toBe(document.body);

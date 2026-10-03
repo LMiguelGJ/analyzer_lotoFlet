@@ -202,7 +202,7 @@ export function ExperimentsPage() {
     {state === "loading" && <p role="status" className="text-text-secondary">Cargando experimentos…</p>}
     {state === "network-error" && <p role="alert">No se pudo contactar al servidor. <button type="button" className="btn btn-tertiary" onClick={() => load(query, offset)}>Reintentar</button></p>}
     {state === "server-error" && <p role="alert">No se pudo cargar el listado de experimentos. <button type="button" className="btn btn-tertiary" onClick={() => load(query, offset)}>Reintentar</button></p>}
-    {state === "ready" && total === 0 && (hasFilters ? <p role="status">Sin coincidencias.</p> : <p role="status">Todavía no hay experimentos. <Link to="/experimentos/nuevo" className="btn btn-tertiary">Creá el primero</Link>.</p>)}
+    {state === "ready" && total === 0 && (hasFilters ? <p role="status">Sin coincidencias.</p> : <p role="status">Las simulaciones muestran cómo se comportan tus estrategias con datos históricos. <Link to="/experimentos/nuevo" className="btn btn-tertiary">Crear simulación</Link></p>)}
     {state === "ready" && total > 0 && <>
       <DataTable caption="Experimentos" columns={columns} rows={items} getRowKey={(row) => row.id} />
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">

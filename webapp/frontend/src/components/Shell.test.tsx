@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
 import { Shell } from "./Shell";
 import { QueueProvider } from "./QueueProvider";
 
@@ -14,6 +14,22 @@ function renderShell() {
     </MemoryRouter>,
   );
 }
+
+describe("Shell section navigation", () => {
+  it.each(["perfiles", "historiales"])("lands on the %s section, scrolls it into view and focuses it accessibly", async (section) => {
+    const router = createMemoryRouter([{ path: "*", element: <QueueProvider><Shell title="Prueba"><section id="perfiles">Perfiles</section><section id="historiales">Historiales</section></Shell></QueueProvider> }], { initialEntries: ["/experimentos"] });
+    const previousScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    const scroll = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: scroll });
+    render(<RouterProvider router={router} />);
+    await userEvent.setup().click(screen.getByRole("link", { name: section === "perfiles" ? "Perfiles de juego" : "Historiales" }));
+    const target = document.getElementById(section)!;
+    expect(target).toHaveAttribute("tabindex", "-1");
+    expect(target).toHaveFocus();
+    expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: previousScrollIntoView });
+  });
+});
 
 describe("Shell nav toggle", () => {
   it("exposes five task destinations at their existing or section URLs", () => {

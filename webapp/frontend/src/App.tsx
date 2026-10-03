@@ -34,7 +34,7 @@ export function App() {
       <Route
         path="/experimentos/nuevo/sesion"
         element={
-          <Shell key="new-profile-batch" title="Lote de simulaciones">
+          <Shell key="new-profile-batch" title="Crear lote de simulaciones">
             <ProfileBatchPage />
           </Shell>
         }
@@ -42,7 +42,7 @@ export function App() {
       <Route
         path="/experimentos/nuevo/perfil"
         element={
-          <Shell key="new-profile-experiment" title="Simulación con perfil">
+          <Shell key="new-profile-experiment" title="Crear simulación con perfil">
             <ProfileExperimentPage />
           </Shell>
         }
