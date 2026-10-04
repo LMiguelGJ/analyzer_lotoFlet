@@ -157,11 +157,11 @@ export function ConfigurationsPage() {
   return <>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <p className="text-sm text-text-secondary">Guardá un método para reutilizarlo.</p>
-      <button type="button" className="btn btn-primary" onClick={create}>{page?.total === 0 ? "Crear estrategia guardada" : "Nueva estrategia guardada"}</button>
+      <button type="button" className={`btn ${editor ? "btn-secondary" : "btn-primary"}`} onClick={create}>{page?.total === 0 ? "Crear estrategia guardada" : "Nueva estrategia guardada"}</button>
     </div>
     {success && <p ref={successRef} tabIndex={-1} role="status" className="mb-4 text-sm text-accent focus:outline-none" onBlur={() => setSuccess("")}>{success}</p>}
     {message && <p role="alert" className="mb-4 text-sm text-red-300">{message}</p>}
-    {catalogError && <p role="alert" className="mb-4 text-sm text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
+    {catalogError && <div role="alert" className="mb-4 text-sm text-red-300"><p>{catalogError} Las estrategias guardadas necesitan este catálogo para editarse o crearse.</p><button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar el catálogo</button></div>}
     {editorLoading && !editor && <p role="status">Cargando estrategia…</p>}
     {editor && <section aria-label="Editor de estrategia guardada" className="mb-8 max-w-2xl border-t border-border pt-5">
       <h2 className="section-header">{editor.id ? "Editar estrategia guardada" : "Nueva estrategia guardada"}</h2>
@@ -178,18 +178,18 @@ export function ConfigurationsPage() {
         }} />}
       </div>
       </fieldset>
-      <div className="flex flex-wrap gap-3"><button type="button" className="btn btn-primary" disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar estrategia"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
+      <div className="flex flex-wrap gap-3"><button type="button" className={`btn ${editor && page?.total === 0 ? "btn-primary" : "btn-primary"}`} disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar estrategia"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
     </section>}
     {page && page.total > 0 && <>
       <label htmlFor="configSearch" className="field-label">Buscar estrategia guardada</label>
       <input id="configSearch" className={`${control} mb-4 max-w-md`} value={search} onChange={(event) => setSearch(event.target.value)} />
     </>}
     {!page && !listError && <p role="status">Cargando estrategias guardadas…</p>}
-    {listError && <p role="alert" className="text-red-300">{listError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
+    {listError && <p role="alert" className="text-red-300">{listError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar las estrategias guardadas</button></p>}
     {page && <>
-      {page.total === 0 ? <p role="status">La biblioteca es opcional; guardá un método para reutilizarlo.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">Sin coincidencias en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Limpiar búsqueda</button></div> : <ul className="divide-y divide-border border-t border-border">{visible.map((item) => <li key={item.id} className="saved-strategy-row border-b border-border py-4">
+      {page.total === 0 ? <p role="status">La biblioteca es opcional; guardá un método para reutilizarlo.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">No hay estrategias con ese nombre en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Mostrar todas las estrategias de esta página</button></div> : <ul className="divide-y divide-border border-t border-border">{visible.map((item) => <li key={item.id} className="saved-strategy-row border-b border-border py-4">
         <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
-        <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className="btn btn-tertiary" onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-destructive" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
+        <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" to={`/experimentos/nuevo?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className="btn btn-tertiary" onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-tertiary" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
       </li>)}</ul>}
       {page.total > 0 && <nav aria-label="Páginas de estrategias guardadas" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {page.total} en total</span><button type="button" className={action} disabled={offset + pageSize >= page.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>}
     </>}

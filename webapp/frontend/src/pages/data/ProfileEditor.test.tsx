@@ -36,15 +36,15 @@ async function fill(user: ReturnType<typeof userEvent.setup>, positions: number,
     await user.clear(screen.getByLabelText(/Moneda \(código/));
     await user.type(screen.getByLabelText(/Moneda \(código/), "DOP");
     for (let index = 0; index < positions; index++) {
-      const multiplier = screen.getByLabelText(`Posición ${index + 1} · multiplicador`);
+      const multiplier = screen.getByLabelText(`Posición ${index + 1} · premio por unidad apostada`);
       await user.clear(multiplier);
       await user.type(multiplier, ["60", "10", "5", "2", "1"][index] ?? "0");
     }
   }
-  for (const label of [/Escala decimal/, /Incremento de apuesta/, /Apuesta mínima/, /Apuesta máxima/, /Cobertura máxima/, /Exposición máxima/]) {
+  for (const label of [/Decimales de la moneda/, /Incremento de apuesta/, /Apuesta mínima/, /Apuesta máxima/, /Cobertura máxima/, /Exposición máxima/]) {
     await user.clear(screen.getByLabelText(label));
   }
-  await user.type(screen.getByLabelText(/Escala decimal/), "2");
+  await user.type(screen.getByLabelText(/Decimales de la moneda/), "2");
   await user.type(screen.getByLabelText(/Incremento de apuesta/), "0.25");
   await user.type(screen.getByLabelText(/Apuesta mínima/), "0.25");
   await user.type(screen.getByLabelText(/Apuesta máxima/), "2.00");
@@ -63,15 +63,27 @@ describe("profile editor", () => {
     expect(screen.getByLabelText(/Tamaño del universo/)).toHaveValue("100");
     expect(screen.getByLabelText(/Posiciones por sorteo/)).toHaveValue("3");
     expect(screen.getByLabelText(/Se repiten números/)).toHaveValue("yes");
-    expect(screen.getByLabelText("Posición 1 · multiplicador")).toHaveValue("60");
-    expect(screen.getByLabelText("Posición 2 · multiplicador")).toHaveValue("10");
-    expect(screen.getByLabelText("Posición 3 · multiplicador")).toHaveValue("5");
+    expect(screen.getByLabelText("Posición 1 · premio por unidad apostada")).toHaveValue("60");
+    expect(screen.getByLabelText("Posición 2 · premio por unidad apostada")).toHaveValue("10");
+    expect(screen.getByLabelText("Posición 3 · premio por unidad apostada")).toHaveValue("5");
     expect(screen.getByLabelText(/Moneda \(código/)).toHaveValue("DOP");
-    expect(screen.getByLabelText(/Escala decimal/)).toHaveValue("0");
-    expect(screen.getByText("0 = sin escala.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Decimales de la moneda/)).toHaveValue("0");
+    expect(screen.getByText("0 = sin decimales.")).toBeInTheDocument();
     expect(screen.getByLabelText(/Apuesta mínima/)).toHaveValue("1");
     expect(screen.getByText(/sin devolución adicional de la apuesta/)).toBeInTheDocument();
     expect(screen.getByText("Detalles técnicos").closest("details")).not.toHaveAttribute("open");
+  });
+  it("groups decisions into bounded ledger blocks and styles every native control", async () => {
+    render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    for (const title of ["Juego", "Moneda y apuestas", "Apuestas", "Límites por sorteo"]) {
+      expect(screen.getByRole("heading", { name: title })).toBeVisible();
+    }
+    const blocks = Array.from(document.querySelectorAll<HTMLElement>(".ledger-block"));
+    expect(blocks).toHaveLength(4);
+    expect(blocks.slice(1).map((block) => block.querySelectorAll("input, select").length)).toEqual([2, 3, 2]);
+    expect(Array.from(document.querySelectorAll("input, select")).every((control) => control.classList.contains("control") || control.classList.contains("ledger-control"))).toBe(true);
+    expect(screen.getAllByLabelText(/premio por unidad apostada/i)).toHaveLength(3);
   });
   it.each([1, 3, 5])("creates %i position documents with explicit money policy and server-derived digest", async (count) => {
     const user = userEvent.setup();
@@ -93,7 +105,7 @@ describe("profile editor", () => {
     await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
     await user.selectOptions(screen.getByLabelText("Referencia opcional"), "0");
     expect(screen.getByLabelText(/Posiciones por sorteo/)).toHaveValue("3");
-    expect(screen.getByLabelText("Posición 1 · multiplicador")).toHaveValue("60/1");
+    expect(screen.getByLabelText("Posición 1 · premio por unidad apostada")).toHaveValue("60/1");
     expect(screen.getByText(/1 unidad\(es\) sin escala/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Apuesta mínima/)).toHaveValue("");
     await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
@@ -102,7 +114,7 @@ describe("profile editor", () => {
     await user.click(screen.getByText("Detalles técnicos"));
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "example");
     await user.type(screen.getByLabelText(/Revisión \(1/), "1");
-    await user.type(screen.getByLabelText(/Escala decimal/), "0");
+    await user.type(screen.getByLabelText(/Decimales de la moneda/), "0");
     await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Incremento/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
@@ -111,12 +123,12 @@ describe("profile editor", () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
     await fill(user, 1);
-    await user.clear(screen.getByLabelText("Posición 1 · multiplicador"));
-    await user.type(screen.getByLabelText("Posición 1 · multiplicador"), "1/3");
+    await user.clear(screen.getByLabelText("Posición 1 · premio por unidad apostada"));
+    await user.type(screen.getByLabelText("Posición 1 · premio por unidad apostada"), "1/3");
     await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/pagos enteros/);
-    await user.clear(screen.getByLabelText("Posición 1 · multiplicador"));
-    await user.type(screen.getByLabelText("Posición 1 · multiplicador"), "9007199254740992");
+    await user.clear(screen.getByLabelText("Posición 1 · premio por unidad apostada"));
+    await user.type(screen.getByLabelText("Posición 1 · premio por unidad apostada"), "9007199254740992");
     await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/límite/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
