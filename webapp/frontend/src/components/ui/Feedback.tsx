@@ -26,13 +26,15 @@ export interface ErrorBannerProps {
   actionLabel: string;
   onAction: () => void;
   detail?: ReactNode;
+  /** Only claim data is preserved when the failure truly leaves the user's data untouched. */
+  preserved?: boolean;
 }
 
-export function ErrorBanner({ cause, recovery, actionLabel, onAction, detail }: ErrorBannerProps) {
+export function ErrorBanner({ cause, recovery, actionLabel, onAction, detail, preserved = false }: ErrorBannerProps) {
   return <div className="ledger-error-banner" role="alert">
     <p>{cause}</p>
     <p>{recovery}</p>
-    <p>Tu información se conserva.</p>
+    {preserved && <p>Tu información se conserva.</p>}
     {detail && <Disclosure summary="Detalles técnicos">{detail}</Disclosure>}
     <Button variant="secondary" onClick={onAction}>{actionLabel}</Button>
   </div>;

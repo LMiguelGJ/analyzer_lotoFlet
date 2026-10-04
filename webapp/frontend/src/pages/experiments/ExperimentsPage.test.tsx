@@ -121,6 +121,7 @@ describe("LW10 experiments list · states", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/No se pudo cargar el listado/);
+    expect(alert.textContent).toMatch(/Tu información se conserva/);
 
     await user.click(within(alert).getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByText("Fríos K1")).toBeInTheDocument();

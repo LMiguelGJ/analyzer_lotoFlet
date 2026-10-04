@@ -43,6 +43,7 @@ describe("Shell navigation", () => {
     const queue = screen.getByRole("button", { name: "Abrir cola de cálculo" });
     expect(queue).toHaveAttribute("aria-haspopup", "dialog");
     expect(queue).toHaveAttribute("aria-expanded", "false");
+    expect(queue).toHaveAccessibleDescription("Sin cálculos en curso");
     await user.click(queue);
     expect(screen.getByRole("dialog", { name: "Cola de experimentos" })).toBeInTheDocument();
   });

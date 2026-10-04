@@ -199,7 +199,7 @@ describe("profile detail READ", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, net: -250, max_drawdown: 400, roi: -0.25, return_per_wagered: 0.75 } }] });
     const { user } = setup();
     const verdict = await screen.findByRole("region", { name: "Veredicto" });
-    expect(within(verdict).getByRole("heading", { level: 1 })).toHaveTextContent("Límite de sesión");
+    expect(within(verdict).getByRole("heading", { level: 2 })).toHaveTextContent("Límite de sesión");
     expect(verdict.querySelectorAll(".ledger-verdict-figures .ledger-stat")).toHaveLength(3);
     expect(within(verdict).getByText("Saldo final").nextElementSibling).toHaveTextContent("USD 97.50");
     expect(within(verdict).getByText("Mejor saldo").nextElementSibling).toHaveTextContent("USD 100.00");

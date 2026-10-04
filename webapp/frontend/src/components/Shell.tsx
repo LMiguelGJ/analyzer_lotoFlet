@@ -53,12 +53,14 @@ export function Shell({ title, children }: ShellProps) {
               aria-label="Abrir cola de cálculo"
               aria-expanded={queueOpen}
               aria-haspopup="dialog"
+              aria-describedby="queue-state"
               title={error ? error === "network" ? "Cola de cálculo: sin conexión" : "Cola de cálculo: sin datos recientes" : status?.active_id ? "Cola de cálculo: en curso" : "Abrir cola de cálculo"}
               className="ledger-button ledger-button-secondary min-h-9 shrink-0 px-2 min-[321px]:px-3"
               onClick={() => setQueueOpen(true)}
             >
               <span aria-hidden="true" className="hidden min-[321px]:inline">Cola{status?.active_id ? " · En curso" : ""}{error ? error === "network" ? " · Sin conexión" : " · Sin datos recientes" : ""}</span>
               <span aria-hidden="true" className="min-[321px]:hidden">≡</span>
+              <span id="queue-state" className="ledger-sr-only">{error ? error === "network" ? "Sin conexión" : "Sin datos recientes" : status?.active_id ? "En curso" : "Sin cálculos en curso"}</span>
             </button>
           </div>
           <ul className="grid grid-cols-2 gap-x-1 min-[480px]:flex min-[480px]:flex-wrap min-[480px]:gap-1 min-[900px]:block">

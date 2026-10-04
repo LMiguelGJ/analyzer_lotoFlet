@@ -280,7 +280,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
   return <section className="mt-6" aria-label={`Ejecución ${run.ordinal + 1}`}>
     {run.result && <>
       <section aria-label="Veredicto" className="ledger-block">
-        <h1 className="ledger-verdict-title">{verdictPhrase(outcome, run.status)}</h1>
+        <h2 className="ledger-verdict-title">{verdictPhrase(outcome, run.status)}</h2>
         <div className="ledger-verdict-figures">
           <Stat label="Saldo final" value={money(run.result.final_balance)} variant={run.result.final_balance > capital ? "positive" : run.result.final_balance < capital ? "negative" : "neutral"} />
           <Stat label="Mejor saldo" value={trajectoryMaximum == null ? "—" : money(trajectoryMaximum)} variant="neutral" />

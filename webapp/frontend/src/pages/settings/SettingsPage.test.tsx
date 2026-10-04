@@ -87,7 +87,7 @@ it("distinguishes disconnected from generic errors and retries", async () => {
   const banner = await screen.findByRole("alert");
   expect(banner).toHaveTextContent(/No se pudo contactar al servidor/);
   expect(banner).toHaveTextContent(/Comprobá que el laboratorio siga abierto y reintentá/);
-  expect(banner).toHaveTextContent(/Tu información se conserva/);
+  expect(banner).not.toHaveTextContent(/Tu información se conserva/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudieron cargar los ajustes/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));

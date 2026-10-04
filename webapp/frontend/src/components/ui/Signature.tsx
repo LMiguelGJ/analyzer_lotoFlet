@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
 import { Figure, Money, type FigureVariant } from "./Data";
 
+const DEFAULT_CAVEAT = "Esto simula escenarios; no predice ni garantiza rentabilidad.";
+
 export interface VerdictFigure {
   label: string;
   amount: number;
   variant?: FigureVariant;
+  /** "count" renders a plain figure (e.g. draws played) instead of RD$ money. */
+  kind?: "money" | "count";
 }
 
 export interface VerdictProps {
@@ -14,12 +18,12 @@ export interface VerdictProps {
   caveat?: string;
 }
 
-export function Verdict({ phrase, figures, closeReason, caveat = "Esto simula escenarios; no predice ni garantiza rentabilidad." }: VerdictProps) {
+export function Verdict({ phrase, figures, closeReason, caveat = DEFAULT_CAVEAT }: VerdictProps) {
   return <section aria-label="Veredicto" className="ledger-block">
-    <h1 className="ledger-verdict-title">{phrase}</h1>
+    <h2 className="ledger-verdict-title">{phrase}</h2>
     <div className="ledger-verdict-figures">
-      {figures.map(({ label, amount, variant = "neutral" }) => <div className="ledger-stat" key={label}>
-        <span className="ledger-label">{label}</span><Money amount={amount} variant={variant} />
+      {figures.map(({ label, amount, variant = "neutral", kind = "money" }) => <div className="ledger-stat" key={label}>
+        <span className="ledger-label">{label}</span>{kind === "count" ? <Figure value={amount} variant={variant} /> : <Money amount={amount} variant={variant} />}
       </div>)}
     </div>
     <p>{closeReason}</p>
@@ -37,9 +41,10 @@ export interface OrderSummaryProps {
   goal: number;
   duration: ReactNode;
   coverage: ReactNode;
+  caveat?: string;
 }
 
-export function OrderSummary({ capital, goal, duration, coverage }: OrderSummaryProps) {
+export function OrderSummary({ capital, goal, duration, coverage, caveat = DEFAULT_CAVEAT }: OrderSummaryProps) {
   const rows: OrderSummaryRow[] = [
     { label: "Capital", value: <Money amount={capital} align="right" /> },
     { label: "Meta de saldo", value: <Money amount={goal} align="right" /> },
@@ -54,6 +59,6 @@ export function OrderSummary({ capital, goal, duration, coverage }: OrderSummary
         {typeof value === "string" || typeof value === "number" ? <Figure value={value} align="right" /> : value}
       </div>)}
     </div>
-    <p className="ledger-caveat">Esto simula escenarios; no predice ni garantiza rentabilidad.</p>
+    <p className="ledger-caveat">{caveat}</p>
   </section>;
 }

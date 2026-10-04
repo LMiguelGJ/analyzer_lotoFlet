@@ -98,6 +98,7 @@ describe("S2 simple creation form", () => {
     expect(summary).toHaveTextContent("RD$2800");
     expect(summary).toHaveTextContent("12 sorteos");
     expect(summary).toHaveTextContent("Transición 60% + Fríos 40%");
+    expect(screen.getAllByText(/Esto simula/)).toHaveLength(1);
     expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
     expect(summary).not.toHaveTextContent(/Sin nombre:|\(\)/);
     expect(screen.queryByText(/9\.007\.199\.254\.740\.991|9007199254740991/)).not.toBeInTheDocument();

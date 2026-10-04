@@ -6,7 +6,7 @@ import { isProfileExperiment } from "../../api/types";
 import type { Catalog, ConfigurationSummary, Page, StartingDrawAvailability } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { StrategyEditor } from "../../components/StrategyEditor";
-import { Block, Button, Figure, SectionHeader, OrderSummary } from "../../components/ui";
+import { Block, Button, Figure, SectionHeader } from "../../components/ui";
 import { buildRequest, buildStrategy, diffStrategyKey, draftFromRequest, draftFromStrategy, errorDetail, errorMessage, initialConditions, initialStrategy, newStrategy, trimName, validateConditions, validateStrategies } from "./model";
 import type { ConditionsDraft, Errors, StrategyDraft } from "./model";
 import { FIELD_LABEL_SEED, FIELD_LABEL_SETTLEMENT, SELECTOR_LABELS, SETTLEMENT_LABELS } from "../../lib/ui-labels";
@@ -454,10 +454,6 @@ export function NewExperimentPage() {
   const selectedAvailable = !!conditions.start_draw &&
     (offeredDraws.includes(conditions.start_draw) || verifiedDraw === conditions.start_draw);
   const staleDraw = !!knownDraw && conditions.start_draw === knownDraw && !drawLoading && !drawError && !selectedAvailable;
-  const summaryCapital = Number(conditions.capital);
-  const summaryGoal = Number(conditions.goal);
-  const validSummaryMoney = /^\\d+$/.test(conditions.capital) && /^\\d+$/.test(conditions.goal)
-    && Number.isSafeInteger(summaryCapital) && Number.isSafeInteger(summaryGoal);
   const summarySelection = strategies.map((strategy) => catalog ? strategyPlainText(strategy, catalog) : "Selección configurable").join(" · ");
 
   if (baseId && configurationId) return <div><Link to="/experimentos" className="link">Volver a experimentos</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
@@ -556,15 +552,15 @@ export function NewExperimentPage() {
         </details>
         <section className="mb-6">
           <SectionHeader title="Resumen de la orden" className="mb-3" />
-          {validSummaryMoney ? <OrderSummary capital={summaryCapital} goal={summaryGoal} duration={`${conditions.max_bets || "Sin límite"} sorteos`} coverage={summarySelection} /> : <section className="ledger-block" aria-label="Resumen de la orden">
+          <section className="ledger-block" aria-label="Resumen de la orden">
             <div className="ledger-summary-rows">
               <div className="ledger-summary-row"><span className="ledger-label">Capital</span><Figure value={conditions.capital ? `RD$${conditions.capital}` : "Sin definir"} align="right" /></div>
               <div className="ledger-summary-row"><span className="ledger-label">Meta de saldo</span><Figure value={conditions.goal ? `RD$${conditions.goal}` : "Sin definir"} align="right" /></div>
               <div className="ledger-summary-row"><span className="ledger-label">Duración</span><Figure value={`${conditions.max_bets || "Sin límite"} sorteos`} align="right" /></div>
               <div className="ledger-summary-row"><span className="ledger-label">Cobertura</span><Figure value={summarySelection} align="right" /></div>
             </div>
-          </section>}
-          <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
+            <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
+          </section>
         </section>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
           <Button variant="ghost" onClick={() => navigate("/experimentos")}>Salir</Button>

@@ -97,14 +97,19 @@ describe("ledger feedback states", () => {
     expect(action).toHaveBeenCalledOnce();
   });
 
-  it("names the error cause and recovery and confirms user data is preserved", () => {
+  it("names the error cause and recovery and only confirms preserved data when told so", () => {
     render(<ErrorBanner cause="No se pudo guardar." recovery="Revisá la conexión y reintentá." actionLabel="Reintentar" onAction={() => undefined} detail="Código interno 422" />);
     const alert = screen.getByRole("alert");
     expect(alert.textContent).toContain("No se pudo guardar.");
     expect(alert.textContent).toContain("Revisá la conexión y reintentá.");
-    expect(alert.textContent).toContain("Tu información se conserva.");
+    expect(alert.textContent).not.toContain("Tu información se conserva.");
     expect(within(alert).getByRole("button", { name: "Reintentar" })).toBeTruthy();
     expect(screen.getByText("Código interno 422").closest("details")?.open).toBe(false);
+  });
+
+  it("states that data is preserved only when explicitly flagged", () => {
+    render(<ErrorBanner preserved cause="No se pudo cargar." recovery="Reintentá." actionLabel="Reintentar" onAction={() => undefined} />);
+    expect(screen.getByRole("alert").textContent).toContain("Tu información se conserva.");
   });
 
   it("uses static skeleton rows and an accessible status announcement", () => {
@@ -119,10 +124,24 @@ describe("signature components", () => {
   it("leads with a verdict, three monetary figures, close reason and simulation caveat", () => {
     render(<Verdict phrase="Meta alcanzada" figures={[{ label: "Capital", amount: 1000 }, { label: "Saldo final", amount: 1400, variant: "positive" }, { label: "Duración", amount: 12 }]} closeReason="La meta se alcanzó en el sorteo 12." />);
     const verdict = screen.getByRole("region", { name: "Veredicto" });
-    expect(within(verdict).getByRole("heading", { name: "Meta alcanzada" })).toBeTruthy();
+    expect(within(verdict).getByRole("heading", { name: "Meta alcanzada", level: 2 })).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(within(verdict).getAllByText(/^RD\$/)).toHaveLength(3);
     expect(within(verdict).getByText("La meta se alcanzó en el sorteo 12.")).toBeTruthy();
     expect(verdict.textContent).toContain("Esto simula escenarios");
+  });
+
+  it("renders a count figure without the RD$ prefix", () => {
+    render(<Verdict phrase="Meta alcanzada" figures={[{ label: "Capital", amount: 1000 }, { label: "Saldo final", amount: 1400 }, { label: "Sorteos jugados", amount: 12, kind: "count" }]} closeReason="Cierre." />);
+    const verdict = screen.getByRole("region", { name: "Veredicto" });
+    expect(within(verdict).getAllByText(/^RD\$/)).toHaveLength(2);
+    expect(within(verdict).getByText("12")).toBeTruthy();
+  });
+
+  it("accepts a custom order caveat replacing the default", () => {
+    render(<OrderSummary capital={1000} goal={1500} duration="30 sorteos" coverage="25 números" caveat="Texto propio." />);
+    expect(screen.getByText("Texto propio.")).toBeTruthy();
+    expect(screen.queryByText(/Esto simula escenarios/)).toBeNull();
   });
 
   it("shows all live order figures and keeps the caveat visible", () => {

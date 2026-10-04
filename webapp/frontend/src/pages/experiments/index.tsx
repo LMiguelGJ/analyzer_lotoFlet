@@ -265,8 +265,8 @@ export function ExperimentsPage() {
       </Disclosure>
     </div>}
     {state === "loading" && <Loading rows={6} label="Cargando simulaciones…" />}
-    {state === "network-error" && <ErrorBanner cause="No se pudo contactar al servidor." recovery="Iniciá el laboratorio desde el lanzador y después reintentá." actionLabel="Reintentar" onAction={() => load(query, offset)} />}
-    {state === "server-error" && <ErrorBanner cause="No se pudo cargar el listado de simulaciones." recovery="El servidor respondió con un error. Reintentá en unos segundos; si persiste, reiniciá el laboratorio desde el lanzador." actionLabel="Reintentar" onAction={() => load(query, offset)} />}
+    {state === "network-error" && <ErrorBanner cause="No se pudo contactar al servidor." recovery="Iniciá el laboratorio desde el lanzador y después reintentá." preserved actionLabel="Reintentar" onAction={() => load(query, offset)} />}
+    {state === "server-error" && <ErrorBanner cause="No se pudo cargar el listado de simulaciones." recovery="El servidor respondió con un error. Reintentá en unos segundos; si persiste, reiniciá el laboratorio desde el lanzador." preserved actionLabel="Reintentar" onAction={() => load(query, offset)} />}
     {state === "ready" && total === 0 && (hasFilters
       ? <section className="ledger-empty" aria-labelledby="empty-title"><h2 id="empty-title">Sin coincidencias</h2><p>Ninguna simulación cumple la búsqueda o el estado elegidos.</p><Button className="mt-3" onClick={clearFilters}>Limpiar filtros</Button></section>
       : <section className="ledger-empty" aria-labelledby="empty-title"><h2 id="empty-title">Todavía no hay simulaciones</h2><p>Las simulaciones muestran cómo se comportan tus estrategias con datos históricos.</p><Link to="/experimentos/nuevo" className="ledger-button ledger-button-primary mt-3">Nueva simulación</Link></section>)}

@@ -248,7 +248,7 @@ export function SettingsPage() {
       <button type="button" className="btn btn-secondary disabled:cursor-not-allowed" disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>
     </div>}
     {loading && <Loading rows={3} label="Cargando capacidad y límites…" className="border-y border-border py-5" />}
-    {loadError && <ErrorBanner cause={loadError} recovery={view ? "Se muestra la última lectura; reintentá para actualizarla." : "Comprobá que el laboratorio siga abierto y reintentá."} actionLabel="Reintentar" onAction={() => setRefresh((previous) => previous + 1)} />}
+    {loadError && <ErrorBanner cause={loadError} recovery={view ? "Se muestra la última lectura; reintentá para actualizarla." : "Comprobá que el laboratorio siga abierto y reintentá."} preserved={!!view} actionLabel="Reintentar" onAction={() => setRefresh((previous) => previous + 1)} />}
     {view && <>
       <section aria-labelledby="storage-heading" className="border-t border-border pt-5">
         <h2 id="storage-heading" className="section-header">Capacidad</h2>
