@@ -12,7 +12,9 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { StatusLabel } from "../../components/StatusLabel";
 import { formatDOP } from "../../lib/format";
 import { profileBatchOutcome, profileMoney, profileOutcome } from "../../lib/profile-display";
-import { FIELD_LABEL_DELTA, HISTORICAL_CAVEAT } from "../../lib/ui-labels";
+import { FIELD_LABEL_DELTA } from "../../lib/ui-labels";
+import { Figure, Loading, Stat } from "../../components/ui";
+import type { FigureVariant } from "../../components/ui";
 
 type SavedView = { hidden: number[] };
 function storageKey(id: string) { return `comparison-view:${id}`; }
@@ -61,7 +63,8 @@ export function ComparisonPage() {
   useEffect(() => {
     let live = true;
     let timer: ReturnType<typeof setTimeout>;
-    setPair(null); setError(""); setView(readView(id));
+    if (pair?.detail.id !== id) setPair(null);
+    setError(""); setView(readView(id));
     async function load() {
       try {
         const [detail, comparison] = await Promise.all([apiClient.getExperiment(id), apiClient.compareExperiment(id)]);
@@ -85,54 +88,65 @@ export function ComparisonPage() {
   const profileContext = profileDetail ?? batchDetail;
   const names = (ordinal: number) => data ? comparisonName(data.detail, ordinal) : `Ejecución ${ordinal + 1}`;
   const money = profileContext ? (amount: number) => profileMoney(profileContext, amount) : formatDOP;
-  const missingMetric = () => batchDetail ? "N/A" : "—";
+  const missingMetric = () => "Sin dato";
   const columns: DataTableColumn<AnyRunSummary>[] = [
     { key: "strategy", header: "Estrategia", render: (run) => <Link className="btn btn-tertiary" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`} aria-label={`Detalle de ${names(run.ordinal)}`}>{names(run.ordinal)}</Link> },
     { key: "status", header: "Estado", render: (run) => <StatusLabel kind="execution" value={run.status} /> },
     { key: "balance", header: "Saldo final", render: (run) => run.result ? money(run.result.final_balance) : missingMetric() },
     { key: "delta", header: FIELD_LABEL_DELTA, render: (run) => run.result ? money(run.result.delta) : missingMetric() },
-    { key: "net", header: "Neto", render: (run) => run.result?.net == null ? "N/A" : money(run.result.net) },
+    { key: "net", header: "Cambio neto", render: (run) => run.result?.net == null ? "Sin dato" : money(run.result.net) },
     { key: "outcome", header: "Motivo de cierre", render: (run) => run.result ? isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : missingMetric() },
     { key: "wagered", header: "Total apostado", render: (run) => run.result ? money(run.result.wagered) : missingMetric() },
     { key: "paid", header: "Total pagado", render: (run) => run.result ? money(run.result.paid) : missingMetric() },
-    { key: "return", header: "Retorno por peso", render: (run) => metricRatio(run.result?.return_per_wagered) },
+    { key: "return", header: "Retorno por peso apostado", render: (run) => metricRatio(run.result?.return_per_wagered) },
     { key: "roi", header: "ROI neto", render: (run) => metricRatio(run.result?.roi) },
-    { key: "drawdown", header: "Drawdown absoluto", render: (run) => run.result?.max_drawdown == null ? "N/A" : money(run.result.max_drawdown) },
+    { key: "drawdown", header: "Caída máxima del saldo", render: (run) => run.result?.max_drawdown == null ? "Sin dato" : money(run.result.max_drawdown) },
     { key: "bets", header: profileContext ? "Sorteos apostados" : "Apuestas realizadas", render: (run) => run.result ? isProfileRun(run) ? run.result.bet_draws : run.result.bets_count : missingMetric() },
     ...(profileContext ? [{ key: "elapsed", header: "Sorteos transcurridos", render: (run: AnyRunSummary) => isProfileRun(run) && run.result ? run.result.elapsed_draws : missingMetric() }] : []),
-    ...(batchDetail ? [{ key: "stop", header: "Motivo de parada", render: (run: AnyRunSummary) => isProfileBatchRun(run) ? `${stopLabel(run.stop_category)} · ${run.stop_reason}${run.error ? ` · ${run.error}` : ""}` : "N/A" }] : []),
+    ...(batchDetail ? [{ key: "stop", header: "Motivo de parada", render: (run: AnyRunSummary) => isProfileBatchRun(run) ? `${stopLabel(run.stop_category)} · ${run.stop_reason}${run.error ? ` · ${run.error}` : ""}` : "Sin dato" }] : []),
   ];
   const series: ComparisonSeries[] = runs.filter((run) => run.status === "completed" && !!run.result).map((run) => ({ ordinal: run.ordinal, name: names(run.ordinal), visible: !view.hidden.includes(run.ordinal), total: isProfileRun(run) ? run.result!.bet_draws : run.result!.bets_count, points: trajectories.id === id ? (trajectories.runs[run.ordinal]?.points ?? []).map((point) => ({ ordinal: point.bet_index == null ? point.source_index + 1 : point.bet_index + 1, label: point.label, balance: point.balance })) : [], reductionMethod: trajectories.id === id ? trajectories.runs[run.ordinal]?.reduction_method : undefined, initialCapital: data?.detail.request.conditions.capital, startLabel: data?.detail.request.conditions.start_draw }));
+  const completedRuns = runs.filter((run) => run.result);
+  const leader = completedRuns.slice().sort((a, b) => b.result!.final_balance - a.result!.final_balance)[0];
+  const capital = data ? isProfileExperiment(data.detail) ? data.detail.display.capital : data.detail.request.conditions.capital : 0;
+  const goal = data ? isProfileExperiment(data.detail) ? data.detail.display.goal : data.detail.request.conditions.goal : 0;
+  const reached = completedRuns.some((run) => run.result?.outcome === "goal");
+  const delta = leader?.result?.delta;
+  const deltaVariant: FigureVariant = delta == null || delta === 0 ? "neutral" : delta > 0 ? "positive" : "negative";
   return <div className="min-w-0 space-y-7">
-    <Link to="/experimentos" className="btn btn-tertiary">Volver a Experimentos</Link>
-    {!data && !error && <p role="status">Cargando comparación…</p>}
-    {error && <p role="alert">{error} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></p>}
+    <Link to="/experimentos" className="btn btn-primary">Volver a simulaciones</Link>
+    {!data && !error && <Loading rows={4} label="Cargando la comparación…" className="my-4" />}
+    {error && <div role="alert" className="border-y border-border py-4"><p>{error}</p><p>La información guardada se conserva. Podés volver a cargar la comparación.</p><button type="button" className="btn btn-secondary mt-2" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></div>}
     {data && <>
+      <section aria-label="Veredicto" className="ledger-block">
+        <h1 className="ledger-verdict-title">{leader ? `${data.comparison.complete ? names(leader.ordinal) : `Entre las simulaciones con resultado, ${names(leader.ordinal)}`} terminó con más saldo${reached ? " y se alcanzó la meta de saldo" : `; ninguna de las ${data.comparison.complete ? "simulaciones" : "finalizadas"} alcanzó la meta de saldo`}.` : "Todavía no hay saldos finales para comparar."}</h1>
+        <div className="ledger-verdict-figures">
+          <Stat label="Saldo final más alto" value={leader ? money(leader.result!.final_balance) : "Sin dato"} />
+          <Stat label="Cambio respecto del inicio" value={leader ? money(delta!) : "Sin dato"} variant={deltaVariant} />
+          <Stat label="Sorteos jugados" value={<Figure value={leader ? (isProfileRun(leader) ? leader.result!.bet_draws : leader.result!.bets_count) : "Sin dato"} />} />
+          <Stat label="¿Alcanzó la meta?" value={reached ? "Sí" : completedRuns.length ? "No" : "Sin dato"} />
+        </div>
+        <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
+        <p className="text-sm">El saldo no equivale a ganancia o pérdida; el cambio se calcula frente al capital inicial.</p>
+      </section>
+      <dl className="data-list border-b border-border py-3">
+        <dt>Capital inicial</dt><dd className="data-list-numeric">{money(capital)}</dd>
+        <dt>Meta de saldo</dt><dd className="data-list-numeric">{money(goal)}</dd>
+        <dt>Duración</dt><dd className="data-list-numeric">{completedRuns.map((run) => `${names(run.ordinal)}: ${isProfileRun(run) ? run.result!.elapsed_draws : run.result!.bets_count} sorteos`).join(" · ") || "Sin dato; todavía no hay resultados guardados."}</dd>
+      </dl>
       <div className="border-b border-border pb-5"><h2 className="font-heading text-2xl">{comparisonTitle(data.detail)}</h2><p className="mt-2 text-sm">{data.comparison.complete ? "Comparación completa" : "Comparación incompleta"} · {data.comparison.completed}/{data.comparison.requested} terminadas</p>
         <p className="mt-2 text-sm text-text-secondary">Estado: <StatusLabel kind="execution" value={data.comparison.status} />{nonterminal(data.comparison.status) ? " · Se actualiza solo." : ""}</p>
       </div>
-      <section aria-label="Desenlaces guardados" className="space-y-3"><h3 className="section-header">Desenlaces</h3>
-        {!data.comparison.complete && <p role="status" className="text-sm">Resultado incompleto · {data.comparison.completed}/{data.comparison.requested}</p>}
-        {runs.map((run) => <article key={run.ordinal} className="border-b border-border pb-4">
-          <h4 className="font-heading text-lg"><Link className="link" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`}>{names(run.ordinal)}</Link></h4>
-          <dl className="data-list">
-            <dt>Saldo final</dt><dd>{run.result ? money(run.result.final_balance) : missingMetric()}</dd>
-            <dt>Neto</dt><dd>{run.result?.net == null ? "N/A" : money(run.result.net)}</dd>
-            <dt>Motivo de cierre</dt><dd>{run.result ? isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : missingMetric()}</dd>
-          </dl>
-        </article>)}
-        <details><summary className="disclosure-summary">Comparación detallada</summary><div className="pt-2"><DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} /></div></details>
-        <details><summary className="disclosure-summary">Detalles técnicos</summary><div className="space-y-2 pt-2"><p className="field-help">Métricas del backend por corrida guardada; ratios adimensionales, redondeo HALF_UP a seis decimales. Denominador cero: N/A. Drawdown desde el capital inicial. Un resultado guardado no completa un lote con otras corridas pendientes.</p><dl className="data-list break-all"><dt>Versión de solicitud</dt><dd>{profileDetail ? `Perfil v${profileDetail.request.schema_version}` : batchDetail ? `Perfil v${batchDetail.request.schema_version}` : "No disponible"}</dd>{runs.map((run) => <Fragment key={run.ordinal}><dt>Resultado · {names(run.ordinal)}</dt><dd>{isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd>{batchDetail && isProfileBatchRun(run) && <><dt>Parada · {names(run.ordinal)}</dt><dd>{run.stop_category} · {run.stop_code} · {run.stop_reason}</dd></>}</Fragment>)}</dl></div></details>
-        <p className="text-sm text-text-secondary">{profileContext ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
-      </section>
+      {!data.comparison.complete && <p role="status" className="border-y border-border py-3 text-sm">La comparación todavía está incompleta ({data.comparison.completed}/{data.comparison.requested} terminadas). Esperá a que finalicen las simulaciones; los resultados guardados se conservan y se actualizan automáticamente.</p>}
+      <details><summary className="disclosure-summary">Detalles técnicos · comparación</summary><div className="space-y-3 pt-3"><DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} /><p className="field-help">Métricas por corrida guardada; las razones y proporciones usan el cálculo informado por el servidor. Una corrida guardada no completa un lote con otras corridas pendientes.</p></div></details>
       <section className="min-w-0 space-y-4"><ComparisonChart series={series} formatMoney={money} onToggle={(ordinal) => updateView({ ...view, hidden: view.hidden.includes(ordinal) ? view.hidden.filter((n) => n !== ordinal) : [...view.hidden, ordinal] })} />
         {runs.filter((run) => run.status === "completed" && !!run.result).map((run) => <RunTrajectory key={`${id}:${run.ordinal}`} id={id} ordinal={run.ordinal} name={names(run.ordinal)} money={money} goal={data.detail.request.conditions.goal} chart={false} onLoad={onTrajectory} />)}
       </section>
       <details className="space-y-3 text-sm"><summary className="disclosure-summary">Detalles técnicos · condiciones y datos de origen</summary>
         <dl className="data-list break-all">
+          <dt>Versión de solicitud</dt><dd>{profileDetail ? `Perfil v${profileDetail.request.schema_version}` : batchDetail ? `Perfil v${batchDetail.request.schema_version}` : "No disponible"}</dd>
+          {runs.map((run) => <Fragment key={run.ordinal}><dt>Resultado · {names(run.ordinal)}</dt><dd>{isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd>{batchDetail && isProfileBatchRun(run) && <><dt>Parada · {names(run.ordinal)}</dt><dd>{run.stop_category} · {run.stop_code} · {run.stop_reason}</dd></>}</Fragment>)}
           <dt>Sorteo inicial</dt><dd>{data.detail.request.conditions.start_draw}</dd>
-          <dt>Capital</dt><dd className="data-list-numeric">{money(isProfileExperiment(data.detail) ? data.detail.display.capital : data.detail.request.conditions.capital)}</dd>
-          <dt>Meta de referencia</dt><dd className="data-list-numeric">{money(isProfileExperiment(data.detail) ? data.detail.display.goal : data.detail.request.conditions.goal)}</dd>
           <dt>{profileContext ? "Datos de origen" : "Historial"}</dt><dd className="font-mono">{data.detail.sources.history_id}</dd><dt>{profileContext ? "SHA-256 de datos de origen" : "SHA-256 historial"}</dt><dd className="font-mono">{data.detail.sources.history_sha256}</dd>
           {isProfileExperiment(data.detail) ? <>{data.detail.request.schema_version === 4 && <><dt>Margen objetivo</dt><dd>{profileMoney(data.detail, data.detail.request.staking.target_margin)}</dd><dt>Rondas de recuperación</dt><dd>{data.detail.request.staking.rounds}</dd><dt>Al agotar la escalera</dt><dd>{data.detail.request.staking.end_mode === "cycle" ? "Reiniciar la escalera" : "Detener la sesión"}</dd></>}<dt>Perfil</dt><dd>{data.detail.profile.profile_id} · revisión {data.detail.profile.revision} · {data.detail.profile.positions} posiciones · {data.detail.display.currency}</dd><dt>Conjunto de datos SHA-256</dt><dd className="font-mono">{data.detail.request.dataset_sha256}</dd></> : <><dt>Rankings</dt><dd className="font-mono">{data.detail.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd className="font-mono">{data.detail.sources.rankings_sha256}</dd></>}
           <dt>Versión de código</dt><dd className="font-mono">{data.detail.sources.code_version}</dd>

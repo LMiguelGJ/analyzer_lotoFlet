@@ -23,6 +23,11 @@ describe("comparison chronological chart", () => {
     expect(middle).toBeLessThan(end);
     expect(screen.getByText(/2025-01-01 10:15.*RD\$90/)).toBeInTheDocument();
     expect(screen.getByText(/líneas conectan observaciones/)).toBeInTheDocument();
+    expect(within(figure).getByRole("img")).toHaveAttribute("aria-label", expect.stringContaining("trazos y marcadores"));
+    expect(within(figure).getByText(/A · circle, línea continua/)).toBeInTheDocument();
+    expect(within(figure).getByText(/B · square, línea a trazos/)).toBeInTheDocument();
+    expect(within(figure).getByRole("img").closest("svg")).toHaveClass("min-w-[640px]");
+    expect(within(figure).getByRole("region", { name: "Gráfico comparado" })).toHaveClass("overflow-x-auto");
   });
   it("offers keyboard-accessible toggles and textual data without changing metrics", async () => {
     const user = userEvent.setup();

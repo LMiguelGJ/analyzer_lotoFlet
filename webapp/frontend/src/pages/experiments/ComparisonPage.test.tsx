@@ -56,7 +56,7 @@ const batchV5Detail: ProfileBatchExperimentSummary = {
 const batchCompare: CompareResult = { id: "exp", status: "failed", request_kind: "profile", completed: 1, requested: 3, complete: false, runs: [batchFailed, batchSuccess, batchCancelled] };
 const page = (ordinal: number, offset = 0): Page<Bet> => ({ offset, limit: 100, total: ordinal ? 1 : 101, items: offset ? [bet("2025-01-01 11:00", 150)] : ordinal ? [bet("2025-01-01 10:30", 110)] : Array.from({ length: 100 }, (_, i) => bet(`2025-01-01 10:${String(i % 60).padStart(2, "0")}`, 101 + i)) });
 async function openDetailedComparison() {
-  const summary = await screen.findByText("Comparación detallada");
+  const summary = await screen.findByText("Detalles técnicos · comparación");
   await userEvent.setup().click(summary);
   await waitFor(() => expect(summary.closest("details")).toHaveAttribute("open", ""));
 }
@@ -131,7 +131,7 @@ describe("profile comparison READ", () => {
     setup();
     await openDetailedComparison();
     await screen.findByRole("table", { name: "Comparación de ejecuciones" });
-    await userEvent.setup().click(screen.getByText("Detalles técnicos"));
+    await userEvent.setup().click(screen.getByText("Detalles técnicos · condiciones y datos de origen"));
     expect(screen.getByText("Versión de solicitud").nextElementSibling).toHaveTextContent("Perfil v4");
     expect(screen.getByText("Resultado · Perfil EUR").nextElementSibling).toHaveTextContent("Perfil v4");
     expect(screen.getByText("EUR 5.00")).toBeInTheDocument();
@@ -144,11 +144,11 @@ describe("profile comparison READ", () => {
     setup();
     await openDetailedComparison();
     await screen.findByRole("table", { name: "Comparación de ejecuciones" });
-    expect(screen.getByText("Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
     expect(screen.getByText("Datos de origen")).toBeInTheDocument();
     expect(screen.getByText("SHA-256 de datos de origen")).toBeInTheDocument();
     expect(screen.getByText("Evolución comparada · fechas guardadas")).toBeInTheDocument();
-    expect(within(screen.getByRole("main")).queryByText(/datos históricos|Resultados históricos|fechas históricas|^Historial$|^SHA-256 historial$/i)).not.toBeInTheDocument();
+    expect(within(screen.getByRole("main")).queryByText(/Resultados históricos|fechas históricas|^Historial$|^SHA-256 historial$/i)).not.toBeInTheDocument();
   });
 
   it("shows server delta and elapsed versus bet draws with profile currency in table and chart", async () => {
@@ -159,7 +159,7 @@ describe("profile comparison READ", () => {
     await openDetailedComparison();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent(/EUR 99.00.*-EUR 1.00.*Límite de sesión.*1.*3/);
-    expect(screen.getByText("Capital").nextElementSibling).toHaveTextContent("EUR 100.00");
+    expect(screen.getByText("Capital inicial").nextElementSibling).toHaveTextContent("EUR 100.00");
     expect(await screen.findByText(/Perfil EUR: 1 de 1 apuestas/)).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Datos textuales del gráfico" })).toHaveTextContent("EUR 99.00");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
@@ -172,7 +172,7 @@ describe("profile comparison READ", () => {
     setup();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row")[1]).not.toHaveTextContent("EUR 99.00");
-    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("—");
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Sin dato");
     expect(apiClient.getReplay).not.toHaveBeenCalled();
   });
 });
@@ -196,7 +196,7 @@ describe("profile batch v5 comparison", () => {
     expect(rows[1]).toHaveTextContent(/Ventana operativa; fuente incompleta.*bounded draw window ended before source end/);
     expect(rows[1]).toHaveTextContent("Ventana operativa; fuente incompleta");
     expect(rows[1]).not.toHaveTextContent("Historial agotado");
-    expect(rows[2]).toHaveTextContent(/Frozen B.*Cancelado.*N\/A/);
+    expect(rows[2]).toHaveTextContent(/Frozen B.*Cancelado.*Sin dato/);
     expect(rows[3]).toHaveTextContent(/Frozen C.*Con error.*strategy-local failure/);
     expect(screen.queryByText("Fin de la fuente guardada")).not.toBeInTheDocument();
     await user.click(screen.getByText("Detalles técnicos · condiciones y datos de origen"));
@@ -235,7 +235,7 @@ describe("profile batch v5 comparison", () => {
     await openDetailedComparison();
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getAllByRole("row").slice(1)).toHaveLength(3);
-    expect(within(table).getAllByText("N/A").length).toBeGreaterThanOrEqual(3);
+    expect(within(table).getAllByText("Sin dato").length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText("Todavía no hay apuestas guardadas cargadas para graficar.")).toHaveAttribute("role", "status");
     expect(apiClient.getTrajectory).not.toHaveBeenCalled();
     expect(apiClient.getReplay).not.toHaveBeenCalled();
@@ -243,21 +243,32 @@ describe("profile batch v5 comparison", () => {
 });
 
 describe("LW12 comparison", () => {
-  it("leads each run with saldo, neto and cierre while the full table stays closed", async () => {
+  it("leads with a four-figure verdict while technical comparison stays closed", async () => {
     const enrichedRuns = [{ ...runs[0], result: { ...runs[0].result!, net: 25, roi: 2, return_per_wagered: 3, max_drawdown: 10 } }, runs[1]];
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...detail, runs: enrichedRuns });
     vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...comparison, runs: enrichedRuns });
     const { user } = setup();
-    await screen.findByText("Desenlaces");
-    expect(screen.getAllByText("RD$150")[0]).toBeInTheDocument();
-    const outcomes = within(screen.getByRole("region", { name: "Desenlaces guardados" }));
-    expect(outcomes.getAllByText("Motivo de cierre")[0].nextElementSibling).toHaveTextContent("Meta alcanzada");
-    expect(outcomes.getAllByText("Neto")[0].nextElementSibling).toHaveTextContent("RD$25");
-    const disclosure = screen.getByText("Comparación detallada");
+    const verdict = await screen.findByRole("region", { name: "Veredicto" });
+    expect(within(verdict).getByRole("heading", { level: 1 })).toHaveTextContent(/Entre las simulaciones con resultado, Primera terminó con más saldo y se alcanzó la meta/);
+    expect(within(verdict).getByText("Saldo final más alto").nextElementSibling).toHaveTextContent("RD$150");
+    expect(within(verdict).getAllByText(/Saldo final más alto|Cambio respecto del inicio|Sorteos jugados|¿Alcanzó la meta\?/)).toHaveLength(4);
+    expect(within(verdict).getByText(/Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad/)).toBeInTheDocument();
+    expect(screen.getByText("El saldo no equivale a ganancia o pérdida; el cambio se calcula frente al capital inicial.")).toBeInTheDocument();
+    expect(screen.getByText("Volver a simulaciones")).toHaveClass("btn-primary");
+    expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
+    const disclosure = screen.getByText("Detalles técnicos · comparación");
     expect(disclosure.closest("details")).not.toHaveAttribute("open");
+    const technicalDisclosure = disclosure.closest("details")!;
+    expect(technicalDisclosure).toContainElement(screen.getByRole("columnheader", { name: "ROI neto" }));
+    expect(technicalDisclosure).toContainElement(screen.getByRole("columnheader", { name: "Caída máxima del saldo" }));
+    expect(within(verdict).queryByText(/ROI|drawdown|N\/A/)).not.toBeInTheDocument();
+    const visiblePage = document.body.cloneNode(true) as HTMLElement;
+    visiblePage.querySelectorAll("details:not([open])").forEach((element) => element.remove());
+    expect(visiblePage.textContent).not.toMatch(/\bROI\b|drawdown|\bN\/A\b/);
     await user.click(disclosure);
     expect(screen.getByRole("table", { name: "Comparación de ejecuciones" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "ROI neto" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Caída máxima del saldo" })).toBeInTheDocument();
   });
 
   it("uses server N/M and delta, shows absent values as dashes, and separates outcome from execution", async () => {
@@ -267,7 +278,7 @@ describe("LW12 comparison", () => {
     const table = screen.getByRole("table", { name: "Comparación de ejecuciones" });
     const rows = within(table).getAllByRole("row");
     expect(rows[1]).toHaveTextContent(/Primera.*Ejecución completada.*RD\$150.*RD\$50.*Meta alcanzada.*2/);
-    expect(rows[2]).toHaveTextContent(/Segunda.*En curso.*—.*—.*—.*—/);
+    expect(rows[2]).toHaveTextContent(/Segunda.*En curso.*Sin dato/);
     expect(within(rows[2]).queryByText("Meta alcanzada")).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Comparación de ejecuciones" })).toHaveClass("overflow-x-auto");
     expect(screen.getByText("hash-h")).toBeInTheDocument();
@@ -280,7 +291,7 @@ describe("LW12 comparison", () => {
     setup();
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getByRole("columnheader", { name: "Cambio respecto del inicio" })).toBeInTheDocument();
-    expect(screen.getByText(/Simulación con datos históricos: no predice resultados futuros ni garantiza rentabilidad/)).toBeInTheDocument();
+    expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
     expect(screen.queryByText(/Resultados históricos sobre datos ya investigados/)).not.toBeInTheDocument();
     expect(screen.getByText("Historial")).toBeInTheDocument();
     expect(screen.getByText("SHA-256 historial")).toBeInTheDocument();

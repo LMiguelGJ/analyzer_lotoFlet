@@ -30,8 +30,8 @@ export function ComparisonChart({ series, onToggle, formatMoney = formatDOP }: {
         {entry.name} · {markers[entry.ordinal % markers.length]}, {patterns[entry.ordinal % patterns.length] === "none" ? "línea continua" : "línea a trazos"}
       </label>)}
     </fieldset>
-    {dated.length ? <section aria-label="Gráfico comparado desplazable" tabIndex={0} className="max-w-full overflow-x-auto border border-border-control bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
-      <svg role="img" aria-label="Saldos por fecha y hora; datos textuales a continuación" viewBox="0 0 800 240" className="min-w-[640px] w-full h-auto">
+    {dated.length ? <section aria-label="Gráfico comparado" tabIndex={0} className="max-w-full overflow-x-auto border border-border-control bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
+      <svg role="img" aria-label="Saldos por fecha y hora; cada serie se distingue por trazos y marcadores, con datos textuales a continuación" viewBox="0 0 800 240" className="min-w-[640px] w-full h-auto">
         <line x1="55" x2="755" y1="190" y2="190" stroke="currentColor" />
         <text x="55" y="215" fontSize="12" fill="currentColor">{timeLabels[0]?.replace("T", " ")}</text>
         <text x="755" y="215" textAnchor="end" fontSize="12" fill="currentColor">{timeLabels[timeLabels.length - 1]?.replace("T", " ")}</text>
