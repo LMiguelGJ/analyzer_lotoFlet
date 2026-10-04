@@ -55,6 +55,20 @@
 
   --motion-fast: 150ms;
   --motion-easing: ease-out;
+
+  /* Ledger roles: semantic hues are reserved for figures, state chips and indicators. */
+  --color-positive: #8fc7a3;
+  --color-negative: #e29a9a;
+  --color-warning: #e5bd72;
+  --color-info: #7eb3da;
+  --border-hairline: 1px solid var(--color-border);
+  --border-control: 1px solid var(--color-border-control);
+  --motion-control-duration: 150ms;
+  --motion-control-easing: ease-out;
+
+  --type-figure: var(--font-mono);
+  --type-label: var(--font-body);
+  --tracking-label: 0.08em;
 }
 
 @media (prefers-reduced-motion: reduce) {
