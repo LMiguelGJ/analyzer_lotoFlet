@@ -19,10 +19,13 @@ export function errorDetail(entry: ErrorValue | undefined): string | undefined {
   return typeof entry === "string" ? undefined : entry?.detail;
 }
 export const initialConditions: ConditionsDraft = {
-  name: "", start_draw: "", capital: "", goal: "", settlement: "all", max_bets: "", max_minutes: "", seed: "",
+  name: "", start_draw: "", capital: "2000", goal: "2800", settlement: "all", max_bets: "12", max_minutes: "", seed: "",
 };
 export function newStrategy(id: number): StrategyDraft {
   return { id, name: "", selector: "system", system: "", components: [{ system: "", weight: "" }, { system: "", weight: "" }], coverage: "1", staking: "flat" };
+}
+export function initialStrategy(id: number): StrategyDraft {
+  return { id, name: "", selector: "blend", system: "", components: [{ system: "transition", weight: "60" }, { system: "cold", weight: "40" }], coverage: "10", staking: "flat" };
 }
 
 /** The single scalar or component sub-field that changed between two drafts of the same
