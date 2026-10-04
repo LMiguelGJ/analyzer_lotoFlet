@@ -753,7 +753,7 @@ describe("LW09 single-form creation", () => {
     const before = add.mock.calls.filter(([name]) => name === "beforeunload").length;
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
     expect(add.mock.calls.filter(([name]) => name === "beforeunload").length).toBeGreaterThan(before);
-    await user.click(screen.getByRole("link", { name: "Administración" }));
+    await user.click(screen.getByRole("link", { name: "Ajustes" }));
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(remove.mock.calls.some(([name]) => name === "beforeunload")).toBe(true));
     add.mockRestore(); remove.mockRestore();
@@ -762,7 +762,7 @@ describe("LW09 single-form creation", () => {
   it("does not block a clean wizard navigation", async () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-    await user.click(screen.getByRole("link", { name: "Administración" }));
+    await user.click(screen.getByRole("link", { name: "Ajustes" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/ajustes"));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
@@ -863,12 +863,12 @@ describe("LW09 single-form creation", () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
-    await user.click(screen.getByRole("link", { name: "Administración" }));
+    await user.click(screen.getByRole("link", { name: "Ajustes" }));
     const dialog = screen.getByRole("alertdialog");
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
     await user.click(within(dialog).getByRole("button", { name: "Seguir editando" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Borrador");
-    await user.click(screen.getByRole("link", { name: "Administración" }));
+    await user.click(screen.getByRole("link", { name: "Ajustes" }));
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/ajustes"));
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
