@@ -32,7 +32,7 @@ function setup() {
   return { user, ...view };
 }
 async function open(user: ReturnType<typeof userEvent.setup>) {
-  const trigger = screen.getByRole("button", { name: "Cola" });
+  const trigger = screen.getByRole("button", { name: "Abrir cola de cálculo" });
   await user.click(trigger);
   return screen.getByRole("dialog", { name: "Cola de experimentos" });
 }
@@ -57,7 +57,7 @@ describe("LW15 queue drawer", () => {
     await waitFor(() => expect(apiClient.getQueue).toHaveBeenCalledTimes(2));
     await user.click(within(dialog).getByRole("link", { name: "Inspeccionar pending-1" }));
     expect(await screen.findByText("Detalle de prueba")).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Administración" }));
+    await user.click(screen.getByRole("link", { name: "Ajustes" }));
     expect(await screen.findByText("Ajustes de prueba")).toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Simulaciones" }));
     expect(await screen.findByText("Lista de prueba")).toBeInTheDocument();
@@ -341,7 +341,7 @@ describe("LW15 queue drawer", () => {
     expect(dialog).toHaveFocus();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cola" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Abrir cola de cálculo" })).toHaveFocus();
   });
 
   it("nested cancel confirmation absorbs Escape, then cancellation request does not claim terminal status", async () => {
@@ -401,7 +401,7 @@ describe("LW15 queue drawer", () => {
       expect(cancel).toHaveFocus();
       await user.keyboard("{Escape}");
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Cola" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: "Abrir cola de cálculo" })).toHaveFocus();
     } finally {
       view.unmount();
       appRoot.remove();
@@ -472,14 +472,12 @@ describe("LW15 queue drawer", () => {
     }
   });
 
-  it("keeps mobile navigation closed when Escape dismisses only the drawer", async () => {
+  it("dismisses only the drawer on Escape and returns focus to the queue control", async () => {
     const { user } = setup();
-    await user.click(screen.getByRole("button", { name: "Abrir navegación" }));
-    await user.click(screen.getByRole("button", { name: "Cola" }));
-    expect(screen.getByRole("button", { name: "Abrir navegación" })).toHaveAttribute("aria-expanded", "false");
+    await user.click(screen.getByRole("button", { name: "Abrir cola de cálculo" }));
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cola" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Abrir cola de cálculo" })).toHaveFocus();
   });
 
   it("offers explicit start only on held jobs, never resume on the interrupted active job", async () => {

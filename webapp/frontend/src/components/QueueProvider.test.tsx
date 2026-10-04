@@ -23,7 +23,7 @@ describe("shared bounded queue poll", () => {
     const user = userEvent.setup();
     render(<MemoryRouter><QueueProvider><Shell title="Prueba">Contenido</Shell></QueueProvider></MemoryRouter>);
     await waitFor(() => expect(apiClient.getQueue).toHaveBeenCalledTimes(1));
-    await user.click(screen.getByRole("button", { name: "Cola" }));
+    await user.click(screen.getByRole("button", { name: "Abrir cola de cálculo" }));
     expect(await screen.findByRole("link", { name: "Inspeccionar pending-first" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Detenido" })).toHaveTextContent("2");
     expect(apiClient.getQueue).toHaveBeenCalledTimes(1);
@@ -42,7 +42,7 @@ describe("shared bounded queue poll", () => {
       .mockResolvedValueOnce(snapshot(0, 1, 0, ["survivor"], []));
     const user = userEvent.setup();
     render(<MemoryRouter><QueueProvider><Shell title="Prueba">Contenido</Shell></QueueProvider></MemoryRouter>);
-    await user.click(screen.getByRole("button", { name: "Cola" }));
+    await user.click(screen.getByRole("button", { name: "Abrir cola de cálculo" }));
     await screen.findByRole("link", { name: "Inspeccionar first" });
     await user.click(screen.getByRole("button", { name: "Siguiente cola" }));
     await waitFor(() => expect(apiClient.getQueue).toHaveBeenCalledTimes(2));
@@ -61,7 +61,7 @@ describe("shared bounded queue poll", () => {
       .mockImplementationOnce(() => new Promise((resolve) => { resolveRetry = resolve; }));
     const user = userEvent.setup();
     render(<MemoryRouter><QueueProvider><Shell title="Prueba">Contenido</Shell></QueueProvider></MemoryRouter>);
-    await user.click(screen.getByRole("button", { name: "Cola" }));
+    await user.click(screen.getByRole("button", { name: "Abrir cola de cálculo" }));
     await screen.findByRole("link", { name: "Inspeccionar first" });
     await user.click(screen.getByRole("button", { name: "Reintentar cola" }));
     const dialog = screen.getByRole("dialog");

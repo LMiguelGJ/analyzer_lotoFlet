@@ -273,7 +273,7 @@ it("does not block clean navigation and explains 403 and a raced read-only 409 w
   await user.click(screen.getByRole("link", { name: "Simulaciones" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-  await user.click(screen.getByRole("link", { name: "Administración" }));
+  await user.click(screen.getByRole("link", { name: "Ajustes" }));
   const edited = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(edited); await user.type(edited, "7000000000");
   vi.mocked(apiClient.updateSettings).mockRejectedValueOnce(new ApiError(403, "forbidden")).mockRejectedValueOnce(new ApiError(409, "environment quota is read-only"));
@@ -287,7 +287,7 @@ it("does not block clean navigation and explains 403 and a raced read-only 409 w
 
 it("keeps agent access closed, secret-free, and retrieves a credential only after explicit request", async () => {
   const { user } = setup();
-  expect(await screen.findByRole("heading", { name: "Administración del laboratorio" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Ajustes" })).toBeInTheDocument();
   expect(agentApi.getAgentCredential).not.toHaveBeenCalled();
   const access = screen.getByText("Acceso para agentes").closest("details")!;
   expect(access).not.toHaveAttribute("open");
