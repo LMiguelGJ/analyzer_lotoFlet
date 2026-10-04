@@ -2,6 +2,7 @@ import type { Catalog, SelectorKind, StakingStyle } from "../api/types";
 import type { Errors, StrategyDraft } from "../pages/new-experiment/model";
 import { errorDetail, errorMessage } from "../pages/new-experiment/model";
 import { FIELD_LABEL_STAKING, SELECTOR_LABELS, STAKING_DESCRIPTIONS, STAKING_LABELS } from "../lib/ui-labels";
+import { Block, Disclosure } from "./ui";
 
 interface Props {
   value: StrategyDraft;
@@ -21,7 +22,7 @@ export function StrategyEditor({ value, index, catalog, errors, onChange }: Prop
       {node}
       {description && <p id={`${prefix}.${key}.help`} className="field-help">{description}</p>}
       {entry && <p id={`${prefix}.${key}.error`} className="mt-1 text-sm text-red-300">{errorMessage(entry)}</p>}
-      {errorDetail(entry) && <p className="mt-1 text-xs text-text-secondary">{errorDetail(entry)}</p>}
+      {errorDetail(entry) && <Disclosure summary="Detalles técnicos"><p className="mt-1 text-xs text-text-secondary">{errorDetail(entry)}</p></Disclosure>}
     </div>;
   }
   function attributes(key: string, hasHelp = false) {
@@ -31,14 +32,14 @@ export function StrategyEditor({ value, index, catalog, errors, onChange }: Prop
   }
   const systems = Object.entries(catalog.systems);
   const systemOptions = <><option value="">Elegí un sistema</option>{systems.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</>;
-  return <div>
+  return <Block className="space-y-4">
     {field("name", `Nombre de la estrategia ${index + 1}`, <input {...attributes("name")} className="control" value={value.name} maxLength={81} onChange={(event) => onChange({ ...value, name: event.target.value })} />)}
     {field("selector", `Método de la estrategia ${index + 1}`, <select {...attributes("selector")} className="control" value={value.selector} onChange={(event) => onChange({ ...value, selector: event.target.value as SelectorKind, coverage: event.target.value === "parity" ? String(catalog.parity_coverage) : value.selector === "parity" ? String(catalog.coverages[0]) : value.coverage })}>
       {catalog.selectors.map((selector) => <option value={selector} key={selector}>{SELECTOR_LABELS[selector]}</option>)}
     </select>)}
-    {value.selector === "system" && field("system", "Sistema de ranking", <select {...attributes("system")} className="control" value={value.system} onChange={(event) => onChange({ ...value, system: event.target.value })}>{systemOptions}</select>)}
+    {value.selector === "system" && field("system", "Método de selección", <select {...attributes("system")} aria-label="Sistema de ranking" className="control" value={value.system} onChange={(event) => onChange({ ...value, system: event.target.value })}>{systemOptions}</select>)}
     {value.selector === "blend" && <section aria-label="Sistemas de la mezcla" className="mb-5 border-t border-border pt-4">
-      <p className="field-help">Cada ranking otorga 100 puntos al primer puesto hasta 1 al último. Los porcentajes ponderan puntos, no son probabilidades; los empates priorizan el número menor.</p>
+      <Disclosure summary="Detalles técnicos"><p className="field-help">Cada clasificación otorga 100 puntos al primer puesto hasta 1 al último. Los porcentajes ponderan puntos, no son probabilidades; los empates priorizan el número menor.</p></Disclosure>
       {value.components.map((component, componentIndex) => <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px_auto]" key={componentIndex}>
         {errors[`${prefix}.components.${componentIndex}`] && <p id={`${prefix}.components.${componentIndex}.error`} className="text-sm text-red-300 sm:col-span-3">{errorMessage(errors[`${prefix}.components.${componentIndex}`])}{errorDetail(errors[`${prefix}.components.${componentIndex}`]) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors[`${prefix}.components.${componentIndex}`])}</span>}</p>}
         <div><label htmlFor={`${prefix}.components.${componentIndex}.system`} className="field-label">Sistema {componentIndex + 1}</label>
@@ -64,5 +65,5 @@ export function StrategyEditor({ value, index, catalog, errors, onChange }: Prop
         {(Object.keys(STAKING_LABELS) as StakingStyle[]).map((key) => <option value={key} key={key}>{STAKING_LABELS[key]}</option>)}
       </select>, STAKING_DESCRIPTIONS[value.staking])}
     </div>
-  </div>;
+  </Block>;
 }

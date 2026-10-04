@@ -21,9 +21,12 @@ describe("whole-run trajectories", () => {
   it("loads once, discloses reduction/extrema/baseline and selects original indexes", async () => {
     const select = vi.fn(); const user = userEvent.setup();
     render(<RunTrajectory {...props} onSelect={select} />);
-    expect(await screen.findByText(/4 de 1001 apuestas.*reducción minmax-even-v1/)).toBeInTheDocument();
-    expect(screen.getByText(/Capital inicial: EUR 100.00.*Mínimo: EUR 0.00.*Máximo: EUR 500.00/)).toBeInTheDocument();
-    await user.click(screen.getByText("Consultar apuesta exacta de un punto"));
+    expect(await screen.findByText(/4 de 1001 sorteos/)).toBeInTheDocument();
+    const technical = screen.getByText("Detalles técnicos · Perfil");
+    expect(technical.closest("details")).not.toHaveAttribute("open");
+    await user.click(technical);
+    expect(screen.getByText(/modo minmax-even-v1/)).toBeInTheDocument();
+    await user.click(screen.getByText("Consultar detalle técnico de un punto"));
     await user.click(screen.getByRole("button", { name: /Apuesta 1001/ }));
     expect(select).toHaveBeenLastCalledWith(1000);
     await user.type(screen.getByRole("spinbutton"), "601");
@@ -40,8 +43,8 @@ describe("whole-run trajectories", () => {
       { source_index: 905, bet_index: 1, label: "2025-01-02 10:00", balance: 9800, replay: "replay?offset=1&limit=1" },
     ] });
     render(<RunTrajectory {...props} onSelect={select} />);
-    expect(await screen.findByText(/2 de 2 apuestas.*sin reducción/)).toBeInTheDocument();
-    await user.click(screen.getByText("Consultar apuesta exacta de un punto"));
+    expect(await screen.findByText(/2 de 2 sorteos/)).toBeInTheDocument();
+    await user.click(screen.getByText("Consultar detalle técnico de un punto"));
     await user.click(screen.getByRole("button", { name: /Apuesta 2 · sorteo n.º 905/ }));
     expect(select).toHaveBeenLastCalledWith(1);
     expect(screen.getByRole("img").querySelectorAll("circle")).toHaveLength(3);
@@ -50,7 +53,7 @@ describe("whole-run trajectories", () => {
     const points = Array.from({ length: 30 }, (_, i) => ({ ...long.points[0], source_index: i }));
     vi.mocked(apiClient.getTrajectory).mockResolvedValue({ ...long, total: 30, reduction_method: "none", points });
     render(<MemoryRouter><RunTrajectory {...props} chart={false} /></MemoryRouter>);
-    expect(await screen.findByText(/30 de 30 apuestas.*sin reducción/)).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Trayectoria de Perfil" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Apuesta 30/ })).toHaveAttribute("href", "/experimentos/exp?run=0&bet=29&from=comparison");
   });
   it("handles empty data and retries failed/malformed responses", async () => {
@@ -59,7 +62,7 @@ describe("whole-run trajectories", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo cargar");
     vi.mocked(apiClient.getTrajectory).mockResolvedValue({ ...long, total: 0, points: [], reduction_method: "none" });
     await user.click(screen.getByRole("button", { name: /Reintentar trayectoria/ }));
-    expect(await screen.findByText(/0 de 0 apuestas.*sin reducción/)).toBeInTheDocument();
+    expect(await screen.findByText(/Todavía no hay sorteos jugados/)).toBeInTheDocument();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
@@ -81,12 +84,12 @@ describe("server-derived finance display", () => {
   it("displays backend values verbatim and null ratios as N/A", () => {
     render(<FinancialMetrics money={money} result={{ wagered: 0, paid: 0, net: 123, max_drawdown: 456, roi: null, return_per_wagered: null }} />);
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("EUR 1.23");
-    expect(screen.getByText("Máximo drawdown absoluto").nextElementSibling).toHaveTextContent("EUR 4.56");
-    expect(screen.getByText("ROI neto").nextElementSibling).toHaveTextContent("N/A");
+    expect(screen.getByText("Máximo de saldo perdido desde un pico").nextElementSibling).toHaveTextContent("EUR 4.56");
+    expect(screen.getByText("Cambio sobre lo apostado").nextElementSibling).toHaveTextContent("N/D");
   });
   it("does not replace missing metrics with financial zero", () => {
     render(<FinancialMetrics money={money} result={{ wagered: 20, paid: 60 }} />);
-    expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("N/A");
-    expect(screen.getByText("Retorno por peso apostado").nextElementSibling).toHaveTextContent("N/A");
+    expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("No disponible");
+    expect(screen.getByText("Retorno por peso apostado").nextElementSibling).toHaveTextContent("N/D");
   });
 });

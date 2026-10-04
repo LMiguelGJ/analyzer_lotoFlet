@@ -22,9 +22,9 @@ const file = () => new File([new Uint8Array([0, 255, 10])], "draws.csv", { type:
 async function setup() {
   const user = userEvent.setup();
   render(<DataPage />);
-  await user.click(screen.getByText(/Importar CSV o JSON plano/));
+  await user.click(screen.getByText(/Detalles técnicos · importación de archivos/));
   await screen.findByLabelText("Perfil guardado completo");
-  await user.upload(screen.getByLabelText(/Archivo CSV o JSON/), file());
+  await user.upload(screen.getByLabelText(/Archivo de datos/), file());
   await user.selectOptions(screen.getByLabelText(/Formato del archivo/), "csv");
   await user.selectOptions(screen.getByLabelText("Interpretación de la hora"), "naive_legacy");
   await user.selectOptions(screen.getByLabelText("Perfil guardado completo"), "saved@2");
@@ -60,7 +60,7 @@ describe("visible game profiles", () => {
     expect(create).toBeVisible();
     const importing = await screen.findByRole("region", { name: "Importar historial" });
     expect(profiles.compareDocumentPosition(importing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByText("Importar CSV o JSON plano")?.closest("details")).not.toHaveAttribute("open");
+    expect(screen.queryByText("Detalles técnicos · importación de archivos")?.closest("details")).not.toHaveAttribute("open");
     await userEvent.setup().click(create);
     expect(screen.getByLabelText(/Tamaño del universo/)).toBeVisible();
   });
@@ -69,7 +69,7 @@ describe("visible game profiles", () => {
     render(<DataPage />);
     const library = await screen.findByRole("region", { name: "Biblioteca de historiales" });
     expect(within(library).getByRole("status")).toHaveTextContent(/Todavía no hay historiales guardados/);
-    expect(within(library).getByRole("link", { name: "Importá un historial" })).toHaveAttribute("href", "#history-import-title");
+    expect(within(library).getByRole("link", { name: "Importar historial" })).toHaveAttribute("href", "#history-import-title");
   });
 
   it("offers profile creation in context when importing without a saved profile", async () => {
@@ -93,8 +93,8 @@ describe("bounded local import", () => {
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "new-profile");
     await user.clear(screen.getByLabelText(/Posiciones por sorteo/));
     await user.type(screen.getByLabelText(/Posiciones por sorteo/), "1");
-    await user.clear(screen.getByLabelText("Posición 1 · multiplicador"));
-    await user.type(screen.getByLabelText("Posición 1 · multiplicador"), "1");
+    await user.clear(screen.getByLabelText("Posición 1 · premio por unidad apostada"));
+    await user.type(screen.getByLabelText("Posición 1 · premio por unidad apostada"), "1");
     await user.clear(screen.getByLabelText(/Apuesta máxima/));
     await user.type(screen.getByLabelText(/Apuesta máxima/), "1");
     await user.clear(screen.getByLabelText(/Exposición máxima/));
@@ -138,9 +138,9 @@ describe("bounded local import", () => {
   it("requires deliberate format and clock choices and supports JSON without altering raw bytes", async () => {
     const user = userEvent.setup();
     render(<DataPage />);
-    await user.click(screen.getByText(/Importar CSV o JSON plano/));
+    await user.click(screen.getByText(/Detalles técnicos · importación de archivos/));
     await screen.findByLabelText("Perfil guardado completo");
-    await user.upload(screen.getByLabelText(/Archivo CSV o JSON/), file());
+    await user.upload(screen.getByLabelText(/Archivo de datos/), file());
     await user.selectOptions(screen.getByLabelText("Perfil guardado completo"), "saved@2");
     await user.type(screen.getByLabelText("Identificador de fuente"), "ledger");
     await user.type(screen.getByLabelText("Revisión o corrección"), "r1");
@@ -194,7 +194,7 @@ describe("bounded local import", () => {
     expect(screen.queryByRole("heading", { name: /Vista previa/ })).not.toBeInTheDocument();
     await act(async () => { resolveNew({ ...valid, rows_seen: 3 }); });
     expect(screen.getByText(/Filas leídas: 3/)).toBeInTheDocument();
-    await user.upload(screen.getByLabelText(/Archivo CSV o JSON/), new File(["changed"], "other.csv"));
+    await user.upload(screen.getByLabelText(/Archivo de datos/), new File(["changed"], "other.csv"));
     expect(screen.queryByRole("button", { name: "Confirmar y guardar importación" })).not.toBeInTheDocument();
     expect(apiClient.promoteImport).not.toHaveBeenCalled();
   });
@@ -208,7 +208,7 @@ describe("bounded local import", () => {
     fireEvent.click(confirm); fireEvent.click(confirm);
     expect(apiClient.promoteImport).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("Tipo de fuente")).toBeDisabled();
-    expect(screen.getByLabelText(/Archivo CSV o JSON/)).toBeDisabled();
+    expect(screen.getByLabelText(/Archivo de datos/)).toBeDisabled();
     expect(screen.getByRole("button", { name: "Generar vista previa" })).toBeDisabled();
     expect(confirm).toBeDisabled();
     expect(screen.getByText(/esperá la respuesta/)).toBeInTheDocument();
@@ -245,21 +245,21 @@ describe("bounded local import", () => {
 
   it("rejects over-2-MiB file without reading/sending it and focuses the error", async () => {
     const user = await setup();
-    await user.upload(screen.getByLabelText(/Archivo CSV o JSON/),
+    await user.upload(screen.getByLabelText(/Archivo de datos/),
       new File([new Uint8Array(2 * 1024 * 1024 + 1)], "huge.csv"));
     await user.click(screen.getByRole("button", { name: "Generar vista previa" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/2 MiB/);
     // Field-level validation lands on the invalid field, linked to the error; server failures keep focusing the alert.
-    expect(screen.getByLabelText(/Archivo CSV o JSON/)).toHaveFocus();
-    expect(screen.getByLabelText(/Archivo CSV o JSON/)).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByLabelText(/Archivo CSV o JSON/)).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
+    expect(screen.getByLabelText(/Archivo de datos/)).toHaveFocus();
+    expect(screen.getByLabelText(/Archivo de datos/)).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText(/Archivo de datos/)).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
     expect(apiClient.previewImport).not.toHaveBeenCalled();
   });
 
   it("opens a collapsed advanced disclosure on validation failure, keeps typed values and focuses the first invalid field", async () => {
     const user = userEvent.setup();
     render(<DataPage />);
-    const summary = screen.getByText(/Importar CSV o JSON plano/);
+    const summary = screen.getByText(/Detalles técnicos · importación de archivos/);
     const details = summary.closest("details") as HTMLDetailsElement;
     await user.click(summary);
     await screen.findByLabelText("Perfil guardado completo");
@@ -270,8 +270,8 @@ describe("bounded local import", () => {
     expect(details.open).toBe(true);
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(/Elegí un archivo CSV o JSON/);
-    expect(screen.getByLabelText(/Archivo CSV o JSON/)).toHaveFocus();
-    expect(screen.getByLabelText(/Archivo CSV o JSON/)).toHaveAttribute("aria-describedby", alert.id);
+    expect(screen.getByLabelText(/Archivo de datos/)).toHaveFocus();
+    expect(screen.getByLabelText(/Archivo de datos/)).toHaveAttribute("aria-describedby", alert.id);
     expect(screen.getByLabelText("Identificador de fuente")).toHaveValue("ledger");
     expect(apiClient.previewImport).not.toHaveBeenCalled();
   });
@@ -291,7 +291,8 @@ describe("bounded local import", () => {
     vi.mocked(apiClient.promoteImport).mockRejectedValueOnce(new NetworkError());
     const user = await setup(); await preview(user);
     await user.click(screen.getByRole("button", { name: "Confirmar y guardar importación" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/Puede que la solicitud haya llegado/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo contactar al servidor para guardar el archivo/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/Revisá la conexión antes de reintentar/);
     expect(apiClient.promoteImport).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Confirmar y guardar importación" })).not.toBeInTheDocument();
   });

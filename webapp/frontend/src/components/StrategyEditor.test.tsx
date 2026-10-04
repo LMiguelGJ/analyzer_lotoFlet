@@ -17,6 +17,8 @@ describe("shared strategy vocabulary", () => {
     expect(staking).toHaveValue("flat");
     expect(staking).toHaveAccessibleDescription("Importe base constante por número.");
     expect(staking).toHaveAttribute("aria-describedby", "strategies.0.staking.help");
+    expect(document.querySelectorAll(".ledger-control")).toHaveLength(0);
+    expect(document.querySelector(".ledger-block")).toBeInTheDocument();
   });
 
   it("announces both the staking help and an error without dangling references", () => {

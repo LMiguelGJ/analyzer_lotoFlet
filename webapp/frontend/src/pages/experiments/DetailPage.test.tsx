@@ -4,6 +4,7 @@ import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
+import { verdictPhrase } from "./DetailPage";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import type { Bet, ExperimentSummary, Page, ProfileBatchExperimentSummary, ProfileExperimentSummary, ReplayPage } from "../../api/types";
 
@@ -94,6 +95,19 @@ beforeEach(() => {
   vi.mocked(apiClient.getReplay).mockResolvedValue(page);
 });
 
+describe("verdict phrase facts", () => {
+  it.each([
+    ["goal", "completed", "Meta alcanzada"],
+    ["ruin", "completed", "Se agotó el capital"],
+    ["limit", "completed", "Límite de sesión"],
+    ["history_exhausted", "completed", "Historial agotado"],
+    [undefined, "running", "En curso"],
+    ["cancelled", "cancelled", "Simulación cancelada"],
+  ])("maps existing outcome %s and execution state %s to %s", (outcome, status, phrase) => {
+    expect(verdictPhrase(outcome, status)).toBe(phrase);
+  });
+});
+
 describe("profile detail READ", () => {
   it.each(["pending", "running", "held", "failed"] as const)("shows Q80 %s without a fabricated result or replay", async (status) => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...cyclingSnapshot, status,
@@ -112,6 +126,7 @@ describe("profile detail READ", () => {
     const { user } = setup();
     await screen.findByText("-USD 2.50");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    await user.click(screen.getByText("Detalles técnicos"));
     expect(screen.getByText("Escalera cíclica Q80 · apuesta dinámica por sorteo")).toBeInTheDocument();
     expect(screen.queryByText(/undefined por número/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
@@ -137,6 +152,7 @@ describe("profile detail READ", () => {
     const { user } = setup();
     await screen.findByText("-USD 2.50");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    await user.click(screen.getByText("Detalles técnicos"));
     expect(screen.getByText("Audaz · apuesta dinámica por sorteo")).toBeInTheDocument();
     expect(screen.queryByText(/por número/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
@@ -171,25 +187,32 @@ describe("profile detail READ", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(profileSnapshot);
     const { user } = setup();
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
-    expect(within(run).getByText("Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
-    expect(within(run).queryByText(/Simulación con datos históricos/)).not.toBeInTheDocument();
+    expect(within(run).getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(within(run).getByText("Capital inicial").nextElementSibling).toHaveTextContent("USD 100.00");
+    expect(within(run).getByText("Meta de saldo").nextElementSibling).toHaveTextContent("USD 200.00");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
-    expect(within(run).getByText("Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.")).toBeInTheDocument();
+    expect(within(run).getByText("Detalles técnicos")).toBeInTheDocument();
     expect(within(run).queryByText(/Resultados históricos/)).not.toBeInTheDocument();
   });
 
-  it("leads with Desenlace and keeps secondary metrics closed until technical details open", async () => {
+  it("leads with the verdict and keeps calculation jargon inside technical details", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, net: -250, max_drawdown: 400, roi: -0.25, return_per_wagered: 0.75 } }] });
     const { user } = setup();
-    await screen.findByRole("region", { name: "Ejecución 1" });
-    const headings = screen.getAllByRole("heading");
-    expect(headings.findIndex((heading) => heading.textContent === "Desenlace")).toBeLessThan(headings.findIndex((heading) => heading.textContent === "Evolución"));
+    const verdict = await screen.findByRole("region", { name: "Veredicto" });
+    expect(within(verdict).getByRole("heading", { level: 1 })).toHaveTextContent("Límite de sesión");
+    expect(verdict.querySelectorAll(".ledger-verdict-figures .ledger-stat")).toHaveLength(3);
+    expect(within(verdict).getByText("Saldo final").nextElementSibling).toHaveTextContent("USD 97.50");
+    expect(within(verdict).getByText("Mejor saldo").nextElementSibling).toHaveTextContent("USD 100.00");
+    expect(within(verdict).getByText("Sorteos jugados").nextElementSibling).toHaveTextContent("1");
+    expect(within(verdict).getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
-    const technical = screen.getByText("Detalles técnicos · métricas complementarias");
+    expect(screen.getByText("Cambio sobre lo apostado").nextElementSibling).toHaveTextContent("-0.250000");
+    const financial = screen.getByRole("region", { name: "Métricas financieras" });
+    const technical = within(financial).getByText("Detalles técnicos");
     expect(technical.closest("details")).not.toHaveAttribute("open");
     await user.click(technical);
-    expect(screen.getByText("ROI neto").nextElementSibling).toHaveTextContent("-0.250000");
-    expect(screen.getByText("Máximo drawdown absoluto").nextElementSibling).toHaveTextContent("USD 4.00");
+    expect(within(financial).getByText(/ROI.*HALF_UP/)).toBeInTheDocument();
+    expect(within(financial).getByText("Máximo de saldo perdido desde un pico").nextElementSibling).toHaveTextContent("USD 4.00");
   });
 
   it("shows server delta, elapsed/bet counts, 3 positions and per-number stakes in USD cents", async () => {
@@ -198,9 +221,13 @@ describe("profile detail READ", () => {
     const { user } = setup();
     await screen.findByText("-USD 2.50");
     expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).toHaveTextContent("-USD 2.50");
-    expect(screen.getByText("Sorteos transcurridos").nextElementSibling).toHaveTextContent("3");
-    expect(screen.getByText("Sorteos apostados").nextElementSibling).toHaveTextContent("1");
-    expect(screen.getByText(/Límite de sesión \(límite de sorteos transcurridos\)/)).toBeInTheDocument();
+    expect(screen.getByText("Duración").nextElementSibling).toHaveTextContent("3 sorteos transcurridos");
+    expect(screen.getByText("Sorteos jugados").nextElementSibling).toHaveTextContent("1");
+    expect(screen.getByText(/Motivo de cierre: Límite de sesión \(límite de sorteos transcurridos\)/)).toBeInTheDocument();
+    const ledger = await screen.findByRole("table", { name: "Libro de sorteos" });
+    expect(within(ledger).getAllByRole("columnheader")).toHaveLength(4);
+    expect(within(ledger).getByRole("columnheader", { name: "Saldo" })).toHaveClass("text-right");
+    expect(within(ledger).getByText("USD 97.50")).toHaveClass("font-mono", "tabular-nums");
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
     const table = await screen.findByRole("table", { name: "Apuestas del experimento" });
     expect(within(table).getAllByRole("columnheader", { name: /Resultado/ })).toHaveLength(3);
@@ -240,10 +267,11 @@ describe("profile batch v5 detail", () => {
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
     expect(screen.getByRole("heading", { name: "Lote guardado · Snapshot cold" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Snapshot cold" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver comparación" })).toHaveAttribute("href", "/experimentos/exp/comparacion");
+    expect(screen.getByRole("link", { name: "Comparar simulaciones" })).toHaveAttribute("href", "/experimentos/exp/comparacion");
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
-    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Límite configurado");
-    await user.click(within(run).getByText("Detalles técnicos · métricas complementarias"));
+    expect(within(screen.getByRole("region", { name: "Veredicto" })).getByText(/Motivo de cierre:/)).toHaveTextContent("Límite configurado");
+    const technical = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Versión de solicitud"));
+    await user.click(technical!.querySelector("summary")!);
     expect(screen.getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("configured_limit");
     expect(screen.getByText("Motivo informado").nextElementSibling).toHaveTextContent("max_bet_draws");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
@@ -310,13 +338,13 @@ describe("profile batch v5 detail", () => {
     }] });
     const { user } = setup();
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
-    expect(screen.getByText("Motivo de cierre").nextElementSibling).toHaveTextContent("Ventana operativa; fuente incompleta");
-    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Ventana operativa; fuente incompleta");
-    await user.click(within(run).getByText("Detalles técnicos · métricas complementarias"));
+    expect(screen.getByText(/Motivo de cierre:/)).toHaveTextContent("Ventana operativa; fuente incompleta");
+    const technical = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Versión de solicitud"));
+    await user.click(technical!.querySelector("summary")!);
     expect(screen.getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("operational_window");
     expect(screen.getByText("Motivo informado").nextElementSibling).toHaveTextContent("bounded draw window ended before source end");
-    expect(screen.queryByText("Historial agotado")).not.toBeInTheDocument();
-    expect(screen.queryByText("Fin de la fuente guardada")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Historial agotado" })).toBeInTheDocument();
+    expect(screen.queryByText(/Fin de la fuente guardada/)).not.toBeInTheDocument();
   });
   it("keeps Historial agotado when v5 reports the actual full-source end", async () => {
     const savedRun = batchV5Snapshot.runs[0];
@@ -326,10 +354,11 @@ describe("profile batch v5 detail", () => {
     }] });
     const { user } = setup();
     await screen.findByText("Historial agotado");
-    expect(screen.getByText("Clasificación de parada").nextElementSibling).toHaveTextContent("Fin de la fuente guardada");
+    expect(within(screen.getByRole("region", { name: "Veredicto" })).getByText(/Motivo de cierre:/)).toHaveTextContent("Fin de la fuente guardada");
     expect(screen.queryByText("Ventana operativa; fuente incompleta")).not.toBeInTheDocument();
     const run = screen.getByRole("region", { name: "Ejecución 1" });
-    await user.click(within(run).getByText("Detalles técnicos · métricas complementarias"));
+    const technical = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Versión de solicitud"));
+    await user.click(technical!.querySelector("summary")!);
     expect(within(run).getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("source_end");
     expect(within(run).getByText("Motivo informado").nextElementSibling).toHaveTextContent("full saved source ended");
   });
@@ -340,7 +369,7 @@ describe("LW11 detail", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed", runs: [{ ...snapshot.runs[0], bets_count: 1001, result: { ...snapshot.runs[0].result!, bets_count: 1001 } }] });
     vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 1001, offset: 600, limit: 20, items: [bet] });
     setup("/experimentos/exp?run=0&bet=600&from=comparison");
-    expect(await screen.findByText(/Apuesta seleccionada 601:/)).toBeInTheDocument();
+    expect(await screen.findByText(/Sorteo seleccionado 601:/)).toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 600, 20);
     expect(screen.getByRole("tab", { name: "Apuestas" })).toHaveAttribute("aria-selected", "true");
   });
@@ -349,7 +378,7 @@ describe("LW11 detail", () => {
     setup();
     await screen.findByRole("region", { name: "Métricas financieras" });
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("USD 7.77");
-    expect(screen.getByText("Máximo drawdown absoluto").nextElementSibling).toHaveTextContent("USD 1.23");
+    expect(screen.getByText("Máximo de saldo perdido desde un pico").nextElementSibling).toHaveTextContent("USD 1.23");
     expect(screen.getByText("Retorno por peso apostado").nextElementSibling).toHaveTextContent("0.456789");
   });
   it.each([
@@ -371,7 +400,7 @@ describe("LW11 detail", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed", runs: [{ ...snapshot.runs[0], result: { ...snapshot.runs[0].result!, delta: 40 } }, snapshot.runs[1]] });
     setup();
     await screen.findByText("Prueba");
-    expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("N/A");
+    expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("No disponible");
     expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).toHaveTextContent("RD$40");
     expect(screen.getByText("Neto").nextElementSibling).not.toHaveTextContent("RD$");
     expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).not.toHaveTextContent("N/A");
@@ -386,21 +415,37 @@ describe("LW11 detail", () => {
     expect(within(run).queryByText("Cambio respecto del inicio")).not.toBeInTheDocument();
   });
 
-  it("shows the delta help text and the historical-simulation caveat next to the result summary", async () => {
+  it("shows the delta help and exact standing caveat in the open verdict", async () => {
     setup();
-    await screen.findByText("Prueba");
+    await screen.findByRole("region", { name: "Veredicto" });
     expect(screen.getByText("Diferencia entre el saldo final y el capital inicial")).toBeInTheDocument();
-    expect(screen.getByText(/Simulación con datos históricos: no predice resultados futuros/)).toBeInTheDocument();
+    expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+  });
+
+  it("keeps technical identifiers folded while financial facts stay available", async () => {
+    const { user } = setup();
+    await screen.findByRole("region", { name: "Veredicto" });
+    expect(screen.queryByText(/semilla|SHA-256|JSON|history\\.json/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Capital inicial").nextElementSibling).toHaveTextContent("RD$100");
+    expect(screen.getByText("Meta de saldo").nextElementSibling).toHaveTextContent("RD$200");
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    const technical = screen.getByText("Detalles técnicos");
+    expect(technical.closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText("history.json")).not.toBeVisible();
+    await user.click(technical);
+    expect(screen.getByText("history.json")).toBeVisible();
+    expect(screen.getByText("Semilla guardada").nextElementSibling).toHaveTextContent("5");
   });
 
   it("maps saved selector and staking to plain labels in Parámetros, never the raw enum keys", async () => {
     const { user } = setup();
     await screen.findByText("Prueba");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    await user.click(screen.getByText("Detalles técnicos"));
     expect(screen.getByText("Un sistema de selección")).toBeInTheDocument();
     expect(screen.getByText("Plana")).toBeInTheDocument();
     expect(screen.getByText("Sumar los premios")).toBeInTheDocument();
-    expect(screen.getByText(/Resultados sobre datos históricos ya investigados: no constituyen una validación independiente/)).toBeInTheDocument();
+    expect(screen.getByText("Detalles técnicos")).toBeInTheDocument();
     expect(screen.queryByText("Todas las posiciones")).not.toBeInTheDocument();
     expect(screen.queryByText("system")).not.toBeInTheDocument();
     expect(screen.queryByText("flat")).not.toBeInTheDocument();
@@ -410,7 +455,7 @@ describe("LW11 detail", () => {
     const { router, user } = setup();
     expect(await screen.findByText("Prueba")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/experimentos/exp");
-    expect(screen.getByText("Meta alcanzada")).toHaveAttribute("data-status-kind", "outcome");
+    expect(document.querySelector("[data-status-kind='outcome'][data-status-value='goal']")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Segunda/ }));
     expect(within(screen.getByRole("region", { name: "Ejecución 2" })).getByText("En curso")).toHaveAttribute("data-status-kind", "execution");
     expect(screen.queryByText("Meta alcanzada")).not.toBeInTheDocument();
@@ -447,7 +492,7 @@ describe("LW11 detail", () => {
     first.unmount();
     vi.mocked(apiClient.getExperiment).mockRejectedValueOnce(new NetworkError());
     const second = setup();
-    expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent("El cálculo puede continuar en el servidor; comprobá el estado desde la cola antes de reintentar.");
     second.unmount();
     vi.mocked(apiClient.getReplay).mockRejectedValueOnce(new ApiError(409, "no result"));
     setup();
@@ -502,7 +547,7 @@ describe("LW11 detail", () => {
     vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 2, offset: 0, limit: 20, items: [bet, { ...bet, label: "2026-01-02T10:10:00", balance: 120 }] });
     const { user, unmount } = setup();
     await screen.findByText("Prueba");
-    await screen.findByText(/Apuesta 2:/);
+    await screen.findByText(/Sorteo mostrado: 1 de 2/);
     const final = screen.getByText("Saldo final").parentElement?.textContent;
     const resultTab = screen.getByRole("tab", { name: "Resultado" });
     resultTab.focus();
@@ -526,7 +571,7 @@ describe("LW11 detail", () => {
   it("has no automated accessibility violations in a completed detail", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed" });
     const { container } = setup();
-    await screen.findByText(/Apuesta 1:/);
+    await screen.findByRole("img", { name: /saldos registrados/ });
     expect(await axe(container)).toHaveNoViolations();
   });
 

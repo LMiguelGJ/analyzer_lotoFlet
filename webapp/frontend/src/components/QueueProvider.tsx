@@ -16,7 +16,7 @@ export type RequestLock = {
 };
 
 function actionError(cause: unknown, kind: QueueAction["kind"]): string {
-  if (cause instanceof NetworkError) return "No se pudo contactar al servidor local. La acción podría haberse recibido; comprobá el estado antes de repetirla.";
+  if (cause instanceof NetworkError) return "La solicitud puede haber llegado; comprobá el estado desde la cola antes de reintentar.";
   if (cause instanceof ApiError) {
     if (cause.status === 404) return "El experimento ya no existe. Actualizá la cola.";
     if (cause.status === 409) return kind === "start" ? "Este experimento ya no puede iniciarse. Comprobá su estado." : "Este experimento ya no puede cancelarse. Comprobá su estado.";
@@ -74,6 +74,7 @@ export function QueueProvider({ children }: { children: ReactNode }) {
     let live = true;
     let timer: ReturnType<typeof setTimeout>;
     const ticket = ++sequence.current;
+    setError(null);
     setLoading(true);
     async function poll() {
       try {

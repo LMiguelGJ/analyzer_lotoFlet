@@ -32,7 +32,7 @@ it("frames saved strategies as an optional reusable library", async () => {
   const use = screen.getByRole("link", { name: /Usar/ });
   expect(use).toHaveClass("btn-secondary");
   expect(screen.getByRole("button", { name: /Editar/ })).toHaveClass("btn-tertiary");
-  expect(screen.getByRole("button", { name: /Eliminar/ })).toHaveClass("btn-destructive");
+  expect(screen.getByRole("button", { name: /Eliminar/ })).toHaveClass("btn-tertiary");
   await user.click(screen.getByRole("button", { name: /Eliminar/ }));
   expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 });
@@ -41,19 +41,29 @@ it("shows empty, disconnected and retry states honestly", async () => {
   vi.mocked(apiClient.listConfigurations).mockRejectedValueOnce(new NetworkError()).mockResolvedValueOnce({ total: 0, offset: 0, limit: 20, items: [] });
   const { user } = setup();
   expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor/);
-  await user.click(screen.getByRole("button", { name: "Reintentar" }));
+  await user.click(screen.getByRole("button", { name: "Volver a cargar las estrategias guardadas" }));
   expect(await screen.findByText("La biblioteca es opcional; guardá un método para reutilizarlo.")).toBeInTheDocument();
+});
+it("distinguishes recovery for the catalog and saved strategies", async () => {
+  vi.mocked(apiClient.getCatalog).mockRejectedValueOnce(new NetworkError());
+  vi.mocked(apiClient.listConfigurations).mockRejectedValueOnce(new NetworkError());
+  const { user } = setup();
+  expect(await screen.findByText(/necesitan este catálogo/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Volver a cargar el catálogo" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Volver a cargar el catálogo" }));
+  await waitFor(() => expect(apiClient.getCatalog).toHaveBeenCalledTimes(2));
+  expect(screen.queryByRole("button", { name: "Volver a cargar el catálogo" })).not.toBeInTheDocument();
 });
 it("keeps page-local search distinct from an empty library", async () => {
   const { user } = setup();
   await screen.findByText("Mi plantilla");
   const search = screen.getByRole("textbox", { name: "Buscar estrategia guardada" });
   await user.type(search, "sin coincidencia");
-  expect(screen.getByRole("status")).toHaveTextContent(/Sin coincidencias en esta página/);
+  expect(screen.getByRole("status")).toHaveTextContent(/No hay estrategias con ese nombre/);
   expect(screen.queryByText(/Todavía no hay estrategias guardadas/)).not.toBeInTheDocument();
   expect(apiClient.listConfigurations).toHaveBeenCalledWith(0, 20);
   expect(apiClient.listConfigurations).toHaveBeenCalledTimes(1);
-  await user.click(screen.getByRole("button", { name: "Limpiar búsqueda" }));
+  await user.click(screen.getByRole("button", { name: "Mostrar todas las estrategias de esta página" }));
   expect(search).toHaveValue("");
   expect(screen.getByText("Mi plantilla")).toBeInTheDocument();
 });
@@ -61,6 +71,7 @@ it("hides search and pagination while the library is empty", async () => {
   vi.mocked(apiClient.listConfigurations).mockResolvedValueOnce({ total: 0, offset: 0, limit: 20, items: [] });
   setup();
   expect(await screen.findByText("La biblioteca es opcional; guardá un método para reutilizarlo.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Crear estrategia guardada" })).toBeVisible();
   expect(screen.queryByRole("textbox", { name: "Buscar estrategia guardada" })).not.toBeInTheDocument();
   expect(screen.queryByRole("navigation", { name: "Páginas de estrategias guardadas" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Crear estrategia guardada" })).toBeInTheDocument();
@@ -88,6 +99,7 @@ it("keeps saved data and actions in DOM order with a full-width data row and wra
   expect(row).toHaveClass("saved-strategy-row");
   expect(within(row).getAllByRole("link")).toHaveLength(1);
   expect(within(row).getAllByRole("button").map((button) => button.textContent)).toEqual(["Editar Mi plantilla", "Eliminar Mi plantilla"]);
+  expect(within(row).getAllByRole("button").every((button) => button.classList.contains("btn-tertiary"))).toBe(true);
   const css = readFileSync("src/styles/index.css", "utf8");
   expect(css).toMatch(/\.saved-strategy-row\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s);
   expect(css).toMatch(/\.saved-strategy-row \.btn\s*\{[^}]*max-width:\s*100%;/s);
@@ -99,6 +111,7 @@ it("lists a bounded page, offers use and edit, and preserves distinct library an
   expect(apiClient.listConfigurations).toHaveBeenCalledWith(0, 20);
   expect(screen.getByRole("link", { name: /Usar/ })).toHaveAttribute("href", "/experimentos/nuevo?configuration=cfg-1");
   expect(screen.getByText("Un sistema de selección")).toBeInTheDocument();
+  expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
   expect(screen.getByText("Plana")).toBeInTheDocument();
   expect(screen.getByText("Fríos", { selector: "dd" })).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: /Editar/ }));

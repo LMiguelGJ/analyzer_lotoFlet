@@ -55,10 +55,10 @@ describe("canonical history import and saved library", () => {
     const user = userEvent.setup();
     mount();
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: { "2025-01-01": [{ hora: "10:30", numeros: [1, 2] }] } });
-    await user.upload(await screen.findByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json", { type: "application/json" }));
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json", { type: "application/json" }));
     expect(await screen.findByText(/Juego: Juego/)).toBeInTheDocument();
     expect(screen.getAllByText(/America\/Santo_Domingo/).length).toBeGreaterThan(0);
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
@@ -70,9 +70,9 @@ describe("canonical history import and saved library", () => {
     expect(timezone).toBe(metadata.zona_horaria);
     await user.click(await screen.findByRole("button", { name: /Confirmar y guardar historial/i }));
     expect(await screen.findByText("Historial guardado.")).toBeInTheDocument();
-    expect(await screen.findByText(/1 sorteos · history_json/)).toBeInTheDocument();
-    expect(screen.getByText(/Perfil: local · revisión 1/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Continuar con este historial/i })).toHaveAttribute("href", `/experimentos/nuevo/sesion?dataset_sha256=${dataset.dataset_sha256}`);
+    expect(await screen.findByText(/Historial · 1 sorteos/)).toBeInTheDocument();
+    expect(within(library()).getByText(/Fuente: operador-local/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Usar este historial/i })).toHaveAttribute("href", `/experimentos/nuevo/sesion?dataset_sha256=${dataset.dataset_sha256}`);
   });
 
   it("pages through the saved dataset library without changing the selected profile", async () => {
@@ -83,9 +83,9 @@ describe("canonical history import and saved library", () => {
     const user = userEvent.setup(); mount();
     expect(await screen.findByText("1–20 de 21")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Siguiente" }));
-    expect(await screen.findByText(/1 sorteos · history_json/)).toBeInTheDocument();
+    expect(await screen.findByText(/Historial · 1 sorteos/)).toBeInTheDocument();
     expect(apiClient.getDatasets).toHaveBeenLastCalledWith(20, 20);
-    expect(screen.getByRole("link", { name: /Continuar con este historial/ })).toHaveAttribute("href", `/experimentos/nuevo/sesion?dataset_sha256=${dataset.dataset_sha256}`);
+    expect(screen.getByRole("link", { name: /Usar este historial/ })).toHaveAttribute("href", `/experimentos/nuevo/sesion?dataset_sha256=${dataset.dataset_sha256}`);
   });
 
   it("keeps file metadata when the profile changes while FileReader is pending", async () => {
@@ -98,8 +98,8 @@ describe("canonical history import and saved library", () => {
     });
     const user = userEvent.setup(); mount();
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(await screen.findByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await act(async () => { finishRead(raw); });
     expect(await screen.findByText(/Juego: Juego/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Importar historial/i })).toBeEnabled();
@@ -115,13 +115,13 @@ describe("canonical history import and saved library", () => {
     const user = userEvent.setup(); const view = render(<MemoryRouter><DataPage /></MemoryRouter>);
     const oldRaw = JSON.stringify({ metadata: { ...metadata, juego: "Archivo anterior" }, sorteos_por_fecha: {} });
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    const input = await screen.findByLabelText("Historial JSON (máximo 32 MiB)");
+    const input = await screen.findByLabelText("Archivo del historial (hasta 32 MB)");
     await user.upload(input, new File([oldRaw], "old.json"));
     await user.upload(input, new File([raw], "new.json"));
     await screen.findByText(/Juego: Juego/);
     await act(async () => { finishFirstRead(oldRaw); });
     expect(screen.getByText(/Juego: Juego/)).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
@@ -138,9 +138,9 @@ describe("canonical history import and saved library", () => {
     vi.mocked(historyClient.promoteHistoryImport).mockImplementationOnce(() => new Promise((resolve) => { resolvePromotion = resolve; }));
     const user = userEvent.setup(); const view = render(<MemoryRouter><DataPage /></MemoryRouter>);
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(await screen.findByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
@@ -161,9 +161,9 @@ describe("canonical history import and saved library", () => {
     vi.mocked(historyClient.previewHistoryImport).mockResolvedValueOnce(validPreview);
     const user = userEvent.setup(); mount();
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(await screen.findByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
-    const profileChoice = screen.getByLabelText("Perfil de juego (obligatorio)");
+    const profileChoice = screen.getByLabelText("Reglas del juego");
     await user.selectOptions(profileChoice, "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
@@ -181,14 +181,14 @@ describe("canonical history import and saved library", () => {
   it("invalidates a preview when the profile binding changes before promotion", async () => {
     const user = userEvent.setup(); mount();
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(await screen.findByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
     await screen.findByRole("button", { name: /Confirmar y guardar historial/i });
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "");
     expect(screen.queryByRole("button", { name: /Confirmar y guardar historial/i })).not.toBeInTheDocument();
     expect(historyClient.promoteHistoryImport).not.toHaveBeenCalled();
   });
@@ -197,9 +197,9 @@ describe("canonical history import and saved library", () => {
     vi.mocked(historyClient.previewHistoryImport).mockRejectedValueOnce(new ApiError(409, "registered profile hash does not match identity"));
     const user = userEvent.setup(); mount();
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(await screen.findByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
@@ -211,15 +211,15 @@ describe("canonical history import and saved library", () => {
     vi.mocked(historyClient.promoteHistoryImport).mockRejectedValueOnce(new NetworkError());
     const user = userEvent.setup(); mount();
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(await screen.findByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
     await user.click(await screen.findByRole("button", { name: /Confirmar y guardar historial/i }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/Puede que la solicitud haya llegado/i);
-    expect(screen.getByText(/Revisá la biblioteca antes de reintentar/)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo contactar al servidor/);
+    expect(screen.getByText(/Comprobá el estado desde la cola/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Importar historial/i })).toBeDisabled();
     expect(historyClient.promoteHistoryImport).toHaveBeenCalledTimes(1);
   });
@@ -230,17 +230,17 @@ describe("canonical history import and saved library", () => {
     const user = userEvent.setup(); mount();
     expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo cargar la biblioteca/);
     await user.click(screen.getByRole("button", { name: "Reintentar biblioteca" }));
-    expect(await screen.findByText(/1 sorteos · history_json/)).toBeInTheDocument();
+    expect(await screen.findByText(/Historial · 1 sorteos/)).toBeInTheDocument();
     expect(apiClient.getDatasets).toHaveBeenCalledTimes(2);
-    expect(screen.queryByRole("link", { name: /Continuar con este historial/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Usar este historial/ })).toBeInTheDocument();
   });
 
   it("requires exact explicit metadata confirmation and does not preview on mismatch", async () => {
     const user = userEvent.setup(); mount();
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(await screen.findByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
     expect(screen.getByRole("alert")).toHaveTextContent(/Confirmá la fuente y la zona horaria/i);
     expect(historyClient.previewHistoryImport).not.toHaveBeenCalled();
@@ -249,7 +249,7 @@ describe("canonical history import and saved library", () => {
 
 const library = () => screen.getByRole("region", { name: "Biblioteca de historiales" });
 const importRegion = () => screen.getByRole("region", { name: "Importar historial" });
-const advancedRegion = () => screen.getByRole("region", { name: "Opciones avanzadas" });
+const advancedRegion = () => screen.getByRole("region", { name: "Más formas de importar" });
 const follows = (first: HTMLElement, second: HTMLElement) => Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
 const emptyLibrary = { total: 0, offset: 0, limit: 20, items: [] };
 const primaries = () => Array.from(document.querySelectorAll<HTMLElement>(".btn-primary"));
@@ -257,7 +257,7 @@ const primaries = () => Array.from(document.querySelectorAll<HTMLElement>(".btn-
 describe("regions, resolved-state order and single dominant action", () => {
   it("shows Perfiles, Historiales, Importar and advanced options in task order", async () => {
     mount();
-    await screen.findByText(/1 sorteos · history_json/);
+    await screen.findByText(/Historial · 1 sorteos/);
     const profiles = screen.getByRole("region", { name: "Perfiles de juego" });
     expect(profiles).toHaveAttribute("id", "perfiles");
     expect(library()).toHaveAttribute("id", "historiales");
@@ -275,7 +275,7 @@ describe("regions, resolved-state order and single dominant action", () => {
     expect(follows(importRegion(), advancedRegion())).toBe(true);
     const steps = within(importRegion()).getByRole("list", { name: "Cómo importar el primer historial" });
     expect(steps).toHaveTextContent(/perfil de juego/i);
-    expect(within(importRegion()).getByLabelText("Perfil de juego (obligatorio)")).toBeInTheDocument();
+    expect(within(importRegion()).getByLabelText("Reglas del juego")).toBeInTheDocument();
     expect(within(importRegion()).getByText("Importar guarda datos, no ejecuta ni calcula pagos.")).toBeInTheDocument();
   });
 
@@ -301,7 +301,7 @@ describe("regions, resolved-state order and single dominant action", () => {
     expect(screen.getByText("Cargando historiales guardados…")).toHaveAttribute("role", "status");
     expect(screen.queryByText(/Todavía no hay historiales guardados/)).not.toBeInTheDocument();
     await act(async () => { resolveList(emptyLibrary); });
-    expect(screen.getByLabelText("Historial JSON (máximo 32 MiB)")).toBeEnabled();
+    expect(screen.getByLabelText("Archivo del historial (hasta 32 MB)")).toBeEnabled();
     expect(screen.getByText(/Todavía no hay historiales guardados/)).toBeInTheDocument();
   });
 
@@ -321,14 +321,14 @@ describe("regions, resolved-state order and single dominant action", () => {
     const user = userEvent.setup(); mount();
     await screen.findByText(/Todavía no hay historiales guardados/);
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(screen.getByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(screen.getByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: /Importar historial/i }));
     await user.click(await screen.findByRole("button", { name: /Confirmar y guardar historial/i }));
-    expect(await screen.findByText(/1 sorteos · history_json/)).toBeInTheDocument();
+    expect(await screen.findByText(/Historial · 1 sorteos/)).toBeInTheDocument();
     expect(follows(library(), importRegion())).toBe(true);
   });
 
@@ -351,25 +351,25 @@ describe("regions, resolved-state order and single dominant action", () => {
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [{ ...dataset,
       profile_execution: { ...dataset.profile_execution, ready: false } }] });
     mount();
-    await screen.findByText(/1 sorteos · history_json/);
-    expect(screen.queryByRole("link", { name: /Continuar con este historial/ })).not.toBeInTheDocument();
-    expect(within(library()).getByText(/ya no está registrado/i)).toBeInTheDocument();
+    await screen.findByText(/Historial · 1 sorteos/);
+    expect(screen.queryByRole("link", { name: /Usar este historial/ })).not.toBeInTheDocument();
+    expect(within(library()).getByText(/ya no están guardadas/i)).toBeInTheDocument();
   });
 
   it("keeps profile creation available while confirmation replaces the history import action", async () => {
     const user = userEvent.setup(); mount();
-    await screen.findByText(/1 sorteos · history_json/);
-    await user.click(screen.getByText(/Importar CSV o JSON plano/));
-    expect(primaries().map((item) => item.textContent)).toEqual(["Crear perfil de juego", "Importar historial"]);
+    await screen.findByText(/Historial · 1 sorteos/);
+    expect(screen.getByRole("button", { name: "Importar historial" })).toBeVisible();
+    expect(primaries().map((item) => item.textContent)).toEqual(["Importar historial"]);
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(screen.getByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(screen.getByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
-    await user.selectOptions(screen.getByLabelText("Perfil de juego (obligatorio)"), "local@1");
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
     await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
     await user.click(screen.getByRole("button", { name: "Importar historial" }));
     await screen.findByRole("button", { name: /Confirmar y guardar historial/i });
-    expect(primaries().map((item) => item.textContent)).toEqual(["Crear perfil de juego", "Confirmar y guardar historial"]);
+    expect(primaries().map((item) => item.textContent)).toEqual(["Confirmar y guardar historial"]);
     expect(screen.queryByRole("button", { name: "Importar historial" })).not.toBeInTheDocument();
   });
 
@@ -379,7 +379,7 @@ describe("regions, resolved-state order and single dominant action", () => {
     expect(submit).toBeDisabled();
     expect(submit).toHaveAccessibleDescription(/archivo/i);
     const raw = JSON.stringify({ metadata, sorteos_por_fecha: {} });
-    await user.upload(screen.getByLabelText("Historial JSON (máximo 32 MiB)"), new File([raw], "history.json"));
+    await user.upload(screen.getByLabelText("Archivo del historial (hasta 32 MB)"), new File([raw], "history.json"));
     await screen.findByText(/Juego: Juego/);
     for (const name of [/Confirmo la fuente/, /Confirmo la zona horaria/]) {
       expect(screen.getByRole("checkbox", { name }).closest("label")).toHaveClass("control-choice");

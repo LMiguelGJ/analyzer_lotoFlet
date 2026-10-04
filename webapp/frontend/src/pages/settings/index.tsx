@@ -3,6 +3,7 @@ import { useBlocker } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
 import type { SettingsView } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { ErrorBanner, Loading } from "../../components/ui";
 
 const MAX_QUOTA = 9223372036854775807n;
 const GIB = 1073741824n;
@@ -17,11 +18,13 @@ function bytes(value: string): string {
   // Exact string/BigInt path: do not round an int64 quota through Number.
   return `${grouped(BigInt(value))} bytes`;
 }
-function budget(value: string): string {
+function readableCapacity(value: string): string {
   const exact = BigInt(value);
-  return exact >= GIB && exact % GIB === 0n
-    ? `${grouped(exact / GIB)} GiB (${bytes(value)})`
-    : bytes(value);
+  const units = [[1099511627776n, "TiB"], [GIB, "GiB"], [1048576n, "MiB"], [1024n, "KiB"]] as const;
+  const [divisor, label] = units.find(([size]) => exact >= size) ?? [1n, "bytes"];
+  if (divisor === 1n) return `${grouped(exact)} ${label}`;
+  const tenths = (exact * 10n + divisor / 2n) / divisor;
+  return `${grouped(tenths / 10n)}${tenths % 10n ? `.${tenths % 10n}` : ""} ${label}`;
 }
 function measured(value: number): string {
   // Physical and free-disk fields are legacy JSON numbers; unlike quota they
@@ -99,7 +102,7 @@ export function SettingsPage() {
       if (!live || sequence !== requestRef.current) return;
       setLoadError(error instanceof NetworkError
         ? "No se pudo contactar al servidor."
-        : "No se pudieron cargar los ajustes. Reintentá.");
+        : "No se pudieron cargar los ajustes.");
       setLoading(false);
     });
     return () => { live = false; };
@@ -244,41 +247,44 @@ export function SettingsPage() {
     {view && <div className="flex justify-end">
       <button type="button" className="btn btn-secondary disabled:cursor-not-allowed" disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>
     </div>}
-    {loading && <p role="status" className="border-y border-border py-5 text-text-secondary">Cargando ajustes…</p>}
-    {loadError && <p role="alert" className="text-red-300">{loadError} <button type="button" className="btn btn-tertiary" onClick={() => setRefresh((previous) => previous + 1)}>Reintentar</button></p>}
+    {loading && <Loading rows={3} label="Cargando capacidad y límites…" className="border-y border-border py-5" />}
+    {loadError && <ErrorBanner cause={loadError} recovery={view ? "Se muestra la última lectura; reintentá para actualizarla." : "Comprobá que el laboratorio siga abierto y reintentá."} actionLabel="Reintentar" onAction={() => setRefresh((previous) => previous + 1)} />}
     {view && <>
       <section aria-labelledby="storage-heading" className="border-t border-border pt-5">
         <h2 id="storage-heading" className="section-header">Capacidad</h2>
         <div className="metric-grid">
-          <div className={metric}><h3 className="field-label">Límite</h3><p className="metric-value">{budget(view.quota.effective_bytes)}</p></div>
-          <div className={metric}><h3 className="field-label">Usado</h3><p className="metric-value">{bytes(used.toString())}</p></div>
-          {hasAdmission && <div className={metric}><h3 className="field-label">Disponible</h3><p className="metric-value"><span className="tabular-nums">{bytes(remaining.toString())}</span></p></div>}
+          <div className={metric}><h3 className="field-label">Límite de almacenamiento</h3><p className="metric-value">{readableCapacity(view.quota.effective_bytes)}</p></div>
+          <div className={metric}><h3 className="field-label">Usado</h3><p className="metric-value">{readableCapacity(used.toString())}</p></div>
+          {hasAdmission && <div className={metric}><h3 className="field-label">Disponible</h3><p className="metric-value"><span className="tabular-nums">{readableCapacity(remaining.toString())}</span></p></div>}
         </div>
         {hasAdmission
           ? <progress className="mt-4 w-full accent-accent" aria-label="Cuota lógica utilizada" value={progress} max={100} />
           : <p className="mt-4 text-sm text-text-secondary">Uso incompleto: este servidor no informa el total.</p>}
         {hasAdmission && used > limit && <p className="mt-2 text-sm text-text-secondary">Uso superior al límite por {bytes((used - limit).toString())}.</p>}
-        <p className="mt-3 text-sm text-text-secondary">El límite no es el espacio libre en disco.</p>
+        <p className="mt-3 text-sm text-text-secondary">El límite de almacenamiento no es el espacio libre en disco.</p>
         {view.storage.warning && <p role="alert" className="mt-4 border border-border-control bg-field p-3 text-sm">El servidor avisa: cerca del límite o falta de disco.</p>}
       </section>
       <section aria-labelledby="quota-form-heading" className="border-t border-border pt-5">
         <h2 id="quota-form-heading" className="section-header">Cambiar límite</h2>
         {view.quota.writable ? <form onSubmit={(event) => { void save(event); }} noValidate className="max-w-xl">
-          <label htmlFor="quota-bytes" className="field-label">Nuevo límite en bytes</label>
+          <label htmlFor="quota-bytes" className="field-label">Nuevo límite de almacenamiento</label>
           <input ref={inputRef} id="quota-bytes" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={draft ?? ""} disabled={saving} aria-invalid={!!fieldError} aria-describedby={fieldError ? "quota-help quota-error" : "quota-help"} onChange={(event) => { setDraft(event.target.value); setFieldError(""); setSaveError(""); setSaved(false); }} className="control font-mono tabular-nums" />
-          <p id="quota-help" className="field-help">Entero positivo, sin separadores. Mínimo {bytes(used.toString())}. Ej.: 5368709120 (5 GiB).</p>
+          <p id="quota-help" className="field-help">Entero positivo, sin separadores. Mínimo {readableCapacity(used.toString())} ({bytes(used.toString())}). Ej.: 5368709120 (5 GiB).</p>
           {fieldError && <p id="quota-error" className="mt-2 text-sm text-red-300">{fieldError}</p>}
           {saveError && <p role="alert" className="mt-2 text-sm text-red-300">{saveError}</p>}
           {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado.</p>}
           <button type="submit" className="btn btn-primary mt-4" disabled={saving}>{saving ? "Guardando…" : "Guardar límite"}</button>
         </form> : <div className="max-w-prose text-text-secondary"><p>El entorno del servidor fija el límite; aquí es de solo lectura.</p>{dirty && <p className="mt-2 break-words">Borrador no guardado: <span className="font-mono">{draft}</span> bytes. No se envió.</p>}</div>}
       </section>
-      <details className="border-y border-border py-3"><summary className="disclosure-summary">Diagnóstico técnico</summary>
+      <details className="border-y border-border py-3"><summary className="disclosure-summary">Detalles técnicos</summary>
         <div className="mt-4 space-y-6 text-sm">
           <dl className="metric-grid">
             <div className={metric}><dt>Origen del límite</dt><dd>{sourceName}</dd></div>
+            <div className={metric}><dt>Límite efectivo en bytes</dt><dd className="break-words font-mono tabular-nums">{bytes(view.quota.effective_bytes)}</dd></div>
             <div className={metric}><dt>Preferencia persistida</dt><dd className="break-words font-mono tabular-nums">{view.quota.persisted_bytes === null ? "ninguna" : bytes(view.quota.persisted_bytes)}</dd></div>
             {hasAdmission && <>
+              <div className={metric}><dt>Disponible en bytes</dt><dd className="break-words font-mono tabular-nums">{bytes(remaining.toString())}</dd></div>
+              <div className={metric}><dt>Uso agregado en bytes</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.admission_logical_bytes_exact!)}</dd></div>
               <div className={metric}><dt>Experimentos y ejecuciones históricos</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.logical_used_bytes_exact)}</dd></div>
               <div className={metric}><dt>Artefactos de perfiles (copias JSON)</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.profile_artifact_bytes_exact)}</dd></div>
               <div className={metric}><dt>Artefactos de datasets</dt><dd className="break-words font-mono tabular-nums">{bytes(view.storage.dataset_artifact_bytes_exact)}</dd></div>

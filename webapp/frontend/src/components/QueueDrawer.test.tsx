@@ -520,9 +520,53 @@ describe("LW15 queue drawer", () => {
     await open(user);
     await screen.findByRole("link", { name: /run-1/ });
     await user.click(screen.getByRole("button", { name: "Reintentar cola" }));
-    expect(await screen.findByText(/No se pudo contactar al servidor local/)).toBeInTheDocument();
+    expect(await screen.findByText(/Sin conexión con el servidor/)).toBeInTheDocument();
+    expect(screen.getByText(/El cálculo puede continuar en el servidor; comprobá el estado desde la cola/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /run-1/ })).toBeInTheDocument();
-    expect(screen.getByRole("dialog").textContent).not.toMatch(/se detuvo/i);
+    // Failure and pending lanes never coexist.
+    expect(screen.getByRole("dialog").textContent).not.toMatch(/Actualizando…/);
+    expect(screen.getByRole("dialog").textContent).not.toMatch(/se detuvo|Esto no detiene/i);
+  });
+
+  it("names the uncertain lane and the concrete check, with one primary action per row", async () => {
+    vi.mocked(apiClient.getQueue).mockResolvedValue(queue(["pending-1"], ["held-1"]));
+    vi.mocked(apiClient.cancelJob).mockRejectedValue(new NetworkError());
+    const { user } = setup();
+    const dialog = await open(user);
+    const heldRow = (await within(dialog).findByRole("link", { name: "Inspeccionar held-1" })).closest("li")!;
+    const pendingRow = within(dialog).getByRole("link", { name: "Inspeccionar pending-1" }).closest("li")!;
+    // Idle rows: exactly one primary; held keeps Cancelar as the legal secondary.
+    expect(heldRow.querySelectorAll(".btn-primary")).toHaveLength(1);
+    expect(within(heldRow as HTMLElement).getByRole("button", { name: "Iniciar held-1" })).toHaveClass("btn-primary");
+    expect(within(heldRow as HTMLElement).getByRole("button", { name: "Cancelar held-1" })).toHaveClass("btn-secondary");
+    expect(pendingRow.querySelectorAll(".btn-primary")).toHaveLength(1);
+    expect(within(pendingRow as HTMLElement).getByRole("button", { name: "Cancelar pending-1" })).toHaveClass("btn-primary");
+    await user.click(within(pendingRow as HTMLElement).getByRole("button", { name: "Cancelar pending-1" }));
+    // Long consequences live in the confirmation, not in the row.
+    const confirmation = screen.getByRole("alertdialog");
+    expect(confirmation).toHaveTextContent(/resultados ya terminados/);
+    expect(pendingRow).not.toHaveTextContent(/resultados ya terminados/);
+    await user.click(within(confirmation).getByRole("button", { name: "Confirmar cancelación" }));
+    await waitFor(() => expect(pendingRow).toHaveTextContent(/La solicitud puede haber llegado; comprobá el estado desde la cola antes de reintentar/));
+    expect(pendingRow).toHaveAttribute("data-lane", "uncertain");
+    expect(pendingRow).not.toHaveTextContent(/Actualizando…|Sin conexión/);
+    expect(pendingRow.querySelectorAll(".btn-primary")).toHaveLength(1);
+    expect(within(pendingRow as HTMLElement).getByRole("button", { name: "Comprobar estado pending-1" })).toHaveClass("btn-primary");
+    expect(within(pendingRow as HTMLElement).getByRole("button", { name: "Cancelar pending-1" })).toBeDisabled();
+  });
+
+  it("shows the pending lane while a request is in flight and never mixes it with a failure", async () => {
+    vi.mocked(apiClient.getQueue).mockResolvedValue(queue([], [], "run-1"));
+    vi.mocked(apiClient.cancelJob).mockImplementation(() => new Promise(() => {}));
+    const { user } = setup();
+    const dialog = await open(user);
+    await user.click(await within(dialog).findByRole("button", { name: "Cancelar run-1" }));
+    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Confirmar cancelación" }));
+    const row = within(dialog).getByRole("link", { name: "Inspeccionar run-1" }).closest("li")!;
+    expect(row).toHaveAttribute("data-lane", "pending");
+    expect(row).toHaveTextContent("Actualizando…");
+    expect(row).not.toHaveTextContent(/Sin conexión|puede haber llegado/);
+    expect(row.querySelectorAll(".btn-primary")).toHaveLength(0);
   });
 
   it("does not describe an unpersisted last failure as a durable failed status", async () => {
