@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { apiClient } from "../api/client";
+import { apiClient, NetworkError } from "../api/client";
 import type { QueueStatus } from "../api/types";
 import { Shell } from "./Shell";
 import { QueueProvider } from "./QueueProvider";
@@ -52,5 +52,25 @@ describe("shared bounded queue poll", () => {
     expect(await screen.findByRole("link", { name: "Inspeccionar survivor" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Inspeccionar stale" })).not.toBeInTheDocument();
     expect(screen.getByText("Página 1")).toBeInTheDocument();
+  });
+
+  it("never shows the failure lane together with the pending lane while a retry is in flight", async () => {
+    let resolveRetry!: (value: QueueStatus) => void;
+    vi.mocked(apiClient.getQueue).mockResolvedValueOnce(snapshot(0, 1, 0, ["first"], []))
+      .mockRejectedValueOnce(new NetworkError())
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRetry = resolve; }));
+    const user = userEvent.setup();
+    render(<MemoryRouter><QueueProvider><Shell title="Prueba">Contenido</Shell></QueueProvider></MemoryRouter>);
+    await user.click(screen.getByRole("button", { name: "Cola" }));
+    await screen.findByRole("link", { name: "Inspeccionar first" });
+    await user.click(screen.getByRole("button", { name: "Reintentar cola" }));
+    const dialog = screen.getByRole("dialog");
+    expect(await within(dialog).findByText(/Sin conexión con el servidor/)).toBeInTheDocument();
+    expect(dialog.textContent).not.toMatch(/Actualizando…/);
+    await user.click(screen.getByRole("button", { name: "Reintentar cola" }));
+    await waitFor(() => expect(apiClient.getQueue).toHaveBeenCalledTimes(3));
+    expect(dialog.textContent).not.toMatch(/Sin conexión con el servidor/);
+    resolveRetry(snapshot(0, 1, 0, ["first"], []));
+    await screen.findByRole("link", { name: "Inspeccionar first" });
   });
 });
