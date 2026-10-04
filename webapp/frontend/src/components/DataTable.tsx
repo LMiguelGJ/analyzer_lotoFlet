@@ -34,7 +34,7 @@ export function DataTable<T>({ caption, columns, rows, getRowKey }: DataTablePro
       role="region"
       aria-label={caption}
       tabIndex={0}
-      className="data-table-region overflow-x-auto border border-border-control"
+      className="data-table-region overflow-x-auto border border-border"
     >
       <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">{caption}</caption>
@@ -44,7 +44,7 @@ export function DataTable<T>({ caption, columns, rows, getRowKey }: DataTablePro
               <th
                 key={column.key}
                 scope="col"
-                className={`px-4 py-3 text-text-secondary ${column.headerClassName ?? ""}`}
+                className={`px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary ${column.headerClassName ?? ""}`}
                 aria-sort={column.onSort ? column.sort ?? "none" : undefined}
               >
                 {column.onSort ? <button type="button" className="min-h-control text-left link" onClick={column.onSort}>{column.header}</button> : column.header}
@@ -54,7 +54,7 @@ export function DataTable<T>({ caption, columns, rows, getRowKey }: DataTablePro
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={getRowKey(row)} className="border-b border-border last:border-b-0">
+            <tr key={getRowKey(row)} className="border-b border-border transition-colors duration-150 ease-out last:border-b-0 hover:bg-surface">
               {columns.map((column) => (
                 <td key={column.key} className={`px-4 py-3 align-top ${column.cellClassName ?? ""}`}>
                   {column.render(row)}

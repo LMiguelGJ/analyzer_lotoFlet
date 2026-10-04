@@ -80,7 +80,7 @@ describe("LW10 experiments list · states", () => {
     );
     setup();
 
-    expect(screen.getByRole("status", { name: "" }) || screen.getByText(/Cargando experimentos/)).toBeTruthy();
+    expect(screen.getByRole("status", { name: "" }) || screen.getByText(/Cargando simulaciones/)).toBeTruthy();
     resolvePage(fixture);
     expect(await screen.findByText("Fríos K1")).toBeInTheDocument();
   });
@@ -90,7 +90,12 @@ describe("LW10 experiments list · states", () => {
     setup();
 
     expect(await screen.findByText(/Las simulaciones muestran cómo se comportan tus estrategias con datos históricos/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Crear simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
+    // The empty state owns the single primary action; the header does not repeat it.
+    const links = screen.getAllByRole("link", { name: "Nueva simulación" });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", "/experimentos/nuevo");
+    expect(links[0]).toHaveClass("ledger-button-primary");
+    expect(screen.queryByRole("group", { name: "Filtros de simulaciones" })).not.toBeInTheDocument();
   });
 
   it("shows a disconnected state with NetworkError wording, never claiming the server stopped, and retries", async () => {
@@ -102,6 +107,7 @@ describe("LW10 experiments list · states", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/No se pudo contactar al servidor/);
     expect(alert.textContent ?? "").not.toMatch(/detuvo|detenido|se detuvo/i);
+    expect(alert.textContent).toMatch(/Iniciá el laboratorio desde el lanzador y después reintentá/);
 
     await user.click(within(alert).getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByText("Fríos K1")).toBeInTheDocument();
@@ -127,7 +133,29 @@ describe("LW10 experiments list · states", () => {
 
     await user.type(screen.getByLabelText("Buscar por nombre"), "no-existe-esto");
     expect(await screen.findByText(/Sin coincidencias/)).toBeInTheDocument();
-    expect(screen.queryByText(/Todavía no hay experimentos/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Todavía no hay simulaciones/)).not.toBeInTheDocument();
+    // Teaches and offers exactly one next step, and the primary action stays the header's.
+    const empty = screen.getByText("Sin coincidencias").closest("section")!;
+    expect(within(empty).getAllByRole("button")).toHaveLength(1);
+    expect(within(empty).queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Nueva simulación" })).toHaveLength(1);
+  });
+
+  it("clears the filters from the no-matches state and reloads the full ledger", async () => {
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(emptyPage()).mockResolvedValueOnce(fixture);
+    const { user, router } = setup("/experimentos?name=nada&status=failed");
+    await screen.findByText("Sin coincidencias");
+    const empty = screen.getByText("Sin coincidencias").closest("section")!;
+    await user.click(within(empty).getByRole("button", { name: "Limpiar filtros" }));
+    expect(await screen.findByText("Fríos K1")).toBeInTheDocument();
+    expect(router.state.location.search).toBe("");
+  });
+
+  it("renders static skeleton rows with a screen-reader status while loading", () => {
+    vi.mocked(apiClient.listExperiments).mockReturnValueOnce(new Promise(() => {}));
+    setup();
+    expect(screen.getByRole("status")).toHaveTextContent("Cargando simulaciones…");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 });
 
@@ -197,27 +225,101 @@ describe("LW10 experiments list · data and navigation", () => {
     const link = await screen.findByRole("link", { name: longName });
     expect(link.closest("td")).toHaveClass("table-name");
     expect(link).toHaveAttribute("href", `/experimentos/${fixture.items[0].id}`);
-    expect(screen.getByRole("region", { name: "Experimentos" })).toHaveClass("overflow-x-auto");
+    expect(screen.getByRole("region", { name: "Simulaciones" })).toHaveClass("overflow-x-auto");
   });
 
-  it("uses StatusLabel for execution status, never the session outcome vocabulary", async () => {
+  it("shows status chips: a financial outcome only when every run closed with it, execution state otherwise", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     setup();
 
     await screen.findByText("Fríos K1");
     const table = screen.getByRole("table");
-    const completedStatus = within(table).getByText("Ejecución completada");
-    expect(completedStatus.closest("span")).toHaveAttribute("data-status-kind", "execution");
-    expect(within(table).getByText("En curso")).toBeInTheDocument();
-    // The outcome vocabulary ("Meta alcanzada") must not appear as if it were the execution status.
-    expect(screen.queryByText("Meta alcanzada")).not.toBeInTheDocument();
+    const goal = within(table).getByText("Meta alcanzada");
+    expect(goal).toHaveClass("ledger-chip", "ledger-chip-success");
+    expect(goal).toHaveAttribute("data-status-kind", "outcome");
+    const running = within(table).getByText("En curso");
+    expect(running).toHaveClass("ledger-chip", "ledger-chip-info");
+    expect(running).toHaveAttribute("data-status-kind", "execution");
+    // Completed without a uniform outcome stays an execution state, never a goal claim.
+    expect(within(table).queryByText("Ejecución completada")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["ruin", "Se agotó el capital", "ledger-chip-danger"],
+    ["limit", "Ejecución completada", "ledger-chip-neutral"],
+  ] as const)("maps a completed %s outcome to the %s chip", async (outcome, label, variant) => {
+    const base = fixture.items[0];
+    const run = { ...base.runs[0], result: { ...base.runs[0].result!, outcome } };
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ ...fixture, total: 1, items: [{ ...base, runs: [run] }] });
+    setup();
+    const chip = within(await screen.findByRole("table")).getByText(label);
+    expect(chip).toHaveClass("ledger-chip", variant);
+  });
+
+  it("shows the net result as a signed money figure with money-semantic color only on the figure", async () => {
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
+    setup();
+    const rows = within(await screen.findByRole("table")).getAllByRole("row");
+    const gain = within(rows[1]).getByText(/^\+.*837/);
+    expect(gain).toHaveClass("ledger-figure", "ledger-money-positive");
+    expect(gain.closest("td")).toHaveClass("table-numeric");
+    // A multi-run comparison has no single net figure.
+    expect(within(rows[2]).queryByText(/ledger-money/)).not.toBeInTheDocument();
+    expect(within(rows[2]).getAllByRole("cell")[4]).toHaveTextContent("—");
+  });
+
+  it("derives the stat band from the fetched page: total, goal reached and running", async () => {
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
+    setup();
+    await screen.findByText("Fríos K1");
+    const band = screen.getByRole("group", { name: "Resumen de simulaciones" });
+    const stat = (label: string) => within(band).getByText(label).closest(".ledger-stat") as HTMLElement;
+    expect(stat("Simulaciones")).toHaveTextContent("2");
+    expect(stat("Con meta alcanzada")).toHaveTextContent("1");
+    expect(stat("En curso")).toHaveTextContent("1");
+    expect(stat("En curso")).toHaveTextContent("de las 2 mostradas");
+  });
+
+  it("offers one open-result row action and keeps comparing/deleting behind a ghost menu", async () => {
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
+    const { user } = setup();
+    const row = (await screen.findByText("Fríos K1")).closest("tr")!;
+    const open = within(row).getByRole("link", { name: "Abrir resultado de Fríos K1" });
+    expect(open).toHaveAttribute("href", "/experimentos/exp-completed-1");
+    expect(open).not.toHaveClass("ledger-button-primary");
+    const trigger = within(row).getByRole("button", { name: "Acciones de Fríos K1" });
+    expect(trigger).toHaveClass("ledger-button-ghost");
+    await user.click(trigger);
+    expect(screen.getByRole("menuitem", { name: "Eliminar" })).toHaveClass("ledger-button-ghost");
+  });
+
+  it("keeps compact filters (search, status, clear) visible and the sort controls inside the Filtros disclosure", async () => {
+    vi.mocked(apiClient.listExperiments).mockResolvedValue(fixture);
+    const { user, router } = setup("/experimentos?name=Fr");
+    await screen.findByText("Fríos K1");
+    const group = screen.getByRole("group", { name: "Filtros de simulaciones" });
+    const disclosure = group.querySelector("details")!;
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(within(disclosure).getByLabelText("Ordenar por")).toBeInTheDocument();
+    const visible = [...group.querySelectorAll("input, select, button")].filter((node) => !disclosure.contains(node));
+    expect(visible.length).toBeLessThanOrEqual(4);
+    expect(within(group).getByText("Filtros", { selector: "summary" })).toBeInTheDocument();
+    await user.selectOptions(within(disclosure).getByLabelText("Ordenar por"), "name");
+    await waitFor(() => expect(router.state.location.search).toContain("sort=name"));
+  });
+
+  it("has exactly one primary action on the populated ledger", async () => {
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
+    const { container } = setup();
+    await screen.findByText("Fríos K1");
+    expect(container.querySelectorAll(".ledger-button-primary")).toHaveLength(1);
   });
 
   it("links the primary action to the wizard and each row name to its stable detail URL", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     setup();
 
-    expect(screen.getByRole("link", { name: "Nuevo experimento" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Nueva simulación" })).toHaveAttribute(
       "href",
       "/experimentos/nuevo",
     );
@@ -302,7 +404,7 @@ describe("LW10 experiments list · data and navigation", () => {
     await screen.findByText("Fríos K1");
     await user.click(screen.getByRole("button", { name: "Acciones de Fríos K1" }));
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
-    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar experimento" }));
+    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Eliminar simulación" }));
     await waitFor(() => expect(router.state.location.search).not.toContain("page=2"));
     await waitFor(() => expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 0, limit: 20, sort: "created_at", order: "desc" }));
   });
@@ -332,9 +434,9 @@ describe("profile batch v5 experiment list compatibility", () => {
     await user.click(trigger);
     expect(screen.getByRole("menu", { name: `Acciones de ${name}` })).toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
-    const dialog = screen.getByRole("alertdialog", { name: `¿Eliminar el experimento «${name}»?` });
+    const dialog = screen.getByRole("alertdialog", { name: `¿Eliminar la simulación «${name}»?` });
     expect(dialog).toHaveTextContent("Se elimina de forma permanente.");
-    await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar simulación" }));
     expect(apiClient.deleteExperiment).toHaveBeenCalledWith("batch-v5", "batch-v5");
     expect(await screen.findByText(`Se eliminó "${name}".`)).toHaveAttribute("role", "status");
   });
@@ -346,7 +448,7 @@ describe("profile experiment list", () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [row] });
     const { user } = setup();
     await screen.findByRole("link", { name: "Perfil de prueba" });
-    const table = screen.getByRole("table", { name: "Experimentos" });
+    const table = screen.getByRole("table", { name: "Simulaciones" });
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("1");
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Capital USD 100.00 · Meta USD 200.00");
     await user.click(screen.getByRole("button", { name: "Acciones de Perfil de prueba" }));
@@ -370,9 +472,9 @@ describe("LW10 deletion", () => {
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
 
     const dialog = await screen.findByRole("alertdialog");
-    expect(dialog).toHaveAccessibleName("¿Eliminar el experimento «Fríos K1»?");
+    expect(dialog).toHaveAccessibleName("¿Eliminar la simulación «Fríos K1»?");
     expect(dialog).toHaveTextContent(/forma permanente/);
-    await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar simulación" }));
 
     expect(apiClient.deleteExperiment).toHaveBeenCalledWith("exp-completed-1", "exp-completed-1");
     await waitFor(() => expect(screen.queryByText("Fríos K1")).not.toBeInTheDocument());
@@ -391,9 +493,9 @@ describe("LW10 deletion", () => {
     await user.click(within(row).getByRole("button", { name: /Acciones de/ }));
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar simulación" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/activo o en cola/);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/activa o en cola/);
     expect(screen.getByText("Comparación mezcla")).toBeInTheDocument();
   });
 
@@ -409,7 +511,7 @@ describe("LW10 deletion", () => {
     await user.click(within(row).getByRole("button", { name: /Acciones de/ }));
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     const dialog = await screen.findByRole("alertdialog");
-    await user.click(within(dialog).getByRole("button", { name: "Eliminar experimento" }));
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar simulación" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/ya no exist/);
     await waitFor(() => expect(screen.queryByText("Fríos K1")).not.toBeInTheDocument());
