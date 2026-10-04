@@ -51,10 +51,10 @@ describe("ui-labels", () => {
     expect(SETTLEMENT_LABELS[key]).not.toBe(key);
   });
 
-  it("keeps the seed range, shared-per-draw scope and reproducibility together", () => {
-    expect(FIELD_HELP_SEED).toContain("repetir la selección aleatoria con las mismas condiciones");
-    expect(FIELD_HELP_SEED).toContain("0 a 9.007.199.254.740.991");
-    expect(FIELD_HELP_SEED).toContain("por sorteo entre todas las estrategias");
+  it("explains automatic reproducibility without exposing implementation ranges", () => {
+    expect(FIELD_HELP_SEED).toBe("Se genera automáticamente; el mismo código repite la selección.");
+    expect(FIELD_HELP_SEED).not.toMatch(/9\.007\.199\.254\.740\.991|\b(?:0|1)\s*(?:a|–|-)\s*\d{2,}\b/);
+    expect(FIELD_HELP_SEED).not.toMatch(/experimento|sesión/i);
   });
 
   it("exposes non-empty field-label constants fixed by the plan", () => {

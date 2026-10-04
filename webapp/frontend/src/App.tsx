@@ -34,7 +34,7 @@ export function App() {
       <Route
         path="/experimentos/nuevo/sesion"
         element={
-          <Shell key="new-profile-batch" title="Crear lote de simulaciones">
+          <Shell key="new-profile-batch" title="Crear varias simulaciones">
             <ProfileBatchPage />
           </Shell>
         }
@@ -42,7 +42,7 @@ export function App() {
       <Route
         path="/experimentos/nuevo/perfil"
         element={
-          <Shell key="new-profile-experiment" title="Crear simulación con perfil">
+          <Shell key="new-profile-experiment" title="Crear simulación con perfil de juego">
             <ProfileExperimentPage />
           </Shell>
         }
@@ -50,7 +50,7 @@ export function App() {
       <Route
         path="/experimentos/:id/comparacion"
         element={
-          <Shell key="comparison" title="Comparación de simulaciones">
+          <Shell key="comparison" title="Comparar simulaciones">
             <ComparisonPage />
           </Shell>
         }
@@ -74,7 +74,7 @@ export function App() {
       <Route
         path="/datos"
         element={
-          <Shell key="data" title="Datos del laboratorio">
+          <Shell key="data" title="Datos e historial">
             <DataPage />
           </Shell>
         }
@@ -82,7 +82,7 @@ export function App() {
       <Route
         path="/ajustes"
         element={
-          <Shell key="settings" title="Administración del laboratorio">
+          <Shell key="settings" title="Ajustes">
             <SettingsPage />
           </Shell>
         }

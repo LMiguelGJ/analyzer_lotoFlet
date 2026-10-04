@@ -1,10 +1,10 @@
 import type { SelectorKind, SettlementMode, StakingStyle } from "../api/types";
 
 /**
- * Presentation-only vocabulary fixed by the plan `claridad-interfaz-80-20.md`
- * (decisions 3-9). These are purely display strings for existing enum
- * values; they carry no domain logic and do not change internal keys,
- * catalog names, defaults, or API payloads. `Record<Kind, string>` typing
+ * Presentation-only vocabulary for the ledger interface. These are display
+ * strings for existing enum values; they carry no domain logic and do not
+ * change internal keys, catalog names, defaults, or API payloads.
+ * `Record<Kind, string>` typing
  * means an enum value added to `api/types` without a matching entry here
  * fails typecheck.
  */
@@ -43,9 +43,9 @@ export const FIELD_LABEL_STAKING = "Forma de ajustar la apuesta";
 /** Decision 5: field label for the settlement selector. */
 export const FIELD_LABEL_SETTLEMENT = "Cómo contar los premios";
 
-/** Decision 6: still the same required field, no new generation or defaults. */
+/** The generated code allows the same selection to be repeated. */
 export const FIELD_LABEL_SEED = "Código de repetición";
-export const FIELD_HELP_SEED = "El mismo código permite repetir la selección aleatoria con las mismas condiciones. Ingresá un entero de 0 a 9.007.199.254.740.991; se comparte por sorteo entre todas las estrategias.";
+export const FIELD_HELP_SEED = "Se genera automáticamente; el mismo código repite la selección.";
 
 /** Decision 7: shows exclusively `result.delta` received from the API, no frontend subtraction. */
 export const FIELD_LABEL_DELTA = "Cambio respecto del inicio";

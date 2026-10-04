@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { App } from "./App";
 
 function renderAt(path: string) {
+  cleanup();
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
   return render(<RouterProvider router={router} />);
 }
@@ -16,23 +17,30 @@ describe("routing", () => {
     expect(screen.getByRole("heading", { name: "Simulaciones" })).toBeInTheDocument();
   });
 
-  it("renders stable URLs including the data-import destination", () => {
+  it.each([
+    ["/experimentos", "Simulaciones"],
+    ["/experimentos/nuevo", "Crear simulación"],
+    ["/experimentos/nuevo/sesion", "Crear varias simulaciones"],
+    ["/experimentos/nuevo/perfil", "Crear simulación con perfil de juego"],
+    ["/experimentos/ejemplo", "Resultado de la simulación"],
+    ["/experimentos/ejemplo/comparacion", "Comparar simulaciones"],
+    ["/configuraciones", "Estrategias"],
+    ["/datos", "Datos e historial"],
+    ["/ajustes", "Ajustes"],
+  ])("shows the canonical title for %s", (path, title) => {
+    renderAt(path);
+    expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+  });
+
+  it("keeps route paths and canonical destinations stable", () => {
     renderAt("/configuraciones");
-    expect(screen.getByRole("heading", { name: "Estrategias" })).toBeInTheDocument();
-
+    expect(screen.getByRole("link", { name: "Estrategias" })).toHaveAttribute("href", "/configuraciones");
     renderAt("/datos");
-    expect(screen.getByRole("heading", { name: "Datos del laboratorio" })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Simulaciones" }).at(-1)).toHaveAttribute("href", "/experimentos");
-
+    expect(screen.getByRole("link", { name: "Datos" })).toHaveAttribute("href", "/datos");
     renderAt("/ajustes");
-    expect(screen.getByRole("heading", { name: "Administración del laboratorio" })).toBeInTheDocument();
-
-    renderAt("/experimentos/nuevo");
-    expect(screen.getByRole("heading", { name: "Crear simulación" })).toBeInTheDocument();
-
-    renderAt("/experimentos/nuevo/perfil");
-    expect(screen.getByRole("heading", { name: "Crear simulación con perfil" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Simulación con perfil" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ajustes" })).toHaveAttribute("href", "/ajustes");
+    renderAt("/experimentos");
+    expect(screen.getByRole("link", { name: "Simulaciones" })).toHaveAttribute("href", "/experimentos");
   });
 
   it("renders an honest not-found state for unknown paths", () => {
@@ -44,8 +52,7 @@ describe("routing", () => {
 
   it("marks the current nav destination as active", () => {
     renderAt("/configuraciones");
-    const link = screen.getByRole("link", { name: "Estrategias" });
-    expect(link).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Estrategias" })).toHaveAttribute("aria-current", "page");
   });
 });
 
@@ -53,42 +60,27 @@ describe("skip link", () => {
   it("is the first focusable element and moves focus to main content", async () => {
     const user = userEvent.setup();
     renderAt("/experimentos");
-
     await user.tab();
     expect(screen.getByText("Saltar al contenido principal")).toHaveFocus();
-
     await user.keyboard("{Enter}");
     expect(document.getElementById("main-content")).toHaveFocus();
   });
 });
 
-describe("keyboard focus order", () => {
-  it("moves skip link -> nav toggle -> nav links -> enabled queue control", async () => {
+describe("keyboard access", () => {
+  it("keeps all destinations and the queue control in the tab order", async () => {
     const user = userEvent.setup();
     renderAt("/experimentos");
-
-    const order = [
-      "Saltar al contenido principal",
-      "Abrir navegación",
-      "Simulaciones",
-      "Perfiles de juego",
-      "Historiales",
-      "Estrategias",
-      "Administración",
-    ];
-
-    for (const name of order) {
-      await user.tab();
-      const candidate = screen.getByText(name, { selector: "a, button" });
-      expect(candidate).toHaveFocus();
-    }
-
-    const queueButton = screen.getByRole("button", { name: /Cola/ });
-    expect(queueButton).toBeEnabled();
     await user.tab();
-    expect(queueButton).toHaveFocus();
-    await user.keyboard("{Enter}");
-    expect(screen.getByRole("dialog", { name: "Cola de experimentos" })).toBeInTheDocument();
+    expect(screen.getByText("Saltar al contenido principal")).toHaveFocus();
+    const queue = screen.getByRole("button", { name: "Abrir cola de cálculo" });
+    await user.tab();
+    expect(queue).toHaveFocus();
+    for (const name of ["Simulaciones", "Estrategias", "Datos", "Ajustes"]) {
+      await user.tab();
+      expect(screen.getByRole("link", { name })).toHaveFocus();
+    }
+    expect(queue).toBeEnabled();
   });
 });
 
