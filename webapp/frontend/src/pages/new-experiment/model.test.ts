@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRequest, buildStrategy, draftFromRequest, draftFromStrategy, initialConditions, integer, newStrategy, normalizeStrategyName, trimName, validateConditions, validateStrategies } from "./model";
+import { buildRequest, buildStrategy, draftFromRequest, draftFromStrategy, initialConditions, initialStrategy, integer, newStrategy, normalizeStrategyName, trimName, validateConditions, validateStrategies } from "./model";
 import type { Catalog } from "../../api/types";
 import nameCases from "../../../../backend/tests/fixtures/strategy_name_cases.json";
 
@@ -8,6 +8,13 @@ const valid = { ...initialConditions, name: "Ejemplo", start_draw: "2025-09-02 0
 const draws = [valid.start_draw];
 
 describe("wire contract validation", () => {
+  it("starts with the brief's valid financial limits and blended selection", () => {
+    expect(initialConditions).toMatchObject({ capital: "2000", goal: "2800", max_bets: "12" });
+    expect(initialStrategy(1)).toMatchObject({
+      selector: "blend", components: [{ system: "transition", weight: "60" }, { system: "cold", weight: "40" }], coverage: "10",
+    });
+    expect(validateConditions({ ...initialConditions, name: "Prueba", start_draw: draws[0], seed: "0" }, draws)).toEqual({});
+  });
   it("round-trips one library strategy without substituting the library name", () => {
     const strategy = { name: "Estrategia", selector: "blend" as const, components: [{ system: "transition", weight: 60 }, { system: "cold", weight: 40 }], coverage: 10, staking: "bold" as const };
     const draft = draftFromStrategy(strategy, 7);

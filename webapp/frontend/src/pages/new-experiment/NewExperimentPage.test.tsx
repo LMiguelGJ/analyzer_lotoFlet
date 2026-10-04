@@ -23,7 +23,7 @@ function setup(path = "/experimentos/nuevo") {
   return { user: userEvent.setup(), router, ...view };
 }
 async function openAdvanced(user: ReturnType<typeof userEvent.setup>) {
-  const summary = screen.getByText("Ajustes avanzados");
+  const summary = screen.getByText("Avanzado");
   const details = summary.closest("details");
   if (!details?.open) await user.click(summary);
 }
@@ -33,14 +33,21 @@ async function revealSeed(user: ReturnType<typeof userEvent.setup>) {
 }
 async function conditions(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-  await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Prueba Q80");
+  await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Prueba Q80");
   await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
-  await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "2000");
-  await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "2800");
-  await user.type(screen.getByRole("textbox", { name: "Máximo de apuestas" }), "12");
+  await user.clear(screen.getByRole("textbox", { name: "Capital (RD$)" }));
+  await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "2000");
+  await user.clear(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }));
+  await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "2800");
+  await user.clear(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }));
+  await user.type(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }), "12");
   await revealSeed(user);
   await user.clear(screen.getByRole("textbox", { name: "Código de repetición" }));
   await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "42");
+  const strategyDisclosure = screen.getByText("Estrategia avanzada").closest("details");
+  if (!strategyDisclosure?.open) await user.click(screen.getByText("Estrategia avanzada"));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Método de la estrategia 1" }), "system");
+  await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
 }
 
 beforeEach(() => {
@@ -61,38 +68,68 @@ beforeEach(() => {
   vi.mocked(apiClient.createConfiguration).mockReset();
 });
 
-describe("RED-02 single-form creation", () => {
-  it("shows three groups, keeps seed advanced and closed, and offers one create action", async () => {
+describe("S2 simple creation form", () => {
+  it("shows three numbered groups, truthful rules, prefilled choices, live order summary and one primary action", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
 
-    for (const group of ["Reglas del sorteo", "Selección", "Límites"]) {
-      expect(screen.getByRole("group", { name: group })).toBeInTheDocument();
+    for (const [number, group] of [["01", "Reglas del sorteo"], ["02", "Selección"], ["03", "Límites"]]) {
+      const section = screen.getByRole("group", { name: group });
+      expect(section).toHaveTextContent(number);
     }
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toBeInTheDocument();
+    const rules = screen.getByRole("group", { name: "Reglas del sorteo" });
+    for (const label of ["Números posibles", "Posiciones por sorteo", "Repeticiones", "Premios por posición", "Apuesta mínima por número"]) {
+      expect(within(rules).getByText(label)).toBeInTheDocument();
+    }
+    expect(rules).toHaveTextContent("00–99 (100 números)");
+    expect(rules).toHaveTextContent("5");
+    expect(rules).toHaveTextContent("1: 80 · 2: 8 · 3: 4 · 4: 2 · 5: 1");
+    expect(rules).toHaveTextContent("RD$1");
+    expect(screen.getByRole("link", { name: "Editar reglas" })).toHaveAttribute("href", "/datos#perfiles");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
+    expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).toHaveValue("2800");
+    expect(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" })).toHaveValue("12");
+    expect(screen.getByRole("group", { name: "Selección" })).toHaveTextContent("Transición 60% + Fríos 40%, cobertura 10 números");
+    expect(screen.getByRole("combobox", { name: "Cómo contar los premios" })).toHaveValue("all");
+    const summary = screen.getByRole("region", { name: "Resumen de la orden" });
+    expect(summary).toHaveTextContent("RD$2000");
+    expect(summary).toHaveTextContent("RD$2800");
+    expect(summary).toHaveTextContent("12 sorteos");
+    expect(summary).toHaveTextContent("Transición 60% + Fríos 40%");
+    expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(summary).not.toHaveTextContent(/Sin nombre:|\(\)/);
+    expect(screen.queryByText(/9\.007\.199\.254\.740\.991|9007199254740991/)).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Código de repetición" })).not.toBeInTheDocument();
-    const advanced = screen.getByText("Ajustes avanzados").closest("details");
+    const advanced = screen.getByText("Avanzado").closest("details");
     expect(advanced).not.toHaveAttribute("open");
-    await user.click(within(advanced!).getByText("Ajustes avanzados"));
+    await user.click(within(advanced!).getByText("Avanzado"));
     expect(within(advanced!).getByText(/Código de repetición:/)).toBeInTheDocument();
-    expect(within(advanced!).getByText(/El mismo código permite repetir la selección aleatoria/)).toBeInTheDocument();
+    expect(within(advanced!).getByText(/Este código permite repetir la misma selección/)).toBeInTheDocument();
+    expect(within(advanced!).getByText("Estrategia avanzada")).toBeInTheDocument();
+    await user.click(within(advanced!).getByText("Estrategia avanzada"));
+    expect(within(advanced!).getByRole("combobox", { name: "Método de la estrategia 1" })).toHaveValue("blend");
+    expect(within(advanced!).getByRole("textbox", { name: "Peso 1 (%)" })).toHaveValue("60");
+    expect(within(advanced!).getByRole("textbox", { name: "Peso 2 (%)" })).toHaveValue("40");
     await user.click(within(advanced!).getByRole("button", { name: "Cambiar" }));
     expect(within(advanced!).getByRole("textbox", { name: "Código de repetición" })).toBeInTheDocument();
+    expect(within(advanced!).queryByText(/9\.007\.199\.254\.740\.991|9007199254740991/)).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Crear simulación" })).toHaveLength(1);
-    expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveClass("btn-primary");
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveClass("ledger-button-primary");
+    expect(screen.getByRole("button", { name: "Salir" })).toHaveClass("ledger-button-ghost");
   });
 });
 
 describe("profile creator discovery", () => {
   it("links to the dedicated route without changing the legacy form", async () => {
     const { user, router } = setup();
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "Crear simulación con perfil" });
     expect(link).toHaveAttribute("href", "/experimentos/nuevo/perfil");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     // The link is navigation only; existing legacy inputs remain usable.
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Clásico");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Clásico");
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
   });
 });
@@ -102,11 +139,11 @@ describe("LW13 library templates", () => {
   it("prefills only one strategy from a configuration; conditions remain fresh and unsubmitted", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
-    expect(await screen.findByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("");
-    expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveValue("");
+    expect(await screen.findByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
     await openAdvanced(user);
     expect(Number.isSafeInteger(Number(document.getElementById("seed-summary")?.textContent))).toBe(true);
-    expect(screen.getByRole("group", { name: "Selección" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Selección" })).toHaveTextContent("Fríos: Fríos, cobertura 1 números");
     expect(apiClient.getConfiguration).toHaveBeenCalledWith("cfg-1");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
@@ -121,8 +158,8 @@ describe("LW13 library templates", () => {
     await user.click(screen.getByRole("button", { name: "Agregar desde biblioteca" }));
     await user.click(screen.getByRole("button", { name: "Añadir Biblioteca" }));
     expect(await screen.findByRole("button", { name: /Estrategia 2.*Fríos/ })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Prueba Q80");
-    expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveValue("2000");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Prueba Q80");
+    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
     await user.click(screen.getByRole("button", { name: "Agregar desde biblioteca" }));
     await user.click(screen.getByRole("button", { name: "Añadir Biblioteca" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/nombre.*único/i);
@@ -131,8 +168,8 @@ describe("LW13 library templates", () => {
   it("guards semantic configuration changes and removal, stays or leaves; rejects base/configuration conflict", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
-    await screen.findByRole("textbox", { name: "Nombre del experimento" });
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Borrador");
+    await screen.findByRole("textbox", { name: "Nombre de la simulación" });
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
     await act(async () => { await router.navigate("/experimentos/nuevo?configuration=other"); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     expect(apiClient.getConfiguration).toHaveBeenCalledTimes(1);
@@ -140,7 +177,7 @@ describe("LW13 library templates", () => {
     await act(async () => { await router.navigate("/experimentos/nuevo"); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue(""));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue(""));
     await act(async () => { await router.navigate("/experimentos/nuevo?base=exp-1&configuration=cfg-1"); });
     expect(await screen.findByRole("alert")).toHaveTextContent(/dos orígenes/);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
@@ -151,13 +188,13 @@ describe("LW13 library templates", () => {
     const { router, user } = setup("/experimentos/nuevo?configuration=cfg-1");
     await waitFor(() => expect(apiClient.getConfiguration).toHaveBeenCalledWith("cfg-1"));
     await act(async () => { await router.navigate("/experimentos/nuevo?configuration=other"); });
-    await screen.findByRole("textbox", { name: "Nombre del experimento" });
+    await screen.findByRole("textbox", { name: "Nombre de la simulación" });
     await act(async () => { resolveOld(saved); });
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Nueva prueba");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Nueva prueba");
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
-    await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "100");
-    await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "200");
+    await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "100");
+    await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "200");
     await revealSeed(user);
     await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "0");
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Nueva");
@@ -234,9 +271,10 @@ describe("LW10 use as base", () => {
     expect(await screen.findByText(/Cargando experimento base/)).toBeInTheDocument();
     await waitFor(() => expect(apiClient.getExperiment).toHaveBeenCalledWith("exp-1"));
     await act(async () => { resolveBase(saved); });
-    expect(await screen.findByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Original");
+    expect(await screen.findByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Original");
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-03 05:10");
     await revealSeed(user);
+    await user.click(screen.getByText("Estrategia avanzada"));
     expect(screen.getByRole("textbox", { name: "Código de repetición" })).toHaveValue("9007199254740991");
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-03");
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100, "2025-09-03");
@@ -247,10 +285,10 @@ describe("LW10 use as base", () => {
     expect(screen.getByRole("textbox", { name: "Peso 2 (%)" })).toHaveValue("40");
     await user.click(screen.getByRole("button", { name: /Estrategia 2/ }));
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" })).toHaveValue("Par");
-    expect(screen.getByText(/50 números/)).toBeInTheDocument();
+    expect(screen.getAllByText(/50 números/).length).toBeGreaterThan(0);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
-    expect(screen.getByRole("region", { name: "Resumen de selección" })).toHaveTextContent(/Mix: Combinación de sistemas/);
-    expect(screen.getByRole("region", { name: "Resumen de selección" })).toHaveTextContent(/Par: Selección por paridad/);
+    expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent(/Mix: Transición 60% \+ Fríos 40%/);
+    expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent(/Par: Selección por paridad/);
     await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -261,7 +299,7 @@ describe("LW10 use as base", () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
     const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
     await screen.findByDisplayValue("Trial");
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), " edited");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " edited");
     await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
@@ -274,17 +312,17 @@ describe("LW10 use as base", () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
     const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
     await screen.findByDisplayValue("Trial");
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), " edited");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " edited");
     await act(async () => { await router.navigate("/experimentos/nuevo?base=other"); });
     const dialog = await screen.findByRole("alertdialog");
     expect(router.state.location.search).toBe(`?base=${detail.id}`);
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Trial edited");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Trial edited");
     expect(apiClient.getExperiment).toHaveBeenCalledTimes(1);
     await user.click(within(dialog).getByRole("button", { name: "Seguir editando" }));
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Trial edited");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Trial edited");
     await act(async () => { await router.navigate("/experimentos/nuevo?base=other"); });
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Next base"));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Next base"));
     expect(router.state.location.search).toBe("?base=other");
     expect(apiClient.getExperiment).toHaveBeenCalledTimes(2);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
@@ -295,14 +333,14 @@ describe("LW10 use as base", () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
     const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
     await screen.findByDisplayValue("Trial");
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), " edited");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " edited");
     await act(async () => { await router.navigate("/experimentos/nuevo"); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     expect(router.state.location.search).toBe(`?base=${detail.id}`);
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Trial edited");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Trial edited");
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(router.state.location.search).toBe(""));
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
@@ -316,7 +354,7 @@ describe("LW10 use as base", () => {
     expect(await screen.findByDisplayValue("Next base")).toBeInTheDocument();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     await act(async () => { await router.navigate("/experimentos/nuevo"); });
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue(""));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue(""));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
@@ -325,13 +363,13 @@ describe("LW10 use as base", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(detail as never);
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Borrador");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
     await act(async () => { await router.navigate("/experimentos/nuevo?view=compact"); });
     expect(router.state.location.search).toBe("?view=compact");
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     await act(async () => { await router.navigate(`/experimentos/nuevo?base=${detail.id}`); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Borrador");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Borrador");
     expect(apiClient.getExperiment).not.toHaveBeenCalled();
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Seguir editando" }));
     expect(router.state.location.search).toBe("?view=compact");
@@ -348,7 +386,7 @@ describe("LW10 use as base", () => {
     await act(async () => { await router.navigate("/experimentos/nuevo?base=other"); });
     expect(await screen.findByDisplayValue("Next base")).toBeInTheDocument();
     await act(async () => { resolveOld(detail); });
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Next base");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Next base");
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
@@ -489,10 +527,10 @@ describe("ODD03b dated starting draws", () => {
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue(late);
     expect(screen.getByRole("option", { name: late })).toBeEnabled();
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100, "2025-09-03");
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Prueba");
-    await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "100");
-    await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "200");
-    await user.click(screen.getByText("Ajustes avanzados"));
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Prueba");
+    await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "100");
+    await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "200");
+    await user.click(screen.getByText("Avanzado"));
     await user.click(screen.getByRole("button", { name: "Cambiar" }));
     await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "0");
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toBeInTheDocument();
@@ -553,10 +591,8 @@ describe("LW09 single-form creation", () => {
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     expect(screen.queryByRole("textbox", { name: "Código de repetición" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Crear simulación" })).toBeInTheDocument();
-    expect(Array.from(document.querySelector("form")!.querySelectorAll("input, select"), (field) => field.id)).toEqual([
-      "name", "start_draw", "settlement", "strategies.0.name", "strategies.0.selector", "strategies.0.system",
-      "strategies.0.coverage", "strategies.0.staking", "libraryName", "capital", "goal", "max_bets", "max_minutes", "draw_date",
-    ]);
+    expect((document.getElementById("advanced-settings") as HTMLDetailsElement | null)?.open).toBe(false);
+    expect((screen.getByText("Estrategia avanzada").closest("details") as HTMLDetailsElement | null)?.open).toBe(false);
   });
 
   it("announces the seed help together with validation errors, without losing either reference", async () => {
@@ -564,17 +600,16 @@ describe("LW09 single-form creation", () => {
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await revealSeed(user);
     const seed = screen.getByRole("textbox", { name: "Código de repetición" });
-    const help = screen.getByText(/El mismo código permite repetir la selección aleatoria/);
+    const help = screen.getByText(/Este código permite repetir la misma selección/);
     expect(seed).toHaveAttribute("aria-describedby", "seed-help");
     expect(seed).toHaveAccessibleDescription(help.textContent!);
-    expect(help).toHaveTextContent("0 a 9.007.199.254.740.991");
-    expect(help).toHaveTextContent("por sorteo entre todas las estrategias");
+    expect(help).toHaveTextContent("Se genera automáticamente");
     await user.clear(seed);
     await user.type(seed, "invalido");
     await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(seed).toHaveAttribute("aria-invalid", "true");
     expect(seed).toHaveAttribute("aria-describedby", "seed-help seed-error");
-    expect(seed).toHaveAccessibleDescription(`${help.textContent} Ingresá un entero entre 0 y 9.007.199.254.740.991.`);
+    expect(seed).toHaveAccessibleDescription(`${help.textContent} Ingresá un código de repetición válido.`);
     for (const id of seed.getAttribute("aria-describedby")!.split(" ")) expect(document.getElementById(id)).toBeInTheDocument();
     const draw = screen.getByRole("combobox", { name: "Sorteo inicial" });
     expect(draw).toHaveAttribute("aria-describedby", "start_draw-help start_draw-error");
@@ -585,27 +620,29 @@ describe("LW09 single-form creation", () => {
     const { user } = setup();
     await conditions(user);
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100);
-    expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveValue("2000");
+    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
     expect(screen.getByRole("combobox", { name: "Cómo contar los premios" })).toHaveValue("all");
     expect(screen.getByRole("option", { name: "Sumar los premios" })).toHaveValue("all");
     expect(screen.getByRole("option", { name: "Contar solo el mayor premio por número" })).toHaveValue("best");
-    expect(screen.getByText(/El mismo código permite repetir la selección aleatoria/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveClass("btn-primary");
-    expect(screen.getByRole("button", { name: "Salir" })).toHaveClass("btn-secondary");
+    expect(screen.getByText(/Este código permite repetir la misma selección/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveClass("ledger-button-primary");
+    expect(screen.getByRole("button", { name: "Salir" })).toHaveClass("ledger-button-ghost");
   });
 
   it("rejects invalid money, goal, start, limits and seed without rounding", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-    await user.type(screen.getByRole("textbox", { name: "Capital inicial (RD$)" }), "2.5");
-    await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "1");
-    await user.type(screen.getByRole("textbox", { name: "Máximo de apuestas" }), "10000001");
+    await user.clear(screen.getByRole("textbox", { name: "Capital (RD$)" }));
+    await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "2.5");
+    await user.clear(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }));
+    await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "1");
+    await user.type(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }), "10000001");
     await revealSeed(user);
     await user.clear(screen.getByRole("textbox", { name: "Código de repetición" }));
     await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "9007199254740992");
     await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/errores/i);
-    expect(screen.getByRole("textbox", { name: "Capital inicial (RD$)" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("textbox", { name: "Código de repetición" })).toHaveValue("9007199254740992");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
@@ -657,7 +694,7 @@ describe("LW09 single-form creation", () => {
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Par");
     await user.selectOptions(screen.getByRole("combobox", { name: "Cobertura de la estrategia 1" }), "10");
     await user.selectOptions(screen.getByRole("combobox", { name: "Método de la estrategia 1" }), "parity");
-    expect(screen.getByText(/50 números/)).toBeInTheDocument();
+    expect(screen.getAllByText(/50 números/).length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Agregar estrategia" }));
     await user.click(screen.getByRole("button", { name: /Estrategia 2/ }));
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" }), " pAR ");
@@ -684,8 +721,8 @@ describe("LW09 single-form creation", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [{ loc: ["body", "request", "conditions", "goal"], msg: "Value error", type: "value_error" }]));
     await user.click(screen.getByRole("button", { name: "Crear simulación" }));
-    await screen.findByRole("textbox", { name: "Meta de saldo final (RD$)" });
-    expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).toHaveAttribute("aria-invalid", "true");
+    await screen.findByRole("textbox", { name: "Meta de saldo (RD$)" });
+    expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).toHaveAttribute("aria-invalid", "true");
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(507, "quota exceeded"));
     await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/No hay espacio para crear el experimento/);
@@ -700,7 +737,7 @@ describe("LW09 single-form creation", () => {
     const user = userEvent.setup();
     render(<RouterProvider router={router} />);
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Borrador");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
     await act(async () => { await router.navigate(-1); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
@@ -714,7 +751,7 @@ describe("LW09 single-form creation", () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     const before = add.mock.calls.filter(([name]) => name === "beforeunload").length;
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Borrador");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
     expect(add.mock.calls.filter(([name]) => name === "beforeunload").length).toBeGreaterThan(before);
     await user.click(screen.getByRole("link", { name: "Administración" }));
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
@@ -737,7 +774,9 @@ describe("LW09 single-form creation", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Método de la estrategia 1" }), "blend");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema 1" }), "transition");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema 2" }), "cold");
+    await user.clear(screen.getByRole("textbox", { name: "Peso 1 (%)" }));
     await user.type(screen.getByRole("textbox", { name: "Peso 1 (%)" }), "60");
+    await user.clear(screen.getByRole("textbox", { name: "Peso 2 (%)" }));
     await user.type(screen.getByRole("textbox", { name: "Peso 2 (%)" }), "40");
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "invalid", [
       { loc: ["body", "request", "strategies", 0, "components", 1], msg: "component rejected", type: "value_error" },
@@ -781,7 +820,7 @@ describe("LW09 single-form creation", () => {
       { loc: ["body", "request", "conditions"], msg: "goal is the final balance and must exceed capital", type: "value_error" },
     ]));
     await user.click(screen.getByRole("button", { name: "Crear simulación" }));
-    expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText(/goal is the final balance and must exceed capital/)).toBeInTheDocument();
   });
 
@@ -795,16 +834,16 @@ describe("LW09 single-form creation", () => {
       { loc: ["body", "request", "conditions", "max_bets"], msg: "Value error", type: "value_error" },
     ]));
     await user.click(screen.getByRole("button", { name: "Crear simulación" }));
-    expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("textbox", { name: "Máximo de apuestas" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(/Revisá los campos señalados/);
-    await user.clear(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }));
-    await user.type(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" }), "3000");
+    await user.clear(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }));
+    await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "3000");
     // The specific server notice cleared because the field just fixed had a server
     // error, but the unrelated conditions.max_bets error (not addressed yet) must
     // survive the edit.
-    expect(screen.getByRole("textbox", { name: "Meta de saldo final (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("textbox", { name: "Máximo de apuestas" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("alert")).toHaveTextContent("Revisá los errores señalados junto a los campos antes de crear la simulación.");
   });
 
@@ -823,12 +862,12 @@ describe("LW09 single-form creation", () => {
   it("guards dirty navigation with accessible stay/leave, without canceling backend work", async () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-    await user.type(screen.getByRole("textbox", { name: "Nombre del experimento" }), "Borrador");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
     await user.click(screen.getByRole("link", { name: "Administración" }));
     const dialog = screen.getByRole("alertdialog");
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
     await user.click(within(dialog).getByRole("button", { name: "Seguir editando" }));
-    expect(screen.getByRole("textbox", { name: "Nombre del experimento" })).toHaveValue("Borrador");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Borrador");
     await user.click(screen.getByRole("link", { name: "Administración" }));
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/ajustes"));
