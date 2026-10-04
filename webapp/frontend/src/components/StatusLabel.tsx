@@ -1,4 +1,5 @@
 import type { ExperimentStatus, Outcome, RunStatus } from "../api/types";
+import { Chip } from "./ui";
 
 /**
  * Execution status (pending/running/completed/...) and session outcome
@@ -48,11 +49,11 @@ const SHAPE_PATH: Record<StatusEntry["shape"], string> = {
   check: "M1.5 6.2 4.5 9.5 10.5 2.5",
 };
 
-const TONE_CLASS: Record<StatusEntry["tone"], string> = {
-  neutral: "text-text-secondary",
-  positive: "text-accent",
-  warning: "text-text",
-  danger: "text-text",
+const CHIP_VARIANT: Record<StatusEntry["tone"], "neutral" | "success" | "warning" | "danger"> = {
+  neutral: "neutral",
+  positive: "success",
+  warning: "warning",
+  danger: "danger",
 };
 
 interface StatusLabelProps {
@@ -68,22 +69,12 @@ export function StatusLabel({ kind, value, className }: StatusLabelProps) {
     throw new Error(`unknown ${kind} status value: ${value}`);
   }
 
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 font-mono text-sm ${TONE_CLASS[entry.tone]} ${className ?? ""}`}
-      data-status-kind={kind}
-      data-status-value={value}
-      data-status-shape={entry.shape}
-    >
+  return <Chip variant={CHIP_VARIANT[entry.tone]} className={`font-mono ${className ?? ""}`.trim()}>
+    <span className="inline-flex items-center gap-1.5" data-status-kind={kind} data-status-value={value} data-status-shape={entry.shape}>
       <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" className="shrink-0">
-        <path
-          d={SHAPE_PATH[entry.shape]}
-          fill={entry.shape === "cross" || entry.shape === "check" ? "none" : "currentColor"}
-          stroke="currentColor"
-          strokeWidth="1.2"
-        />
+        <path d={SHAPE_PATH[entry.shape]} fill={entry.shape === "cross" || entry.shape === "check" ? "none" : "currentColor"} stroke="currentColor" strokeWidth="1.2" />
       </svg>
       {entry.label}
     </span>
-  );
+  </Chip>;
 }

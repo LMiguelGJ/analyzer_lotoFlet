@@ -82,6 +82,16 @@ describe("StatusLabel", () => {
     expect(cancelled?.getAttribute("data-status-shape")).toBe(failed?.getAttribute("data-status-shape"));
   });
 
+  it("uses semantic color on status chips rather than on the surrounding page", () => {
+    const { unmount } = render(<StatusLabel kind="outcome" value="goal" />);
+    const status = screen.getByText("Meta alcanzada");
+    expect(status.closest(".ledger-chip")).toHaveClass("ledger-chip-success");
+    expect(status.className).not.toMatch(/money-(?:positive|negative)/);
+    unmount();
+    render(<StatusLabel kind="execution" value="failed" />);
+    expect(screen.getByText("Con error").closest(".ledger-chip")).toHaveClass("ledger-chip-danger");
+  });
+
   it("includes a hidden SVG glyph so status is never conveyed by color alone", () => {
     render(<StatusLabel kind="execution" value="running" />);
     const svg = document.querySelector("svg[aria-hidden='true']");

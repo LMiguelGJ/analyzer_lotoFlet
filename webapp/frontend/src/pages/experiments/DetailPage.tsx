@@ -3,15 +3,17 @@ import type { KeyboardEvent } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import { isProfileBatchExperiment, isProfileBatchRun, isProfileExperiment, isProfileReplay, isProfileRun } from "../../api/types";
-import type { AnyRunSummary, Bet, ExperimentSummary, LegacyExperimentSummary, ProfileBatchExperimentSummary, ProfileBet, ProfileExperimentSummary, ReplayPage, RunSummary } from "../../api/types";
+import type { AnyRunSummary, Bet, ExperimentSummary, LegacyExperimentSummary, ProfileBatchExperimentSummary, ProfileBet, ProfileExperimentSummary, ProfileRunResult, ReplayPage, RunSummary } from "../../api/types";
 import { RunTrajectory } from "../../components/RunTrajectory";
 import { FinancialMetrics } from "../../components/FinancialMetrics";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StatusLabel } from "../../components/StatusLabel";
+import { Disclosure, Figure, Loading, SectionHeader, Stat } from "../../components/ui";
+import type { FigureVariant } from "../../components/ui";
 import { formatDOP, formatTwoDigit } from "../../lib/format";
-import { profileBatchOutcome, profileMoney, profileOutcome } from "../../lib/profile-display";
-import { FIELD_HELP_DELTA, FIELD_LABEL_DELTA, HISTORICAL_CAVEAT, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
+import { PROFILE_COLLISION_LABELS, PROFILE_OUTCOME_LABELS, profileMoney } from "../../lib/profile-display";
+import { FIELD_HELP_DELTA, FIELD_LABEL_DELTA, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 import { PAGE_SIZE, pageOffset, replayIndex } from "./replay";
 
 const button = "btn btn-secondary";
@@ -26,10 +28,25 @@ function stopCategoryLabel(category: string) {
   return ({ financial_goal: "Meta financiera alcanzada", financial_ruin: "Quiebre financiero", recovery_end: "Fin de escalera de recuperación", interrupted: "Interrumpida", configured_limit: "Límite configurado", operational_budget: "Límite operativo; fuente incompleta", operational_window: "Ventana operativa; fuente incompleta", source_end: "Fin de la fuente guardada", unknown: "Cierre no disponible" } as Record<string, string>)[category] ?? "Cierre no reconocido";
 }
 function detailError(error: unknown) {
-  if (error instanceof NetworkError) return "No se pudo contactar al servidor. Esto no detiene la ejecución.";
+  if (error instanceof NetworkError) return "No se pudo contactar al servidor. El cálculo puede continuar en el servidor; comprobá el estado desde la cola antes de reintentar.";
   if (error instanceof ApiError && error.status === 404) return "Este experimento no existe o fue eliminado.";
   return "No se pudo consultar el experimento. Reintentá.";
 }
+export function verdictPhrase(outcome: string | undefined, status: string): string {
+  if (outcome === "goal") return "Meta alcanzada";
+  if (outcome === "ruin") return "Se agotó el capital";
+  if (outcome === "limit") return "Límite de sesión";
+  if (outcome === "history_exhausted") return "Historial agotado";
+  if (outcome === "cancelled" || status === "cancelled") return "Simulación cancelada";
+  if (status === "pending" || status === "running" || status === "held") return "En curso";
+  return "Simulación cerrada";
+}
+
+function profileCloseReason(result: ProfileRunResult): string {
+  const reasons = result.collisions.map((reason) => PROFILE_COLLISION_LABELS[reason]).filter((reason): reason is string => Boolean(reason));
+  return `${PROFILE_OUTCOME_LABELS[result.outcome]}${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
+}
+
 function replayError(error: unknown) {
   if (error instanceof NetworkError) return "No se pudo contactar al servidor. Lo guardado no cambió.";
   if (error instanceof ApiError && error.status === 409) return "La reproducción todavía no está disponible para esta ejecución.";
@@ -73,10 +90,10 @@ function profileColumns(data: ProfileExperimentSummary, canonical = false): Data
     ] : []),
     { key: "date", header: "Fecha y hora", render: (bet) => storedDate(bet.label) },
     { key: "stakes", header: "Apuestas por número", render: (bet) => bet.stakes.map(([number, stake]) => `${number}: ${profileMoney(data, stake)}`).join(", ") },
-    { key: "wagered", header: "Gasto total", render: (bet) => profileMoney(data, bet.wagered) },
+    { key: "wagered", header: "Gasto total", headerClassName: "text-right", cellClassName: "text-right font-mono tabular-nums", render: (bet) => profileMoney(data, bet.wagered) },
     ...Array.from({ length: data.profile.positions }, (_, position): DataTableColumn<ProfileBet> => ({ key: `result-${position}`, header: `Resultado ${position + 1}`, render: (bet) => bet.results[position] ?? "—" })),
-    { key: "paid", header: "Cobro", render: (bet) => profileMoney(data, bet.paid) },
-    { key: "balance", header: "Saldo", render: (bet) => profileMoney(data, bet.balance) },
+    { key: "paid", header: "Cobro", headerClassName: "text-right", cellClassName: "text-right font-mono tabular-nums", render: (bet) => profileMoney(data, bet.paid) },
+    { key: "balance", header: "Saldo", headerClassName: "text-right", cellClassName: "text-right font-mono tabular-nums", render: (bet) => profileMoney(data, bet.balance) },
     { key: "detail", header: "Detalle", render: (bet) => <ProfileBetDetails bet={bet} data={data} /> },
   ];
 }
@@ -84,12 +101,28 @@ function profileColumns(data: ProfileExperimentSummary, canonical = false): Data
 const columns: DataTableColumn<Bet>[] = [
   { key: "date", header: "Fecha y hora", render: (bet) => storedDate(bet.label) },
   { key: "numbers", header: "Números elegidos", render: (bet) => numberList(bet.numbers) },
-  { key: "per", header: "Por número", render: (bet) => formatDOP(bet.per_number) },
-  { key: "wagered", header: "Gasto total", render: (bet) => formatDOP(bet.wagered) },
+  { key: "per", header: "Por número", headerClassName: "text-right", cellClassName: "text-right font-mono tabular-nums", render: (bet) => formatDOP(bet.per_number) },
+  { key: "wagered", header: "Gasto total", headerClassName: "text-right", cellClassName: "text-right font-mono tabular-nums", render: (bet) => formatDOP(bet.wagered) },
   ...[0, 1, 2, 3, 4].map((position): DataTableColumn<Bet> => ({ key: `result-${position}`, header: `Resultado ${position + 1}`, render: (bet) => formatTwoDigit(bet.results[position]) })),
-  { key: "paid", header: "Cobro", render: (bet) => formatDOP(bet.paid) },
-  { key: "balance", header: "Saldo", render: (bet) => formatDOP(bet.balance) },
+  { key: "paid", header: "Cobro", headerClassName: "text-right", cellClassName: "text-right font-mono tabular-nums", render: (bet) => formatDOP(bet.paid) },
+  { key: "balance", header: "Saldo", headerClassName: "text-right", cellClassName: "text-right font-mono tabular-nums", render: (bet) => formatDOP(bet.balance) },
   { key: "detail", header: "Detalle", render: (bet) => <BetDetails bet={bet} /> },
+];
+
+const ledgerMoneyCell = "text-right font-mono tabular-nums";
+function profileLedgerColumns(data: ProfileExperimentSummary): DataTableColumn<ProfileBet>[] {
+  return [
+    { key: "date", header: "Sorteo", render: (bet) => storedDate(bet.label) },
+    { key: "wagered", header: "Gasto", headerClassName: "text-right", cellClassName: ledgerMoneyCell, render: (bet) => profileMoney(data, bet.wagered) },
+    { key: "paid", header: "Cobro", headerClassName: "text-right", cellClassName: ledgerMoneyCell, render: (bet) => profileMoney(data, bet.paid) },
+    { key: "balance", header: "Saldo", headerClassName: "text-right", cellClassName: ledgerMoneyCell, render: (bet) => profileMoney(data, bet.balance) },
+  ];
+}
+const ledgerColumns: DataTableColumn<Bet>[] = [
+  { key: "date", header: "Sorteo", render: (bet) => storedDate(bet.label) },
+  { key: "wagered", header: "Gasto", headerClassName: "text-right", cellClassName: ledgerMoneyCell, render: (bet) => formatDOP(bet.wagered) },
+  { key: "paid", header: "Cobro", headerClassName: "text-right", cellClassName: ledgerMoneyCell, render: (bet) => formatDOP(bet.paid) },
+  { key: "balance", header: "Saldo", headerClassName: "text-right", cellClassName: ledgerMoneyCell, render: (bet) => formatDOP(bet.balance) },
 ];
 
 function Parameters({ data, run }: { data: LegacyExperimentSummary; run: RunSummary }) {
@@ -98,8 +131,6 @@ function Parameters({ data, run }: { data: LegacyExperimentSummary; run: RunSumm
   return <div className="space-y-6 text-sm">
     <dl className="data-list">
       <dt>Sorteo inicial</dt><dd>{storedDate(conditions.start_draw)}</dd>
-      <dt>Capital</dt><dd className="data-list-numeric">{formatDOP(conditions.capital)}</dd>
-      <dt>Meta</dt><dd className="data-list-numeric">{formatDOP(conditions.goal)}</dd>
       <dt>Límite de apuestas</dt><dd>{conditions.max_bets ?? "Sin límite"}</dd>
       <dt>Límite de minutos históricos</dt><dd>{conditions.max_minutes ?? "Sin límite"}</dd>
       <dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd>
@@ -109,15 +140,13 @@ function Parameters({ data, run }: { data: LegacyExperimentSummary; run: RunSumm
         {strategy.components && <><dt>Componentes guardados</dt><dd>{strategy.components.map((component) => `${component.system}: ${component.weight}`).join(", ")}</dd></>}</>}
     </dl>
     <div>
-      <details><summary className="disclosure-summary">Detalles técnicos</summary>
       <dl className="data-list break-all pt-2">
         <dt>Configuración asociada</dt><dd className={run.configuration_id ? "font-mono" : undefined}>{run.configuration_id ?? "Sin configuración asociada"}</dd>
         <dt>Historial</dt><dd className="font-mono">{data.sources.history_id}</dd><dt>SHA-256 historial</dt><dd className="font-mono">{data.sources.history_sha256}</dd>
         <dt>Rankings</dt><dd className="font-mono">{data.sources.rankings_id}</dd><dt>SHA-256 rankings</dt><dd className="font-mono">{data.sources.rankings_sha256}</dd>
         <dt>Versión de código</dt><dd className="font-mono">{data.sources.code_version}</dd>
       </dl>
-    </details></div>
-    <p className="text-text-secondary">Resultados sobre datos históricos ya investigados: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.</p>
+    </div>
   </div>;
 }
 
@@ -126,8 +155,6 @@ function ProfileParameters({ data, run }: { data: Exclude<ProfileExperimentSumma
   return <div className="space-y-6 text-sm"><dl className="data-list">
     <dt>Sorteo inicial</dt><dd>{storedDate(conditions.start_draw)}</dd>
     <dt>Perfil</dt><dd>{data.profile.profile_id} · revisión {data.profile.revision} · {data.profile.positions} posiciones · {data.display.currency}</dd>
-    <dt>Capital</dt><dd>{profileMoney(data, data.display.capital)}</dd>
-    <dt>Meta</dt><dd>{profileMoney(data, data.display.goal)}</dd>
     <dt>Límite de sorteos transcurridos</dt><dd>{conditions.max_elapsed_draws ?? "Sin límite"}</dd>
     <dt>Límite de sorteos apostados</dt><dd>{conditions.max_bet_draws ?? "Sin límite"}</dd>
     <dt>Hora límite</dt><dd>{conditions.end_minute ?? "Sin límite"}</dd>
@@ -138,9 +165,9 @@ function ProfileParameters({ data, run }: { data: Exclude<ProfileExperimentSumma
       ? `${data.display.staking_label} · ${profileMoney(data, data.request.staking.per_number_stake)} por número`
       : data.display.staking_label}</dd>
     {data.request.schema_version === 4 && <><dt>Margen objetivo</dt><dd>{profileMoney(data, data.request.staking.target_margin)}</dd><dt>Rondas de recuperación</dt><dd>{data.request.staking.rounds}</dd><dt>Al agotar la escalera</dt><dd>{data.request.staking.end_mode === "cycle" ? "Reiniciar la escalera" : "Detener la sesión"}</dd></>}
-      </dl><details><summary className="disclosure-summary">Detalles técnicos</summary><dl className="data-list pt-2"><dt>Versión de solicitud</dt><dd>Perfil v{data.request.schema_version}</dd><dt>Versión del resultado</dt><dd>{isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd><dt>Conjunto de datos SHA-256</dt><dd className="font-mono break-all">{data.request.dataset_sha256}</dd>
+      </dl><dl className="data-list pt-2"><dt>Versión de solicitud</dt><dd>Perfil v{data.request.schema_version}</dd><dt>Versión del resultado</dt><dd>{isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd><dt>Conjunto de datos SHA-256</dt><dd className="font-mono break-all">{data.request.dataset_sha256}</dd>
     <dt>Perfil SHA-256</dt><dd className="font-mono break-all">{data.request.profile_sha256}</dd>
-    <dt>Versión de código</dt><dd>{data.sources.code_version}</dd></dl></details><p className="text-text-secondary">Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.</p></div>;
+    <dt>Versión de código</dt><dd>{data.sources.code_version}</dd></dl></div>;
 }
 
 function ProfileBatchParameters({ data, run }: { data: ProfileBatchExperimentSummary; run: AnyRunSummary }) {
@@ -153,13 +180,11 @@ function ProfileBatchParameters({ data, run }: { data: ProfileBatchExperimentSum
   return <div className="space-y-6 text-sm"><dl className="data-list break-all">
     <dt>Sorteo inicial</dt><dd>{storedDate(conditions.start_draw)}</dd>
     <dt>Perfil</dt><dd>{data.request.profile_id} · revisión {data.request.profile_revision}</dd>
-    <dt>Capital</dt><dd>{profileMoney(data, conditions.capital)}</dd>
-    <dt>Meta</dt><dd>{profileMoney(data, conditions.goal)}</dd>
     <dt>Liquidación</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd>
     <dt>Estrategia</dt><dd>{strategyName ?? definition?.name ?? "No disponible"} · revisión {strategyRef?.revision ?? "—"}{definition ? ` · cobertura ${definition.coverage}` : ""}</dd>
     <dt>Ventana</dt><dd>{String(admission.effective_constraints.max_draws ?? data.request.max_draws)} sorteos máximos · {String(admission.effective_constraints.max_elapsed_draws ?? "sin límite")} transcurridos</dd>
     <dt>Filas de la fuente</dt><dd>{identity.row_count}</dd>
-  </dl><details><summary className="disclosure-summary">Detalles técnicos</summary><dl className="data-list break-all pt-2">
+  </dl><dl className="data-list break-all pt-2">
     <dt>Versión de solicitud</dt><dd>Perfil v{data.request.schema_version}</dd>
     <dt>Versión del resultado</dt><dd>{isProfileBatchRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd>
     <dt>Sorteo de inicio (índice fuente)</dt><dd>{definition ? data.runs[run.ordinal]?.result?.start_draw_index ?? "(no iniciado)" : "—"}</dd>
@@ -176,7 +201,7 @@ function ProfileBatchParameters({ data, run }: { data: ProfileBatchExperimentSum
     <dt>Restricciones efectivas</dt><dd><code>{JSON.stringify(admission.effective_constraints)}</code></dd>
     <dt>Política de ejecución</dt><dd>Revisión {admission.policy_revision} · <code>{JSON.stringify(admission.policy)}</code></dd>
     <dt>Versión de código</dt><dd className="font-mono">{data.sources.code_version}</dd>
-  </dl></details><p className="text-text-secondary">Se muestran las revisiones admitidas, no las más recientes.</p></div>;
+  </dl></div>;
 }
 
 function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary }) {
@@ -199,13 +224,21 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
   const money = isProfileExperiment(data) ? (amount: number) => profileMoney(data, amount) : formatDOP;
   const total = run.result ? isProfileRun(run) ? run.result.bet_draws : run.result.bets_count : 0;
   const runName = isProfileBatchRun(run) ? run.strategy.name ?? `Estrategia ${run.ordinal + 1}` : isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? `Ejecución ${run.ordinal + 1}`;
+  const [trajectoryMaximum, setTrajectoryMaximum] = useState<number | null>(null);
+  const capital = isProfileExperiment(data) ? data.display.capital : data.request.conditions.capital;
+  const goal = isProfileExperiment(data) ? data.display.goal : data.request.conditions.goal;
+  const drawCount = run.result ? isProfileRun(run) ? run.result.bet_draws : run.result.bets_count : null;
+  const outcome = run.result?.outcome;
+  const delta = run.result?.delta;
+  const deltaVariant: FigureVariant = delta == null || delta === 0 ? "neutral" : delta > 0 ? "positive" : "negative";
+  const closeReason = run.result ? isProfileBatchRun(run) ? stopCategoryLabel(run.result.stop_category) : isProfileRun(run) ? profileCloseReason(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : "Todavía no hay un resultado guardado.";
 
   useEffect(() => {
     if (!run.result) { setPage(null); setError(""); setLoading(false); return; }
     const cached = cache.current.get(offset);
     if (cached && retry === 0) { setPage(cached); setError(""); setLoading(false); return; }
     let live = true;
-    setPage(null); setLoading(true); setError("");
+    setLoading(true); setError("");
     void apiClient.getReplay(data.id, run.ordinal, offset, PAGE_SIZE).then((result) => {
       if (!live) return;
       // Keep at most three bounded pages per mounted run; never eagerly download history.
@@ -244,32 +277,44 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
   }
   const visiblePage = page?.offset === offset ? page : null;
   const current = visiblePage?.items[cursor - offset];
-  const canonicalSourceIndex = current && "source_index" in current && typeof current.source_index === "number" ? current.source_index : null;
   return <section className="mt-6" aria-label={`Ejecución ${run.ordinal + 1}`}>
-    <div className="flex flex-wrap items-center gap-4"><h3 className="font-heading text-xl">{runName}</h3><StatusLabel kind="execution" value={run.status} /></div>
+    {run.result && <>
+      <section aria-label="Veredicto" className="ledger-block">
+        <h1 className="ledger-verdict-title">{verdictPhrase(outcome, run.status)}</h1>
+        <div className="ledger-verdict-figures">
+          <Stat label="Saldo final" value={money(run.result.final_balance)} variant={run.result.final_balance > capital ? "positive" : run.result.final_balance < capital ? "negative" : "neutral"} />
+          <Stat label="Mejor saldo" value={trajectoryMaximum == null ? "—" : money(trajectoryMaximum)} variant="neutral" />
+          <Stat label="Sorteos jugados" value={<Figure value={drawCount ?? "—"} />} />
+        </div>
+        <p>Motivo de cierre: {closeReason}</p>
+        <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
+        <p className="text-sm">El saldo final no es lo mismo que la ganancia o pérdida: el cambio respecto del capital inicial se informa por separado.</p>
+      </section>
+      <dl className="data-list border-b border-border py-3">
+        <dt>Capital inicial</dt><dd className="data-list-numeric">{money(capital)}</dd>
+        <dt>Meta de saldo</dt><dd className="data-list-numeric">{money(goal)}</dd>
+        <dt>Duración</dt><dd className="data-list-numeric">{isProfileRun(run) ? `${run.result.elapsed_draws} sorteos transcurridos` : `${run.result.bets_count} sorteos jugados`}</dd>
+        <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help"><Figure value={money(delta!)} variant={deltaVariant} align="right" /></dd>
+      </dl>
+      <p id="detail-delta-help" className="field-help">{FIELD_HELP_DELTA}</p>
+    </>}
+    <div className="flex flex-wrap items-center gap-4"><h2 className="font-heading text-xl">{runName}</h2><StatusLabel kind="execution" value={run.status} /></div>
     <div role="tablist" aria-label="Secciones del detalle" className="mt-6 flex flex-wrap gap-2 border-b border-border">
       {tabs.map((name, index) => <button key={name} ref={(node) => { tabRefs.current[index] = node; }} type="button" role="tab" id={`detail-tab-${index}`} aria-controls={`detail-panel-${index}`} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => selectTab(name)} onKeyDown={(event) => onTabKey(event, index)} className={`min-h-control px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${tab === name ? "border-b-2 border-accent text-text" : "text-text-secondary hover:text-text"}`}>{name}</button>)}
     </div>
     <div role="tabpanel" id={`detail-panel-${tabs.indexOf(tab)}`} aria-labelledby={`detail-tab-${tabs.indexOf(tab)}`} tabIndex={0} className="pt-5">
-      {tab === "Parámetros y datos" ? isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} run={run} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null : !run.result ? <><p role="status">Esta ejecución no tiene un resultado guardado.</p>{isProfileBatchRun(run) && <><p className="mt-2 text-sm">{stopCategoryLabel(run.stop_category)}</p><details><summary className="disclosure-summary">Detalles técnicos</summary><dl className="data-list pt-2"><dt>Categoría de parada (código)</dt><dd>{run.stop_category}</dd><dt>Motivo informado</dt><dd>{run.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd>{run.error && <><dt>Error</dt><dd>{run.error}</dd></>}</dl></details></>}</> : <>
-        {tab === "Resultado" && <>
-          {isProfileBatchRun(run) && !run.result.complete && <p role="status" className="mb-4 text-sm">Resultado incompleto · {stopCategoryLabel(run.result.stop_category)}</p>}
-          <section aria-label="Desenlace" className="border-b border-border pb-5">
-            <h4 className="section-header">Desenlace</h4>
-            <dl className="data-list">
-              <dt>Saldo final</dt><dd className="data-list-numeric">{money(run.result.final_balance)}</dd>
-              <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help">{money(run.result.delta)}</dd>
-              <dt>Neto</dt><dd className="data-list-numeric">{run.result.net == null ? "N/A" : money(run.result.net)}</dd>
-              <dt>Motivo de cierre</dt><dd>{isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} />}</dd>
-              {isProfileBatchRun(run) && <><dt>Clasificación de parada</dt><dd>{stopCategoryLabel(run.result.stop_category)}</dd></>}
-            </dl>
-            <p id="detail-delta-help" className="field-help mt-2">{FIELD_HELP_DELTA}</p>
-          </section>
-          <h4 className="section-header mt-6">Evolución</h4>
-          <RunTrajectory id={data.id} ordinal={run.ordinal} name={runName} goal={isProfileExperiment(data) ? data.display.goal : data.request.conditions.goal} money={money} onSelect={(index) => { setPlaying(false); setCursor(index); setOffset(pageOffset(index)); setTab("Apuestas"); }} />
-          <div className="border-t border-border pt-5" aria-label="Reproducción visual">
-            <h4 className="section-header">Reproducción visual</h4>
-            <p aria-live="polite" className="mb-3 text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)}${isProfileBatchRun(run) && canonicalSourceIndex != null ? ` · índice fuente ${canonicalSourceIndex}` : ""} · saldo en ese sorteo ${money(current.balance)}` : ""}</p>
+      {tab === "Parámetros y datos" ? (
+        <Disclosure summary="Detalles técnicos">{isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} run={run} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null}</Disclosure>
+      ) : !run.result ? (
+        <div><p role="status">Esta ejecución todavía no tiene un resultado guardado. Volvé a la pestaña Resultado más tarde; el estado se actualiza automáticamente.</p>{isProfileBatchRun(run) && <><p className="mt-2 text-sm">{stopCategoryLabel(run.stop_category)}</p><Disclosure summary="Detalles técnicos"><dl className="data-list pt-2"><dt>Categoría de parada (código)</dt><dd>{run.stop_category}</dd><dt>Motivo informado</dt><dd>{run.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd>{run.error && <><dt>Error</dt><dd>{run.error}</dd></>}</dl></Disclosure></>}</div>
+      ) : tab === "Resultado" ? (
+        <div>
+          {isProfileBatchRun(run) && !run.result.complete && <p role="status" className="mb-4 text-sm">Resultado incompleto · {stopCategoryLabel(run.result.stop_category)}. Revisá el motivo antes de comparar esta simulación.</p>}
+          <SectionHeader title="Evolución del saldo" />
+          <RunTrajectory id={data.id} ordinal={run.ordinal} name={runName} goal={goal} money={money} onLoad={(_ordinal, trajectory) => setTrajectoryMaximum(trajectory.maximum.balance)} onSelect={(index) => { setPlaying(false); setCursor(index); setOffset(pageOffset(index)); setTab("Apuestas"); }} />
+          <div className="border-t border-border pt-5" role="region" aria-label="Reproducción visual">
+            <h3 className="section-header">Reproducción visual</h3>
+            <p aria-live="polite" className="mb-3 text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)} · saldo en ese sorteo ${money(current.balance)}` : ""}</p>
             <div className="flex flex-wrap items-center gap-2">
               <button className={button} type="button" disabled={!total || cursor === 0} onClick={() => move(-1)}>Sorteo anterior</button>
               <button className={button} type="button" disabled={!total || cursor >= total - 1 || (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)} onClick={() => setPlaying(!playing)}>{playing ? "Pausar" : "Reproducir"}</button>
@@ -278,26 +323,21 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
             </div>
             {typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches && <p className="mt-2 text-sm">Movimiento reducido: usá anterior y siguiente.</p>}
           </div>
-          <details className="mt-5 border-t border-border pt-5"><summary className="disclosure-summary">Detalles técnicos · métricas complementarias</summary>
-            <dl className="data-list pt-2">
-              {isProfileRun(run) ? <><dt>Sorteos transcurridos</dt><dd>{run.result.elapsed_draws}</dd><dt>Sorteos apostados</dt><dd>{run.result.bet_draws}</dd>{isProfileBatchRun(run) && <><dt>Alcance del resultado</dt><dd>{run.result.complete ? "Completo según el límite configurado" : "Incompleto; no equivale al fin de la fuente"}</dd></>}</> : <><dt>Apuestas realizadas</dt><dd className="data-list-numeric">{run.result.bets_count}</dd></>}
-            </dl>
-            <FinancialMetrics result={run.result} money={money} omitNet />
-            {isProfileBatchRun(run) && <dl className="data-list break-all pt-2"><dt>Versión de solicitud</dt><dd>{isProfileBatchExperiment(data) ? `Perfil v${data.request.schema_version}` : "No disponible"}</dd><dt>Versión del resultado</dt><dd>{run.result.schema_version}</dd><dt>Categoría de parada (código)</dt><dd>{run.result.stop_category}</dd><dt>Motivo informado</dt><dd>{run.result.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd><dt>Índice de inicio en la fuente</dt><dd>{run.result.start_draw_index}</dd></dl>}
-          </details>
-          <p className="mt-3 text-sm text-text-secondary">{isProfileExperiment(data) ? "Simulación con datos del conjunto seleccionado: no predice resultados futuros ni garantiza rentabilidad." : HISTORICAL_CAVEAT}</p>
-        </>}
-        {tab === "Apuestas" && <>
-          {current && <p role="status">Apuesta seleccionada {cursor + 1}: {storedDate(current.label)} · {money(current.balance)}</p>}
-          {visiblePage && visiblePage.items.length > 0 && (isProfileReplay(visiblePage) && isProfileExperiment(data)
-            ? <DataTable caption="Apuestas del experimento" columns={profileColumns(data, isProfileBatchRun(run))} rows={visiblePage.items} getRowKey={(bet) => bet.label} />
-            : !isProfileReplay(visiblePage) && <DataTable caption="Apuestas del experimento" columns={columns} rows={visiblePage.items} getRowKey={(bet) => bet.label} />)}
-          {visiblePage && visiblePage.items.length === 0 && <p role="status">No hay apuestas registradas en esta página.</p>}
+          {visiblePage && visiblePage.items.length > 0 && (isProfileReplay(visiblePage) && isProfileExperiment(data) ? <DataTable caption="Libro de sorteos" columns={profileLedgerColumns(data)} rows={visiblePage.items} getRowKey={(bet) => bet.label} /> : !isProfileReplay(visiblePage) && <DataTable caption="Libro de sorteos" columns={ledgerColumns} rows={visiblePage.items} getRowKey={(bet) => bet.label} />)}
+          {visiblePage && visiblePage.items.length === 0 && <p role="status">Todavía no hay sorteos registrados. La simulación puede seguir en curso.</p>}
+          <FinancialMetrics result={run.result} money={money} />
+          {isProfileBatchRun(run) && <Disclosure summary="Detalles técnicos"><dl className="data-list break-all pt-2"><dt>Versión de solicitud</dt><dd>{isProfileBatchExperiment(data) ? `Perfil v${data.request.schema_version}` : "No disponible"}</dd><dt>Versión del resultado</dt><dd>{run.result.schema_version}</dd><dt>Categoría de parada (código)</dt><dd>{run.result.stop_category}</dd><dt>Motivo informado</dt><dd>{run.result.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd><dt>Índice de inicio en la fuente</dt><dd>{run.result.start_draw_index}</dd></dl></Disclosure>}
+        </div>
+      ) : (
+        <div>
+          {current && <p role="status">Sorteo seleccionado {cursor + 1}: {storedDate(current.label)} · {money(current.balance)}</p>}
+          {visiblePage && visiblePage.items.length > 0 && (isProfileReplay(visiblePage) && isProfileExperiment(data) ? <DataTable caption="Apuestas del experimento" columns={profileColumns(data, isProfileBatchRun(run))} rows={visiblePage.items} getRowKey={(bet) => bet.label} /> : !isProfileReplay(visiblePage) && <DataTable caption="Apuestas del experimento" columns={columns} rows={visiblePage.items} getRowKey={(bet) => bet.label} />)}
+          {visiblePage && visiblePage.items.length === 0 && <p role="status">No hay sorteos registrados en esta página.</p>}
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm"><span>Mostrando {total ? offset + 1 : 0}–{Math.min(offset + (visiblePage?.items.length ?? 0), total)} de {total}</span><button type="button" className={button} disabled={offset === 0} onClick={() => { const previous = Math.max(0, offset - PAGE_SIZE); setPlaying(false); setOffset(previous); setCursor(previous); }}>Página anterior</button><button type="button" className={button} disabled={offset + PAGE_SIZE >= total} onClick={() => { const next = offset + PAGE_SIZE; setPlaying(false); setOffset(next); setCursor(next); }}>Página siguiente</button></div>
-        </>}
-        {loading && <p role="status" className="mt-3">Cargando página de apuestas…</p>}
-        {error && <p role="alert" className="mt-3">{error} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
-      </>}
+        </div>
+      )}
+      {loading && <Loading rows={3} label="Cargando sorteos…" className="mt-3" />}
+      {error && <p role="alert" className="mt-3">{error} Los datos guardados no se modificaron. Podés volver a cargar esta página de sorteos. <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar página</button></p>}
     </div>
     {tabs.map((name, index) => name !== tab && <div key={name} role="tabpanel" id={`detail-panel-${index}`} aria-labelledby={`detail-tab-${index}`} hidden />)}
   </section>;
@@ -316,7 +356,7 @@ export function DetailPage() {
   useEffect(() => {
     let live = true;
     let timer: ReturnType<typeof setTimeout>;
-    setSnapshot(null); setError(""); setOrdinal(null);
+    setError(""); setOrdinal(null);
     async function load() {
       try {
         const next = await apiClient.getExperiment(id);
@@ -338,20 +378,20 @@ export function DetailPage() {
   const requested = data?.runs.find((run) => run.ordinal === target);
   const selected = data?.runs.find((run) => run.ordinal === ordinal) ?? requested ?? data?.runs[0];
   return <div>
-    {!data && !error && <p role="status">Cargando experimento…</p>}
-    {error && <p role="alert" className="mb-4">{error} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
+    {!data && !error && <Loading rows={4} label="Cargando el estado de la simulación…" className="my-4" />}
+    {error && <div role="alert" className="mb-4 border-y border-border py-4"><p>{error}</p><p>Tu información guardada se conserva. Podés consultar la cola y volver a intentar la carga.</p><button type="button" className="btn btn-secondary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar</button></div>}
     {data && <>
-      <nav aria-label="Navegación del experimento" className="mb-5 flex flex-wrap gap-2 text-sm">
-        <Link className="btn btn-tertiary" to="/experimentos">Volver a Experimentos</Link>
-        <Link className="btn btn-tertiary" to={`/experimentos/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Ver comparación"}</Link>
-      </nav>
+      {selected && <RunView key={`${id}:${selected.ordinal}`} data={data} run={selected} />}
       {requestedRun !== null && !requested && <p role="status" className="mb-4">Esa ejecución no existe; se muestra la primera.</p>}
-      <div className="flex flex-wrap items-center gap-4 border-b border-border pb-5"><h2 className="font-heading text-2xl">{isProfileBatchExperiment(data) ? data.display.name : isProfileExperiment(data) ? data.request.name : data.request.name}</h2><StatusLabel kind="execution" value={data.status} /></div>
-      {(data.status === "running" || data.status === "pending" || data.status === "held") && <p className="mt-3 text-sm text-text-secondary">Se actualiza solo; salir de esta página no cancela la ejecución.</p>}
-      {data.runs.length > 1 && <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
+      <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-4"><h2 className="font-heading text-2xl">{isProfileBatchExperiment(data) ? data.display.name : data.request.name}</h2><StatusLabel kind="execution" value={data.status} /></div>
+      {(data.status === "running" || data.status === "pending" || data.status === "held") && <p className="mt-3 text-sm text-text-secondary">El cálculo puede continuar en el servidor; comprobá el estado desde la cola antes de reintentar.</p>}
+      {data.runs.length > 1 && <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
         {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {isProfileBatchRun(run) ? run.strategy.name ?? `Estrategia ${run.ordinal + 1}` : isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? "Estrategia"} · <StatusLabel kind="execution" value={run.status} /></button>)}
       </div>}
-      {selected && <RunView key={`${id}:${selected.ordinal}`} data={data} run={selected} />}
+      <nav aria-label="Navegación del experimento" className="mt-6 flex flex-wrap gap-2 text-sm">
+        <Link className="btn btn-tertiary" to="/experimentos">Volver a simulaciones</Link>
+        <Link className="btn btn-primary" to={`/experimentos/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Comparar simulaciones"}</Link>
+      </nav>
     </>}
   </div>;
 }
