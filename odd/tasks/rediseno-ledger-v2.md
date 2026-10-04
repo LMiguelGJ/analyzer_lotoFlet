@@ -17,13 +17,13 @@ Contrato y sistema: `DESIGN.md` (raíz). Verdad de producto: `PRODUCT.md` (raíz
 ## Tareas
 
 - [x] S0 Fundación del sistema visual: tokens + primitivas `components/ui/*` + tests — commit `8defd01`; verificación independiente: 523/523 tests serial (36 archivos), typecheck limpio, contrato de primitivas sin violaciones
-- [ ] S1 Shell + glosario canónico (Shell, App, ui-labels, format) — en curso (writer en árbol principal)
-- [ ] S2 Creador simple de 3 grupos con «Resumen de la orden» (brief no negociable)
-- [ ] S3 Resultado con veredicto primero (DetailPage, FinancialMetrics, charts) — en curso (writer en worktree aislado `wt-s3`, rama `wt/s3`, node_modules por junction)
-- [ ] S4 Comparación que responde «qué cambió» primero
-- [ ] S5 Listado como libro mayor con estados y vacíos que enseñan
-- [ ] S6 Datos y estrategias en lenguaje llano con lo técnico plegado
-- [ ] S7 Cola y ajustes con estados llanos y una acción por fila
+- [x] S1 Shell + glosario canónico (Shell, App, ui-labels, format) — en curso (writer en árbol principal)
+- [x] S2 Creador simple de 3 grupos con «Resumen de la orden» (brief no negociable)
+- [x] S3 Resultado con veredicto primero (DetailPage, FinancialMetrics, charts) — implementado y commiteado como `f51143b` en rama `wt/s3` (535/535 tests serial, typecheck limpio; mapeo veredicto solo desde hechos existentes: outcome goal→Meta alcanzada, ruin→Se agotó el capital, limit→Límite de sesión, history_exhausted→Historial agotado, running/pending/held→En curso, cancelado→Simulación cancelada); pendiente integrar a `stage`
+- [x] S4 Comparación que responde «qué cambió» primero
+- [x] S5 Listado como libro mayor con estados y vacíos que enseñan
+- [x] S6 Datos y estrategias en lenguaje llano con lo técnico plegado
+- [x] S7 Cola y ajustes con estados llanos y una acción por fila
 - [ ] S8 Pulido: microinteracciones, estados, teclado, zoom, tablet, reduced-motion
 - [ ] S9 QA + evidencia: suite completa, typecheck, build, detect 0, barrido
       navegador desktop+tablet, capturas, docs
@@ -38,6 +38,32 @@ Contrato y sistema: `DESIGN.md` (raíz). Verdad de producto: `PRODUCT.md` (raíz
 - Push final a `origin/stage` + informe con comandos, conteos y capturas.
 
 ## Evidencia y bloqueos
+
+- Commits: `8defd01` (S0 fundación), `cb29454` (plan + seguimiento), `c9a4bae`
+  (S1 shell + glosario; fallout conocido: 47 aserciones de copy en suites de
+  otros slices, se reconcilian en el commit de integración), `66de27c` (S2
+  creador, rama `wt/s2`, 524/524), `f51143b` (S3, `wt/s3`), `50202f1` (S4,
+  `wt/s3`), `dcba4fe` (S6, `wt/s3`, 537/537).
+- Verdad de motor verificada por S2: max_bets cuenta UNA apuesta por sorteo
+  rankeado → «Duración máxima (sorteos)» = 12 es exacto; el juego clásico
+  impone apuesta mínima RD$1 (fila legítima); reglas reales del juego activo:
+  00–99, 5 posiciones, repeticiones permitidas, premios 80/8/4/2/1.
+- Pendiente de pulido (S8): doble caveat adyacente en el Resumen de la orden
+  (OrderSummary + caveat histórico).
+- Lanes paralelos: árbol principal = S1; `wt-s2` = S2 (creador); `wt-s3` = S4 tras S3.
+  Worktrees con node_modules por junction de Windows.
+- Verdad de motor detectada (decisión de dirección): el juego embebido Q80 es
+  100 números / 5 posiciones / premios 80-8-4-2-1 (contracts.py:36), mientras el
+  brief pide 3 posiciones y premios 60/10/5 (juego de perfil, "primera
+  ampliación" según especificaciones-laboratorio-web.md [A8]). Decisión: el
+  panel de Reglas muestra SIEMPRE los valores reales del juego en uso (verdad
+  financiera intacta = límite 6 del brief); los valores del brief se prefiltran
+  donde el contrato real existe (blend transición 60 + fríos 40, cobertura 10,
+  capital 2000, meta 2800, duración 12 sorteos vía max_bets si una apuesta es
+  una ronda de sorteo — verificado por S2). Discrepancia 3/60-10-5 lista para
+  decisión del usuario en el informe final.
+- Canal de preguntas de subagentes NO funciona (expira siempre): los writers
+  reciben autorización y criterio embebidos y prohibición de preguntar.
 
 - Crítica de partida (Evaluación A): 26/40; P1 perfil/lote, comparación técnica,
   vocabulario mixto. Detector: 0 hallazgos.
@@ -56,3 +82,24 @@ Contrato y sistema: `DESIGN.md` (raíz). Verdad de producto: `PRODUCT.md` (raíz
   `lottery-predictability-monte-carlo` sin stagear; se excluye de todo commit.
 - Primer intento de Evaluación B bloqueado por canal de autorización expirado
   (relanzado con autorización embebida; sin pérdida de evidencia).
+
+## Integración y revisión nativa (evidencia real)
+
+- `stage` integra todo: S0 `8defd01`, S1 `c9a4bae`, S5 `603ff84`, merge S2 `8552cec`
+  (S2 = `66de27c`), fix de integración `f55c417`, merge S3/S4/S6/S7 `390bc1f`
+  (S3 `f51143b`, S4 `50202f1`, S6 `dcba4fe`, S7 `26fc266`) y reconciliación de
+  suites `711bb24`. Suite serial integrada: **551/551**, typecheck limpio.
+- Revisión nativa por slice (RDD activo; base `4afe0f8`; el rango completo excedió
+  el presupuesto de contexto → `lens_context_budget_exceeded`, se partió en
+  cadena y se verificó que el árbol de la cadena es idéntico a `stage@711bb24`):
+  - R1 S0+S1 — lineage `review-19b9c053f317da0f`: approved, ack quemado
+  - R2 S2+S5 — lineage `review-e6be18c715098705`: approved, ack quemado
+  - R3a S3+S4 — lineage `review-412d072b93cb8ea4`: approved, ack quemado
+  - R3b S6 — lineage `review-eb3406633418e22b`: approved, ack quemado
+  - R3c S7+reconciliación — lineage `review-5315f527ee084785`: approved, ack quemado
+  Lente `review-reliability` (riesgo medio). Advisories no bloqueantes (se tratan
+  como trabajo posterior, no reabren la revisión): doble caveat adyacente,
+  `Shell.tsx:53-59` nombre de cola, `Feedback.tsx:35` claim incondicional,
+  `Signature.tsx:6/19` Verdict solo dinero y h1 duplicado, `new-experiment/index.tsx:459`
+  regex muerta, `DetailPage.tsx:227/359`, `BalanceChart.tsx:16`, entre otros.
+- Pendiente: S8 pulido guiado por barrido de navegador, S9 QA final, push.
