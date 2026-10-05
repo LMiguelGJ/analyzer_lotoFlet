@@ -69,6 +69,7 @@ def codes(result):
 
 @pytest.mark.parametrize("positions", [1, 3, 5])
 @pytest.mark.parametrize("format", ["json", "csv"])
+# B-STO-076: JSON/CSV parse 1/3/5 positions, zero padding, and immutable records.
 def test_valid_position_counts_and_zero_padded_values(positions, format):
     opts = options(positions, format=format)
     values = ["00", *range(1, positions)]
@@ -109,6 +110,7 @@ def test_valid_position_counts_and_zero_padded_values(positions, format):
         (b"\xff", "csv", "encoding"),
     ],
 )
+# B-STO-077: malformed shapes, CSV headers, duplicate keys and UTF-8 fail entirely.
 def test_malformed_shape_header_and_encoding(raw, format, expected):
     result = parse_records(raw, **options(format=format))
     assert expected in codes(result)
@@ -132,12 +134,14 @@ def test_malformed_shape_header_and_encoding(raw, format, expected):
         ("p0", "9" * 5000, "number"),
     ],
 )
+# B-STO-078: invalid date/time/number yields one code and no partial rows.
 def test_invalid_row_fields(field, value, expected):
     result = parse([row(), dict(row(hour="05:11"), **{field: value})])
     assert codes(result) == {expected} and result.rows_seen == 2
     assert result.records == () and not result.promotable
 
 
+# B-STO-079: missing fields or forbidden repeats reject the whole import.
 def test_missing_fields_and_repeats_rejected_without_partial_promotion():
     missing = row()
     del missing["p1"]
@@ -146,6 +150,7 @@ def test_missing_fields_and_repeats_rejected_without_partial_promotion():
     assert result.records == () and result.dataset_sha256 is None
 
 
+# B-STO-080: mapping, source and clock declarations are validated together.
 def test_mapping_and_source_clock_validation():
     duplicate = ColumnMapping("day", "day", ("p0", "p1", "p2"))
     assert "mapping_duplicate" in codes(parse([row()], mapping=duplicate))
@@ -162,6 +167,7 @@ def test_mapping_and_source_clock_validation():
     assert result.promotable or codes(result) == {"clock_zone"}
 
 
+# B-STO-081: conflicting draws block promotion; exact duplicates merge and sort.
 def test_conflicts_block_promotion_identical_duplicates_merge_and_sort():
     later = row((3, 4, 5), day="2025-09-03")
     first = row((0, 1, 2))
@@ -174,6 +180,7 @@ def test_conflicts_block_promotion_identical_duplicates_merge_and_sort():
     assert conflict.records == () and conflict.dataset_sha256 is None
 
 
+# B-STO-082: normalized identity ignores order but binds context, map, profile and clock.
 def test_normalized_hash_order_provenance_mapping_profile_and_clock():
     first, second = row(), row((3, 4, 5), hour="05:11")
     a, b = parse([first, second]), parse([second, first])
@@ -190,6 +197,7 @@ def test_normalized_hash_order_provenance_mapping_profile_and_clock():
         assert zone.dataset_sha256 != a.dataset_sha256
 
 
+# B-STO-083: byte/mapping/column ceilings run before payload decoding.
 def test_input_limit_precedes_decode_and_import_column_ceiling():
     raw = b"\xff" * (MAX_INPUT_BYTES + 1)
     result = parse_records(raw, **options())
@@ -203,6 +211,7 @@ def test_input_limit_precedes_decode_and_import_column_ceiling():
     assert "column_limit" in codes(result)
 
 
+# B-STO-084: row and error limits remain bounded while counts stay truthful.
 def test_row_limit_and_bounded_error_count_truthful():
     result = parse([row((1, 2, 3), hour="99:99")] * (MAX_ERRORS + 5))
     assert result.error_count == MAX_ERRORS + 5 and len(result.errors) == MAX_ERRORS
@@ -216,6 +225,7 @@ def test_row_limit_and_bounded_error_count_truthful():
     assert "row_limit" in codes(result) and not result.promotable
 
 
+# B-STO-085: empty imports and enormous CSV numeric cells are rejected safely.
 def test_empty_and_oversized_csv_numeric_cell():
     assert "empty" in codes(parse([]))
     result = parse_records(
@@ -224,6 +234,7 @@ def test_empty_and_oversized_csv_numeric_cell():
     assert codes(result) == {"number"}
 
 
+# B-STO-086: malformed map, oversized JSON row, and nested values are validation errors.
 def test_malformed_mapping_and_json_row_width_are_validation_errors():
     malformed = ColumnMapping("day", "hour", (cast(str, []), "p1", "p2"))
     assert "mapping" in codes(parse([row()], mapping=malformed))
@@ -232,6 +243,7 @@ def test_malformed_mapping_and_json_row_width_are_validation_errors():
     assert "shape" in codes(parse([{**row(), "nested": {"value": 1}}]))
 
 
+# B-STO-087: excessive valid nesting yields a bounded invalid preview, not a crash.
 def test_deeply_nested_valid_json_is_bounded_invalid_preview():
     raw = b"[" * 100_000 + b"0" + b"]" * 100_000
     result = parse_records(raw, **options())
@@ -242,6 +254,7 @@ def test_deeply_nested_valid_json_is_bounded_invalid_preview():
 
 
 @pytest.mark.parametrize("field", ["source_id", "revision", "provenance"])
+# B-STO-088: unpaired surrogates in source metadata cannot poison identity hashes.
 def test_lone_surrogate_source_metadata_is_invalid_preview(field):
     raw = json.dumps([row()]).encode()
     values = {"source_id": "local-1", "revision": "v1", "provenance": "manual"}
@@ -255,6 +268,7 @@ def test_lone_surrogate_source_metadata_is_invalid_preview(field):
     assert result.records == () and result.dataset_sha256 is None and not result.promotable
 
 
+# B-STO-088: unpaired surrogates in mapping/clock remain safe invalid previews.
 def test_lone_surrogate_mapping_and_clock_are_invalid_previews():
     raw = json.dumps([row()]).encode()
     mapping = ColumnMapping("day", "hour", ("p0", "p1", "p\ud800"))
@@ -266,6 +280,7 @@ def test_lone_surrogate_mapping_and_clock_are_invalid_previews():
         assert result.records == () and result.dataset_sha256 is None and not result.promotable
 
 
+# B-STO-088: bypassed profile text validation cannot inject invalid hash text.
 def test_bypassed_profile_text_validation_cannot_poison_hash():
     raw = json.dumps([row()]).encode()
     valid = profile()
@@ -277,6 +292,7 @@ def test_bypassed_profile_text_validation_cannot_poison_hash():
     assert result.records == () and result.dataset_sha256 is None and not result.promotable
 
 
+# B-STO-089: parser is pure and does not open application files for naive clocks.
 def test_naive_preview_does_not_open_application_files(monkeypatch):
     def deny_open(*args, **kwargs):
         raise AssertionError("parser must not open files")

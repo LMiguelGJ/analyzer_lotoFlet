@@ -55,6 +55,7 @@ def archive(tmp_path, monkeypatch, rows, row_ids=(0, 2)):
     return settings, dataset
 
 
+# B-STO-058: archive binding authenticates exact historical rows and rankings.
 def test_binding_authenticates_source_and_exact_full_history_rows(tmp_path, monkeypatch):
     rows = [("2025-01-01", f"0{i}:00", (i, 1, 2, 3, 4)) for i in range(3)]
     settings, dataset = archive(tmp_path, monkeypatch, rows)
@@ -68,6 +69,7 @@ def test_binding_authenticates_source_and_exact_full_history_rows(tmp_path, monk
     assert bound.select("topk", 2, 2, system="freq_hist") == (95, 96)
 
 
+# B-STO-059: incompatible embedded profiles are rejected despite matching source rows.
 def test_binding_rejects_incompatible_profile_even_when_rows_and_source_match(
     tmp_path, monkeypatch
 ):
@@ -86,6 +88,7 @@ def test_binding_rejects_incompatible_profile_even_when_rows_and_source_match(
         bind_archived_dataset(rejected, settings)
 
 
+# B-STO-060: imported draw values must match authenticated history at each label.
 def test_binding_rejects_same_label_with_different_result(tmp_path, monkeypatch):
     rows = [("2025-01-01", f"0{i}:00", (i, 1, 2, 3, 4)) for i in range(3)]
     settings, dataset = archive(tmp_path, monkeypatch, rows)
@@ -104,6 +107,7 @@ def test_binding_rejects_same_label_with_different_result(tmp_path, monkeypatch)
         bind_archived_dataset(altered, settings)
 
 
+# B-STO-061: source hash and requested ranking row must be verified.
 def test_binding_rejects_unverified_source_hash_and_missing_ranking_row(tmp_path, monkeypatch):
     rows = [("2025-01-01", f"0{i}:00", (i, 1, 2, 3, 4)) for i in range(3)]
     settings, dataset = archive(tmp_path, monkeypatch, rows)
@@ -114,6 +118,7 @@ def test_binding_rejects_unverified_source_hash_and_missing_ranking_row(tmp_path
         bound.select("cold", 1, 3)
 
 
+# B-STO-062: ranking timestamps bind to history; callers cannot supply asset paths.
 def test_binding_rejects_timestamp_mismatch_and_forged_asset_path_argument(tmp_path, monkeypatch):
     rows = [("2025-01-01", f"0{i}:00", (i, 1, 2, 3, 4)) for i in range(3)]
     settings, dataset = archive(tmp_path, monkeypatch, rows)
@@ -133,6 +138,7 @@ def test_binding_rejects_timestamp_mismatch_and_forged_asset_path_argument(tmp_p
     assert len(inspect.signature(bind_archived_dataset).parameters) == 2
 
 
+# B-STO-063: ranking rows must be exact permutations of the universe.
 def test_binding_rejects_nonpermutation_rankings(tmp_path, monkeypatch):
     rows = [("2025-01-01", f"0{i}:00", (i, 1, 2, 3, 4)) for i in range(3)]
     settings, dataset = archive(tmp_path, monkeypatch, rows)
@@ -149,6 +155,7 @@ def test_binding_rejects_nonpermutation_rankings(tmp_path, monkeypatch):
         bind_archived_dataset(dataset, settings)
 
 
+# B-STO-064: parity uses prior draws and does not require ranking rows.
 def test_parity_selection_uses_prior_history_and_skips_no_rank_requirement(tmp_path, monkeypatch):
 
     rows = [("2025-01-01", f"0{i}:00", (first, 1, 2, 3, 4)) for i, first in enumerate((2, 3, 5))]

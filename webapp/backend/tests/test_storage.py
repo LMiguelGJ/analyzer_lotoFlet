@@ -20,9 +20,12 @@ from laboratorio.domain.contracts import (
     Strategy,
     legacy_quiniela_80_profile,
 )
+from laboratorio.domain.profile_strategy import StrategyDefinition
 from laboratorio.domain.session import Bet, SessionResult
+from laboratorio.domain.strategy_library import definition_snapshot, seed_presets, strategy_payload
 from laboratorio.settings import Settings
 from laboratorio.storage.database import SCHEMA_VERSION, UnsupportedSchema, initialize_database
+from laboratorio.storage.quota import LOGICAL_MARGIN_BYTES, QuotaExceeded
 from laboratorio.storage.repository import Repository
 
 
@@ -69,6 +72,7 @@ def create(repo, config_id=None):
     )
 
 
+# B-STO-009: durable legacy result reads never invoke the engine.
 def test_reopen_complete_result_without_engine_or_source_files(repo, monkeypatch):
     config = repo.create_configuration("Saved", request().strategies[0])
     experiment = create(repo, config)
@@ -94,6 +98,7 @@ def test_reopen_complete_result_without_engine_or_source_files(repo, monkeypatch
     assert repo.list_experiments()[0] == saved
 
 
+# B-STO-010: reject versioned data on the legacy result wire.
 def test_legacy_result_refuses_versioned_envelope_without_rewriting_wire(repo):
     identifier = create(repo)
     repo.start_run(identifier, 0)
@@ -110,6 +115,7 @@ def test_legacy_result_refuses_versioned_envelope_without_rewriting_wire(repo):
         repo.get_experiment(identifier)
 
 
+# B-STO-011: configuration edits/deletes do not rewrite saved experiment history.
 def test_configuration_mutation_and_deletion_keep_history(repo):
     config = repo.create_configuration("Saved", request().strategies[0])
     experiment = create(repo, config)
@@ -132,6 +138,7 @@ def test_configuration_mutation_and_deletion_keep_history(repo):
     assert repo.delete_experiment(experiment) is False
 
 
+# B-STO-012: completion validation is atomic and completed runs are immutable.
 def test_immutable_completed_runs_and_atomic_validation(repo):
     experiment = create(repo)
     repo.start_run(experiment, 0)
@@ -150,6 +157,7 @@ def test_immutable_completed_runs_and_atomic_validation(repo):
     assert repo.get_experiment(experiment).runs[0].result == result()
 
 
+# B-STO-013: pending/interrupted/held states never expose a result.
 def test_incomplete_states_never_claim_completion(repo):
     experiment = create(repo)
     assert repo.get_experiment(experiment).status is ExperimentStatus.PENDING
@@ -168,6 +176,7 @@ def test_incomplete_states_never_claim_completion(repo):
     assert repo.get_experiment(held).status is ExperimentStatus.HELD
 
 
+# B-STO-014: missing links and source identifiers are rejected without persistence.
 def test_missing_records_and_invalid_configuration_link(repo):
     assert repo.get_experiment("missing") is None
     assert repo.get_configuration("missing") is None
@@ -193,6 +202,7 @@ def comparison_request():
     return request().model_copy(update={"strategies": (first, second)})
 
 
+# B-STO-015: completed comparison runs survive cancellation of a peer.
 def test_comparison_retains_completed_run_when_another_is_cancelled(repo):
     comparison = comparison_request()
     experiment = repo.create_experiment(
@@ -220,6 +230,7 @@ def test_comparison_retains_completed_run_when_another_is_cancelled(repo):
         repo.complete_experiment(experiment)
 
 
+# B-STO-016: failure finalization requires terminal runs and preserves successes.
 def test_local_failure_finalize_requires_all_terminal_and_preserves_results(repo):
     comparison = comparison_request()
     comparison = comparison.model_copy(
@@ -269,6 +280,7 @@ def test_local_failure_finalize_requires_all_terminal_and_preserves_results(repo
         repo.fail_experiment_after_runs(identifier)
 
 
+# B-STO-017: a failed child insert rolls back the whole experiment.
 def test_insert_failure_rolls_back_experiment_and_runs(repo):
     with sqlite3.connect(repo.path) as db:
         db.execute("""CREATE TRIGGER reject_second BEFORE INSERT ON runs
@@ -295,6 +307,7 @@ def _bootstrap_v1_schema(db):
     db.execute("PRAGMA user_version = 1")
 
 
+# B-STO-018: v1 rows survive migration with NULL created_at; migration is repeatable.
 def test_migration_from_v1_preserves_data_and_adds_created_at(tmp_path):
     path = tmp_path / "legacy_v1.db"
     with sqlite3.connect(path) as db:
@@ -331,6 +344,7 @@ def test_migration_from_v1_preserves_data_and_adds_created_at(tmp_path):
     assert saved.created_at is None
 
 
+# B-STO-019: concurrent v2 upgrades preserve records and empty quota preference.
 def test_migration_from_v2_preserves_records_and_empty_preference(tmp_path):
     path = tmp_path / "legacy_v2.db"
     with sqlite3.connect(path) as db:
@@ -364,6 +378,7 @@ def test_migration_from_v2_preserves_records_and_empty_preference(tmp_path):
     assert saved is not None and saved.created_at == "2025-01-01T00:00:00Z"
 
 
+# B-STO-020: partial DDL failure rolls back version and columns for retry.
 def test_migration_rolls_back_all_ddl_if_second_step_fails(tmp_path, monkeypatch):
     from laboratorio.storage import database
 
@@ -388,6 +403,7 @@ def test_migration_rolls_back_all_ddl_if_second_step_fails(tmp_path, monkeypatch
     assert Repository(path)
 
 
+# B-STO-021: concurrent v1 upgrade creates the current schema only once.
 def test_concurrent_upgrade_from_v1_is_idempotent(tmp_path):
     path = tmp_path / "shared_v1.db"
     with sqlite3.connect(path) as db:
@@ -400,6 +416,7 @@ def test_concurrent_upgrade_from_v1_is_idempotent(tmp_path):
         assert columns.count("created_at") == 1
 
 
+# B-STO-022: fresh databases migrate in order and seed only the legacy profile.
 def test_fresh_database_applies_migrations_in_order(tmp_path):
     path = tmp_path / "fresh.db"
     initialize_database(path)
@@ -462,6 +479,7 @@ def _legacy_with_completed_result(path, version):
 
 
 @pytest.mark.parametrize("version", [1, 2, 3])
+# B-STO-023: historical backfill preserves request/result wire bytes and pending state.
 def test_upgrade_backfills_all_historical_rows_without_rewriting_bytes(tmp_path, version):
     path = tmp_path / f"legacy_v{version}.db"
     request_bytes, result_bytes = _legacy_with_completed_result(path, version)
@@ -489,6 +507,7 @@ def test_upgrade_backfills_all_historical_rows_without_rewriting_bytes(tmp_path,
     assert saved.runs[0].result.wagered == 1_000_000_001
 
 
+# B-STO-024: failed historical profile backfill leaves DDL/version/data untouched.
 def test_failed_backfill_rolls_back_ddl_and_version(tmp_path, monkeypatch):
     from laboratorio.storage import database
 
@@ -528,6 +547,7 @@ def test_failed_backfill_rolls_back_ddl_and_version(tmp_path, monkeypatch):
     assert restored is not None and restored.profile == legacy_quiniela_80_profile()
 
 
+# B-STO-025: v4 upgrade preserves legacy snapshots without inventing datasets.
 def test_upgrade_v4_to_v5_preserves_legacy_bytes_without_backfill(tmp_path):
     from laboratorio.storage import database
 
@@ -566,6 +586,7 @@ def test_upgrade_v4_to_v5_preserves_legacy_bytes_without_backfill(tmp_path):
         assert db.execute("SELECT count(*) FROM datasets").fetchone()[0] == 0
 
 
+# B-STO-026: v5 wire bytes remain unchanged while receiving legacy discriminators.
 def test_upgrade_v5_to_v8_keeps_request_and_result_bytes(tmp_path):
     from laboratorio.storage import database
 
@@ -611,6 +632,7 @@ def test_upgrade_v5_to_v8_keeps_request_and_result_bytes(tmp_path):
     assert saved is not None and saved.request_kind == "legacy"
 
 
+# B-STO-027: migration 7 preserves profile wire and atomically rolls back.
 def test_seventh_migration_preserves_schema6_wire_and_rollback(tmp_path, monkeypatch):
     from laboratorio.storage import database
 
@@ -674,6 +696,7 @@ def test_seventh_migration_preserves_schema6_wire_and_rollback(tmp_path, monkeyp
         )
 
 
+# B-STO-028: migrations 5/6 fail closed at their previous schema version.
 def test_sixth_migration_failure_rolls_back_v5(tmp_path, monkeypatch):
     from laboratorio.storage import database
 
@@ -701,6 +724,7 @@ def test_sixth_migration_failure_rolls_back_v5(tmp_path, monkeypatch):
     assert Repository(path)
 
 
+# B-STO-028: migrations 5/6 fail closed at their previous schema version.
 def test_fifth_migration_failure_rolls_back_v4(tmp_path, monkeypatch):
     from laboratorio.storage import database
 
@@ -728,6 +752,7 @@ def test_fifth_migration_failure_rolls_back_v4(tmp_path, monkeypatch):
     assert Repository(path)
 
 
+# B-STO-029/030: immutable profile revisions and experiment snapshots round-trip/account exactly.
 def test_profile_versions_are_inert_immutable_and_roundtrip(repo):
     legacy = legacy_quiniela_80_profile()
     custom = GameProfile.model_validate(
@@ -791,6 +816,7 @@ def test_profile_versions_are_inert_immutable_and_roundtrip(repo):
     assert repo.get_game_profile(custom.profile_id, 2) == second
 
 
+# B-STO-031: bounded profile paging uses stable keys and validates row identity.
 def test_profile_page_uses_stable_key_order_and_validates_stored_identity(repo, monkeypatch):
     legacy = legacy_quiniela_80_profile()
     custom = GameProfile.model_validate(
@@ -817,6 +843,7 @@ def test_profile_page_uses_stable_key_order_and_validates_stored_identity(repo, 
         repo.page_game_profiles(0, 1)
 
 
+# B-STO-032: missing snapshots cannot fall back to the legacy profile.
 def test_missing_or_corrupt_snapshot_is_integrity_error(repo):
     identifier = create(repo)
     with sqlite3.connect(repo.path) as db:
@@ -829,6 +856,7 @@ def test_missing_or_corrupt_snapshot_is_integrity_error(repo):
 
 
 @pytest.mark.parametrize("corruption", ["invalid-document", "different-version"])
+# B-STO-032: invalid or revision-mismatched snapshots fail closed.
 def test_corrupt_profile_snapshot_never_silently_falls_back_to_legacy(repo, corruption):
     identifier = create(repo)
     with sqlite3.connect(repo.path) as db:
@@ -847,6 +875,7 @@ def test_corrupt_profile_snapshot_never_silently_falls_back_to_legacy(repo, corr
         repo.get_experiment(identifier)
 
 
+# B-STO-033: created_at is UTC ISO-8601 and immutable across lifecycle changes.
 def test_create_experiment_sets_created_at_in_utc_iso8601(repo):
     identifier = create(repo)
     saved = repo.get_experiment(identifier)
@@ -861,6 +890,7 @@ def test_create_experiment_sets_created_at_in_utc_iso8601(repo):
     assert repo.get_experiment(identifier).created_at == saved.created_at
 
 
+# B-STO-034: experiment search literals, filters, sorting and pagination.
 def test_search_experiments_filters_sorts_and_paginates(repo):
     first = repo.create_experiment(
         request().model_copy(update={"name": "Alpha"}),
@@ -928,6 +958,7 @@ def test_search_experiments_filters_sorts_and_paginates(repo):
     assert total == 4 and [r.id for r in rows] == [second]
 
 
+# B-STO-035: default search order deterministically breaks timestamp ties by id.
 def test_search_experiments_default_order_is_created_at_desc_with_id_tiebreak(repo):
     ids = [create(repo) for _ in range(3)]
     with sqlite3.connect(repo.path) as db:
@@ -938,6 +969,7 @@ def test_search_experiments_default_order_is_created_at_desc_with_id_tiebreak(re
     assert [r.id for r in rows] == sorted(ids, reverse=True)
 
 
+# B-STO-034: combined search preserves literal escapes and stable pages.
 def test_search_combined_filters_literal_escape_and_stable_page(repo):
     ids = {}
     for name in ("A\\B", "A%B", "A_B", "A plain"):
@@ -963,6 +995,7 @@ def test_search_combined_filters_literal_escape_and_stable_page(repo):
     assert repo.get_experiment(ids["A%B"]).created_at == "2025-01-01T00:00:00.000000Z"
 
 
+# B-STO-036: search rejects invalid sort/order/status/pagination values.
 def test_search_experiments_rejects_invalid_sort_or_status(repo):
     with pytest.raises(ValueError):
         repo.search_experiments(0, 20, sort="not_a_column")
@@ -975,6 +1008,7 @@ def test_search_experiments_rejects_invalid_sort_or_status(repo):
             repo.search_experiments(offset, limit)
 
 
+# B-STO-037: initialization is idempotent and refuses unsupported/nonempty v0 files.
 def test_initialization_repeat_and_unsupported_version(tmp_path):
     path = tmp_path / "private" / "lab.db"
     assert not path.exists()
@@ -998,6 +1032,7 @@ def test_initialization_repeat_and_unsupported_version(tmp_path):
         assert db.execute("SELECT name FROM sqlite_master WHERE name='legacy'").fetchone()
 
 
+# B-STO-038: concurrent initialization is safe and repeatable.
 def test_concurrent_initialization_is_repeatable(tmp_path):
     path = tmp_path / "shared.db"
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -1007,6 +1042,7 @@ def test_concurrent_initialization_is_repeatable(tmp_path):
         assert db.execute("SELECT COUNT(*) FROM sqlite_master WHERE name='runs'").fetchone()[0] == 1
 
 
+# B-STO-038: Repository opens only an explicitly initialized database.
 def test_repository_does_not_initialize_implicitly(tmp_path):
     path = tmp_path / "missing" / "lab.db"
     with pytest.raises(FileNotFoundError):
@@ -1014,6 +1050,7 @@ def test_repository_does_not_initialize_implicitly(tmp_path):
     assert not path.exists()
 
 
+# B-STO-039: default database path is under local application data, not the repo.
 def test_settings_default_not_under_repository(monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", "C:/Users/example/AppData/Local")
     monkeypatch.delenv("LABORATORIO_DATA_DIR", raising=False)
@@ -1024,6 +1061,7 @@ def test_settings_default_not_under_repository(monkeypatch):
     )
 
 
+# B-STO-040/B-FLAKY-010: preserve v7 bytes through v12 and verify the v9 rollback boundary.
 def test_migration_v7_to_v9_preserves_bytes_and_rolls_back_atomically(tmp_path, monkeypatch):
     from laboratorio.storage import database
 
@@ -1066,7 +1104,8 @@ def test_migration_v7_to_v9_preserves_bytes_and_rolls_back_atomically(tmp_path, 
     request_bytes, result_bytes, snapshot = v7_database(path)
     initialize_database(path)
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 9
+        # Initialization upgrades through the current schema, not the historical v9 target.
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 12
         assert db.execute("PRAGMA foreign_key_check").fetchall() == []
         assert (
             db.execute("SELECT request_json FROM experiments WHERE id='legacy'").fetchone()[0]
@@ -1096,8 +1135,20 @@ def test_migration_v7_to_v9_preserves_bytes_and_rolls_back_atomically(tmp_path, 
         )
         db.execute("UPDATE experiments SET request_schema_version=4 WHERE id='audaz'")
         db.execute("UPDATE experiments SET request_schema_version=3 WHERE id='audaz'")
+        # Schema 12 also stores v5 batches; v9's narrower CHECK is verified below
+        # against the actual v7→v9 migration boundary, not the current schema.
+
+    # The v7→v9 contract is checked at its migration boundary. The current
+    # initializer continues to v12, where request schema 5 is valid for batches.
+    boundary = tmp_path / "v7-to-v9.db"
+    v7_database(boundary)
+    with sqlite3.connect(boundary) as db:
+        db.executescript(database._MIGRATIONS[8].read_text(encoding="utf-8"))
+        db.executescript(database._MIGRATIONS[9].read_text(encoding="utf-8"))
+        db.execute("PRAGMA user_version = 9")
+        assert db.execute("PRAGMA foreign_key_check").fetchall() == []
         with pytest.raises(sqlite3.IntegrityError):
-            db.execute("UPDATE experiments SET request_schema_version=5 WHERE id='audaz'")
+            db.execute("UPDATE experiments SET request_schema_version = 5 WHERE id = 'legacy'")
 
     failed = tmp_path / "v7-rollback.db"
     v7_database(failed)
@@ -1125,3 +1176,168 @@ def test_migration_v7_to_v9_preserves_bytes_and_rolls_back_atomically(tmp_path, 
         assert "experiments_v9" not in {
             row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
+
+
+# B-STO-001: exercise the populated v10→current path and verify the migration-11 columns.
+def test_migration_11_preserves_populated_v10_rows_and_foreign_keys(tmp_path):
+    from laboratorio.storage import database
+
+    path = tmp_path / "populated-v10.db"
+    with sqlite3.connect(path) as db:
+        db.executescript(
+            "\n".join(
+                database._MIGRATIONS[version].read_text(encoding="utf-8")
+                for version in range(1, 11)
+            )
+        )
+        db.execute("PRAGMA user_version = 10")
+        db.execute(
+            "INSERT INTO experiments (id, status, request_json, history_id, history_sha256, "
+            "rankings_id, rankings_sha256, code_version, request_kind, request_schema_version) "
+            "VALUES ('v10', 'pending', ?, 'h', 'a', 'r', 'b', 'v10', 'legacy', 1)",
+            (request().model_dump_json(),),
+        )
+        db.execute(
+            "INSERT INTO runs (experiment_id, ordinal, status, result_json, result_kind, "
+            "result_schema_version) VALUES ('v10', 0, 'completed', ?, 'legacy', 1)",
+            ('{"outcome":"goal","bets_count":0,"wagered":0,"paid":0,'
+             '"final_balance":100,"bets":[]}',),
+        )
+    initialize_database(path)
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+        assert db.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert db.execute(
+            "SELECT request_schema_version FROM experiments WHERE id='v10'"
+        ).fetchone() == (1,)
+        assert db.execute(
+            "SELECT result_schema_version FROM runs WHERE experiment_id='v10'"
+        ).fetchone() == (1,)
+
+
+# B-STO-002: exact canonical strategy snapshot survives close/reopen.
+def test_strategy_snapshot_hash_and_execution_state_survive_reopen(repo):
+    definition = StrategyDefinition.static_numbers("Aurea", (7, 13))
+    saved = repo.create_strategy(definition)
+    assert saved["revision"] == 1
+    assert saved["definition_sha256"] == definition_snapshot(definition)[1]
+    assert repo.page_strategies(0, 10)[0] == 1
+    reopened = Repository(repo.path).get_strategy(saved["id"])
+    assert reopened == saved
+    assert reopened["execution_available"] is False
+    assert "ProfileBatchRequestV5" in reopened["execution_unavailable_reason"]
+
+
+# B-STO-003: revision writes use compare-and-swap and preserve old wire.
+def test_strategy_revision_compare_and_swap_preserves_old_snapshot(repo):
+    first = repo.create_strategy(StrategyDefinition.static_numbers("First", (7,)))
+    second = repo.append_strategy_revision(
+        first["id"], 1, StrategyDefinition.static_numbers("Second", (8,))
+    )
+    assert second["revision"] == 2
+    assert repo.get_strategy_revision(first["id"], 1)["definition_json"] == first["definition_json"]
+    with pytest.raises(ValueError, match="revision conflict"):
+        repo.append_strategy_revision(
+            first["id"], 1, StrategyDefinition.static_numbers("Lost", (9,))
+        )
+    assert repo.get_strategy(first["id"])["latest_revision"] == 2
+
+
+# B-STO-004: built-in presets are idempotent and originals are copy-only.
+def test_strategy_presets_are_idempotent_protected_and_copyable(repo):
+    first = seed_presets(repo)
+    again = seed_presets(repo)
+    assert len(first) == 3 and [row["id"] for row in first] == [row["id"] for row in again]
+    with sqlite3.connect(repo.path) as db:
+        with pytest.raises(sqlite3.IntegrityError, match="immutable"):
+            db.execute("UPDATE strategies SET latest_revision=2 WHERE id=?", (first[0]["id"],))
+    with pytest.raises(ValueError, match="protected"):
+        repo.append_strategy_revision(
+            first[0]["id"], 1, StrategyDefinition.static_numbers("No", (1,))
+        )
+    copied = repo.create_strategy(StrategyDefinition.static_numbers("Copy", (1,)))
+    assert copied["id"] not in {row["id"] for row in first}
+
+
+# B-STO-005: invalid definitions and modified persisted wires fail closed.
+def test_strategy_definition_tampering_fails_closed(repo):
+    with pytest.raises(ValueError):
+        strategy_payload({"definition_version": 1, "unknown": True})
+    saved = repo.create_strategy(StrategyDefinition.static_numbers("Valid", (1,)))
+    with sqlite3.connect(repo.path) as db:
+        db.execute("DROP TRIGGER strategy_revisions_no_update")
+        db.execute(
+            "UPDATE strategy_revisions SET definition_json='{}' WHERE strategy_id=?",
+            (saved["id"],),
+        )
+    with pytest.raises(ValueError, match="corrupt"):
+        repo.get_strategy(saved["id"])
+
+
+# B-STO-006: UTF-8 strategy bytes are admitted exactly and failed transactions roll back.
+def test_strategy_utf8_artifact_bytes_and_failed_write_rollback(repo):
+    saved = repo.create_strategy(StrategyDefinition.static_numbers("ñ strategy", (7,)))
+    expected = sum(len(saved[key].encode("utf-8")) for key in ("id", "name", "created_at"))
+    expected += 9 + len(saved["id"].encode()) + 16
+    expected += len(saved["definition_sha256"].encode()) + len(saved["definition_json"].encode())
+    expected += len(saved["revision_created_at"].encode())
+    assert repo.strategy_artifact_bytes() == expected
+    other_path = repo.path.parent / "strategy-rollback.db"
+    initialize_database(other_path)
+    other = Repository(other_path)
+    limit = next(
+        value for value in range(expected + 1, expected * 2 + 100)
+        if value - min(LOGICAL_MARGIN_BYTES, max(1, value // 20)) == expected
+    )
+    with pytest.raises(QuotaExceeded):
+        other.create_strategy(
+            StrategyDefinition.static_numbers("ñ strategy", (7,)), quota_bytes=limit
+        )
+    assert other.strategy_artifact_bytes() == 0
+    with sqlite3.connect(other.path) as db:
+        db.execute("CREATE TRIGGER reject_strategy BEFORE INSERT ON strategies "
+                   "BEGIN SELECT RAISE(ABORT, 'reject'); END")
+    with pytest.raises(sqlite3.IntegrityError, match="reject"):
+        other.create_strategy(StrategyDefinition.static_numbers("Valid", (1,)))
+    assert other.strategy_artifact_bytes() == 0
+
+
+# B-STO-007: REPLACE must not evade immutable strategy-head triggers.
+def test_replace_cannot_mutate_strategy_heads(repo):
+    preset = seed_presets(repo)[0]
+    own = repo.create_strategy(StrategyDefinition.static_numbers("Owned", (3,)))
+    with sqlite3.connect(repo.path) as db:
+        db.execute("PRAGMA foreign_keys=ON")
+        for saved in (preset, own):
+            with pytest.raises(sqlite3.IntegrityError, match="immutable"):
+                db.execute(
+                    "INSERT OR REPLACE INTO strategies VALUES (?, ?, ?, ?, ?, ?)",
+                    (saved["id"], "forged", saved["created_at"], int(saved["protected"]),
+                     saved["preset_explanation"], saved["latest_revision"]),
+                )
+    assert repo.get_strategy(preset["id"])["protected"] is True
+
+
+# B-STO-008: protected flags and preset identities are authenticated on reads.
+def test_unknown_or_forged_protected_strategy_is_rejected(repo):
+    preset = seed_presets(repo)[2]
+    own = repo.create_strategy(StrategyDefinition.static_numbers("Owned", (3,)))
+    with sqlite3.connect(repo.path) as db:
+        db.execute("UPDATE strategies SET protected=1 WHERE id=?", (own["id"],))
+    for read in (lambda: repo.get_strategy(own["id"]), lambda: repo.page_strategies(0, 10)):
+        with pytest.raises(ValueError, match="protected preset"):
+            read()
+    with sqlite3.connect(repo.path) as db:
+        db.execute("DROP TRIGGER strategies_protected_update")
+        db.execute("UPDATE strategies SET protected=0 WHERE id=?", (own["id"],))
+        db.execute("DROP TRIGGER strategy_revisions_no_update")
+        forged, digest = definition_snapshot(
+            replace(preset["definition"], coverage=preset["definition"].coverage + 1)
+        )
+        db.execute("UPDATE strategy_revisions SET definition_json=?, definition_sha256=? "
+                   "WHERE strategy_id=?", (forged, digest, preset["id"]))
+    for getter in (lambda: repo.get_strategy(preset["id"]),
+                   lambda: repo.get_strategy_revision(preset["id"], 1),
+                   lambda: repo.page_strategies(0, 10)):
+        with pytest.raises(ValueError, match="protected preset"):
+            getter()
