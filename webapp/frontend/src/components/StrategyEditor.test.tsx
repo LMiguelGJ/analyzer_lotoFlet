@@ -50,4 +50,15 @@ describe("mix component errors", () => {
     expect(screen.getByRole("combobox", { name: "Sistema 2" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("combobox", { name: "Sistema 2" })).toHaveAttribute("aria-describedby", "strategies.0.components.1.error");
   });
+
+  it("associates blend weight help and validation errors with the weight input", () => {
+    const value = { ...newStrategy(1), selector: "blend" as const, components: [{ system: "cold", weight: "40" }, { system: "transition", weight: "60" }] };
+    render(<StrategyEditor value={value} index={0} catalog={catalog} errors={{ "strategies.0.components.1.weight": { message: "El peso debe ser positivo.", detail: "must be > 0" } }} onChange={vi.fn()} />);
+    const weight = screen.getByRole("textbox", { name: "Peso 2 (%)" });
+    expect(weight).toHaveAttribute("aria-invalid", "true");
+    expect(weight).toHaveAttribute("aria-describedby", "strategies.0.components.1.weight.help strategies.0.components.1.weight.error");
+    expect(weight).toHaveAccessibleDescription("Porcentaje que aporta este sistema a la mezcla. El peso debe ser positivo.");
+    expect(screen.getByText("must be > 0")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Sistema 2" })).not.toHaveAttribute("aria-invalid", "true");
+  });
 });

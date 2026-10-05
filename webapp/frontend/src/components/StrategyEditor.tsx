@@ -45,21 +45,28 @@ export function StrategyEditor({ value, index, catalog, errors, onChange, progre
     {value.selector === "system" && field("system", "Método de selección", <select {...attributes("system")} aria-label="Sistema de ranking" className="control" value={value.system} onChange={(event) => onChange({ ...value, system: event.target.value })}>{systemOptions}</select>)}
     {value.selector === "blend" && <section aria-label="Sistemas de la mezcla" className="mb-5 border-t border-border pt-4">
       <Disclosure summary="Detalles técnicos"><p className="field-help">Cada clasificación otorga 100 puntos al primer puesto hasta 1 al último. Los porcentajes ponderan puntos, no son probabilidades; los empates priorizan el número menor.</p></Disclosure>
-      {value.components.map((component, componentIndex) => <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px_auto]" key={componentIndex}>
-        {errors[`${prefix}.components.${componentIndex}`] && <p id={`${prefix}.components.${componentIndex}.error`} className="text-sm text-red-300 sm:col-span-3">{errorMessage(errors[`${prefix}.components.${componentIndex}`])}{errorDetail(errors[`${prefix}.components.${componentIndex}`]) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(errors[`${prefix}.components.${componentIndex}`])}</span>}</p>}
-        <div><label htmlFor={`${prefix}.components.${componentIndex}.system`} className="field-label">Sistema {componentIndex + 1}</label>
-          <select id={`${prefix}.components.${componentIndex}.system`} className="control" aria-invalid={!!(errors[`${prefix}.components.${componentIndex}.system`] || errors[`${prefix}.components.${componentIndex}`])} aria-describedby={errors[`${prefix}.components.${componentIndex}`] ? `${prefix}.components.${componentIndex}.error` : errors[`${prefix}.components.${componentIndex}.system`] ? `${prefix}.components.${componentIndex}.system.error` : undefined} value={component.system} onChange={(event) => onChange({ ...value, components: value.components.map((item, i) => i === componentIndex ? { ...item, system: event.target.value } : item) })}>{systemOptions}</select>
-          {errors[`${prefix}.components.${componentIndex}.system`] && <p className="text-sm text-red-300">{errorMessage(errors[`${prefix}.components.${componentIndex}.system`])}</p>}
-          {errorDetail(errors[`${prefix}.components.${componentIndex}.system`]) && <p className="text-xs text-text-secondary">{errorDetail(errors[`${prefix}.components.${componentIndex}.system`])}</p>}</div>
-        <div><label htmlFor={`${prefix}.components.${componentIndex}.weight`} className="field-label">Peso {componentIndex + 1} (%)</label>
-          <input id={`${prefix}.components.${componentIndex}.weight`} className="control" inputMode="numeric" aria-invalid={!!errors[`${prefix}.components.${componentIndex}.weight`]} value={component.weight} onChange={(event) => onChange({ ...value, components: value.components.map((item, i) => i === componentIndex ? { ...item, weight: event.target.value } : item) })} />
-          {errors[`${prefix}.components.${componentIndex}.weight`] && <p className="text-sm text-red-300">{errorMessage(errors[`${prefix}.components.${componentIndex}.weight`])}</p>}
-          {errorDetail(errors[`${prefix}.components.${componentIndex}.weight`]) && <p className="text-xs text-text-secondary">{errorDetail(errors[`${prefix}.components.${componentIndex}.weight`])}</p>}</div>
-        {value.components.length > 2 && <button type="button" className="self-end text-sm text-accent" onClick={() => onChange({ ...value, components: value.components.filter((_, i) => i !== componentIndex) })}>Quitar sistema {componentIndex + 1}</button>}
-      </div>)}
-      {errors[`${prefix}.components`] && <p className="mt-2 text-sm text-red-300">{errorMessage(errors[`${prefix}.components`])}</p>}
+      {value.components.map((component, componentIndex) => {
+        const componentKey = `${prefix}.components.${componentIndex}`;
+        const systemError = errors[`${componentKey}.system`];
+        const weightError = errors[`${componentKey}.weight`];
+        const componentError = errors[componentKey];
+        return <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px_auto]" key={componentIndex}>
+          {componentError && <p id={`${componentKey}.error`} className="text-sm text-red-300 sm:col-span-3">{errorMessage(componentError)}{errorDetail(componentError) && <span className="ml-2 text-xs text-text-secondary">{errorDetail(componentError)}</span>}</p>}
+          <div><label htmlFor={`${componentKey}.system`} className="field-label">Sistema {componentIndex + 1}</label>
+            <select id={`${componentKey}.system`} className="control" aria-invalid={!!(systemError || componentError)} aria-describedby={[componentError && `${componentKey}.error`, systemError && `${componentKey}.system.error`].filter(Boolean).join(" ") || undefined} value={component.system} onChange={(event) => onChange({ ...value, components: value.components.map((item, i) => i === componentIndex ? { ...item, system: event.target.value } : item) })}>{systemOptions}</select>
+            {systemError && <p id={`${componentKey}.system.error`} className="text-sm text-red-300">{errorMessage(systemError)}</p>}
+            {errorDetail(systemError) && <p className="text-xs text-text-secondary">{errorDetail(systemError)}</p>}</div>
+          <div><label htmlFor={`${componentKey}.weight`} className="field-label">Peso {componentIndex + 1} (%)</label>
+            <input id={`${componentKey}.weight`} className="control" inputMode="numeric" aria-invalid={!!weightError} aria-describedby={[`${componentKey}.weight.help`, weightError && `${componentKey}.weight.error`].filter(Boolean).join(" ")} value={component.weight} onChange={(event) => onChange({ ...value, components: value.components.map((item, i) => i === componentIndex ? { ...item, weight: event.target.value } : item) })} />
+            <p id={`${componentKey}.weight.help`} className="field-help">Porcentaje que aporta este sistema a la mezcla.</p>
+            {weightError && <p id={`${componentKey}.weight.error`} className="text-sm text-red-300">{errorMessage(weightError)}</p>}
+            {errorDetail(weightError) && <p className="text-xs text-text-secondary">{errorDetail(weightError)}</p>}</div>
+          {value.components.length > 2 && <button type="button" className="min-h-12 self-end px-2 text-sm text-accent" onClick={() => onChange({ ...value, components: value.components.filter((_, i) => i !== componentIndex) })}>Quitar sistema {componentIndex + 1}</button>}
+        </div>;
+      })}
+      {errors[`${prefix}.components`] && <p id={`${prefix}.components.error`} className="mt-2 text-sm text-red-300">{errorMessage(errors[`${prefix}.components`])}</p>}
       {errorDetail(errors[`${prefix}.components`]) && <p className="mt-1 text-xs text-text-secondary">{errorDetail(errors[`${prefix}.components`])}</p>}
-      <button type="button" disabled={value.components.length >= Math.min(13, systems.length)} className="mt-4 text-sm text-accent disabled:text-text-secondary" onClick={() => onChange({ ...value, components: [...value.components, { system: "", weight: "" }] })}>Agregar sistema</button>
+      <button type="button" disabled={value.components.length >= Math.min(13, systems.length)} className="mt-4 min-h-12 px-2 text-sm text-accent disabled:text-text-secondary" onClick={() => onChange({ ...value, components: [...value.components, { system: "", weight: "" }] })}>Agregar sistema</button>
     </section>}
     {/* Coverage and staking are the two closing decisions for this configuration; pairing
         them side by side at sm+ keeps the block scannable without reordering the fields

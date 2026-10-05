@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { QueueDrawer } from "./QueueDrawer";
 import { useQueue } from "./QueueProvider";
 
@@ -31,6 +31,7 @@ export function Shell({ title, children }: ShellProps) {
     }
   });
   const { status, error } = useQueue();
+  const location = useLocation();
   const queueRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -69,6 +70,15 @@ export function Shell({ title, children }: ShellProps) {
           </div>
           <div className="shell-app-bar-actions">
             <button
+              type="button"
+              className="m3-icon-button"
+              aria-label={`Cambiar tema. Tema actual: ${theme ?? "automático"}`}
+              title="Cambiar tema"
+              onClick={toggleTheme}
+            >
+              <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+            </button>
+            <button
               ref={queueRef}
               type="button"
               aria-label="Abrir cola de cálculo"
@@ -97,23 +107,14 @@ export function Shell({ title, children }: ShellProps) {
             ))}
           </ul>
         </nav>
-        <button
-          type="button"
-          className="m3-icon-button shell-theme-toggle"
-          aria-label={`Cambiar tema. Tema actual: ${theme ?? "automático"}`}
-          title="Cambiar tema"
-          onClick={toggleTheme}
-        >
-          <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
-        </button>
         <main id="main-content" tabIndex={-1} className="shell-main">
           <div className="shell-page-content">{children}</div>
         </main>
 
-        <Link className="m3-extended-fab" aria-label="Acceso rápido: Nueva simulación" to="/experimentos/nuevo">
+        {!location.pathname.startsWith("/ajustes") && !location.pathname.startsWith("/experimentos/nuevo") && <Link className="m3-extended-fab" aria-label="Acceso rápido: Nueva simulación" to="/experimentos/nuevo">
           <span aria-hidden="true">＋</span>
           <span>Nueva simulación</span>
-        </Link>
+        </Link>}
       </div>
       <QueueDrawer open={queueOpen} onClose={() => setQueueOpen(false)} trigger={queueRef} />
     </div>

@@ -372,15 +372,22 @@ export function SettingsPage() {
     if (error) { inputRef.current?.focus(); return; }
     saveRef.current = true; setSaving(true);
     const sequence = ++requestRef.current;
+    let refreshAfterFailure = false;
     try {
       const value = await apiClient.updateSettings(draft);
-      if (sequence !== requestRef.current) return;
+      // A reload may have started while the PUT was pending. Its snapshot can be
+      // older than the successful write, so invalidate it and trust the PUT view.
+      if (sequence !== requestRef.current) requestRef.current += 1;
+      setLoadError("");
       setView(value);
       setDraft(value.quota.effective_bytes); // PUT returns the full authoritative view.
       dirtyRef.current = false;
       setSaved(true); setWizardOutcome("Ajustes guardados. Se aplicarán a las simulaciones nuevas.");
     } catch (failure) {
-      if (sequence !== requestRef.current) return;
+      if (sequence !== requestRef.current) {
+        requestRef.current += 1;
+        refreshAfterFailure = true;
+      }
       if (failure instanceof ApiError && failure.status === 422 && failure.fieldErrors?.some((entry) =>
         entry.loc.map(String).join(".") === "body.quota_bytes")) {
         setFieldError("El servidor rechazó el límite. Revisá el valor.");
@@ -396,7 +403,11 @@ export function SettingsPage() {
         setSaveError("No se pudo guardar el límite. Tus cambios siguen en el campo; reintentá.");
       }
       setWizardOutcome("No se guardó el límite. Tus cambios siguen disponibles para reintentar.");
-    } finally { saveRef.current = false; setSaving(false); }
+    } finally {
+      saveRef.current = false;
+      setSaving(false);
+      if (refreshAfterFailure) setRefresh((previous) => previous + 1);
+    }
   }
 
   const gameSourceName = gameSource === "stored" ? "Guardadas desde la web" : gameSource === "environment" ? "Variables de entorno LABORATORIO_GAME_*" : gameSource === "default" ? "Predeterminadas (Quiniela 80)" : "Sin leer";
@@ -408,8 +419,8 @@ export function SettingsPage() {
     {wizardOutcome && step === 3 && <div role={wizardOutcome.startsWith("No se") ? "alert" : "status"} className="m3-review mb-4"><p className="font-medium">{wizardOutcome}</p>{!wizardOutcome.startsWith("No se") && <Link className="btn btn-tertiary mt-3" to="/experimentos/nuevo">Crear una simulación</Link>}</div>}
     {view && <>
       <section className="m3-wizard" aria-label="Asistente de ajustes">
-        <div className="m3-wizard-progress" role="progressbar" aria-label={`Paso ${step + 1} de 4`} aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={4}>
-          <span style={{ width: `${((step + 1) / 4) * 100}%` }} />
+        <div className="m3-wizard-progress" data-step={step + 1} role="progressbar" aria-label={`Paso ${step + 1} de 4`} aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={4}>
+          <span />
         </div>
         <p className="m3-wizard-step">Paso {step + 1} de 4</p>
         <div className="m3-wizard-actions">
@@ -426,7 +437,7 @@ export function SettingsPage() {
       </div>
       <div hidden={step !== 1}>
       <div className="flex justify-end">
-        <button type="button" className="btn btn-secondary disabled:cursor-not-allowed" disabled={saving} onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>
+        <button type="button" className="btn btn-secondary disabled:cursor-not-allowed" onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>
       </div>
       <section aria-labelledby="storage-heading" className="border-t border-border pt-5">
         <h2 id="storage-heading" className="section-header">Presupuesto y cuota</h2>
@@ -447,9 +458,9 @@ export function SettingsPage() {
       <section aria-labelledby="quota-form-heading" className="border-t border-border pt-5">
         <h2 id="quota-form-heading" className="section-header">Cambiar límite</h2>
         {view.quota.writable ? <form id="quota-form" onSubmit={(event) => { void save(event); }} noValidate className="max-w-xl">
-          <label htmlFor="quota-bytes" className="field-label">Nuevo límite de almacenamiento</label>
+          <label htmlFor="quota-bytes" className="field-label">Nuevo límite de almacenamiento (en bytes)</label>
           <input ref={inputRef} id="quota-bytes" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={draft ?? ""} disabled={saving} aria-invalid={!!fieldError} aria-describedby={fieldError ? "quota-help quota-error" : "quota-help"} onChange={(event) => { setDraft(event.target.value); setFieldError(""); setSaveError(""); setSaved(false); setWizardOutcome(""); }} className="control font-mono tabular-nums" />
-          <p id="quota-help" className="field-help">Entero positivo, sin separadores. Mínimo {readableCapacity(used.toString())} ({bytes(used.toString())}). Ej.: 5368709120 (5 GiB).</p>
+          <p id="quota-help" className="field-help">Ingresá un entero positivo con cuántos bytes puede ocupar el almacenamiento; no es dinero. Escribí solo números, sin separadores. Por ejemplo, 5 GiB son 5,368,709,120 bytes. Mínimo actual: {readableCapacity(used.toString())} ({bytes(used.toString())}).</p>
           {fieldError && <p id="quota-error" className="mt-2 text-sm text-red-300">{fieldError}</p>}
           {saveError && <p role="alert" className="mt-2 text-sm text-red-300">{saveError}</p>}
           {saved && <p role="status" className="mt-2 text-sm text-accent">Guardado.</p>}

@@ -33,6 +33,14 @@ describe("Shell navigation", () => {
     expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
   });
 
+  it("suppresses the global FAB while settings and guided creation flows are active", () => {
+    const { unmount } = renderShell("/ajustes");
+    expect(screen.queryByRole("link", { name: "Acceso rápido: Nueva simulación" })).not.toBeInTheDocument();
+    unmount();
+    renderShell("/experimentos/nuevo/perfil");
+    expect(screen.queryByRole("link", { name: "Acceso rápido: Nueva simulación" })).not.toBeInTheDocument();
+  });
+
   it("# F-SHELL-006 marks the current destination with the Material 3 active indicator", () => {
     renderShell("/configuraciones");
     const link = screen.getByRole("link", { name: "Estrategias" });
@@ -84,9 +92,8 @@ describe("Shell navigation", () => {
     const theme = screen.getByRole("button", { name: /Cambiar tema/ });
     expect(theme).toBeInTheDocument();
     const queue = screen.getByRole("button", { name: "Abrir cola de cálculo" });
-    expect(theme.compareDocumentPosition(queue) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
-    expect(theme.closest(".shell-layout")).toBeInTheDocument();
-    expect(theme.className).toContain("shell-theme-toggle");
+    expect(theme.compareDocumentPosition(queue) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(theme.closest(".shell-app-bar-actions")).toBeInTheDocument();
     expect(screen.getAllByRole("link")).toHaveLength(6); // Skip link, four destinations, and extended FAB.
   });
 });

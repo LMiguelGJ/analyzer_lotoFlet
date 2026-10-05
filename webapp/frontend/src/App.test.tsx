@@ -73,7 +73,10 @@ describe("keyboard access", () => {
     renderAt("/experimentos");
     await user.tab();
     expect(screen.getByText("Saltar al contenido principal")).toHaveFocus();
+    const theme = screen.getByRole("button", { name: /Cambiar tema/ });
     const queue = screen.getByRole("button", { name: "Abrir cola de cálculo" });
+    await user.tab();
+    expect(theme).toHaveFocus();
     await user.tab();
     expect(queue).toHaveFocus();
     for (const name of ["Simulaciones", "Estrategias", "Datos", "Ajustes"]) {

@@ -86,6 +86,9 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   expect(await screen.findByRole("heading", { name: "Presupuesto y cuota" })).toBeInTheDocument();
   expect(screen.getAllByText("5 GiB")).toHaveLength(2);
   expect(screen.getByText("1.5 KiB")).toBeInTheDocument();
+  const quotaField = screen.getByRole("textbox", { name: /Nuevo límite de almacenamiento \(en bytes\)/ });
+  expect(quotaField).toHaveAccessibleDescription(/Ingresá un entero positivo.*5 GiB son 5,368,709,120 bytes.*Mínimo actual/);
+  expect(quotaField).toHaveValue(base.quota.effective_bytes);
   expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "0");
   await user.click(screen.getByRole("button", { name: "Siguiente" }));
   const diagnostics = screen.getByText("Detalles técnicos").closest("details")!;
@@ -154,7 +157,7 @@ it.each(["", "0", "01", " 5", "+5", "-1", "1.5", "1e3", "９", "9223372036854775
   expect(input).toHaveFocus();
   expect(input).toHaveAttribute("aria-invalid", "true");
   expect(screen.getByText(/Ingresá un entero en bytes/, { selector: "#quota-error" })).toBeInTheDocument();
-  expect(input).toHaveAccessibleDescription(/Entero positivo.*Mínimo.*Ingresá un entero en bytes/s);
+  expect(input).toHaveAccessibleDescription(/entero positivo.*Mínimo actual.*Ingresá un entero en bytes/s);
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
 });
 
@@ -165,7 +168,7 @@ it("sends max int64 exactly as a string, disables duplicate saving, then trusts 
   await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(input);
-  expect(input).toHaveAccessibleDescription(/Entero positivo.*Mínimo 1.5 KiB \(1,536 bytes\)/i);
+  expect(input).toHaveAccessibleDescription(/entero positivo.*Mínimo actual: 1.5 KiB \(1,536 bytes\)/i);
   await user.type(input, "9223372036854775807");
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(apiClient.updateSettings).toHaveBeenCalledWith("9223372036854775807");
@@ -176,6 +179,26 @@ it("sends max int64 exactly as a string, disables duplicate saving, then trusts 
   expect((await screen.findAllByText(/8,000,000,000,000,000,000 bytes/)).length).toBeGreaterThanOrEqual(2);
   expect(screen.getByText(/Guardado/)).toBeInTheDocument();
   expect(input).toHaveValue("8000000000000000000");
+});
+
+it("keeps a successful PUT outcome authoritative when a refresh races its response", async () => {
+  let resolveSave!: (view: SettingsView) => void;
+  vi.mocked(apiClient.updateSettings).mockReturnValueOnce(new Promise((done) => { resolveSave = done; }));
+  vi.mocked(apiClient.getSettings).mockResolvedValueOnce(base).mockResolvedValueOnce({
+    ...base, quota: { ...base.quota, effective_bytes: "6000000000", persisted_bytes: "6000000000", source: "persisted" },
+  });
+  const { user } = setup();
+  await openQuota(user);
+  const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
+  await user.clear(input); await user.type(input, "7000000000");
+  await user.click(screen.getByRole("button", { name: "Guardar límite" }));
+  await user.click(screen.getByRole("button", { name: "Actualizar estado" }));
+  await waitFor(() => expect(apiClient.getSettings).toHaveBeenCalledTimes(2));
+  expect((await screen.findAllByText("5.6 GiB")).length).toBeGreaterThanOrEqual(1);
+  resolveSave({ ...base, quota: { ...base.quota, effective_bytes: "7000000000", persisted_bytes: "7000000000", source: "persisted" } });
+  expect(await screen.findByRole("status")).toHaveTextContent("Guardado.");
+  expect(input).toHaveValue("7000000000");
+  expect((await screen.findAllByText(/7,000,000,000 bytes/)).length).toBeGreaterThanOrEqual(1);
 });
 
 it("keeps the draft after 422, 409 below usage, and network failure; 422 focuses the field", async () => {
@@ -238,7 +261,7 @@ it("rejects a quota above historical bytes but below aggregate admission usage, 
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
   expect(input).toHaveFocus();
   expect(input).toHaveAttribute("aria-invalid", "true");
-  expect(screen.getByText(/Mínimo 1.5 KiB \(1,536 bytes\)/)).toBeInTheDocument();
+  expect(screen.getByText(/Mínimo actual: 1.5 KiB \(1,536 bytes\)/)).toBeInTheDocument();
   expect(screen.getByText(/no puede ser menor que el uso actual.*1,536 bytes/, { selector: "#quota-error" })).toBeInTheDocument();
   expect(apiClient.updateSettings).not.toHaveBeenCalled();
   await user.clear(input); await user.type(input, "1536");
