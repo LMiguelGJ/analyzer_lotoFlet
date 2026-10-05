@@ -18,6 +18,7 @@ interface ShellProps {
 
 export function Shell({ title, children }: ShellProps) {
   const [queueOpen, setQueueOpen] = useState(false);
+  const [mobileViewport, setMobileViewport] = useState(() => window.innerWidth < 900);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
       const stored = window.localStorage.getItem("laboratorio-theme");
@@ -29,6 +30,12 @@ export function Shell({ title, children }: ShellProps) {
   const { status, error } = useQueue();
   const location = useLocation();
   const queueRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const updateViewport = () => setMobileViewport(window.innerWidth < 900);
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -58,7 +65,7 @@ export function Shell({ title, children }: ShellProps) {
         <header className="shell-app-bar">
           <div className="shell-app-bar-title">
             <span className="shell-brand">Laboratorio Quiniela 80</span>
-            <h1 className="break-normal">{title}</h1>
+            <h1 className="break-normal">{mobileViewport && /^\/experimentos\/[^/]+$/.test(location.pathname) && location.pathname !== "/experimentos/nuevo" ? "Resultado" : title}</h1>
           </div>
           <div className="shell-app-bar-actions">
             <button

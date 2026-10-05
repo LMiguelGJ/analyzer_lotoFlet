@@ -205,7 +205,7 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
         <select id="history-profile" className="control" value={profileKey} disabled={busy === "promote" || profilesLoading} onChange={(event) => { invalidate(); setProfileKey(event.target.value); }}>
           <option value="">Elegí las reglas del juego</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.universe_size} números · {profile.positions} posiciones · {profile.currency}</option>)}
         </select>
-        {profilesLoading ? <p role="status" className="field-help">Cargando perfiles…</p> : profilesError ? <><p role="alert" className="field-help">{profilesError}</p><button type="button" className="btn btn-tertiary" onClick={onRetryProfiles}>Reintentar perfiles</button></> : profiles.length === 0 && <div className="field-help space-y-2"><p>No hay perfiles todavía; creá uno para importar este historial.</p><button type="button" className="btn btn-primary" onClick={onCreateProfile}>Crear perfil de juego</button><a className="link ml-3" href="#perfiles">Ver Perfiles de juego</a></div>}</div>
+        {profilesLoading ? <p role="status" className="field-help">Cargando perfiles…</p> : profilesError ? <><p role="alert" className="field-help">{profilesError}</p><button type="button" className="btn btn-tertiary" onClick={onRetryProfiles}>Reintentar perfiles</button></> : profiles.length === 0 && <div className="field-help space-y-2"><p>No hay perfiles todavía; creá uno para importar este historial.</p><button type="button" className="btn btn-primary" onClick={onCreateProfile}>Crear perfil</button><a className="link ml-3" href="#perfiles">Ver Perfiles de juego</a></div>}</div>
       {!preview && <div>
         <button type="submit" className="btn btn-primary" aria-busy={busy === "preview"} aria-describedby={importReason ? "history-import-reason" : undefined} disabled={busy !== null || promotionUncertain || !file || !metadata || !selected}>Importar historial</button>
         {importReason && <p id="history-import-reason" className="field-help">{importReason}</p>}
@@ -426,7 +426,7 @@ export function DataPage() {
     <section aria-labelledby="advanced-title" className="border-t border-border pt-5">
     <h2 id="advanced-title" className="section-header">Más formas de importar</h2>
     <details ref={advanced}>
-      <summary className="disclosure-summary font-medium">Detalles técnicos · importación de archivos</summary>
+      <summary className="disclosure-summary font-medium">Importar archivo CSV o JSON</summary>
       <div className="mt-5 space-y-8">
     <form onSubmit={(event) => { void showPreview(event); }}>
       <fieldset disabled={busy === "promote" || registering} className="min-w-0 space-y-7">
@@ -440,7 +440,7 @@ export function DataPage() {
           <select id="import-format" className="control" {...bad("import-format")} value={draft.format} onChange={(event) => change({ format: event.target.value as Draft["format"] })}><option value="">Elegí un formato</option><option value="csv">CSV</option><option value="json">JSON (lista plana de objetos)</option></select></div>
         <div className="field"><label htmlFor="import-profile" className="field-label">Perfil guardado completo</label>
           <select id="import-profile" className="control" {...bad("import-profile")} value={draft.profileKey} onChange={(event) => chooseProfile(event.target.value)}><option value="">Elegí un perfil</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.profile_id} · revisión {profile.revision}</option>)}</select>
-          {!profilesLoading && !profilesError && profiles.length === 0 && <div className="field-help space-y-2"><p>Necesitás un perfil para importar estos datos.</p><button type="button" className="btn btn-secondary" onClick={() => setProfileOpenRequest((value) => value + 1)}>Crear perfil de juego</button><a className="link ml-3" href="#perfiles">Ver Perfiles de juego</a></div>}</div>
+          {!profilesLoading && !profilesError && profiles.length === 0 && <div className="field-help space-y-2"><p>Necesitás un perfil para importar estos datos.</p><button type="button" className="btn btn-secondary" onClick={() => setProfileOpenRequest((value) => value + 1)}>Crear perfil</button><a className="link ml-3" href="#perfiles">Ver Perfiles de juego</a></div>}</div>
       </section>
       <section aria-labelledby="source-heading" className="border-t border-border pt-5 space-y-4">
         <h3 id="source-heading" className="section-header">Origen y hora</h3>

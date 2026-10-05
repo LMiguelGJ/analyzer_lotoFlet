@@ -164,7 +164,7 @@ export function ProfileEditor({ templates, profiles, onRegistered, onBusyChange,
   }
   return <section aria-labelledby="profile-editor-heading" className="border-t border-border pt-5 space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 id="profile-editor-heading" className="section-header">Crear perfil de juego</h3></div>
-      <button type="button" className="btn btn-secondary" aria-expanded={open} aria-controls="profile-editor-form" disabled={disabled || pending} onClick={() => setOpen(!open)}>{open ? "Cerrar editor" : "Crear perfil de juego"}</button></div>
+      <button type="button" className="btn btn-secondary" aria-expanded={open} aria-controls="profile-editor-form" disabled={disabled || pending} onClick={() => setOpen(!open)}>{open ? "Cerrar editor" : "Crear perfil"}</button></div>
     {open && <div id="profile-editor-form" className="space-y-5">
             <div className={field}><label htmlFor="profile-template" className="field-label">Referencia opcional</label><select id="profile-template" className={input} disabled={pending || disabled} value={templateIndex} onChange={(event) => { const value = event.target.value; setTemplateIndex(value); setDraft(value === "" ? empty : fromTemplate(templates[Number(value)])); setError(""); setErrorCode(null); setNotice(""); }}><option value="">Empezar sin plantilla</option>{templates.map((template, index) => <option value={index} key={`${template.name}-${index}`}>{template.name} · parcial</option>)}</select>
         {templates.length > 0 && <p className="field-help">Las plantillas de catálogo son parciales; completá los campos que faltan.</p>}

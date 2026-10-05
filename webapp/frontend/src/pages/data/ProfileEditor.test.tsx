@@ -21,7 +21,7 @@ const onRegistered = vi.fn();
 const onBusyChange = vi.fn();
 
 async function fill(user: ReturnType<typeof userEvent.setup>, positions: number, useTemplate = false) {
-  await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+  await user.click(screen.getByRole("button", { name: "Crear perfil" }));
   if (useTemplate) await user.selectOptions(screen.getByLabelText("Referencia opcional"), "0");
   await user.click(screen.getByText("Detalles técnicos"));
   await user.clear(screen.getByLabelText("ID nuevo del perfil"));
@@ -58,7 +58,8 @@ describe("profile editor", () => {
   it("opens with an editable Quiniela 80 profile ready to register", async () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
-    await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    expect(screen.getByRole("heading", { name: "Crear perfil de juego" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
     expect(screen.getByLabelText("ID nuevo del perfil")).toHaveValue("quiniela-80");
     expect(screen.getByLabelText(/Revisión \(1/)).toHaveValue("1");
     expect(screen.getByLabelText(/Tamaño del universo/)).toHaveValue("100");
@@ -78,7 +79,7 @@ describe("profile editor", () => {
   });
   it("groups decisions into bounded ledger blocks and styles every native control", async () => {
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
-    await userEvent.setup().click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Crear perfil" }));
     for (const title of ["Juego", "Moneda y apuestas", "Apuestas", "Límites por sorteo"]) {
       expect(screen.getByRole("heading", { name: title })).toBeVisible();
     }
@@ -106,7 +107,7 @@ describe("profile editor", () => {
   it("prefills only documented template fields and requires missing financial fields", async () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[template]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
-    await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
     await user.selectOptions(screen.getByLabelText("Referencia opcional"), "0");
     expect(screen.getByLabelText(/Posiciones por sorteo/)).toHaveValue("3");
     expect(screen.getByLabelText("Posición 1 · premio por unidad apostada")).toHaveValue("60/1");
@@ -167,7 +168,7 @@ describe("profile editor", () => {
     render(<details><summary>Host</summary><ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} /></details>);
     const host = screen.getByText("Host").closest("details") as HTMLDetailsElement;
     host.open = true;
-    await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
     await user.click(screen.getByText("Detalles técnicos"));
     await user.clear(screen.getByLabelText("ID nuevo del perfil"));
     await user.clear(screen.getByLabelText(/Revisión \(1/));
@@ -185,7 +186,7 @@ describe("profile editor", () => {
   it("focuses the field that actually fails, and clears its invalid state when edited", async () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
-    await user.click(screen.getByRole("button", { name: "Crear perfil de juego" }));
+    await user.click(screen.getByRole("button", { name: "Crear perfil" }));
     await user.click(screen.getByText("Detalles técnicos"));
     await user.clear(screen.getByLabelText("ID nuevo del perfil"));
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "my-game");

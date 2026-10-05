@@ -112,8 +112,8 @@
     text-decoration: none;
     white-space: nowrap;
   }
-  .shell-nav-link.is-active { color: var(--md-sys-color-on-secondary-container); font-weight: 600; }
-  .shell-nav-link.is-active::after { position: absolute; top: 4px; left: 50%; width: 64px; height: 32px; transform: translateX(-50%); border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-secondary-container); content: ""; }
+  .shell-nav-link.is-active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); font-weight: 600; }
+  .shell-nav-link.is-active::after { content: none; }
   .shell-nav-icon { z-index: 1; display: grid; width: 64px; height: 32px; place-items: center; font-size: 1.25rem; }
   .shell-nav-link > span:last-child { z-index: 1; }
   .shell-main { min-width: 0; padding: 20px 16px max(128px, calc(112px + env(safe-area-inset-bottom))); }
@@ -268,6 +268,7 @@
   .queue-section + .queue-section { margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 20px; }
   .queue-row + .queue-row { border-top: 1px solid var(--md-sys-color-outline-variant); }
   .experiment-card-list, .comparison-card-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .experiment-card-list { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
   .experiment-card, .comparison-card { min-width: 0; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-md); background: var(--md-sys-color-surface-container-low); padding: 16px; }
   .experiment-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .experiment-card-title { min-width: 0; color: var(--md-sys-color-on-surface); font-size: var(--md-sys-typescale-title-medium-size); font-weight: 600; overflow-wrap: anywhere; }

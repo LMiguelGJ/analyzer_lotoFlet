@@ -44,10 +44,9 @@ export function verdictPhrase(outcome: string | undefined, status: string): stri
 
 function financialConclusion(run: AnyRunSummary): string | null {
   if (!run.result) return null;
-  const draws = isProfileRun(run) ? run.result.elapsed_draws : run.result.bets_count;
   if (run.result.outcome === "goal") return "Llegó a la meta.";
-  if (run.result.outcome === "ruin") return `Perdió: se quedó sin plata en ${draws} sorteos.`;
-  if (run.result.outcome === "limit") return `Se detuvo en el límite de duración (${draws} sorteos).`;
+  if (run.result.outcome === "ruin") return "Perdió: se quedó sin plata.";
+  if (run.result.outcome === "limit") return "Se detuvo al alcanzar el límite de duración.";
   if (run.result.outcome === "history_exhausted") return "Se detuvo: terminó el historial disponible.";
   return "La simulación terminó sin alcanzar la meta.";
 }
@@ -299,7 +298,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
         </div>
         <p>Motivo de cierre: {closeReason}</p>
         <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
-        <p className="text-sm">El saldo final no es lo mismo que la ganancia o pérdida: el cambio respecto del capital inicial se informa por separado.</p>
+        <p className="text-sm">Tu ganancia o pérdida está en «Cambio respecto del inicio», más abajo.</p>
       </section>
       <dl className="data-list border-b border-border py-3">
         <dt>Capital inicial</dt><dd className="data-list-numeric">{money(capital)}</dd>

@@ -23,7 +23,7 @@ const file = () => new File([new Uint8Array([0, 255, 10])], "draws.csv", { type:
 async function setup() {
   const user = userEvent.setup();
   render(<DataPage />);
-  await user.click(screen.getByText(/Detalles técnicos · importación de archivos/));
+  await user.click(screen.getByText("Importar archivo CSV o JSON"));
   await screen.findByLabelText("Perfil guardado completo");
   await user.upload(screen.getByLabelText(/Archivo de datos/), file());
   await user.selectOptions(screen.getByLabelText(/Formato del archivo/), "csv");
@@ -57,27 +57,30 @@ describe("visible game profiles", () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 0, offset: 0, limit: 100, items: [], templates: [] });
     render(<DataPage />);
     const profiles = await screen.findByRole("region", { name: "Perfiles de juego" });
-    const create = within(profiles).getByRole("button", { name: "Crear perfil de juego" });
+    const create = within(profiles).getByRole("button", { name: "Crear perfil" });
     expect(create).toBeVisible();
     const importing = await screen.findByRole("region", { name: "Importar historial" });
     expect(profiles.compareDocumentPosition(importing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByText("Detalles técnicos · importación de archivos")?.closest("details")).not.toHaveAttribute("open");
+    expect(screen.queryByText("Importar archivo CSV o JSON")?.closest("details")).not.toHaveAttribute("open");
     await userEvent.setup().click(create);
     expect(screen.getByLabelText(/Tamaño del universo/)).toBeVisible();
   });
 
-  it("gives the empty history library a direct import action", async () => {
+  it("distinguishes history import from the advanced file-import path", async () => {
     render(<DataPage />);
     const library = await screen.findByRole("region", { name: "Biblioteca de historiales" });
     expect(within(library).getByRole("status")).toHaveTextContent(/Todavía no hay historiales guardados/);
     expect(within(library).getByRole("link", { name: "Importar historial" })).toHaveAttribute("href", "#history-import-title");
+    expect(screen.getByRole("heading", { name: "Importar historial" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Más formas de importar" })).toBeInTheDocument();
+    expect(screen.getByText("Importar archivo CSV o JSON")).toBeInTheDocument();
   });
 
   it("offers profile creation in context when importing without a saved profile", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 0, offset: 0, limit: 100, items: [], templates: [] });
     render(<DataPage />);
     const importing = await screen.findByRole("region", { name: "Importar historial" });
-    expect(within(importing).getByRole("button", { name: "Crear perfil de juego" })).toBeVisible();
+    expect(within(importing).getByRole("button", { name: "Crear perfil" })).toBeVisible();
     expect(within(importing).getByRole("link", { name: /Ver Perfiles de juego/ })).toHaveAttribute("href", "#perfiles");
   });
 
@@ -85,7 +88,7 @@ describe("visible game profiles", () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 0, offset: 0, limit: 100, items: [], templates: [] });
     render(<DataPage />);
     const importing = await screen.findByRole("region", { name: "Importar historial" });
-    expect(within(importing).getByRole("button", { name: "Crear perfil de juego" })).toHaveClass("btn-primary");
+    expect(within(importing).getByRole("button", { name: "Crear perfil" })).toHaveClass("btn-primary");
   });
 
   it("offers a retry for failed profile loads in both sections and re-runs the profiles fetch", async () => {
@@ -110,7 +113,7 @@ describe("bounded local import", () => {
     const created = { ...profile, profile_id: "new-profile", revision: 1, positions: 1, multipliers: [{ numerator: 1, denominator: 1 }] };
     vi.mocked(apiClient.registerProfile).mockResolvedValueOnce({ profile: created, profile_sha256: hash,
       profile_execution: readiness, execution_supported: false });
-    await user.click(within(screen.getByRole("region", { name: "Perfiles de juego" })).getByRole("button", { name: "Crear perfil de juego" }));
+    await user.click(within(screen.getByRole("region", { name: "Perfiles de juego" })).getByRole("button", { name: "Crear perfil" }));
     await user.clear(screen.getByLabelText("ID nuevo del perfil"));
     await user.type(screen.getByLabelText("ID nuevo del perfil"), "new-profile");
     await user.clear(screen.getByLabelText(/Posiciones por sorteo/));
@@ -161,7 +164,7 @@ describe("bounded local import", () => {
   it("requires deliberate format and clock choices and supports JSON without altering raw bytes", async () => {
     const user = userEvent.setup();
     render(<DataPage />);
-    await user.click(screen.getByText(/Detalles técnicos · importación de archivos/));
+    await user.click(screen.getByText("Importar archivo CSV o JSON"));
     await screen.findByLabelText("Perfil guardado completo");
     await user.upload(screen.getByLabelText(/Archivo de datos/), file());
     await user.selectOptions(screen.getByLabelText("Perfil guardado completo"), "saved@2");
@@ -282,7 +285,7 @@ describe("bounded local import", () => {
   it("opens a collapsed advanced disclosure on validation failure, keeps typed values and focuses the first invalid field", async () => {
     const user = userEvent.setup();
     render(<DataPage />);
-    const summary = screen.getByText(/Detalles técnicos · importación de archivos/);
+    const summary = screen.getByText("Importar archivo CSV o JSON");
     const details = summary.closest("details") as HTMLDetailsElement;
     await user.click(summary);
     await screen.findByLabelText("Perfil guardado completo");

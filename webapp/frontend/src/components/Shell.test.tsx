@@ -43,11 +43,14 @@ describe("Shell navigation", () => {
     expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
   });
 
-  it("# F-SHELL-006 marks the current destination with the Material 3 active indicator", () => {
+  it("# F-SHELL-006 marks the current destination and keeps its icon and label inside the item", () => {
     renderShell("/configuraciones");
     const link = screen.getByRole("link", { name: "Estrategias" });
     expect(link).toHaveAttribute("aria-current", "page");
     expect(link.className).toMatch(/shell-nav-link/);
+    expect(link.className).toMatch(/is-active/);
+    expect(within(link).getByText("◇", { selector: ".shell-nav-icon" })).toBeInTheDocument();
+    expect(within(link).getByText("Estrategias")).toBeInTheDocument();
     expect(link.className).not.toMatch(/border-l-2/);
   });
 

@@ -204,7 +204,7 @@ describe("profile detail READ", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, outcome: "ruin" } }] });
     const { user } = setup();
     const verdict = await screen.findByRole("region", { name: "Veredicto" });
-    expect(within(verdict).getByText("Perdió: se quedó sin plata en 3 sorteos.")).toBeInTheDocument();
+    expect(within(verdict).getByText("Perdió: se quedó sin plata.")).toBeInTheDocument();
     expect(within(verdict).getByText("Saldo final").nextElementSibling).toHaveTextContent("USD 97.50");
     expect(within(verdict).getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
@@ -216,7 +216,7 @@ describe("profile detail READ", () => {
     const { user } = setup();
     const verdict = await screen.findByRole("region", { name: "Veredicto" });
     expect(within(verdict).getByRole("heading", { level: 2 })).toHaveTextContent("Límite de sesión");
-    expect(within(verdict).getByText("Se detuvo en el límite de duración (3 sorteos).")).toBeInTheDocument();
+    expect(within(verdict).getByText("Se detuvo al alcanzar el límite de duración.")).toBeInTheDocument();
     expect(verdict.querySelectorAll(".ledger-verdict-figures .ledger-stat")).toHaveLength(3);
     expect(within(verdict).getByText("Saldo final").nextElementSibling).toHaveTextContent("USD 97.50");
     expect(within(verdict).getByText("Mejor saldo").nextElementSibling).toHaveTextContent("USD 100.00");
@@ -434,11 +434,24 @@ describe("LW11 detail", () => {
     expect(within(run).queryByText("Cambio respecto del inicio")).not.toBeInTheDocument();
   });
 
-  it("shows the delta help and exact standing caveat in the open verdict", async () => {
+  it("keeps the draw count out of the conclusion and explains the financial change plainly", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, outcome: "limit", elapsed_draws: 5000, bet_draws: 1 } }] });
+    setup();
+    const verdict = await screen.findByRole("region", { name: "Veredicto" });
+    expect(within(verdict).getByText("Se detuvo al alcanzar el límite de duración.")).toBeInTheDocument();
+    expect(within(verdict).getByText("Tu ganancia o pérdida está en «Cambio respecto del inicio», más abajo.")).toBeInTheDocument();
+    expect(within(verdict).getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(within(verdict).queryByText(/5000 sorteos/)).not.toBeInTheDocument();
+    expect(screen.getByText("Duración").nextElementSibling).toHaveTextContent("5000 sorteos transcurridos");
+  });
+
+  it("uses a short app-bar title on the detail page on mobile", async () => {
+    const previousWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
     setup();
     await screen.findByRole("region", { name: "Veredicto" });
-    expect(screen.getByText("Diferencia entre el saldo final y el capital inicial")).toBeInTheDocument();
-    expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Resultado", level: 1 })).toBeInTheDocument();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: previousWidth });
   });
 
   it("keeps technical identifiers folded while financial facts stay available", async () => {
