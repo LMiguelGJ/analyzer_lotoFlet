@@ -23,6 +23,7 @@ pythonpath = ["."]
 addopts = "-p no:cacheprovider"
 markers = [
     "real_data: uses the frozen history JSON and ranking NPZ (slower)",
+    "golden: reproduces a reference result from the summary table exactly",
 ]
 
 [tool.ruff]
