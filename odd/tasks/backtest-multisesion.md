@@ -69,10 +69,10 @@ mismos resultados; las divergencias son bugs a corregir.
   estrategias (lenguaje claro) y ver la tabla de resultados estilo MD
   (llegaron/completas, meta %, quiebres, neto medio). Superficies:
   webapp/frontend/src/pages/**, components/**, styles/**, tests.
-- [ ] T4. Correr los 14 escenarios REALES contra el MD, fila por fila; investigar
+- [x] T4. Correr los 14 escenarios REALES contra el MD, fila por fila; investigar
   cada divergencia (foco: parity/ties) y corregir hasta coincidir (enteros y 1
   decimal como el MD). Evidencia en webapp/reports/verification/.
-- [ ] T5. QA: suite completa frontend+backend, build, revisión nativa, push.
+- [x] T5. QA: suite completa frontend+backend, build, revisión nativa, push.
 
 ## Seguimientos de revisión (no bloqueantes)
 
@@ -103,5 +103,24 @@ Aceptación: los 14 escenarios reproducen exactamente la tabla del MD.
   (segmented control, FAB adaptado), formulario guiado, informe con columnas del
   MD; suite frontend 579/579. Informativos: R3-early-submit
   (pages/backtests/index.tsx:126-129), R3-stale-detail (pages/backtests/index.tsx:208)
-- T4: pendiente
-- T5: pendiente
+- T4: f0870b6 (3 archivos) · revisión nativa review-90b1f6fd3bfa588e aprobada y
+  quemada; 14/14 filas del MD reproducidas EXACTAS por la API real, sin cambios
+  de producto (el motor ya era correcto); window.bets = 65.235 en las 14 corridas;
+  evidencia en webapp/reports/verification/registro-backtest-14-escenarios.md;
+  suite backend 880/880; marcador `golden` registrado. Informativo:
+  R3-population-checks-unasserted (tests/test_backtest_golden.py:73-79)
+- T5: las 14 corridas creadas en la base REAL del usuario
+  (C:\Users\luism\AppData\Local\LaboratorioQuiniela) vía la API en proceso,
+  nombres «01 · Transición · 1 · Audaz» … «14 · Paridad · 50 · Plana»;
+  0 diferencias contra el MD; dist compilado incluye «Corridas históricas».
+
+## Cierre (2026-10-05)
+
+La plataforma reproduce los 14 escenarios de `repo_ref/simuladores/` con los
+mismos resultados que `docs/resumen_resultados_quiniela.md`, configurables de
+punta a punta (estrategia, cobertura, apuesta, reglas de juego y condiciones).
+Revisiones quemadas: review-b98ba3f362fbdb1a (T1), review-f815afebe2807a39 (T2),
+review-f38c87a865f0db2c (T3), review-90b1f6fd3bfa588e (T4).
+Seguimientos informativos abiertos: R3-bold-minimum, R3-config-integer-validation,
+R3-snapshot-validation, R3-system-selection-assertions, R3-early-submit,
+R3-stale-detail, R3-population-checks-unasserted.
