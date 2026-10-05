@@ -32,12 +32,21 @@ const storedGame: GameSettings = {
   name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1],
   allows_repeats: true, minimum_stake: 1, source: "default",
 };
-function setup() {
+function setup(_options: { stayOnRules?: boolean } = {}) {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/ajustes"] });
-  return { user: userEvent.setup(), router, ...render(<RouterProvider router={router} />) };
+  const user = userEvent.setup();
+  const rendered = render(<RouterProvider router={router} />);
+  return { user, router, ...rendered };
+}
+async function openQuota(user: ReturnType<typeof userEvent.setup>) {
+  await screen.findByRole("heading", { name: "Reglas del sorteo" });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Siguiente" })).toBeEnabled());
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  await screen.findByRole("heading", { name: "Presupuesto y cuota" });
 }
 async function openAgentAccess(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole("heading", { name: "Capacidad" });
+  await openQuota(user);
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
   await user.click(screen.getByText("Acceso para agentes"));
 }
 beforeEach(() => {
@@ -56,16 +65,20 @@ afterEach(() => {
 it("loads the actual view, distinguishing logical quota, physical files and free disk", async () => {
   let resolve!: (view: SettingsView) => void;
   vi.mocked(apiClient.getSettings).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
-  setup();
-  expect(screen.getByRole("status")).toHaveTextContent(/Cargando capacidad y límites/);
+  const { user } = setup({ stayOnRules: true });
+  expect(screen.getByRole("status")).toHaveTextContent(/Cargando ajustes/);
   resolve(base);
-  expect(await screen.findByRole("heading", { name: "Capacidad" })).toBeInTheDocument();
+  await screen.findByRole("heading", { name: "Reglas del sorteo" });
+  await waitFor(() => expect(screen.getByRole("button", { name: "Siguiente" })).toBeEnabled());
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  expect(await screen.findByRole("heading", { name: "Presupuesto y cuota" })).toBeInTheDocument();
   expect(screen.getAllByText("5 GiB")).toHaveLength(2);
   expect(screen.getByText("1.5 KiB")).toBeInTheDocument();
   expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "0");
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
   const diagnostics = screen.getByText("Detalles técnicos").closest("details")!;
-  // Capacity leads; diagnostics come after it; one primary action on the page.
-  expect(screen.getByRole("heading", { name: "Capacidad" }).compareDocumentPosition(diagnostics) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  // Advanced diagnostics follow the capacity step and remain collapsed.
+  expect(screen.getByRole("heading", { name: "Detalles avanzados" }).compareDocumentPosition(diagnostics) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
   expect(diagnostics).not.toHaveAttribute("open");
   expect(within(diagnostics).getByText("Experimentos y ejecuciones históricos")).not.toBeVisible();
@@ -85,7 +98,7 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   expect(screen.queryByText(/LW16/)).not.toBeInTheDocument();
   expect(screen.getByText("chance_express_history.json")).toBeInTheDocument();
   expect(screen.getByText("127.0.0.1:8765")).toBeInTheDocument();
-  expect(screen.getByText(/Por defecto/)).toBeInTheDocument();
+  expect(within(diagnostics).getByText("Por defecto")).toBeInTheDocument();
 });
 
 it("distinguishes disconnected from generic errors and retries", async () => {
@@ -98,11 +111,13 @@ it("distinguishes disconnected from generic errors and retries", async () => {
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudieron cargar los ajustes/);
   await user.click(screen.getByRole("button", { name: "Reintentar" }));
-  expect(await screen.findByRole("heading", { name: "Capacidad" })).toBeInTheDocument();
+  await openQuota(user);
+  expect(await screen.findByRole("heading", { name: "Presupuesto y cuota" })).toBeInTheDocument();
 });
 
 it.each(["", "0", "01", " 5", "+5", "-1", "1.5", "1e3", "９", "9223372036854775808"])("rejects invalid byte input %j with focus and no PUT", async (value) => {
   const { user } = setup();
+  await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(input);
   if (value) await user.type(input, value);
@@ -118,6 +133,7 @@ it("sends max int64 exactly as a string, disables duplicate saving, then trusts 
   let resolve!: (view: SettingsView) => void;
   vi.mocked(apiClient.updateSettings).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
   const { user } = setup();
+  await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(input);
   expect(input).toHaveAccessibleDescription(/Entero positivo.*Mínimo 1.5 KiB \(1,536 bytes\)/i);
@@ -139,6 +155,7 @@ it("keeps the draft after 422, 409 below usage, and network failure; 422 focuses
     .mockRejectedValueOnce(new ApiError(409, "quota cannot be below current logical usage"))
     .mockRejectedValueOnce(new NetworkError());
   const { user } = setup();
+  await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(input); await user.type(input, "2000");
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
@@ -153,8 +170,9 @@ it("keeps the draft after 422, 409 below usage, and network failure; 422 focuses
 
 it("shows an environment quota as read-only, with persisted preference distinct", async () => {
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce({ ...base, quota: { effective_bytes: "9007199254740993", persisted_bytes: "2147483648", source: "environment", writable: false } });
-  setup();
-  expect(await screen.findByText(/Variable de entorno/)).toBeInTheDocument();
+  const { user } = setup();
+  await openQuota(user);
+  expect(await screen.findByText(/El límite lo fija el servidor/)).toBeInTheDocument();
   expect(screen.getByText("1.5 KiB")).toBeInTheDocument();
   expect(screen.getByText(/2,147,483,648 bytes/)).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Guardar límite" })).not.toBeInTheDocument();
@@ -169,7 +187,8 @@ it("presents max int64 and aggregate usage exactly with es-DO grouping while kee
     storage: { ...base.storage, logical_used_bytes_exact: "9007199254740993", profile_artifact_bytes_exact: "7", admission_logical_bytes_exact: "9007199254741000" },
   });
   const { user } = setup();
-  const capacity = (await screen.findByRole("heading", { name: "Capacidad" })).closest("section")!;
+  await openQuota(user);
+  const capacity = (await screen.findByRole("heading", { name: "Presupuesto y cuota" })).closest("section")!;
   expect(within(capacity).getByText("8,388,608 TiB")).toBeInTheDocument();
   expect(within(capacity).getByText("8,192 TiB")).toBeInTheDocument();
   expect(capacity.textContent).not.toMatch(/bytes|SHA-256|JSON/);
@@ -184,6 +203,7 @@ it("presents max int64 and aggregate usage exactly with es-DO grouping while kee
 
 it("rejects a quota above historical bytes but below aggregate admission usage, then allows equality", async () => {
   const { user } = setup();
+  await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(input); await user.type(input, "1500");
   await user.click(screen.getByRole("button", { name: "Guardar límite" }));
@@ -202,7 +222,8 @@ it("shows exact remaining capacity and bounded progress from aggregate usage", a
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce({
     ...base, quota: { effective_bytes: "2560", persisted_bytes: "2560", source: "persisted", writable: true },
   });
-  setup();
+  const { user } = setup();
+  await openQuota(user);
   expect(await screen.findByText("1 KiB", { selector: "span" })).toBeInTheDocument();
   expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "60");
 });
@@ -211,7 +232,8 @@ it("clamps remaining and progress when aggregate usage exceeds the effective lim
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce({
     ...base, quota: { effective_bytes: "1200", persisted_bytes: "1200", source: "persisted", writable: true },
   });
-  setup();
+  const { user } = setup();
+  await openQuota(user);
   expect(await screen.findByText("0 bytes", { selector: "span" })).toBeInTheDocument();
   expect(screen.getByText(/Uso superior al límite por 336 bytes/)).toBeInTheDocument();
   expect(screen.getByRole("progressbar", { name: "Cuota lógica utilizada" })).toHaveAttribute("value", "100");
@@ -220,6 +242,7 @@ it("clamps remaining and progress when aggregate usage exceeds the effective lim
 it("marks historical-only responses as incomplete instead of claiming an aggregate", async () => {
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce(fixture as SettingsView);
   const { user } = setup();
+  await openQuota(user);
   expect(await screen.findByText(/Uso incompleto: este servidor no informa el total/)).toBeInTheDocument();
   expect(screen.queryByRole("progressbar", { name: "Cuota lógica utilizada" })).not.toBeInTheDocument();
   expect(screen.queryByText("Artefactos de perfiles (copias JSON)")).not.toBeInTheDocument();
@@ -231,7 +254,8 @@ it("marks historical-only responses as incomplete instead of claiming an aggrega
 
 it("warns on the server's quota warning without confusing it with disk reclamation", async () => {
   vi.mocked(apiClient.getSettings).mockResolvedValueOnce({ ...base, storage: { ...base.storage, warning: true, admission_logical_bytes_exact: "9007199254740993" } });
-  setup();
+  const { user } = setup();
+  await openQuota(user);
   expect(await screen.findByRole("alert")).toHaveTextContent(/límite o falta de disco/);
   expect(screen.getAllByText(/9,007,199,254,740,993 bytes/).length).toBeGreaterThanOrEqual(1);
 });
@@ -242,6 +266,7 @@ it("guards dirty navigation and unload while a refresh keeps the draft across se
   });
   const add = vi.spyOn(window, "addEventListener");
   const { user, router } = setup();
+  await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(input); await user.type(input, "7000000000");
   expect(add.mock.calls.some(([name]) => name === "beforeunload")).toBe(true);
@@ -264,6 +289,7 @@ it("preserves an unsaved draft when a refresh changes quota to environment read-
     ...base, quota: { effective_bytes: "6000000000", persisted_bytes: null, source: "environment", writable: false },
   });
   const { user, router } = setup();
+  await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(input); await user.type(input, "7000000000");
   await user.click(screen.getByRole("button", { name: "Actualizar estado" }));
@@ -276,11 +302,13 @@ it("preserves an unsaved draft when a refresh changes quota to environment read-
 
 it("does not block clean navigation and explains 403 and a raced read-only 409 without losing the draft", async () => {
   const { user, router } = setup();
+  await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.click(screen.getByRole("link", { name: "Simulaciones" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Ajustes" }));
+  await openQuota(user);
   const edited = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.clear(edited); await user.type(edited, "7000000000");
   vi.mocked(apiClient.updateSettings).mockRejectedValueOnce(new ApiError(403, "forbidden")).mockRejectedValueOnce(new ApiError(409, "environment quota is read-only"));
@@ -296,6 +324,8 @@ it("keeps agent access closed, secret-free, and retrieves a credential only afte
   const { user } = setup();
   expect(await screen.findByRole("heading", { name: "Ajustes" })).toBeInTheDocument();
   expect(agentApi.getAgentCredential).not.toHaveBeenCalled();
+  await openQuota(user);
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
   const access = screen.getByText("Acceso para agentes").closest("details")!;
   expect(access).not.toHaveAttribute("open");
   expect(screen.queryByLabelText("Credencial de agente")).not.toBeInTheDocument();
@@ -406,24 +436,58 @@ it("ignores a credential response after the settings screen unmounts", async () 
 
 it("has no axe violations in loaded settings", async () => {
   const { container } = setup();
-  await screen.findByRole("heading", { name: "Capacidad" });
+  await screen.findByRole("heading", { name: "Ajustes" });
   expect(await axe(container)).toHaveNoViolations();
 });
 
-async function openRules(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole("heading", { name: "Capacidad" });
-  await user.click(screen.getByText("Avanzado"));
-  return screen.findByRole("form", { hidden: false }).catch(() => screen.findByLabelText("Nombre"));
+// Contract coverage: F-LIST-064–F-LIST-080 remains above; these assertions cover
+// the guided setup additions without weakening the established behavior checks.
+it("guides settings through rules, quota, advanced details, and a review before saving", async () => {
+  const { user } = setup({ stayOnRules: true });
+  expect(await screen.findByRole("heading", { name: "Reglas del sorteo" })).toBeInTheDocument();
+  expect(screen.getByRole("progressbar", { name: /paso 1 de 4/i })).toBeInTheDocument();
+  expect(screen.getByLabelText("Números posibles")).toHaveValue("100");
+  expect(screen.getByLabelText("Números posibles").parentElement).toHaveTextContent(/números distintos puede elegir el sorteo/i);
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  expect(await screen.findByRole("heading", { name: "Presupuesto y cuota" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  expect(await screen.findByRole("heading", { name: "Detalles avanzados" })).toBeInTheDocument();
+  expect(agentApi.getAgentCredential).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  expect(await screen.findByRole("heading", { name: "Revisá tus ajustes" })).toBeInTheDocument();
+  const review = screen.getByRole("region", { name: "Revisá tus ajustes" });
+  expect(within(review).getByText(/100/)).toBeInTheDocument();
+  expect(within(review).getByText(/5,368,709,120 bytes/)).toBeInTheDocument();
+  expect(apiClient.updateSettings).not.toHaveBeenCalled();
+  expect(apiClient.saveGameSettings).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
+  await waitFor(() => expect(apiClient.saveGameSettings).toHaveBeenCalledWith({
+    name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true, minimum_stake: 1,
+  }));
+  expect(apiClient.updateSettings).toHaveBeenCalledWith(base.quota.effective_bytes);
+});
+
+it("keeps the rules step when values are invalid and prevents advancing", async () => {
+  const { user } = setup({ stayOnRules: true });
+  await screen.findByRole("heading", { name: "Reglas del sorteo" });
+  await user.clear(screen.getByLabelText("Números posibles"));
+  await user.type(screen.getByLabelText("Números posibles"), "1");
+  expect(screen.getByText("Tiene que haber al menos 2 números posibles.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Siguiente" })).toBeDisabled();
+  expect(screen.getByRole("heading", { name: "Reglas del sorteo" })).toBeInTheDocument();
+});
+
+async function openRules(_user?: ReturnType<typeof userEvent.setup>) {
+  return screen.findByRole("heading", { name: "Reglas del sorteo" });
 }
 
 it("renders the game rules form with stored values inside the Avanzado disclosure", async () => {
   vi.mocked(apiClient.getGameSettings).mockResolvedValue({
     name: "Tres", numbers: 50, positions: 3, prizes: [30, 6, 2], allows_repeats: false, minimum_stake: 5000, source: "stored",
   });
-  const { user } = setup();
-  await openRules(user);
-  const advanced = screen.getByText("Avanzado").closest("details")!;
-  expect(advanced).toContainElement(screen.getByRole("heading", { name: "Reglas del juego" }));
+  setup({ stayOnRules: true });
+  await openRules();
+  expect(screen.getByRole("heading", { name: "Reglas del sorteo" })).toBeInTheDocument();
   expect(screen.getByLabelText("Nombre")).toHaveValue("Tres");
   expect(screen.getByLabelText("Números posibles")).toHaveValue("50");
   expect(screen.getByLabelText("Posiciones por sorteo")).toHaveValue("3");
@@ -435,14 +499,14 @@ it("renders the game rules form with stored values inside the Avanzado disclosur
   expect(screen.getByText("Mínimo actual: RD$5.000.")).toBeInTheDocument();
   expect(screen.getByText("Cambiar las reglas del juego afecta las simulaciones futuras; las guardadas conservan las suyas.")).toBeInTheDocument();
   expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
-  // Where the rules come from is a technical detail, not part of the open area.
-  expect(within(advanced).queryByText(/LABORATORIO_GAME/)).not.toBeInTheDocument();
+  // Configuration source remains in the collapsed technical step.
+  expect(screen.queryByText(/LABORATORIO_GAME/)).not.toBeInTheDocument();
   expect(screen.getByText("Guardadas desde la web")).toBeInTheDocument();
 });
 
 it("adds and removes prize inputs as positions change", async () => {
-  const { user } = setup();
-  await openRules(user);
+  const { user } = setup({ stayOnRules: true });
+  await openRules();
   const positions = screen.getByLabelText("Posiciones por sorteo");
   await user.clear(positions); await user.type(positions, "7");
   expect(screen.getByLabelText("Posición 7")).toHaveValue("1");
@@ -452,8 +516,8 @@ it("adds and removes prize inputs as positions change", async () => {
 });
 
 it("validates the rules live with inline errors and blocks saving", async () => {
-  const { user } = setup();
-  await openRules(user);
+  const { user } = setup({ stayOnRules: true });
+  await openRules();
   const save = screen.getByRole("button", { name: "Guardar reglas" });
   const numbers = screen.getByLabelText("Números posibles");
   await user.clear(numbers); await user.type(numbers, "1");
@@ -477,8 +541,8 @@ it("validates the rules live with inline errors and blocks saving", async () => 
 });
 
 it("saves valid rules and confirms", async () => {
-  const { user } = setup();
-  await openRules(user);
+  const { user } = setup({ stayOnRules: true });
+  await openRules();
   const stake = screen.getByLabelText("Apuesta mínima por número");
   await user.clear(stake); await user.type(stake, "10");
   await user.click(screen.getByRole("button", { name: "Guardar reglas" }));
@@ -490,8 +554,8 @@ it("saves valid rules and confirms", async () => {
 
 it("shows the server reason when the rules are rejected with 422", async () => {
   vi.mocked(apiClient.saveGameSettings).mockRejectedValue(new ApiError(422, "every prize must be at least 1"));
-  const { user } = setup();
-  await openRules(user);
+  const { user } = setup({ stayOnRules: true });
+  await openRules();
   await user.click(screen.getByRole("button", { name: "Guardar reglas" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("every prize must be at least 1");
   expect(screen.getByLabelText("Nombre")).toHaveValue("Quiniela 80");

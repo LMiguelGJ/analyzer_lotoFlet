@@ -238,6 +238,17 @@
   .metric-item dt, .metric-item .field-label { color: var(--md-sys-color-on-surface-variant); }
   .metric-item dd, .metric-value { margin-top: 4px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
   .section-header { margin-bottom: 16px; font-family: var(--font-heading); font-size: var(--md-sys-typescale-title-large-size); font-style: normal; font-weight: 500; }
+  .m3-wizard { position: sticky; bottom: calc(80px + env(safe-area-inset-bottom)); z-index: 10; display: grid; grid-template-columns: 1fr; gap: 8px; margin: 0 -12px 20px; padding: 12px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-lg); background: var(--md-sys-color-surface-container); box-shadow: var(--md-sys-elevation-level2); }
+  .m3-wizard-progress { height: 4px; overflow: hidden; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-surface-container-highest); }
+  .m3-wizard-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--md-sys-color-primary); transition: width var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-emphasized); }
+  .m3-wizard-step { margin: 0; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-label-large-size); }
+  .m3-wizard-actions { display: flex; justify-content: space-between; gap: 12px; }
+  .m3-wizard-actions .btn { min-width: 112px; }
+  .m3-review { max-width: 48rem; }
+  .m3-review-list { display: grid; gap: 0; margin-block: 16px; }
+  .m3-review-list > div { display: grid; grid-template-columns: minmax(8rem, 0.8fr) minmax(0, 1.2fr); gap: 12px; border-bottom: 1px solid var(--md-sys-color-outline-variant); padding: 12px 0; }
+  .m3-review-list dt { color: var(--md-sys-color-on-surface-variant); }
+  .m3-review-list dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .queue-section + .queue-section { margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 20px; }
   .queue-row + .queue-row { border-top: 1px solid var(--md-sys-color-outline-variant); }
   .data-table-region { max-width: 100%; overflow-x: auto; border-radius: var(--md-sys-shape-corner-sm); }
@@ -277,6 +288,7 @@
   .shell-navigation { padding-inline: 2px; }
   .shell-nav-link { font-size: 0.6875rem; }
   .shell-main { padding-inline: 12px; }
+  .m3-wizard { margin-inline: -4px; }
   .m3-extended-fab { right: 12px; min-height: 52px; padding-inline: 16px; }
   .metric-grid { grid-template-columns: minmax(0, 1fr); }
 }
