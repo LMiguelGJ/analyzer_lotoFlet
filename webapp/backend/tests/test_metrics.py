@@ -4,6 +4,7 @@ from laboratorio.domain.metrics import financial_metrics
 
 
 def test_metrics_are_run_scoped_exact_and_round_half_up():
+    """B-DOM-032: financial metrics are run-scoped and use half-up rounding."""
     result = SimpleNamespace(
         wagered=3,
         paid=1,
@@ -24,6 +25,7 @@ def test_metrics_are_run_scoped_exact_and_round_half_up():
 
 
 def test_zero_wagers_have_null_ratios_and_no_nonfinite_values():
+    """B-DOM-033: zero wagers yield null ratios and finite metrics."""
     result = SimpleNamespace(wagered=0, paid=0, bets=())
     metrics = financial_metrics(result, 100)
     assert metrics["return_per_wagered"] is None

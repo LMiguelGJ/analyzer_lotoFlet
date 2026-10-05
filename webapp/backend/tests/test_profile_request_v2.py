@@ -53,6 +53,7 @@ def wire():
 
 
 def test_exact_private_roundtrip_and_v1_bytes_unchanged():
+    """B-DOM-073: cycling v2 wire is distinct while v1 bytes remain unchanged."""
     source = request()
     text = serialize_profile_cycling_request(source)
     assert load_profile_cycling_request(text) == source
@@ -133,6 +134,7 @@ def test_exact_private_roundtrip_and_v1_bytes_unchanged():
     ],
 )
 def test_malformed_wire_rejected(path, bad):
+    """B-DOM-074: malformed cycling v2 wire fields are rejected."""
     value = wire()
     target = value
     for key in path[:-1]:
@@ -143,6 +145,7 @@ def test_malformed_wire_rejected(path, bad):
 
 
 def test_public_profile_post_dispatches_v2_then_rejects_unregistered_binding(api_setup):
+    """B-DOM-075: public profile POST dispatches v2 then checks binding admission."""
     client, _, _ = api_setup
     response = client.post(
         "/api/v1/experiments/profiles",
@@ -154,6 +157,7 @@ def test_public_profile_post_dispatches_v2_then_rejects_unregistered_binding(api
 
 
 def test_no_missing_or_extra_fields_and_recursive_duplicate_and_non_json_numbers():
+    """B-DOM-076: v2 rejects missing/extra/duplicate fields and non-JSON values."""
     value = wire()
     for section, key in (
         (None, "entry_policy"),

@@ -32,6 +32,7 @@ def request():
 
 
 def test_v4_recovery_request_roundtrip_explicit_nested_schema():
+    """B-DOM-078: recovery v4 serializes explicit nested staking schema."""
     value = request()
     wire = serialize_profile_recovery_request(value)
     data = json.loads(wire)
@@ -47,6 +48,7 @@ def test_v4_recovery_request_roundtrip_explicit_nested_schema():
 
 @pytest.mark.parametrize("field", ["target_margin", "rounds", "end_mode"])
 def test_v4_rejects_missing_recovery_parameters(field):
+    """B-DOM-078: recovery v4 requires every recovery parameter."""
     data = json.loads(serialize_profile_recovery_request(request()))
     del data["staking"][field]
     with pytest.raises(ValueError):
@@ -55,6 +57,7 @@ def test_v4_rejects_missing_recovery_parameters(field):
 
 @pytest.mark.parametrize("end_mode", ["cycle", "stop"])
 def test_v4_accepts_only_explicit_end_modes(end_mode):
+    """B-DOM-078: recovery end mode is explicitly cycle or stop."""
     value = request()
     data = json.loads(serialize_profile_recovery_request(value))
     data["staking"]["end_mode"] = end_mode

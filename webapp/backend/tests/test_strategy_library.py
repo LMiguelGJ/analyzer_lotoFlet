@@ -34,6 +34,7 @@ def definition(name="mi estrategia"):
 
 
 def test_closed_definition_codec_and_canonical_hash():
+    """B-DOM-182: strategy definition codec is closed and hash is canonical UTF-8."""
     definition_json, digest = definition_snapshot(definition("áurea"))
     assert json.loads(definition_json)["name"] == "áurea"
     assert digest == hashlib.sha256(definition_json.encode("utf-8")).hexdigest()
@@ -131,6 +132,7 @@ def test_exact_utf8_quota_and_failed_transaction_rollback(repo):
 
 
 def test_profile_compatibility_is_contextual_and_presets_require_exact_reference():
+    """B-DOM-183: strategy compatibility depends on profile and exact reference identity."""
     from test_import_records import profile
 
     from laboratorio.domain.strategy_library import compatibility_projection
@@ -270,6 +272,7 @@ def generic_profile(
 
 
 def test_generic_profile_staking_math_is_not_q80_or_fake_capital_admission():
+    """B-DOM-184: generic Audaz math uses profile domain, not Q80 assumptions."""
     from laboratorio.domain.strategy_library import compatibility_projection
 
     profile_value = generic_profile()
@@ -297,6 +300,7 @@ def test_generic_profile_staking_math_is_not_q80_or_fake_capital_admission():
 
 
 def test_generic_recovery_ladder_checks_full_rung_exposure_and_stake_caps():
+    """B-DOM-185: generic recovery compatibility checks all rungs and profile caps."""
     from laboratorio.domain.profile_staking import profile_recovery_ladder
     from laboratorio.domain.strategy_library import compatibility_projection
 
@@ -346,6 +350,7 @@ def test_generic_recovery_ladder_checks_full_rung_exposure_and_stake_caps():
 
 
 def test_reference_identity_is_stable_when_definition_name_changes():
+    """B-DOM-186: preset identity survives renaming and rejects forged parameters."""
     from dataclasses import replace
 
     from laboratorio.domain.contracts import legacy_quiniela_80_profile

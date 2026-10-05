@@ -39,6 +39,7 @@ def setup_case():
 
 
 def test_v3_result_roundtrip_and_replay_include_prestart_rows():
+    """B-DOM-095: Audaz v3 result replays over prestart rows."""
     game, request, draws = setup_case()
     session = run_profile_session(
         game, request.conditions, request.selector, request.staking, draws
@@ -60,6 +61,7 @@ def test_v3_result_roundtrip_and_replay_include_prestart_rows():
 
 
 def test_audaz_executes_alternate_universe_rational_scaled_profile():
+    """B-DOM-096: Audaz executes rational scaled profiles on alternate universes."""
     game = GameProfile.model_validate({
         "schema_version": 1, "profile_id": "compact-rational", "revision": 1,
         "universe_size": 10, "positions": 3, "allows_repeats": True,

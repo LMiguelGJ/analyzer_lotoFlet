@@ -99,6 +99,7 @@ def run(rows, *, p=None, conditions=None, selector=None, staking=None, **kwargs)
 
 
 def test_one_three_five_and_custom_universe_with_exact_per_number_accounting():
+    """B-DOM-136: profile sessions account exact stakes across positions/universes."""
     single = profile(positions=1, multipliers=[{"numerator": 3, "denominator": 1}])
     result = run([draw(results=(7,))], p=single, staking=flat(3))
     assert (result.wagered, result.paid, result.final_balance) == (3, 9, 26)
@@ -129,6 +130,7 @@ def test_one_three_five_and_custom_universe_with_exact_per_number_accounting():
 
 
 def test_legacy_best_uses_first_match_via_shared_settlement():
+    """B-DOM-137: legacy BEST session uses shared first-match settlement."""
     p = legacy_quiniela_80_profile()
     result = run(
         [draw(results=(7, 7, 8, 7, 8))],
@@ -141,6 +143,7 @@ def test_legacy_best_uses_first_match_via_shared_settlement():
 
 
 def test_explicit_funding_stake_limits_and_no_implicit_one_unit():
+    """B-DOM-138: session requires explicit stake and enforces funding/limits."""
     with pytest.raises(ValueError, match="afford"):
         run([draw()], conditions=opts(capital=3, goal=10), selector=static(7, 8), staking=flat(2))
     with pytest.raises(TypeError):
@@ -161,6 +164,7 @@ def test_explicit_funding_stake_limits_and_no_implicit_one_unit():
 
 
 def test_static_and_seeded_random_determinism_prefix_and_profile_universe():
+    """B-DOM-139: static/random selections are deterministic and profile-bounded."""
     rows = [draw(), draw("2025-01-01 05:15")]
     a = run(rows, selector=random(3))
     b = run(rows, selector=random(3))
@@ -180,12 +184,14 @@ def test_static_and_seeded_random_determinism_prefix_and_profile_universe():
 
 
 def test_future_results_do_not_affect_random_selection():
+    """B-DOM-140: future outcomes cannot affect seeded-random selections."""
     first = run([draw(results=(1, 2, 3))], selector=random(3))
     second = run([draw(results=(4, 5, 6))], selector=random(3))
     assert first.bets[0].stakes == second.bets[0].stakes
 
 
 def test_skipped_rows_consume_elapsed_but_not_bet_limit_and_start_is_included():
+    """B-DOM-141: skipped rows count elapsed time but not bet count."""
     rows = [
         draw(),
         draw("2025-01-01 05:15", enter=False),
@@ -207,6 +213,7 @@ def test_skipped_rows_consume_elapsed_but_not_bet_limit_and_start_is_included():
 
 
 def test_goal_ruin_and_bet_elapsed_collision_priority_after_settlement():
+    """B-DOM-142: terminal goal/ruin priorities and simultaneous collisions are explicit."""
     winning = run(
         [draw(results=(7, 8, 9))], conditions=opts(goal=100, max_bet_draws=1, max_elapsed_draws=1)
     )
@@ -229,6 +236,7 @@ def test_goal_ruin_and_bet_elapsed_collision_priority_after_settlement():
 
 
 def test_exclusive_time_boundaries_and_collision_exclude_boundary_draw():
+    """B-DOM-143: exclusive time boundaries exclude the draw at the limit."""
     rows = [draw(), draw("2025-01-01 05:15")]
     boundary = rows[1].minute
     result = run(
@@ -243,6 +251,7 @@ def test_exclusive_time_boundaries_and_collision_exclude_boundary_draw():
 
 
 def test_cancellation_and_history_exhaustion_are_distinct():
+    """B-DOM-144: cancellation differs from natural history exhaustion."""
     rows = [draw(), draw("2025-01-01 05:15")]
     assert run(rows, cancel_after_elapsed_draws=0).outcome is ProfileOutcome.CANCELLED
     cancelled = run(rows, selector=static(99), cancel_after_elapsed_draws=1)
@@ -276,6 +285,7 @@ def test_cancellation_and_history_exhaustion_are_distinct():
     ],
 )
 def test_conditions_reject_implicit_or_malformed_values(change):
+    """B-DOM-145: profile conditions reject malformed and implicit values."""
     with pytest.raises(ValueError):
         opts(**change)
 
@@ -300,11 +310,13 @@ def test_conditions_reject_implicit_or_malformed_values(change):
     ],
 )
 def test_typed_inputs_reject_bool_float_and_unsupported_capabilities(invalid):
+    """B-DOM-146: typed session inputs reject coercion and unsupported capabilities."""
     with pytest.raises(ValueError):
         invalid()
 
 
 def test_capability_registry_retains_pending_families_and_has_no_eval():
+    """B-DOM-147: selector capabilities retain pending status and forbid eval."""
     registered = dict(CAPABILITIES)
     assert registered["static-numbers/v1"] == "supported"
     assert registered["seeded-random/hash-sha256-v1"] == "supported"
@@ -318,6 +330,7 @@ def test_capability_registry_retains_pending_families_and_has_no_eval():
 
 
 def test_invalid_rows_rejected_even_when_after_terminal_event():
+    """B-DOM-148: malformed rows reject even after a terminal session event."""
     rows = [draw(), draw("2025-01-01 05:15", results=(7, 8))]
     with pytest.raises(ValueError, match="positions"):
         run(rows, conditions=opts(max_bet_draws=1))
@@ -338,6 +351,7 @@ def test_invalid_rows_rejected_even_when_after_terminal_event():
 
 
 def test_bounded_rows_no_generator_materialization_and_strict_budget():
+    """B-DOM-149: session rows are bounded and operation budget is strict."""
     with pytest.raises(TypeError, match="bounded materialized"):
         run(draw() for _ in range(10**9))
     with pytest.raises(ValueError, match="budget"):
@@ -351,6 +365,7 @@ def test_bounded_rows_no_generator_materialization_and_strict_budget():
 
 
 def test_mutated_frozen_profile_and_session_models_revalidated():
+    """B-DOM-150: forged frozen profile/session models are revalidated."""
     p = profile().model_copy(update={"positions": 4})
     with pytest.raises(ValidationError):
         run([draw()], p=p)
@@ -374,6 +389,7 @@ def q80_rows(*results, enter=True):
 
 
 def test_private_q80_variant_validates_identity_without_registry_admission():
+    """B-DOM-151: private Q80 variant identity stays outside public registry admission."""
     assert Q80CyclingStaking() == Q80CyclingStaking(1, "q80-first-prize-cycling/v1")
     for variant in ((2, "q80-first-prize-cycling/v1"), (1, "flat-per-number/v1")):
         with pytest.raises(ValueError):
@@ -423,6 +439,7 @@ def test_private_q80_variant_validates_identity_without_registry_admission():
 
 
 def test_private_profile_audaz_settles_q80_coverage_fifty_in_all_and_best():
+    """B-DOM-152: profile Audaz settles Q80 coverage 50 under ALL and BEST."""
     p = legacy_quiniela_80_profile()
     rows = q80_rows((7, 7, 7, 8, 9), (1, 2, 3, 4, 5))
     selector = static(*range(50))
@@ -451,6 +468,7 @@ def test_private_profile_audaz_settles_q80_coverage_fifty_in_all_and_best():
 
 
 def test_private_profile_audaz_q80_k1_matches_reference_oracle():
+    """B-DOM-153: profile Audaz Q80 coverage one matches reference oracle."""
     result = run(
         q80_rows((7, 7, 7, 8, 9)),
         p=legacy_quiniela_80_profile(),
@@ -464,6 +482,7 @@ def test_private_profile_audaz_q80_k1_matches_reference_oracle():
 
 
 def test_private_profile_audaz_is_profile_generic_and_recomputed_after_settlement():
+    """B-DOM-154: profile Audaz is generic and recalculates after settlement."""
     p = profile(
         universe_size=37,
         positions=1,
@@ -488,6 +507,7 @@ def test_private_profile_audaz_is_profile_generic_and_recomputed_after_settlemen
 
 
 def test_private_profile_audaz_caps_stakes_and_ruins_with_positive_residual():
+    """B-DOM-155: Audaz caps stakes and can ruin with residual balance."""
     p = profile(
         positions=5,
         multipliers=[{"numerator": n, "denominator": 1} for n in (80, 8, 4, 2, 1)],
@@ -524,6 +544,7 @@ def test_private_profile_audaz_caps_stakes_and_ruins_with_positive_residual():
 
 
 def test_private_profile_audaz_skips_without_staking_and_rejects_negative_margin():
+    """B-DOM-156: Audaz skips non-entry rows and rejects nonpositive margin."""
     skipped = run(
         [draw(enter=False), draw("2025-01-01 05:15", enter=False)], staking=ProfileAudazStaking()
     )
@@ -534,6 +555,7 @@ def test_private_profile_audaz_skips_without_staking_and_rejects_negative_margin
 
 
 def test_private_recovery_ladder_q80_parameters_match_cycle_sequence_without_changing_q80():
+    """B-DOM-157: recovery ladder Q80 parameters match cycling sequence."""
     p = legacy_quiniela_80_profile()
     rows = [
         draw(
@@ -566,6 +588,7 @@ def test_private_recovery_ladder_q80_parameters_match_cycle_sequence_without_cha
 
 
 def test_private_recovery_ladder_binds_settlement_modes_and_result_hit():
+    """B-DOM-158: recovery ladder respects ALL/BEST settlement rules."""
     p = legacy_quiniela_80_profile()
     rows = q80_rows((7, 7, 7, 8, 9))
     args = dict(
@@ -589,6 +612,7 @@ def test_private_recovery_ladder_binds_settlement_modes_and_result_hit():
 
 
 def test_private_recovery_ladder_secondary_advances_first_hit_resets_and_skip_consumes_only_time():
+    """B-DOM-159: recovery advances on secondary, resets on first hit, skips only time."""
     p = profile(
         positions=3,
         multipliers=[{"numerator": n, "denominator": 1} for n in (4, 3, 2)],
@@ -614,6 +638,7 @@ def test_private_recovery_ladder_secondary_advances_first_hit_resets_and_skip_co
 
 
 def test_private_recovery_ladder_stop_after_configured_misses_and_terminal_priority():
+    """B-DOM-160: recovery stop mode and goal priority follow configured rounds."""
     p = profile(
         positions=3,
         multipliers=[{"numerator": n, "denominator": 1} for n in (4, 3, 2)],
@@ -651,6 +676,7 @@ def test_private_recovery_ladder_stop_after_configured_misses_and_terminal_prior
 
 
 def test_private_recovery_ladder_next_stake_ruin_and_cycle_then_repeat():
+    """B-DOM-161: recovery handles unaffordable next stake and immutable policy."""
     p = profile(
         positions=3,
         multipliers=[{"numerator": n, "denominator": 1} for n in (4, 3, 2)],
@@ -672,6 +698,7 @@ def test_private_recovery_ladder_next_stake_ruin_and_cycle_then_repeat():
 
 
 def test_private_profile_audaz_staking_remains_outside_v1_request_wire():
+    """B-DOM-162: profile Audaz staking remains outside v1 request wire."""
     p = legacy_quiniela_80_profile()
     with pytest.raises(ValueError, match="unsupported"):
         ProfileStaking(1, "profile-audaz/v1", 1)
@@ -683,6 +710,7 @@ def test_private_profile_audaz_staking_remains_outside_v1_request_wire():
 
 
 def test_q80_secondary_only_advances_then_first_hit_resets_from_same_draw():
+    """B-DOM-163: Q80 secondary hit advances; first prize resets deterministically."""
     rows = q80_rows((1, 7, 2, 3, 4), (7, 7, 7, 8, 9), (1, 2, 3, 4, 5))
     result = run(
         rows,
@@ -719,6 +747,7 @@ def test_q80_secondary_only_advances_then_first_hit_resets_from_same_draw():
 
 
 def test_q80_ten_misses_cycle_and_skips_do_not_advance_round():
+    """B-DOM-164: Q80 cycles after ten misses and skipped rows do not advance rung."""
     rows = [
         draw(
             f"2025-01-01 {5 + (10 + 5 * i) // 60:02d}:{(10 + 5 * i) % 60:02d}",
@@ -753,6 +782,7 @@ def test_q80_ten_misses_cycle_and_skips_do_not_advance_round():
 
 
 def test_private_reference_audaz_staking_is_distinct_and_settles_q80_k1():
+    """B-DOM-165: reference Audaz is distinct and settles Q80 coverage one."""
     from laboratorio.domain.profile_staking import (
         ProfileAudazStaking,
         Q80ReferenceAudazStaking,
@@ -790,6 +820,7 @@ def test_private_reference_audaz_staking_is_distinct_and_settles_q80_k1():
 
 
 def test_q80_admission_checks_whole_ladder_and_initial_affordability():
+    """B-DOM-166: Q80 admission validates whole ladder and first-stake funding."""
     base = legacy_quiniela_80_profile().model_copy(
         update={"profile_id": "another-q80", "best_rule": "maximum-payout/v1"}
     )
@@ -808,6 +839,7 @@ def test_q80_admission_checks_whole_ladder_and_initial_affordability():
 
 
 def test_q80_next_stake_ruin_with_positive_residual_and_goal_limit_priority():
+    """B-DOM-167: Q80 ruin and goal priorities hold with residual and limits."""
     p = legacy_quiniela_80_profile()
     rows = q80_rows((1, 2, 3, 4, 5), (1, 2, 3, 4, 5))
     kwargs = dict(p=p, selector=static(*range(50, 100)), staking=Q80CyclingStaking())
@@ -843,6 +875,7 @@ def test_q80_next_stake_ruin_with_positive_residual_and_goal_limit_priority():
 
 
 def test_q80_time_limits_cancellation_and_censored_history():
+    """B-DOM-168: Q80 respects time limits, cancellation, and history exhaustion."""
     p = legacy_quiniela_80_profile()
     rows = q80_rows((1, 2, 3, 4, 5), (1, 2, 3, 4, 5))
     kwargs = dict(
@@ -878,6 +911,7 @@ def test_q80_time_limits_cancellation_and_censored_history():
 
 
 def test_q80_seeded_selection_and_draw_binding_are_deterministic():
+    """B-DOM-169: Q80 seeded selection is deterministic and bound to draw label."""
     p = legacy_quiniela_80_profile()
     selection = random(1, seed=17)
     first = run(
@@ -914,6 +948,7 @@ def test_q80_seeded_selection_and_draw_binding_are_deterministic():
 
 
 def test_total_money_ceiling_after_multiple_draws():
+    """B-DOM-170: session totals enforce MAX_MONEY across draws."""
     p = profile(
         multipliers=[{"numerator": 1, "denominator": 1}] * 3, maximum_stake=1, max_exposure=10
     )

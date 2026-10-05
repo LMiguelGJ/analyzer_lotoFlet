@@ -61,6 +61,7 @@ def conditions(**overrides):
 
 
 def test_default_game_is_quiniela_80():
+    """B-DOM-001: published default game and selector catalog."""
     assert GAME.numbers == 100
     assert GAME.positions == 5
     assert GAME.prizes == (80, 8, 4, 2, 1)
@@ -86,6 +87,7 @@ def restore_game():
 
 
 def test_make_game_builds_a_three_position_game():
+    """B-DOM-002: arbitrary valid position counts and minimum stake default."""
     game = make_game("Tres", 100, 3, [60, 10, 5], True, 2)
     assert game == Game("Tres", 100, 3, (60, 10, 5), True, 2)
     assert make_game("Q", 10, 1, (9,), False).minimum_stake == 1
@@ -103,12 +105,13 @@ def test_make_game_builds_a_three_position_game():
     ],
 )
 def test_make_game_rejects_inconsistent_rules(args):
+    """B-DOM-002: inconsistent game rules are rejected."""
     with pytest.raises(ValueError):
         make_game(*args)
 
 
 def test_make_game_rejects_game_sizes_above_the_ceilings():
-    """The active game must stay bounded so the catalog and the rules editor cannot explode."""
+    """B-NEW-001: the active game obeys published numeric and position ceilings."""
     with pytest.raises(ValueError, match="numbers must be at most"):
         make_game("G", MAX_GAME_NUMBERS + 1, 3, (1, 1, 1), True)
     with pytest.raises(ValueError, match="positions must be at most"):
@@ -116,7 +119,7 @@ def test_make_game_rejects_game_sizes_above_the_ceilings():
 
 
 def test_game_ceilings_keep_the_supported_games_valid():
-    """The Q80 default and the brief's 3-position game must remain valid after bounding."""
+    """B-NEW-001: supported Q80 and three-position games remain valid."""
     assert make_game("Quiniela 80", 100, 5, (80, 8, 4, 2, 1), True).numbers == 100
     brief = make_game("Tres", 100, 3, (60, 10, 5), True)
     assert brief.positions == 3
@@ -124,6 +127,7 @@ def test_game_ceilings_keep_the_supported_games_valid():
 
 
 def test_configure_game_replaces_the_visible_game(restore_game):
+    """B-DOM-003: configuration mutates the shared visible game object."""
     configure_game(make_game("Tres", 100, 3, [60, 10, 5], True, 5))
     assert contracts.GAME.positions == 3
     assert contracts.GAME.prizes == (60, 10, 5)
@@ -157,6 +161,7 @@ def profile(**overrides):
 
 @pytest.mark.parametrize("positions", [1, 3, 5])
 def test_new_profiles_admit_explicit_position_counts(positions):
+    """B-DOM-004: one-, three-, and five-position profiles round-trip."""
     parsed = GameProfile.model_validate(
         profile(positions=positions, multipliers=[{"numerator": 2, "denominator": 1}] * positions)
     )
@@ -165,6 +170,7 @@ def test_new_profiles_admit_explicit_position_counts(positions):
 
 
 def test_new_profiles_allow_other_universes_and_exact_scaled_money():
+    """B-DOM-005: custom universes and exact scaled rational money are supported."""
     parsed = GameProfile.model_validate(
         profile(
             universe_size=7,
@@ -185,6 +191,7 @@ def test_new_profiles_allow_other_universes_and_exact_scaled_money():
 
 
 def test_profile_requires_every_field_and_rejects_extra_fields():
+    """B-DOM-006: profile wire requires exactly the declared fields."""
     for key in profile():
         incomplete = profile()
         incomplete.pop(key)
@@ -223,6 +230,7 @@ def test_profile_requires_every_field_and_rejects_extra_fields():
     ],
 )
 def test_profile_rejects_malformed_scalar_fields(field, bad):
+    """B-DOM-007: scalar fields use strict types and documented bounds."""
     with pytest.raises(ValidationError):
         GameProfile.model_validate(profile(**{field: bad}))
 
@@ -248,11 +256,13 @@ def test_profile_rejects_malformed_scalar_fields(field, bad):
     ],
 )
 def test_profile_rejects_inconsistent_or_inexact_terms(changes):
+    """B-DOM-008: profile terms must be internally consistent and exact."""
     with pytest.raises(ValidationError):
         GameProfile.model_validate(profile(**changes))
 
 
 def test_profile_and_nested_multipliers_are_immutable_and_do_not_share_mutable_input():
+    """B-DOM-009: profile and multiplier values are deeply immutable."""
     raw = profile()
     parsed = GameProfile.model_validate(raw)
     raw["multipliers"][0]["numerator"] = 999
@@ -264,6 +274,7 @@ def test_profile_and_nested_multipliers_are_immutable_and_do_not_share_mutable_i
 
 
 def test_legacy_descriptor_is_frozen_stable_and_distinct_from_new_best_rule():
+    """B-DOM-010: legacy Q80 descriptor stays frozen and reserved."""
     legacy = legacy_quiniela_80_profile()
     assert (legacy.universe_size, legacy.positions, legacy.allows_repeats) == (
         GAME.numbers,
@@ -288,6 +299,7 @@ def test_legacy_descriptor_is_frozen_stable_and_distinct_from_new_best_rule():
 
 
 def test_individual_system_strategy_is_valid():
+    """B-DOM-011: registered individual system strategy is valid."""
     parsed = Strategy.model_validate(strategy())
     assert parsed.system == "transition" and parsed.components is None
 
@@ -304,11 +316,13 @@ def test_individual_system_strategy_is_valid():
     ],
 )
 def test_invalid_individual_strategies_are_rejected(overrides):
+    """B-DOM-011: invalid system, selector, coverage, staking, and components reject."""
     with pytest.raises(ValidationError):
         Strategy.model_validate(strategy(**overrides))
 
 
 def test_blend_requires_two_distinct_systems_with_integer_weights_summing_100():
+    """B-DOM-012: blend requires distinct systems and integer weights totaling 100."""
     blend = strategy(
         selector="blend",
         system=None,
@@ -328,6 +342,7 @@ def test_blend_requires_two_distinct_systems_with_integer_weights_summing_100():
 
 
 def test_parity_only_allows_coverage_50_and_random_uses_standard_coverages():
+    """B-DOM-013: parity and random enforce their selector-specific constraints."""
     assert Strategy.model_validate(strategy(selector="parity", system=None, coverage=50))
     with pytest.raises(ValidationError):
         Strategy.model_validate(strategy(selector="parity", system=None, coverage=10))
@@ -337,6 +352,7 @@ def test_parity_only_allows_coverage_50_and_random_uses_standard_coverages():
 
 
 def test_goal_is_final_balance_and_must_exceed_capital():
+    """B-DOM-014: goal is a bounded final balance strictly above capital."""
     assert Conditions.model_validate(conditions()).goal == 2800
     for bad in ({"goal": 2000}, {"capital": 0}, {"capital": -5}, {"goal": 10**13}):
         with pytest.raises(ValidationError):
@@ -344,6 +360,7 @@ def test_goal_is_final_balance_and_must_exceed_capital():
 
 
 def test_limits_are_optional_but_positive_when_present():
+    """B-DOM-015: optional run limits must be positive when provided."""
     parsed = Conditions.model_validate(conditions(max_bets=12, max_minutes=90))
     assert (parsed.max_bets, parsed.max_minutes) == (12, 90)
     for bad in ({"max_bets": 0}, {"max_minutes": 0}, {"max_minutes": -1}):
@@ -352,6 +369,7 @@ def test_limits_are_optional_but_positive_when_present():
 
 
 def test_start_draw_uses_the_historical_label_format():
+    """B-DOM-016: start draw accepts only the historical label format."""
     with pytest.raises(ValidationError):
         Conditions.model_validate(conditions(start_draw="2025-09-02T05:10"))
     with pytest.raises(ValidationError):
@@ -359,6 +377,7 @@ def test_start_draw_uses_the_historical_label_format():
 
 
 def test_seed_is_bounded_to_the_max_safe_javascript_integer():
+    """B-DOM-017: seed is bounded by MAX_SEED."""
     assert MAX_SEED == 2**53 - 1
     assert Conditions.model_validate(conditions(seed=MAX_SEED)).seed == MAX_SEED
     with pytest.raises(ValidationError):
@@ -368,6 +387,7 @@ def test_seed_is_bounded_to_the_max_safe_javascript_integer():
 
 
 def test_experiment_has_one_to_five_uniquely_named_strategies():
+    """B-DOM-018: experiment strategy count and names are bounded and unique."""
     one = {"name": "Prueba", "conditions": conditions(), "strategies": [strategy()]}
     assert len(ExperimentRequest.model_validate(one).strategies) == 1
 
@@ -383,6 +403,7 @@ def test_experiment_has_one_to_five_uniquely_named_strategies():
 
 
 def test_duplicate_name_error_is_located_on_the_offending_strategys_name_field():
+    """B-DOM-019: duplicate-name validation points at the offending field."""
     one = {
         "name": "Prueba",
         "conditions": conditions(),
@@ -397,6 +418,7 @@ def test_duplicate_name_error_is_located_on_the_offending_strategys_name_field()
 
 @pytest.mark.parametrize("case", NAME_CASES, ids=[case["category"] for case in NAME_CASES])
 def test_strategy_name_normalization_matches_the_shared_fixture(case):
+    """B-DOM-020: normalization matches shared backend/client fixture cases."""
     equal = normalize_strategy_name(case["a"]) == normalize_strategy_name(case["b"])
     assert equal is case["duplicate"]
     one = {
@@ -412,6 +434,7 @@ def test_strategy_name_normalization_matches_the_shared_fixture(case):
 
 
 def test_names_are_trimmed_and_bounded():
+    """B-DOM-021: names are trimmed and limited to 80 characters."""
     parsed = Strategy.model_validate(strategy(name="  Fríos  "))
     assert parsed.name == "Fríos"
     with pytest.raises(ValidationError):
@@ -419,6 +442,7 @@ def test_names_are_trimmed_and_bounded():
 
 
 def test_stored_name_uses_the_same_explicit_trim_charset_as_duplicate_detection():
+    """B-DOM-022: storage and duplicate checks share the explicit trim charset."""
     # U+FEFF and U+0085 are excluded from the shared trim charset on both sides, so the
     # stored name keeps them instead of one side trimming them and the other not.
     assert Strategy.model_validate(strategy(name="\ufeffName")).name == "\ufeffName"
@@ -427,6 +451,7 @@ def test_stored_name_uses_the_same_explicit_trim_charset_as_duplicate_detection(
 
 
 def test_seed_capital_goal_limits_coverage_and_weight_are_strict_integers():
+    """B-DOM-023: numeric condition and strategy inputs reject coercion."""
     for bad in (
         conditions(seed="7"),
         conditions(seed=7.0),
