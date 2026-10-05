@@ -1,6 +1,7 @@
 """Queue execution for privately persisted profile batch v5 requests."""
 
 import json
+import sqlite3
 import threading
 import time
 from dataclasses import replace
@@ -23,21 +24,34 @@ from laboratorio.settings import Settings
 
 def wait_for(predicate, timeout=10):
     deadline = time.monotonic() + timeout
+    last_lock = None
     while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(0.02)
-    pytest.fail("profile batch queue did not reach expected state")
+        try:
+            if predicate():
+                return
+        except sqlite3.OperationalError as exc:
+            if "locked" not in str(exc).lower():
+                raise
+            last_lock = exc
+        time.sleep(0.1)
+    detail = f"; last transient SQLite lock: {last_lock}" if last_lock else ""
+    pytest.fail(f"profile batch queue did not reach expected state{detail}")
+
+
+def stored_status(repo, identifier):
+    # Poll only the status row: get_experiment also opens/authenticates the dataset
+    # in a second connection and can contend with the queue's own SQLite write.
+    with sqlite3.connect(repo.path, timeout=2) as db:
+        row = db.execute("SELECT status FROM experiments WHERE id = ?", (identifier,)).fetchone()
+    return row[0] if row is not None else None
 
 
 def completed(repo, identifier):
-    saved = repo.get_experiment(identifier)
-    return saved is not None and saved.status is ExperimentStatus.COMPLETED
+    return stored_status(repo, identifier) == ExperimentStatus.COMPLETED.value
 
 
 def has_status(repo, identifier, status):
-    saved = repo.get_experiment(identifier)
-    return saved is not None and saved.status is status
+    return stored_status(repo, identifier) == status.value
 
 
 def submission_with_three(repo):
@@ -100,6 +114,8 @@ def make_queue(repo, tmp_path):
     return JobQueue(repo.path, settings)
 
 
+# B-QUE-039
+
 def test_manual_child_authenticates_archive_frozen_by_mixed_batch(tmp_path, monkeypatch):
     repo = _new_repo(tmp_path)
     _, dataset, _, _, submission = _saved_inputs(repo, row_count=3)
@@ -154,6 +170,8 @@ def test_manual_child_authenticates_archive_frozen_by_mixed_batch(tmp_path, monk
     assert json.loads(frames[0])["status"] == "completed"
 
 
+# B-QUE-040
+
 def test_profile_batch_source_value_error_with_unfamiliar_message_is_shared(tmp_path, monkeypatch):
     repo = _new_repo(tmp_path)
     game, dataset, _, _, submission = _saved_inputs(repo, row_count=3)
@@ -187,6 +205,8 @@ def test_profile_batch_source_value_error_with_unfamiliar_message_is_shared(tmp_
     assert frame["status"] == "failed"
     assert frame["kind"] == "shared"
 
+
+# B-QUE-041
 
 def test_profile_batch_financial_value_error_is_typed_local_failure(tmp_path):
     repo = _new_repo(tmp_path)
@@ -222,6 +242,8 @@ def test_profile_batch_financial_value_error_is_typed_local_failure(tmp_path):
     assert frame["kind"] == "strategy_local"
 
 
+# B-QUE-042
+
 def test_typed_submission_runs_three_ordinals_serially_and_persists_each(tmp_path):
     repo = _new_repo(tmp_path)
     submission = submission_with_three(repo)
@@ -250,6 +272,8 @@ def test_typed_submission_runs_three_ordinals_serially_and_persists_each(tmp_pat
         queue.shutdown()
 
 
+# B-QUE-043 / B-FLAKY-006
+
 def test_submission_idempotency_never_enqueues_existing_batch_twice(tmp_path):
     repo = _new_repo(tmp_path)
     submission = submission_with_three(repo)
@@ -275,6 +299,8 @@ def test_submission_idempotency_never_enqueues_existing_batch_twice(tmp_path):
         queue.shutdown()
 
 
+# B-QUE-044
+
 def test_local_strategy_failure_continues_later_ordinals(tmp_path, monkeypatch):
     repo = _new_repo(tmp_path)
     submission = submission_with_three(repo)
@@ -295,6 +321,8 @@ def test_local_strategy_failure_continues_later_ordinals(tmp_path, monkeypatch):
     finally:
         queue.shutdown()
 
+
+# B-QUE-045 / B-FLAKY-007
 
 def test_corrupt_worker_result_stops_batch_but_keeps_prior_ordinal(tmp_path, monkeypatch):
     repo = _new_repo(tmp_path)
@@ -321,6 +349,8 @@ def test_corrupt_worker_result_stops_batch_but_keeps_prior_ordinal(tmp_path, mon
         queue.shutdown()
 
 
+# B-QUE-046
+
 def test_oversized_worker_frame_fails_shared_and_does_not_run_later_ordinals(tmp_path, monkeypatch):
     repo = _new_repo(tmp_path)
     submission = submission_with_three(repo)
@@ -346,6 +376,8 @@ def test_oversized_worker_frame_fails_shared_and_does_not_run_later_ordinals(tmp
     finally:
         queue.shutdown()
 
+
+# B-QUE-047
 
 def test_cancel_during_child_keeps_completed_ordinal_and_cancels_remainder(tmp_path, monkeypatch):
     repo = _new_repo(tmp_path)
@@ -375,18 +407,30 @@ def test_cancel_during_child_keeps_completed_ordinal_and_cancels_remainder(tmp_p
         queue.shutdown()
 
 
+# B-QUE-048 / B-FLAKY-004
+
 def test_timeout_uses_frozen_admission_policy_not_current_policy(tmp_path, monkeypatch):
     repo = _new_repo(tmp_path)
     repo.update_execution_policy({"run_timeout_seconds": 1}, expected_revision=1)
     submission = submission_with_three(repo)
     queue = make_queue(repo, tmp_path)
+    original_enqueue = queue._enqueue_profile_batch
+    deferred = []
+
+    def defer_enqueue(identifier):
+        deferred.append(identifier)
+
     monkeypatch.setattr(
         "laboratorio.jobs.queue.profile_batch_process_entry", timeout_first_strategy
     )
+    monkeypatch.setattr(queue, "_enqueue_profile_batch", defer_enqueue)
     try:
         queue.start()
         identifier = queue.submit_profile_batch(submission)
+        assert deferred == [identifier]
         repo.update_execution_policy({"run_timeout_seconds": 3_600}, expected_revision=2)
+        monkeypatch.setattr(queue, "_enqueue_profile_batch", original_enqueue)
+        original_enqueue(identifier)
         wait_for(lambda: has_status(repo, identifier, ExperimentStatus.FAILED))
         saved = repo.get_experiment(identifier)
         assert saved is not None and saved.batch_admission is not None
@@ -401,6 +445,7 @@ def test_timeout_uses_frozen_admission_policy_not_current_policy(tmp_path, monke
         queue.shutdown()
 
 
+# B-QUE-049
 @pytest.mark.parametrize("stop_kind", ["cancel", "deadline"])
 def test_stalled_frame_receive_observes_cancel_and_frozen_deadline(
     tmp_path, monkeypatch, stop_kind
@@ -517,6 +562,8 @@ def test_stalled_frame_receive_observes_cancel_and_frozen_deadline(
         queue._cancel = None
         assert not caller.is_alive(), "test fixture failed to release the blocked receive"
 
+
+# B-QUE-050 / B-FLAKY-005
 
 def test_enqueue_failure_compensates_batch_and_allows_same_identity_retry(tmp_path, monkeypatch):
     repo = _new_repo(tmp_path)

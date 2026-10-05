@@ -127,6 +127,8 @@ def queue_for(setup):
     return JobQueue(repo.path, settings, runner=synthetic, runner_args=(entered, release, report))
 
 
+# B-QUE-001
+
 def test_spawned_local_failure_preserves_neighbours_and_continues(setup):
     repo, _, _, _, _, report, create = setup
     queue = queue_for(setup)
@@ -151,6 +153,8 @@ def test_spawned_local_failure_preserves_neighbours_and_continues(setup):
         queue.shutdown()
 
 
+# B-QUE-002
+
 def test_unknown_worker_value_error_fails_current_experiment_not_later_job(setup):
     repo, _, _, _, _, report, create = setup
     queue = queue_for(setup)
@@ -173,6 +177,7 @@ def test_unknown_worker_value_error_fails_current_experiment_not_later_job(setup
         queue.shutdown()
 
 
+# B-QUE-003
 @pytest.mark.parametrize("name", ["Shared", "Storage"])
 def test_shared_worker_failure_stops_queue_and_preserves_unstarted_job(setup, name):
     repo, _, _, _, _, _, create = setup
@@ -195,6 +200,7 @@ def test_shared_worker_failure_stops_queue_and_preserves_unstarted_job(setup, na
         queue.shutdown()
 
 
+# B-QUE-004
 @pytest.mark.parametrize("entry", [malformed_entry, silent_entry])
 def test_malformed_spawn_message_is_queue_fatal(setup, monkeypatch, entry):
     repo, _, _, _, _, _, create = setup
@@ -215,6 +221,8 @@ def test_malformed_spawn_message_is_queue_fatal(setup, monkeypatch, entry):
     finally:
         queue.shutdown()
 
+
+# B-QUE-005
 
 def test_clean_exit_eof_is_fatal_even_when_pipe_reports_readable(setup, monkeypatch):
     repo, _, ctx, _, _, _, create = setup
@@ -254,6 +262,8 @@ def test_clean_exit_eof_is_fatal_even_when_pipe_reports_readable(setup, monkeypa
         queue.shutdown()
 
 
+# B-QUE-006
+
 def test_production_boundary_only_localizes_initial_stake(setup, monkeypatch):
     from laboratorio.jobs import worker
 
@@ -275,6 +285,8 @@ def test_production_boundary_only_localizes_initial_stake(setup, monkeypatch):
     with pytest.raises(SharedCalculationError, match="bad draw"):
         calculate_run(settings, request("First").conditions, strategy("First"), LocalEvent())
 
+
+# B-QUE-007
 
 def test_admission_at_enqueue_and_held_start(setup):
     repo, settings, _, _, _, _, create = setup
@@ -299,6 +311,8 @@ def test_admission_at_enqueue_and_held_start(setup):
     finally:
         restarted.shutdown()
 
+
+# B-QUE-008
 
 def test_backlog_rechecks_capacity_before_expensive_run(setup, monkeypatch):
     repo, _, _, entered, release, report, create = setup
@@ -330,6 +344,8 @@ def test_backlog_rechecks_capacity_before_expensive_run(setup, monkeypatch):
         release.set()
         queue.shutdown()
 
+
+# B-QUE-009
 
 def test_write_failure_stops_queue_preserves_prior_result_and_reaps_child(setup, monkeypatch):
     repo, _, _, entered, release, _, create = setup
@@ -374,6 +390,8 @@ def test_write_failure_stops_queue_preserves_prior_result_and_reaps_child(setup,
         restarted.shutdown()
 
 
+# B-QUE-010
+
 def test_failed_status_write_is_reported_only_in_memory_then_recovered(setup, monkeypatch):
     repo, _, _, entered, release, _, create = setup
     queue = queue_for(setup)
@@ -414,6 +432,8 @@ def test_failed_status_write_is_reported_only_in_memory_then_recovered(setup, mo
         restarted.shutdown()
 
 
+# B-QUE-011
+
 def test_serial_experiments_and_child_process(setup):
     repo, _, _, entered, release, report, create = setup
     queue = queue_for(setup)
@@ -433,6 +453,8 @@ def test_serial_experiments_and_child_process(setup):
     finally:
         queue.shutdown()
 
+
+# B-QUE-012
 
 def test_cancel_active_preserves_completed_and_discards_partial(setup):
     repo, _, _, entered, release, _, create = setup
@@ -463,6 +485,8 @@ def test_cancel_active_preserves_completed_and_discards_partial(setup):
         queue.shutdown()
 
 
+# B-QUE-013
+
 def test_cancel_does_not_wait_for_a_stuck_session_and_reaps_child(setup):
     repo, _, _, entered, release, _, create = setup
     queue = queue_for(setup)
@@ -483,6 +507,8 @@ def test_cancel_does_not_wait_for_a_stuck_session_and_reaps_child(setup):
         release.set()
         queue.shutdown()
 
+
+# B-QUE-014
 
 def test_shutdown_and_restart_holds_pending_and_does_not_resume(setup):
     repo, _, _, entered, release, _, create = setup
@@ -516,6 +542,8 @@ def test_shutdown_and_restart_holds_pending_and_does_not_resume(setup):
         queue.shutdown()
 
 
+# B-QUE-015
+
 def test_abrupt_child_death_fails_and_next_job_proceeds(setup):
     repo, _, _, entered, release, _, create = setup
     queue = queue_for(setup)
@@ -536,6 +564,8 @@ def test_abrupt_child_death_fails_and_next_job_proceeds(setup):
         queue.shutdown()
 
 
+# B-QUE-016
+
 def test_child_initialization_failure_is_explicit_and_queue_recovers(setup):
     repo, _, _, _, _, _, create = setup
     queue = queue_for(setup)
@@ -551,6 +581,7 @@ def test_child_initialization_failure_is_explicit_and_queue_recovers(setup):
         queue.shutdown()
 
 
+# B-QUE-017
 @pytest.mark.parametrize("malformed", ["None result", "Wrong type", "Bad result"])
 def test_invalid_child_result_is_queue_fatal_without_losing_prior_result(setup, malformed):
     repo, _, _, _, _, report, create = setup
@@ -582,6 +613,8 @@ def test_invalid_child_result_is_queue_fatal_without_losing_prior_result(setup, 
         queue.shutdown()
 
 
+# B-QUE-018
+
 def test_start_held_rejects_active_before_status_changes(setup, monkeypatch):
     repo, _, _, _, _, _, create = setup
     held = create("Held")
@@ -609,6 +642,8 @@ def test_start_held_rejects_active_before_status_changes(setup, monkeypatch):
         release.set()
         queue.shutdown()
 
+
+# B-QUE-019
 
 def test_concurrent_held_starts_enqueue_once(setup):
     _, _, _, _, _, _, create = setup
@@ -640,6 +675,8 @@ def test_concurrent_held_starts_enqueue_once(setup):
         queue.shutdown()
 
 
+# B-QUE-020
+
 def test_cancel_queued_and_held_without_spawning(setup):
     repo, _, _, entered, release, _, create = setup
     queue = queue_for(setup)
@@ -666,6 +703,8 @@ def test_cancel_queued_and_held_without_spawning(setup):
         release.set()
         restarted.shutdown()
 
+
+# B-QUE-021
 
 def test_persisted_quota_reaches_existing_queue_submit_enqueue_and_held_start(setup):
     repo, settings, _, _, _, _, create = setup
@@ -700,6 +739,8 @@ def test_persisted_quota_reaches_existing_queue_submit_enqueue_and_held_start(se
         restarted.shutdown()
 
 
+# B-QUE-022
+
 def test_explicit_environment_default_wins_over_persisted_limit_at_runtime(setup):
     repo, settings, _, entered, release, report, _ = setup
     queue = JobQueue(
@@ -727,6 +768,8 @@ def test_explicit_environment_default_wins_over_persisted_limit_at_runtime(setup
         queue.shutdown()
 
 
+# B-QUE-023
+
 def test_persisted_update_during_active_calculation_blocks_result_without_partial_write(setup):
     repo, _, _, entered, release, _, create = setup
     queue = queue_for(setup)
@@ -748,6 +791,8 @@ def test_persisted_update_during_active_calculation_blocks_result_without_partia
         release.set()
         queue.shutdown()
 
+
+# B-QUE-024
 
 def test_next_configuration_rechecks_persisted_limit_after_completed_result(setup, monkeypatch):
     repo, _, _, _, _, report, create = setup
@@ -775,6 +820,7 @@ def test_next_configuration_rechecks_persisted_limit_after_completed_result(setu
         queue.shutdown()
 
 
+# B-QUE-026
 @pytest.mark.real_data
 def test_default_worker_runs_real_engine_in_spawned_process(tmp_path):
     from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256, Settings
@@ -820,6 +866,7 @@ def test_default_worker_runs_real_engine_in_spawned_process(tmp_path):
         queue.shutdown()
 
 
+# B-QUE-026
 @pytest.mark.real_data
 def test_real_engine_unaffordable_snapshot_is_local_after_spawn(tmp_path):
     from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256
@@ -857,6 +904,8 @@ def test_real_engine_unaffordable_snapshot_is_local_after_spawn(tmp_path):
     finally:
         queue.shutdown()
 
+
+# B-QUE-025
 
 def test_startup_reconciles_abandoned_running_and_pending(setup):
     repo, _, _, _, _, _, create = setup
