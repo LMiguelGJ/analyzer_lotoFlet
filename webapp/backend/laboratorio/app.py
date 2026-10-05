@@ -28,6 +28,7 @@ from laboratorio.api import (
     strategies,
 )
 from laboratorio.api import settings as settings_api
+from laboratorio.domain.contracts import configure_game
 from laboratorio.domain.strategy_library import seed_presets
 from laboratorio.engine.adapter import open_lab_data
 from laboratorio.importing.history import MAX_HISTORY_BYTES
@@ -115,6 +116,11 @@ def create_app(
             agent_token = load_or_create_token(settings.data_dir / "agent-token")
             initialize_database(settings.database_path)
             repo = Repository(settings.database_path)
+            # Startup seam: stored rules > LABORATORIO_GAME_* > Quiniela 80 default.
+            # Only future simulations use them; saved experiments keep their own profile.
+            stored_game = repo.get_game_settings()
+            if stored_game is not None:
+                configure_game(stored_game)
             seed_presets(
                 repo,
                 quota_bytes=settings.quota_bytes,

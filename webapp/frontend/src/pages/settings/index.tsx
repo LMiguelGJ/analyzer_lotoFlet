@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useBlocker } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
-import type { SettingsView } from "../../api/types";
+import type { GameSettings, GameSettingsSource, SettingsView } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ErrorBanner, Loading } from "../../components/ui";
+import { formatDOP } from "../../lib/format";
 
 const MAX_QUOTA = 9223372036854775807n;
 const GIB = 1073741824n;
@@ -39,6 +40,141 @@ function validate(value: string): string | null {
   return null;
 }
 
+const MAX_POSITIONS = 50;
+const WHOLE = /^[0-9]+$/;
+const GAME_WARNING = "Cambiar las reglas del juego afecta las simulaciones futuras; las guardadas conservan las suyas.";
+
+interface GameDraft { name: string; numbers: string; positions: string; prizes: string[]; repeats: boolean; stake: string }
+interface GameErrors { name?: string; numbers?: string; positions?: string; prizes: (string | undefined)[]; stake?: string }
+
+function toDraft(game: GameSettings): GameDraft {
+  return {
+    name: game.name, numbers: String(game.numbers), positions: String(game.positions),
+    prizes: game.prizes.map(String), repeats: game.allows_repeats, stake: String(game.minimum_stake),
+  };
+}
+// Mirrors the backend make_game() rules so the form never sends what the server would reject.
+function validateGame(draft: GameDraft): GameErrors {
+  const errors: GameErrors = { prizes: [] };
+  const numbers = WHOLE.test(draft.numbers) ? Number(draft.numbers) : NaN;
+  const positions = WHOLE.test(draft.positions) ? Number(draft.positions) : NaN;
+  if (draft.name.trim().length === 0 || draft.name.trim().length > 80) errors.name = "Escribí un nombre de hasta 80 caracteres.";
+  if (!(numbers >= 2)) errors.numbers = "Tiene que haber al menos 2 números posibles.";
+  if (!(positions >= 1)) errors.positions = "Tiene que haber al menos 1 posición.";
+  else if (positions > MAX_POSITIONS) errors.positions = `Se pueden editar hasta ${MAX_POSITIONS} posiciones.`;
+  else if (!draft.repeats && numbers >= 2 && positions > numbers) {
+    errors.positions = "Sin repeticiones, las posiciones no pueden superar a los números posibles.";
+  }
+  draft.prizes.forEach((prize, index) => {
+    errors.prizes[index] = WHOLE.test(prize) && Number(prize) >= 1 ? undefined : "Mínimo 1.";
+  });
+  if (!WHOLE.test(draft.stake) || Number(draft.stake) < 1) errors.stake = "La apuesta mínima es de al menos RD$1.";
+  return errors;
+}
+const hasGameErrors = (errors: GameErrors) =>
+  !!(errors.name || errors.numbers || errors.positions || errors.stake || errors.prizes.some(Boolean));
+
+function GameRulesSection({ onSource }: { onSource: (source: GameSettingsSource) => void }) {
+  const [draft, setDraft] = useState<GameDraft | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const busyRef = useRef(false);
+
+  useEffect(() => {
+    let live = true;
+    apiClient.getGameSettings().then((value) => {
+      if (!live) return;
+      setDraft(toDraft(value)); onSource(value.source);
+    }).catch(() => { if (live) setLoadError("No se pudieron cargar las reglas del juego."); });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function edit(change: Partial<GameDraft>) {
+    setDraft((current) => (current ? { ...current, ...change } : current));
+    setSaved(false); setSaveError("");
+  }
+  function changePositions(value: string) {
+    const count = WHOLE.test(value) ? Number(value) : NaN;
+    const next: Partial<GameDraft> = { positions: value };
+    if (count >= 1 && count <= MAX_POSITIONS && draft) {
+      next.prizes = Array.from({ length: count }, (_, index) => draft.prizes[index] ?? "1");
+    }
+    edit(next);
+  }
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!draft || busyRef.current || hasGameErrors(validateGame(draft))) return;
+    busyRef.current = true; setSaving(true); setSaveError(""); setSaved(false);
+    try {
+      const value = await apiClient.saveGameSettings({
+        name: draft.name.trim(), numbers: Number(draft.numbers), positions: Number(draft.positions),
+        prizes: draft.prizes.map(Number), allows_repeats: draft.repeats, minimum_stake: Number(draft.stake),
+      });
+      setDraft(toDraft(value)); onSource(value.source); setSaved(true);
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 422) setSaveError(failure.detail);
+      else if (failure instanceof NetworkError) setSaveError("Sin respuesta del servidor. Revisá la conexión y reintentá.");
+      else setSaveError("No se pudieron guardar las reglas. Tus cambios siguen en el formulario; reintentá.");
+    } finally { busyRef.current = false; setSaving(false); }
+  }
+
+  const errors = draft ? validateGame(draft) : null;
+  return <section aria-labelledby="game-rules-heading" className="mt-4">
+    <h2 id="game-rules-heading" className="section-header">Reglas del juego</h2>
+    {loadError && <p role="alert" className="text-sm text-red-300">{loadError}</p>}
+    {draft && errors && <form onSubmit={(event) => { void save(event); }} noValidate className="max-w-xl space-y-4">
+      <div>
+        <label htmlFor="game-name" className="field-label">Nombre</label>
+        <input id="game-name" type="text" autoComplete="off" className="control" value={draft.name} disabled={saving} aria-invalid={!!errors.name} aria-describedby={errors.name ? "game-name-error" : undefined} onChange={(event) => edit({ name: event.target.value })} />
+        {errors.name && <p id="game-name-error" className="mt-2 text-sm text-red-300">{errors.name}</p>}
+      </div>
+      <div>
+        <label htmlFor="game-numbers" className="field-label">Números posibles</label>
+        <input id="game-numbers" type="text" inputMode="numeric" autoComplete="off" className="control tabular-nums" value={draft.numbers} disabled={saving} aria-invalid={!!errors.numbers} aria-describedby={errors.numbers ? "game-numbers-error" : undefined} onChange={(event) => edit({ numbers: event.target.value })} />
+        {errors.numbers && <p id="game-numbers-error" className="mt-2 text-sm text-red-300">{errors.numbers}</p>}
+      </div>
+      <div>
+        <label htmlFor="game-positions" className="field-label">Posiciones por sorteo</label>
+        <input id="game-positions" type="text" inputMode="numeric" autoComplete="off" className="control tabular-nums" value={draft.positions} disabled={saving} aria-invalid={!!errors.positions} aria-describedby={errors.positions ? "game-positions-error" : undefined} onChange={(event) => changePositions(event.target.value)} />
+        {errors.positions && <p id="game-positions-error" className="mt-2 text-sm text-red-300">{errors.positions}</p>}
+      </div>
+      <fieldset>
+        <legend className="field-label">Premios por posición</legend>
+        <p className="field-help">Cuánto paga cada RD$1 apostado a esa posición.</p>
+        <div className="mt-2 space-y-2">
+          {draft.prizes.map((prize, index) => {
+            const error = errors.prizes[index];
+            return <div key={index}>
+              <label htmlFor={`game-prize-${index}`} className="text-sm text-text-secondary">Posición {index + 1}</label>
+              <input id={`game-prize-${index}`} type="text" inputMode="numeric" autoComplete="off" className="control tabular-nums" value={prize} disabled={saving} aria-invalid={!!error} aria-describedby={error ? `game-prize-${index}-error` : undefined} onChange={(event) => edit({ prizes: draft.prizes.map((current, at) => (at === index ? event.target.value : current)) })} />
+              {error ? <p id={`game-prize-${index}-error`} className="mt-1 text-sm text-red-300">{error}</p>
+                : <p className="mt-1 text-sm text-text-secondary">Paga {formatDOP(Number(prize))} por cada RD$1.</p>}
+            </div>;
+          })}
+        </div>
+      </fieldset>
+      <div>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.repeats} disabled={saving} onChange={(event) => edit({ repeats: event.target.checked })} />Repeticiones permitidas</label>
+        <p className="field-help">Si se permiten, el mismo número puede salir en varias posiciones.</p>
+      </div>
+      <div>
+        <label htmlFor="game-stake" className="field-label">Apuesta mínima por número</label>
+        <input id="game-stake" type="text" inputMode="numeric" autoComplete="off" className="control tabular-nums" value={draft.stake} disabled={saving} aria-invalid={!!errors.stake} aria-describedby={errors.stake ? "game-stake-error" : "game-stake-help"} onChange={(event) => edit({ stake: event.target.value })} />
+        {errors.stake ? <p id="game-stake-error" className="mt-2 text-sm text-red-300">{errors.stake}</p>
+          : <p id="game-stake-help" className="field-help">Mínimo actual: {formatDOP(Number(draft.stake))}.</p>}
+      </div>
+      <p className="border border-border-control bg-field p-3 text-sm">{GAME_WARNING}</p>
+      {saveError && <p role="alert" className="text-sm text-red-300">{saveError}</p>}
+      {saved && <p role="status" className="text-sm text-accent">Reglas guardadas. Se usarán en las próximas simulaciones.</p>}
+      {/* The page keeps a single primary action (the capacity limit); this one is secondary. */}
+      <button type="submit" className="btn btn-secondary disabled:cursor-not-allowed" disabled={saving || hasGameErrors(errors)}>{saving ? "Guardando…" : "Guardar reglas"}</button>
+    </form>}
+  </section>;
+}
+
 export function SettingsPage() {
   const [view, setView] = useState<SettingsView | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
@@ -49,6 +185,7 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const [gameSource, setGameSource] = useState<GameSettingsSource | null>(null);
   const [agentCredential, setAgentCredential] = useState<string | null>(null);
   const [agentCredentialVisible, setAgentCredentialVisible] = useState(false);
   const [agentCredentialLoading, setAgentCredentialLoading] = useState(false);
@@ -242,6 +379,7 @@ export function SettingsPage() {
     } finally { saveRef.current = false; setSaving(false); }
   }
 
+  const gameSourceName = gameSource === "stored" ? "Guardadas desde la web" : gameSource === "environment" ? "Variables de entorno LABORATORIO_GAME_*" : gameSource === "default" ? "Predeterminadas (Quiniela 80)" : "Sin leer";
   const sourceName = view?.quota.source === "environment" ? "Variable de entorno" : view?.quota.source === "persisted" ? "Preferencia guardada" : "Por defecto";
   return <div className="max-w-5xl space-y-8">
     {view && <div className="flex justify-end">
@@ -276,6 +414,9 @@ export function SettingsPage() {
           <button type="submit" className="btn btn-primary mt-4" disabled={saving}>{saving ? "Guardando…" : "Guardar límite"}</button>
         </form> : <div className="max-w-prose text-text-secondary"><p>El entorno del servidor fija el límite; aquí es de solo lectura.</p>{dirty && <p className="mt-2 break-words">Borrador no guardado: <span className="font-mono">{draft}</span> bytes. No se envió.</p>}</div>}
       </section>
+      <details className="border-y border-border py-3"><summary className="disclosure-summary">Avanzado</summary>
+        <GameRulesSection onSource={setGameSource} />
+      </details>
       <details className="border-y border-border py-3"><summary className="disclosure-summary">Detalles técnicos</summary>
         <div className="mt-4 space-y-6 text-sm">
           <dl className="metric-grid">
@@ -300,6 +441,10 @@ export function SettingsPage() {
               <div className={metric}><dt>SHM</dt><dd className="break-words font-mono">{measured(view.storage.shm_bytes)}</dd></div>
               <div className={metric}><dt>Temporales locales</dt><dd className="break-words font-mono">{measured(view.storage.temp_bytes)}</dd></div>
             </dl>
+          </section>
+          <section aria-labelledby="game-source-heading">
+            <h3 id="game-source-heading" className="field-label">Origen de las reglas del juego</h3>
+            <p>{gameSourceName}</p>
           </section>
           <section aria-labelledby="sources-heading">
             <h3 id="sources-heading" className="field-label">Datos de origen</h3>

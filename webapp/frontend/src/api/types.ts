@@ -655,6 +655,21 @@ export interface SettingsView {
   connection: { host: string; port: number; version: string };
 }
 
+export type GameSettingsSource = "stored" | "environment" | "default";
+
+export interface GameSettingsInput {
+  name: string;
+  numbers: number;
+  positions: number;
+  prizes: number[];
+  allows_repeats: boolean;
+  minimum_stake: number;
+}
+
+export interface GameSettings extends GameSettingsInput {
+  source: GameSettingsSource;
+}
+
 export interface AgentCredentialResponse {
   token: string;
 }
