@@ -40,11 +40,11 @@ base de datos son de solo lectura: no se cambian endpoints ni payloads.
   en móvil, verdad financiera siempre visible. Superficies:
   webapp/frontend/src/pages/experiments/** y presentación compartida que usen,
   tests colocados.
-- [ ] T5. Estrategias y datos: configurations + data mobile-first con jerarquía
+- [x] T5. Estrategias y datos: configurations + data mobile-first con jerarquía
   clara. Superficies: webapp/frontend/src/pages/configurations/**,
   webapp/frontend/src/pages/data/** y presentación compartida que usen, tests
   colocados.
-- [ ] T6. QA transversal: responsive, accesibilidad, reduced motion, tsc, suite
+- [~] T6. QA transversal (p1 cerrada: 10/10 seguimientos R3 + flakiness sistémica resuelta con timeout global 15s; p2 en curso: detector Impeccable + finish review + cierre): responsive, accesibilidad, reduced motion, tsc, suite
   completa frontend, build, detector Impeccable `[]`. Superficies: solo correcciones
   de presentación/estilos y tests de regresión que aparezcan.
 
@@ -71,8 +71,13 @@ Aceptación manual del usuario: navegador en ancho de teléfono real + zoom.
 - T4: e64747f (7 archivos) · revisión nativa review-7c98d43a012cd6df
   aprobada y quemada; suite 553/553 x2. Hallazgo R3: R3-resize-coverage
   (experiments/ComparisonPage.tsx:65-68)
-- T5: pendiente
-- T6: pendiente
+- T5: 70dc0b8 (8 archivos) · revisión nativa review-ad0062173a045376
+  aprobada y quemada; hallazgo R3-validation-disclosure cerrado luego en T6-p1
+- T6-p1: 3987f1f (11 archivos) · revisión nativa review-355a5315bcd85904
+  aprobada y quemada; 560/560 x3 corridas; timeout global Vitest 15s
+- T6-p2: detector Impeccable + finish review + DESIGN.md final — en curso
+- NUEVO hallazgo R3: R3-save-outcome-race (pages/settings/index.tsx:381),
+  no bloqueante, para el lote final de fixes
 
 ## Seguimientos de revisión (no bloqueantes)
 
