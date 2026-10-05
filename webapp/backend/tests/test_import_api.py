@@ -1,5 +1,16 @@
 """Local import HTTP admission, bounded projection, and promotion authority."""
 
+# Contract traceability:
+# B-API-065: test_preview_no_writes_bounded_sample_truthful_counts_and_errors
+# B-API-066: test_promote_hash_gate_idempotence_and_distinct_raw_retained
+# B-API-067/068: test_invalid_envelope_metadata_and_parser_errors
+# B-API-069: test_quota_failure_rolls_back_and_integrity_failure_is_opaque
+# B-API-070/072: test_cap_declared_and_streamed_with_missing_or_false_length_and_local_guard
+# B-API-071: test_decoded_limit_and_other_route_unchanged
+# B-API-111..114: native history imports remain covered by tests in
+#   test_history_import.py (preview/hash/promotion, metadata/profile validation,
+#   quota revalidation, and strict legacy import format).
+
 import base64
 import json
 import sqlite3

@@ -1,5 +1,15 @@
 """Read projections for persisted profile batch v5 sessions."""
 
+# Contract traceability:
+# B-API-101: test_completed_v5_detail_list_and_replay_project_saved_session
+# B-API-102: test_v5_stop_reasons_distinguish_budget_goal_and_source_end
+# B-API-103: test_v5_resultless_runs_have_no_financial_claims
+# B-API-104: test_v5_saved_source_identity_corruption_is_conflict
+# B-API-105: test_corrupt_v5_saved_dataset_is_conflict_for_replay_and_trajectory
+# B-API-106: test_corrupt_v5_admission_is_conflict_not_server_error
+# B-API-108..110: strategy API behavior remains covered by the strategy-library
+#   startup/pagination/retrieval and stored-corruption tests in test_strategy_library.py.
+
 import json
 import sqlite3
 from dataclasses import replace

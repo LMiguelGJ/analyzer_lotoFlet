@@ -1,3 +1,16 @@
+# Contract traceability:
+# B-API-049..051: test_agent_facade_auth_allowlist_delegation_and_local_credential;
+#   test_agent_origin_guards_and_credential_stable_across_restart
+# B-API-052: test_agent_origin_guards_and_credential_stable_across_restart
+# B-API-053: test_agent_batch_schema_versions_reject_coercible_values
+# B-API-054..058: test_agent_batch_facade_reuses_native_admission_and_safe_links
+# B-API-059: test_corrupt_saved_batch_is_opaque_conflict_on_native_and_agent_facades
+# B-API-060: test_agent_history_preview_and_promote_use_raw_body_and_registered_context
+# B-API-061: test_corrupt_agent_credential_fails_closed
+# B-API-062: test_agent_auth_rejects_duplicate_authorization_headers
+# B-API-063: test_agent_auth_rejects_non_ascii_authorization_without_server_error
+# B-API-064: test_concurrent_agent_credential_creation_publishes_only_complete_winner
+
 import asyncio
 import json
 import sqlite3

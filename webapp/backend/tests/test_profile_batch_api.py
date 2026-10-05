@@ -1,3 +1,12 @@
+# Contract traceability:
+# B-API-092/093: test_validate_is_dry_and_native_batch_routes_are_registered
+# B-API-094/095: test_native_batch_post_uses_queue_and_idempotent_lookup;
+#   test_identity_lookup_maps_a_missing_verified_experiment_to_conflict
+# B-API-096/097: test_policy_route_is_bounded_cas_and_does_not_rewrite_frozen_batches
+# B-API-098: test_validate_does_not_reserve_capacity_or_request_identity
+# B-API-099: test_native_batch_schema_versions_reject_coercible_values
+# B-API-100: test_native_batch_body_is_closed_and_limited
+
 import sqlite3
 
 import pytest
