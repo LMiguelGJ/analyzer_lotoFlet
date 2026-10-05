@@ -1,5 +1,20 @@
 """HTTP read projections of persisted profile jobs; no public profile submission."""
 
+# Contract traceability:
+# B-API-073..076: test_profile_static_and_random_get_projection_is_inert_and_discriminated
+# B-API-077: test_profile_held_and_failed_are_incomplete_without_replay
+# B-API-078: test_public_registration_import_submission_and_completed_read
+# B-API-079..081: test_dataset_detail_and_draws_use_verified_embedded_profile
+# B-API-082: test_registration_strict_idempotent_conflict_quota_and_origin
+# B-API-083/084: test_profile_submit_rejects_invalid_binding_affordability_and_queue_failure
+# B-API-085: test_legacy_exact_http_fixture_unchanged
+# B-API-086: test_private_cycling_public_reads_and_queue_start_refuse_without_leaking
+# B-API-087: test_public_cycling_submit_spawn_replay_and_rejection_before_rows
+# B-API-088: test_completed_cycling_public_read_projection_and_visibility
+# B-API-089: test_public_audaz_post_has_truthful_detail_list_and_replay
+# B-API-090: test_public_schema4_recovery_submission_worker_and_truthful_reads
+# B-API-091: test_public_schema4_stop_persists_round_limit_and_replays
+
 import asyncio
 import json
 import sqlite3

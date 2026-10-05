@@ -1,5 +1,46 @@
 """HTTP contract, isolation and lifecycle tests against temporary storage."""
 
+# Contract traceability (the behavior-level assertions below are the replacements):
+# B-API-001/002: test_catalog_and_create_read_without_recalculation
+# B-API-003..007: test_profile_catalog_is_bounded_inert_and_keeps_legacy_catalog_shape
+# B-API-008..010: test_dataset_discovery_is_bounded_inert_and_metadata_only
+# B-API-011: test_starting_draw_date_jumps_to_late_ranked_page_without_changing_legacy_pagination
+# B-API-012: test_starting_draw_late_date_uses_indexed_access_not_linear_page_scanning
+# B-API-013: test_starting_draw_date_excludes_unranked_and_reports_bounded_history_availability
+# B-API-014: test_starting_draw_date_rejects_non_iso_or_invalid_calendar_day
+# B-API-015: test_experiment_profile_snapshot_is_additive_on_saved_responses
+# B-API-016/017: test_experiment_search_filters_orders_paginates_and_serializes_created_at
+# B-API-018: test_max_safe_seed_round_trips_exactly_through_create_and_get
+# B-API-019: test_seed_rejects_string_and_float_with_field_loc
+# B-API-020: test_duplicate_strategy_name_error_is_field_located_not_root
+# B-API-021: test_invalid_payload_and_start
+# B-API-022: test_create_rejects_unaffordable_initial_stake_before_submit;
+#   test_create_rejects_later_unaffordable_strategy_without_persisting_batch
+# B-API-023: test_create_accepts_exact_initial_cost_boundary
+# B-API-024/025: test_host_origin_guard
+# B-API-026: test_run_delta_projects_persisted_result_from_request_capital
+# B-API-027..031: test_snapshot_replay_compare_and_confirmed_delete
+# B-API-032: test_mixed_failed_batch_keeps_api_shapes_and_comparison_incomplete
+# B-API-033: test_active_delete_refused_and_cancel_held_start
+# B-API-034: test_queue_status_pages_pending_and_held_without_materializing_backlog
+# B-API-035: test_running_delete_refused_and_unpersisted_failure_is_truthful;
+#   test_queue_failure_is_sanitized_with_persistence_truth
+# B-API-036: test_capacity_rejects_before_insert_and_enqueue_compensates
+# B-API-037: test_startup_failure_and_no_auto_resume
+# B-API-038: test_single_queue_owner_and_manual_held_start
+# B-API-039/040: test_shutdown_timeout_retains_database_owner_until_coordinator_stops;
+#   test_failed_start_with_live_coordinator_retains_owner
+# B-API-041: test_queue_start_failure_reaps
+# B-API-042: test_spawned_route_integration
+# B-API-043: test_real_catalog_factory_uses_installed_inputs
+# B-API-044/045: test_settings_exact_quota_and_validation;
+#   test_settings_quota_validation_runs_independently_of_storage_accounting
+# B-API-046: test_settings_below_used_conflicts_without_mutation
+# B-API-047: test_settings_env_override_read_only_and_guarded
+# B-API-048: test_settings_preference_survives_new_app_and_sources_remain_read_only
+# B-API-107 cross-reference: game configuration remains covered by test_settings.py;
+#   queue endpoints by test_queue.py and B-API-033/034/038 above.
+
 import sqlite3
 import time
 from dataclasses import replace
@@ -1238,6 +1279,42 @@ def test_settings_exact_quota_and_validation(setup):
         assert response.status_code == 422
         location = response.json()["detail"][0]["loc"]
         assert location[:2] == (["body", "quota_bytes"] if isinstance(body, dict) else ["body"])
+    assert client.get("/api/v1/settings").json()["quota"]["persisted_bytes"] == maximum
+
+
+def test_settings_quota_validation_runs_independently_of_storage_accounting(setup):
+    """B-API-045: quota boundary and invalid-input checks run even if storage metrics regress."""
+    client, _, _ = setup
+    maximum = str(2**63 - 1)
+    accepted = put_settings(client, {"quota_bytes": maximum})
+    assert accepted.status_code == 200
+    assert accepted.json()["quota"]["persisted_bytes"] == maximum
+    invalid_values = (
+        0,
+        True,
+        5.0,
+        2**53,
+        "",
+        "0",
+        "-1",
+        "+1",
+        "1.0",
+        "1e3",
+        "\uff11\uff12",
+        "9" * 20,
+        "9223372036854775808",
+        "0001",
+        " 1",
+        "1\n",
+        "1_0",
+    )
+    for value in invalid_values:
+        response = put_settings(client, {"quota_bytes": value})
+        assert response.status_code == 422, value
+        assert response.json()["detail"][0]["loc"] == ["body", "quota_bytes"]
+        assert client.get("/api/v1/settings").json()["quota"]["persisted_bytes"] == maximum
+    for body in ({"quota_bytes": "5", "unexpected": 1}, {}, []):
+        assert put_settings(client, body).status_code == 422
     assert client.get("/api/v1/settings").json()["quota"]["persisted_bytes"] == maximum
 
 
