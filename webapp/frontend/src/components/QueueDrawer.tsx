@@ -154,7 +154,7 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
   return createPortal(<>
     <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} aria-hidden="true" />
     <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="fixed inset-y-0 right-0 z-40 w-full max-w-lg overflow-y-auto border-l border-border-control bg-surface p-6 text-text focus:outline-none">
-      <div className="flex items-center justify-between gap-3"><h2 id={titleId} className="font-heading text-2xl">Cola de experimentos</h2><button type="button" className={control} onClick={onClose}>Cerrar cola</button></div>
+      <div className="flex items-center justify-between gap-3"><h2 id={titleId} className="font-heading text-2xl">Cola de cálculo</h2><button type="button" className={control} onClick={onClose}>Cerrar cola</button></div>
       <details className="mt-2 border-y border-border py-3"><summary className="disclosure-summary">Detalles técnicos</summary>
         <p className="mt-3 text-sm text-text-secondary">La cola ejecuta un cálculo a la vez y consulta los trabajos en páginas independientes de 20. El estado puede cambiar entre consultas. Los trabajos detenidos solo se pueden iniciar después de comprobar su estado; si una solicitud no se confirma, comprobalo antes de reenviarla.</p>
       </details>

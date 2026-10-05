@@ -45,7 +45,7 @@ describe("Shell navigation", () => {
     expect(queue).toHaveAttribute("aria-expanded", "false");
     expect(queue).toHaveAccessibleDescription("Sin cálculos en curso");
     await user.click(queue);
-    expect(screen.getByRole("dialog", { name: "Cola de experimentos" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Cola de cálculo" })).toBeInTheDocument();
   });
 
   it("does not break route titles mid-word", () => {

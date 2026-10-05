@@ -34,7 +34,7 @@ function setup() {
 async function open(user: ReturnType<typeof userEvent.setup>) {
   const trigger = screen.getByRole("button", { name: "Abrir cola de cálculo" });
   await user.click(trigger);
-  return screen.getByRole("dialog", { name: "Cola de experimentos" });
+  return screen.getByRole("dialog", { name: "Cola de cálculo" });
 }
 beforeEach(() => {
   vi.mocked(apiClient.getQueue).mockReset().mockResolvedValue(queue());
