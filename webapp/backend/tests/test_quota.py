@@ -51,6 +51,7 @@ def repo(tmp_path):
     return Repository(path)
 
 
+# B-STO-090: default/configured quotas are exact and invalid values are rejected.
 def test_default_and_invalid_configured_quota(tmp_path, monkeypatch):
     settings = Settings(tmp_path, tmp_path / "source.json", tmp_path / "rank.npz", tmp_path)
     assert settings.quota_bytes == DEFAULT_QUOTA_BYTES == 5 * 1024**3
@@ -64,6 +65,7 @@ def test_default_and_invalid_configured_quota(tmp_path, monkeypatch):
         Settings.from_environment()
 
 
+# B-STO-091: persisted, environment and explicit override quota precedence is stable.
 def test_preference_persists_and_effective_precedence(repo):
     initial = repo.effective_quota()
     assert (initial.effective_bytes, initial.persisted_bytes, initial.source, initial.writable) == (
@@ -97,6 +99,7 @@ def test_preference_persists_and_effective_precedence(repo):
 
 
 @pytest.mark.parametrize("invalid", [0, -1, True, 1.5, "100", 2**63])
+# B-STO-092: quota preference accepts only strict in-range SQLite integers.
 def test_preference_requires_strict_sqlite_int(repo, invalid):
     with pytest.raises(ValueError, match="quota"):
         repo.set_quota_preference(invalid)
@@ -105,6 +108,7 @@ def test_preference_requires_strict_sqlite_int(repo, invalid):
         repo.effective_quota(invalid)
 
 
+# B-STO-093: equal-to-usage preference is allowed; below-usage update rolls back.
 def test_preference_below_usage_rolls_back_and_equal_allowed(repo):
     identifier = repo.create_experiment(
         request("First"),
@@ -125,6 +129,7 @@ def test_preference_below_usage_rolls_back_and_equal_allowed(repo):
     assert repo.get_quota_preference() == 2**63 - 1
 
 
+# B-STO-094: write boundaries reread persisted preferences after stale preflight.
 def test_write_boundary_rereads_preference_after_stale_preflight(repo):
     generous = 2 * 1024**3
     repo.set_quota_preference(generous)
@@ -176,6 +181,7 @@ def test_write_boundary_rereads_preference_after_stale_preflight(repo):
     assert repo.get_experiment(identifier).runs[0].status is RunStatus.COMPLETED
 
 
+# B-STO-095: concurrent quota preference changes cannot undercut active writes.
 def test_concurrent_preference_cannot_undercut_in_flight_write(repo):
     inside_write = Event()
     release_write = Event()
@@ -210,6 +216,7 @@ def test_concurrent_preference_cannot_undercut_in_flight_write(repo):
     assert repo.get_quota_preference() is None
 
 
+# B-STO-096: quota distinguishes logical artifacts, source inputs and physical bytes.
 def test_logical_usage_excludes_original_inputs_and_physical_overhead(repo, tmp_path):
     (tmp_path / "source.json").write_bytes(b"x" * 4096)
     (tmp_path / "rank.npz").write_bytes(b"x" * 4096)
@@ -238,6 +245,7 @@ def test_logical_usage_excludes_original_inputs_and_physical_overhead(repo, tmp_
     assert repo.get_experiment(identifier) is not None
 
 
+# B-STO-097: SQLite sidecars contribute to physical size and report separately.
 def test_sqlite_wal_and_temporary_sidecars_reported_separately(repo):
     # A real SQLite open can clean up stale sidecars; isolate measurement itself.
     for suffix, size in (("-wal", 47), ("-shm", 31), ("-journal", 13)):
@@ -250,6 +258,7 @@ def test_sqlite_wal_and_temporary_sidecars_reported_separately(repo):
     assert status.logical_margin_bytes > 0
 
 
+# B-STO-098: logical quota and free-disk thresholds are independent.
 def test_below_at_and_above_threshold_and_free_disk_independent(repo):
     limit = 5 * 1024**3
     profile_bytes = repo.profile_artifact_bytes()
@@ -307,6 +316,7 @@ def admission_equality_limit(projected):
     )
 
 
+# B-STO-099: textual request/result discriminators are counted in logical usage.
 def test_discriminator_bytes_are_counted_and_projected(repo):
     baseline = repo.logical_experiment_bytes()
     identifier = create_trial(repo)
@@ -327,6 +337,7 @@ def test_discriminator_bytes_are_counted_and_projected(repo):
     assert repo.admission_logical_bytes() >= baseline + used + 2
 
 
+# B-STO-100: snapshot cost is projected once and equality rejection is atomic.
 def test_snapshot_projection_counts_one_copy_atomically_at_equality(repo):
     def free(_):
         return disk(2 * 1024**3)
@@ -347,6 +358,7 @@ def test_snapshot_projection_counts_one_copy_atomically_at_equality(repo):
     assert repo.admission_logical_bytes() == baseline + snapshot_cost
 
 
+# B-STO-101: profile quota, exact retries and conflicting revisions are enforced.
 def test_profile_version_quota_idempotence_and_conflict(repo):
     def free(_):
         return disk(2 * 1024**3)
@@ -381,6 +393,7 @@ def test_profile_version_quota_idempotence_and_conflict(repo):
     assert repo.set_quota_preference(baseline + cost) == baseline + cost
 
 
+# B-STO-102: existing over-quota rows stay readable and deletion recovers headroom.
 def test_old_over_quota_data_readable_and_deletion_recovers_headroom(repo):
     identifier = create_trial(repo)
     old_used = repo.logical_experiment_bytes()
@@ -403,6 +416,7 @@ def test_old_over_quota_data_readable_and_deletion_recovers_headroom(repo):
     assert repo.set_quota_preference(repo.admission_logical_bytes()) > 0
 
 
+# B-STO-103: result UTF-8 growth is checked before commit, preserving RUNNING state.
 def test_result_write_checks_exact_utf8_bytes_before_commit(repo):
     from laboratorio.domain.contracts import ExperimentStatus, Outcome
     from laboratorio.domain.session import Bet, SessionResult

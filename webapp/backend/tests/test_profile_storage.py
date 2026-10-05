@@ -87,6 +87,7 @@ def prepared(tmp_path):
     return Repository(path), request, wire
 
 
+# B-STO-041: prepared profile rows load typed; legacy create cannot admit them.
 def test_prepared_profile_request_loads_typed_without_exposing_enqueue(prepared):
     repo, request, wire = prepared
     saved = repo.get_experiment("prepared")
@@ -118,6 +119,7 @@ def test_prepared_profile_request_loads_typed_without_exposing_enqueue(prepared)
         ("request_json", "not JSON"),
     ],
 )
+# B-STO-042: request discriminator and serialized request must agree.
 def test_request_discriminator_and_wire_must_agree(prepared, column, value):
     repo, _, _ = prepared
     with sqlite3.connect(repo.path) as db:
@@ -126,6 +128,7 @@ def test_request_discriminator_and_wire_must_agree(prepared, column, value):
         repo.get_experiment("prepared")
 
 
+# B-STO-043: request snapshot identity and full profile hash are authenticated.
 def test_snapshot_identity_and_full_hash_must_agree(prepared):
     repo, request, _ = prepared
     with sqlite3.connect(repo.path) as db:
@@ -137,6 +140,7 @@ def test_snapshot_identity_and_full_hash_must_agree(prepared):
         repo.get_experiment("prepared")
 
 
+# B-STO-044: mixed result kinds and malformed completed profile results fail closed.
 def test_mixed_kind_and_completed_profile_results_fail_closed(prepared):
     repo, _, _ = prepared
     with sqlite3.connect(repo.path) as db:
@@ -153,6 +157,7 @@ def test_mixed_kind_and_completed_profile_results_fail_closed(prepared):
         repo.get_experiment("prepared")
 
 
+# B-STO-045: legacy completion cannot write a profile-kind run.
 def test_legacy_completion_cannot_write_profile_run(prepared):
     repo, _, _ = prepared
     repo.start_run("prepared", 0)
@@ -162,6 +167,7 @@ def test_legacy_completion_cannot_write_profile_run(prepared):
         assert db.execute("SELECT status, result_json FROM runs").fetchone() == ("running", None)
 
 
+# B-STO-046: database checks reject unknown request/result discriminators.
 def test_schema_discriminators_reject_unknown_values(prepared):
     repo, _, _ = prepared
     with sqlite3.connect(repo.path) as db:
@@ -213,6 +219,7 @@ def replay(request, profile, dataset):
     )
 
 
+# B-STO-047: profile admission requires exact registered profile and verified dataset.
 def test_create_requires_registered_exact_profile_and_dataset(bound):
     repo, profile, dataset, request = bound
     before = repo.admission_logical_bytes()
@@ -249,6 +256,7 @@ def test_create_requires_registered_exact_profile_and_dataset(bound):
         repo.create_profile_experiment(request)
 
 
+# B-STO-048: request/profile snapshot, provenance and quota admission are atomic.
 def test_create_atomic_snapshot_provenance_and_exact_quota(bound):
     repo, profile, dataset, request = bound
     repo.create_game_profile(profile)
@@ -288,6 +296,7 @@ def test_create_atomic_snapshot_provenance_and_exact_quota(bound):
 
 
 @pytest.mark.parametrize("random", [False, True])
+# B-STO-049: completion validates full-dataset replay and reloads typed result.
 def test_complete_replays_all_rows_and_loads_typed_result(bound, monkeypatch, random):
     import laboratorio.storage.repository as storage
 
@@ -326,6 +335,7 @@ def test_complete_replays_all_rows_and_loads_typed_result(bound, monkeypatch, ra
     assert repo.get_experiment(identifier).status is ExperimentStatus.COMPLETED
 
 
+# B-STO-050: completion rejects forgery, wrong ownership, cancellation and stale replay.
 def test_complete_rejects_forgery_wrong_owner_cancel_and_stale_replay(bound, monkeypatch):
     import laboratorio.storage.repository as storage
 
@@ -367,6 +377,7 @@ def test_complete_rejects_forgery_wrong_owner_cancel_and_stale_replay(bound, mon
 
 
 @pytest.mark.parametrize("positions", [1, 5])
+# B-STO-051: persisted results retain profiles with one and five positions.
 def test_profile_result_loading_preserves_variable_positions(tmp_path, positions):
     path = tmp_path / "positions.db"
     initialize_database(path)
@@ -392,6 +403,7 @@ def test_profile_result_loading_preserves_variable_positions(tmp_path, positions
     assert result.bets[0].results == tuple(range(positions))
 
 
+# B-STO-052: completion rechecks request/dataset binding after replay validation.
 def test_replay_race_rechecks_request_and_dataset_binding(bound, monkeypatch):
     import laboratorio.storage.repository as storage
 
@@ -416,6 +428,7 @@ def test_replay_race_rechecks_request_and_dataset_binding(bound, monkeypatch):
     assert repo.get_experiment(identifier).runs[0].result is None
 
 
+# B-STO-053: quota or corrupt dataset failure leaves no profile result.
 def test_complete_quota_and_corrupt_dataset_fail_without_result(bound):
     repo, profile, dataset, request = bound
     repo.create_game_profile(profile)
@@ -475,6 +488,7 @@ def cycling_result(request, profile, dataset):
     )
 
 
+# B-STO-054/B-FLAKY-008: private cycling round-trip, version and cross-kind fail-closed reads.
 def test_cycling_private_roundtrip_and_cross_version_fail_closed(cycling):
     repo, profile, dataset, request = cycling
     identifier = repo.create_profile_cycling_experiment(request)
@@ -488,12 +502,18 @@ def test_cycling_private_roundtrip_and_cross_version_fail_closed(cycling):
         assert db.execute(
             "SELECT request_json FROM experiments WHERE id = ?", (identifier,)
         ).fetchone()[0] == serialize_profile_cycling_request(request)
+        # Schema 12 permits v5 for batch requests, so exercise fail-closed decoding.
+        db.execute(
+            "UPDATE experiments SET request_schema_version = 5 WHERE id = ?", (identifier,)
+        )
+    with pytest.raises(ValueError):
+        repo.get_experiment(identifier)
+    with sqlite3.connect(repo.path) as db:
         with pytest.raises(sqlite3.IntegrityError):
-            db.execute(
-                "UPDATE experiments SET request_schema_version = 5 WHERE id = ?", (identifier,)
-            )
-        with pytest.raises(sqlite3.IntegrityError):
-            db.execute("UPDATE experiments SET request_kind = 'legacy' WHERE id = ?", (identifier,))
+            db.execute("UPDATE experiments SET request_schema_version = 2, request_kind = 'legacy' "
+                       "WHERE id = ?", (identifier,))
+    # Continue the normal round-trip on a clean stored v2 request.
+    identifier = repo.create_profile_cycling_experiment(request)
     repo.start_run(identifier, 0)  # internal-only setup, never through JobQueue
     result = cycling_result(request, profile, dataset)
     with pytest.raises(ValueError, match="owned"):
@@ -543,6 +563,7 @@ def test_cycling_private_roundtrip_and_cross_version_fail_closed(cycling):
         repo.get_experiment(identifier)
 
 
+# B-STO-055: cycling validates ownership/replay/digest and atomically enforces quota.
 def test_cycling_replay_ownership_digest_and_atomic_quota(cycling, monkeypatch):
     import laboratorio.storage.repository as storage
 
@@ -602,6 +623,7 @@ def test_cycling_replay_ownership_digest_and_atomic_quota(cycling, monkeypatch):
     assert repo.get_experiment(identifier).runs[0].result is None
 
 
+# B-STO-056/B-FLAKY-009: Audaz v3 round-trip and cross-version reads fail closed.
 def test_audaz_v3_persistence_replay_and_version_checks(bound):
     from laboratorio.domain.profile_request_v3 import (
         ProfileAudazRequest,
@@ -649,12 +671,15 @@ def test_audaz_v3_persistence_replay_and_version_checks(bound):
         ).fetchone()
         assert request_wire == serialize_profile_audaz_request(audaz) and version == 3
         assert result_wire == serialize_profile_audaz_result(result) and result_version == 3
-        with pytest.raises(sqlite3.IntegrityError):
-            db.execute(
-                "UPDATE experiments SET request_schema_version = 5 WHERE id = ?", (identifier,)
-            )
+        # Schema 12 accepts v5 globally; the v3 reader must reject that cross-version wire.
+        db.execute(
+            "UPDATE experiments SET request_schema_version = 5 WHERE id = ?", (identifier,)
+        )
+    with pytest.raises(ValueError):
+        repo.get_experiment(identifier)
 
 
+# B-STO-057: unaffordable Audaz admission creates no experiment or run rows.
 def test_audaz_initial_affordability_rejects_before_creating_rows(tmp_path):
     from laboratorio.domain.profile_request_v3 import ProfileAudazRequest
     from laboratorio.domain.profile_session import ProfileConditions, ProfileSelector

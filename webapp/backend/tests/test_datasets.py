@@ -44,6 +44,7 @@ def equality_limit(projected):
     )
 
 
+# B-STO-065: invalid input and external previews never create persisted datasets.
 def test_invalid_source_and_forged_preview_never_insert(repo):
     preview = parse_records(raw(), **options())
     assert preview.promotable
@@ -55,6 +56,7 @@ def test_invalid_source_and_forged_preview_never_insert(repo):
         assert db.execute("SELECT count(*) FROM datasets").fetchone()[0] == 0
 
 
+# B-STO-066: canonical/raw hashes, source context, and duplicate identity are stable.
 def test_canonical_utf8_raw_retention_context_identity_and_duplicate(repo):
     data = json.dumps([row()], indent=2).encode()
     first = promote(repo, data)
@@ -85,6 +87,7 @@ def test_canonical_utf8_raw_retention_context_identity_and_duplicate(repo):
     assert changed.dataset.raw_bytes == data
 
 
+# B-STO-067: datasets contribute exact artifact bytes to shared quota accounting.
 def test_quota_exact_delta_and_other_writes_include_datasets(repo):
     baseline = repo.admission_logical_bytes()
     data = raw()
@@ -110,6 +113,7 @@ def test_quota_exact_delta_and_other_writes_include_datasets(repo):
     assert repo.get_dataset(first.dataset.dataset_sha256) is not None
 
 
+# B-STO-068: dataset equality boundary and failed insert leave accounting atomic.
 def test_quota_boundary_failed_insert_and_rollback(repo):
     baseline = repo.admission_logical_bytes()
     data = raw()
@@ -147,6 +151,7 @@ def test_quota_boundary_failed_insert_and_rollback(repo):
     assert other.dataset_artifact_bytes() == delta
 
 
+# B-STO-069: datasets are immutable and altered raw/context/canonical bytes fail closed.
 def test_immutability_and_corrupt_bytes_context_rejected(repo):
     saved = promote(repo).dataset
     with sqlite3.connect(repo.path) as db:
@@ -170,6 +175,7 @@ def test_immutability_and_corrupt_bytes_context_rejected(repo):
         repo.get_dataset(saved.dataset_sha256)
 
 
+# B-STO-070: dataset pages slice before integrity checks and order ties deterministically.
 def test_page_datasets_slices_before_integrity_work_and_orders_ties(repo, monkeypatch):
     import laboratorio.storage.repository as storage
 
@@ -205,6 +211,7 @@ def test_page_datasets_slices_before_integrity_work_and_orders_ties(repo, monkey
             repo.page_datasets(offset, limit)
 
 
+# B-STO-071: dataset preflight checks exact profile, selectors, start draw, and affordability.
 def test_preflight_requires_exact_registered_embedded_profile_and_static_configs(repo):
     saved = promote(repo).dataset
     selected = profile()
@@ -260,6 +267,7 @@ def test_preflight_requires_exact_registered_embedded_profile_and_static_configs
         )
 
 
+# B-STO-072: concurrent promotion of one dataset charges exactly one artifact.
 def test_concurrent_promotions_charge_once(repo):
     with ThreadPoolExecutor(max_workers=4) as pool:
         results = list(pool.map(lambda _: promote(repo), range(8)))

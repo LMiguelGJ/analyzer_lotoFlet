@@ -37,6 +37,7 @@ def document(draws=None):
     }
 
 
+# B-STO-073: nested history preview counts actual draws and hashes exact source bytes.
 def test_nested_history_counts_actual_rows_and_hashes_raw_bytes():
     raw = json.dumps(document(), separators=(",", ":")).encode()
     result = parse_history(raw, profile())
@@ -47,6 +48,7 @@ def test_nested_history_counts_actual_rows_and_hashes_raw_bytes():
     assert result.records[0].numbers == (1, 2, 3)
 
 
+# B-STO-074: history accepts 10,002 draws and merges exact duplicate labels.
 def test_history_accepts_more_than_legacy_row_limit_and_merges_exact_duplicates():
     items = [{"hora": "05:05", "numeros": ["01", "02", "03"]}] * 10_002
     raw = json.dumps(document({"2025-01-01": items})).encode()
@@ -75,6 +77,7 @@ def test_history_accepts_more_than_legacy_row_limit_and_merges_exact_duplicates(
         ),
     ],
 )
+# B-STO-075: malformed nested history rows/duplicate keys return parser error codes.
 def test_history_rejects_malformed_nested_rows_and_duplicate_keys(raw, code):
     result = parse_history(raw, profile(repeats=False))
     assert not result.promotable and result.dataset_sha256 is None
