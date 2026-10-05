@@ -25,7 +25,7 @@ base de datos son de solo lectura: no se cambian endpoints ni payloads.
 
 ## Tasks
 
-- [ ] T1. Base M3: tokens (`--md-sys-*`), tipografía Roboto Flex, componentes
+- [x] T1. Base M3: tokens (`--md-sys-*`), tipografía Roboto Flex, componentes
   compartidos M3 y Shell mobile-first (Navigation Bar inferior + FAB + top app bar).
   Superficies: webapp/frontend/src/styles/**, webapp/frontend/src/components/**
   (Shell, ui compartidos), tests colocados.
@@ -57,12 +57,21 @@ Aceptación manual del usuario: navegador en ancho de teléfono real + zoom.
 
 ## Evidencia (commits por unidad de trabajo)
 
-- T1: pendiente
+- T1: 65f0af0 (8 archivos) · revisión nativa review-67641f41fa08db8d
+  aprobada y quemada; 3 hallazgos informativos R3 (ver seguimientos)
 - T2: pendiente
 - T3: pendiente
 - T4: pendiente
 - T5: pendiente
 - T6: pendiente
+
+## Seguimientos de revisión (no bloqueantes)
+
+- R3-dark-token-coverage (src/lib/tokens.test.ts:10): ampliar cobertura de tokens
+  del esquema oscuro.
+- R3-storage-failure (src/components/Shell.tsx:25-28): manejar fallo de
+  localStorage al persistir el tema.
+- R3-theme-position (src/styles/index.css:70): posición del control de tema.
 
 ## Notas de alcance
 
