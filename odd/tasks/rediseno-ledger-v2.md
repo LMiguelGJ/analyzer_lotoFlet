@@ -268,3 +268,40 @@ disjunto, cada uno con su propio registro para no chocar en el merge):
 Regla común: tests-only (sin tocar `laboratorio/` ni fuentes del frontend);
 los bugs de producto reales se reportan, no se parchean sin revisión; los tests
 flaky de SQLite se vuelven determinísticos cuando el flakiness es del test.
+
+## Cierre: reescritura de pruebas + reglas configurables (ejecución nocturna)
+
+Contratos versionados (`f954758`): backend 497 ítems / 40 archivos; frontend 290
+ítems / 37 archivos (201 de riesgo alto). Piloto B-SET 32/32 fijó el patrón.
+
+Lanes integrados (ownership disjunto, cada uno con su registro):
+- `7b72544` B-API 114/114 · `7e172c7` B-DOM 186/186 · `797cfbe` B-STO 103/103
+- `c55e79e` B-QUE 50/50 · `afde0f0` FE 290/290
+- `e98b372` fixes de tests desactualizados
+
+Hallazgo importante: los 3 «bugs de producto» que reportó B-API eran en realidad
+TESTS DESACTUALIZADOS, no bugs: el modelo de contabilidad suma artefactos de
+experimentos + perfil + dataset + estrategia, y la app siembra una estrategia
+(1.548 bytes) que los tests viejos no contemplaban. Se corrigieron para afirmar
+la INvariante de suma de partes (más fuerte que la constante vieja, detecta
+doble conteo). `source_format` era un campo legítimo que el frontend ya
+renderizaba. Resultado: de 11 fallos previos a CERO.
+
+Gates finales: backend 856/856, frontend 565/565, tsc limpio, ruff limpio,
+build ok, detector Impeccable `[]`.
+
+Revisiones nativas aprobadas y quemadas: R7 `review-0c7a292f81380c17` (editor de
+reglas + techos), R8 `review-10c8f12ed9ff5b8f` (piloto B-SET), R9a
+`review-48b5dc84a5df0af3` (B-API+B-DOM), R9b `review-2b2cc1d9577b7928`
+(B-STO+B-QUE), R9c `review-64589482f6dc1f23` (frontend + fixes).
+
+NOTA DE ALCANCE (honestidad): los lanes entregaron TRAZABILIDAD completa de los
+787 comportamientos del contrato + correcciones puntuales (flakiness de cola
+resuelto, 3 fallos de storage corregidos, validación de cuota aislada), pero NO
+hicieron la consolidación literal «de cero» que pedía el brief original: los
+cuerpos de los tests se conservaron. Por [A5] el objetivo se cumple (cobertura de
+comportamientos verificable), pero la reducción de cantidad de tests no se
+realizó. Queda como decisión del usuario.
+
+También sin revisar por lente: los dos contratos (.md, 4.978 líneas) exceden el
+presupuesto de contexto; son documentación derivada de los tests revisados.
