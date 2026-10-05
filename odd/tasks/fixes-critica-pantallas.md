@@ -26,7 +26,7 @@ Fuente: snapshot `.impeccable/critique/2026-10-05T15-20-36Z__webapp-frontend-src
   input de archivo (Datos), gráfico (Detalle), disclosure (Comparación), campos
   (Ajustes); verificar ≤320px y zoom. Superficies: webapp/frontend/src/styles/**,
   webapp/frontend/src/components/Shell.tsx.
-- [ ] U5. Claridad del wizard + conclusión financiera primero (P1-3 + P2-5,
+- [x] U5. Claridad del wizard + conclusión financiera primero (P1-3 + P2-5,
   clarify/distill): título + una decisión por paso en creación y Ajustes;
   «Guardar reglas» explícito; ruta perfil/estrategias guardadas demoradas;
   resultado/comparación: perder/meta/límite primero, nombres internos en
@@ -37,7 +37,7 @@ Fuente: snapshot `.impeccable/critique/2026-10-05T15-20-36Z__webapp-frontend-src
   webapp/frontend/src/pages/experiments/ComparisonPage.tsx,
   webapp/frontend/src/pages/configurations/**,
   webapp/frontend/src/pages/data/**, tests colocados.
-- [ ] U6. QA del ciclo: suite completa x3, typecheck, build, capturas móviles y
+- [~] U6. QA del ciclo (en curso: build + capturas + suite final): suite completa x3, typecheck, build, capturas móviles y
   escritorio de las 7 pantallas para verificación visual, commit final.
 
 ## Verification (por unidad)
@@ -51,8 +51,10 @@ Aceptación visual: capturas 390px y 1440px de las 7 pantallas.
 - U1+U2+U3+U4: 272793a (7 archivos, una unidad compartida por Shell/styles) ·
   revisión nativa review-0600b5a6f490a079 aprobada y quemada; suite 564/564 x2;
   hallazgo informativo R3-table-layout-coverage (styles/index.css:292-293)
-- U5: pendiente
-- U6: pendiente
+- U5: 2d068d9 (8 archivos) · revisión nativa review-5f84e7affceacb3b
+  aprobada y quemada; suite 566/566 x2; hallazgo informativo R3-ruin-balance
+  (experiments/DetailPage.tsx:49)
+- U6: pendiente de cierre final
 
 ## Notas de alcance
 
