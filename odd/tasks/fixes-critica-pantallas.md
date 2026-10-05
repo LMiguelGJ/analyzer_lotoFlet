@@ -9,20 +9,20 @@ Fuente: snapshot `.impeccable/critique/2026-10-05T15-20-36Z__webapp-frontend-src
 
 ## Tasks
 
-- [ ] U1. Acciones únicas por pantalla (P1-1, /impeccable distill): suprimir el
+- [x] U1. Acciones únicas por pantalla (P1-1, /impeccable distill): suprimir el
   FAB donde la página define su propia acción primaria; un solo affordance por
   destino (nombre+botón de resultado → uno); un solo «Limpiar filtros».
   Superficies: webapp/frontend/src/components/Shell.tsx,
   webapp/frontend/src/pages/experiments/index.tsx, tests colocados.
-- [ ] U2. Layout de escritorio (P1-2, /impeccable layout): tabla sin scroll
+- [x] U2. Layout de escritorio (P1-2, /impeccable layout): tabla sin scroll
   horizontal espurio, rail con labels legibles, contenido que aproveche el
   ancho. Superficies: webapp/frontend/src/styles/**,
   webapp/frontend/src/components/Shell.tsx, tests colocados.
-- [ ] U3. Tema oscuro por defecto: inversión del default (toggle conserva
+- [x] U3. Tema oscuro por defecto: inversión del default (toggle conserva
   claro), tokens verificados en oscuro, DESIGN.md actualizado.
   Superficies: webapp/frontend/src/components/Shell.tsx,
   webapp/frontend/src/styles/**, tests colocados + DESIGN.md.
-- [ ] U4. Solapamientos móviles (P2-4, /impeccable harden): FAB/Nav no tapan
+- [x] U4. Solapamientos móviles (P2-4, /impeccable harden): FAB/Nav no tapan
   input de archivo (Datos), gráfico (Detalle), disclosure (Comparación), campos
   (Ajustes); verificar ≤320px y zoom. Superficies: webapp/frontend/src/styles/**,
   webapp/frontend/src/components/Shell.tsx.
@@ -48,10 +48,9 @@ Aceptación visual: capturas 390px y 1440px de las 7 pantallas.
 
 ## Evidencia (commits)
 
-- U1: pendiente
-- U2: pendiente
-- U3: pendiente
-- U4: pendiente
+- U1+U2+U3+U4: 272793a (7 archivos, una unidad compartida por Shell/styles) ·
+  revisión nativa review-0600b5a6f490a079 aprobada y quemada; suite 564/564 x2;
+  hallazgo informativo R3-table-layout-coverage (styles/index.css:292-293)
 - U5: pendiente
 - U6: pendiente
 
