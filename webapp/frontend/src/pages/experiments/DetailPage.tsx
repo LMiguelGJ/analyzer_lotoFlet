@@ -303,7 +303,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
       <dl className="data-list border-b border-border py-3">
         <dt>Capital inicial</dt><dd className="data-list-numeric">{money(capital)}</dd>
         <dt>Meta de saldo</dt><dd className="data-list-numeric">{money(goal)}</dd>
-        <dt>Duración</dt><dd className="data-list-numeric">{isProfileRun(run) ? `${run.result.elapsed_draws} sorteos transcurridos` : `${run.result.bets_count} sorteos jugados`}</dd>
+        <dt>{isProfileRun(run) ? "Duración transcurrida" : "Límite de duración"}</dt><dd className="data-list-numeric">{isProfileExperiment(data) || isProfileBatchExperiment(data) ? isProfileRun(run) ? `${run.result.elapsed_draws} sorteos transcurridos` : `${run.result.bets_count} sorteos jugados` : data.request.conditions.max_bets != null ? `${data.request.conditions.max_bets} sorteos` : data.request.conditions.max_minutes != null ? `${data.request.conditions.max_minutes} minutos` : "Sin límite"}</dd>
         <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help"><Figure value={money(delta!)} variant={deltaVariant} align="right" /><span id="detail-delta-help" className="field-help block text-right">{FIELD_HELP_DELTA}</span></dd>
       </dl>
     </>}

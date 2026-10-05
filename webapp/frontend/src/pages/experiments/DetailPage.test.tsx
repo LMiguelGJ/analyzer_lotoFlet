@@ -238,7 +238,7 @@ describe("profile detail READ", () => {
     const { user } = setup();
     await screen.findByText("-USD 2.50");
     expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).toHaveTextContent("-USD 2.50");
-    expect(screen.getByText("Duración").nextElementSibling).toHaveTextContent("3 sorteos transcurridos");
+    expect(screen.getByText("Duración transcurrida").nextElementSibling).toHaveTextContent("3 sorteos transcurridos");
     expect(screen.getByText("Sorteos jugados").nextElementSibling).toHaveTextContent("1");
     expect(screen.getByText(/Motivo de cierre: Límite de sesión \(límite de sorteos transcurridos\)/)).toBeInTheDocument();
     const ledger = await screen.findByRole("table", { name: "Libro de sorteos" });
@@ -434,15 +434,19 @@ describe("LW11 detail", () => {
     expect(within(run).queryByText("Cambio respecto del inicio")).not.toBeInTheDocument();
   });
 
-  it("keeps the draw count out of the conclusion and explains the financial change plainly", async () => {
-    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, outcome: "limit", elapsed_draws: 5000, bet_draws: 1 } }] });
+  it("keeps the played count distinct from the configured draw limit", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot,
+      request: { ...snapshot.request, conditions: { ...snapshot.request.conditions, max_bets: 5000 } },
+      runs: [{ ...snapshot.runs[0], bets_count: 5000, result: { ...snapshot.runs[0].result!, outcome: "limit", bets_count: 5000 } }, snapshot.runs[1]],
+    });
     setup();
     const verdict = await screen.findByRole("region", { name: "Veredicto" });
     expect(within(verdict).getByText("Se detuvo al alcanzar el límite de duración.")).toBeInTheDocument();
     expect(within(verdict).getByText("Tu ganancia o pérdida está en «Cambio respecto del inicio», más abajo.")).toBeInTheDocument();
     expect(within(verdict).getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
-    expect(within(verdict).queryByText(/5000 sorteos/)).not.toBeInTheDocument();
-    expect(screen.getByText("Duración").nextElementSibling).toHaveTextContent("5000 sorteos transcurridos");
+    expect(within(verdict).getByText("Sorteos jugados").nextElementSibling).toHaveTextContent("5000");
+    expect(screen.getByText("Límite de duración").nextElementSibling).toHaveTextContent("5000 sorteos");
+    expect(screen.queryByText("Duración")).not.toBeInTheDocument();
   });
 
   it("uses a short app-bar title on the detail page on mobile", async () => {

@@ -94,7 +94,7 @@ function netResult(row: ExperimentSummary): { text: string; variant: FigureVaria
   return { text: `${delta > 0 ? "+" : "−"}${money}`, variant: delta > 0 ? "positive" : "negative" };
 }
 
-function RowActions({ row, onDelete, includeResult = false }: { row: ExperimentSummary; onDelete: () => void; includeResult?: boolean }) {
+function RowActions({ row, onDelete }: { row: ExperimentSummary; onDelete: () => void }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const trigger = useRef<HTMLButtonElement>(null);
@@ -119,7 +119,6 @@ function RowActions({ row, onDelete, includeResult = false }: { row: ExperimentS
       setOpen(!open);
     }}>Acciones</button>
     {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${experimentName(row)}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
-      {includeResult && <Link role="menuitem" className="ledger-button ledger-button-ghost w-full justify-start" to={`/experimentos/${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Abrir resultado de {experimentName(row)}</Link>}
       {!isProfileExperiment(row) && <Link ref={first} role="menuitem" className="ledger-button ledger-button-ghost w-full justify-start" to={`/experimentos/nuevo?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
       {isProfileExperiment(row) && <span className="block px-3 py-2 text-text-secondary">No disponible como base</span>}
       <button ref={firstProfile} role="menuitem" type="button" className="ledger-button ledger-button-ghost w-full justify-start" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
@@ -236,7 +235,7 @@ export function ExperimentsPage() {
     sortable("created_at", "Creado"),
     sortable("status", "Estado"),
     { key: "net", header: "Resultado neto", headerClassName: "table-numeric", cellClassName: "table-numeric", render: (row) => { const net = netResult(row); return net ? <Figure value={net.text} variant={net.variant} /> : "—"; } },
-    { key: "actions", header: "Acciones", headerClassName: "table-actions", cellClassName: "table-actions", render: (row) => <RowActions includeResult row={row} onDelete={() => { setRowError(""); setDeleteTarget(row); }} /> },
+    { key: "actions", header: "Acciones", headerClassName: "table-actions", cellClassName: "table-actions", render: (row) => <div className="flex items-center gap-2"><Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="ledger-button ledger-button-primary" aria-label={`Abrir resultado de ${experimentName(row)}`}>Abrir resultado</Link><RowActions row={row} onDelete={() => { setRowError(""); setDeleteTarget(row); }} /></div> },
   ];
   const hasFilters = !!(query.name || query.status);
   const goalCount = items.filter((item) => statusChip(item).value === "goal").length;

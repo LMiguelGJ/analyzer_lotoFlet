@@ -174,8 +174,9 @@ describe("LW10 experiments list · data and navigation", () => {
     const { user } = setup();
     const row = (await screen.findByText("Cycling")).closest("tr")!;
     expect(within(row).queryByRole("link", { name: "Cycling" })).not.toBeInTheDocument();
+    expect(within(row).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/experimentos/cycling");
     await user.click(within(row).getByRole("button", { name: "Acciones de Perfil de prueba" }));
-    expect(screen.getByRole("menuitem", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/experimentos/cycling");
+    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Perfil de prueba" })).not.toBeInTheDocument();
     expect(screen.getByText(/Perfil test · 1 posiciones/)).toBeInTheDocument();
     expect(screen.getByText(/Capital USD 100.00/)).toBeInTheDocument();
     expect(screen.getByText(/Escalera cíclica Q80/)).toBeInTheDocument();
@@ -193,8 +194,9 @@ describe("LW10 experiments list · data and navigation", () => {
     const { user } = setup();
     const row = (await screen.findByText("Recovery")).closest("tr");
     expect(row).toHaveTextContent(/Perfil test · 1 posiciones.*Escalera de recuperación/);
+    expect(within(row!).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/experimentos/recovery");
     await user.click(within(row!).getByRole("button", { name: "Acciones de Perfil de prueba" }));
-    expect(screen.getByRole("menuitem", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/experimentos/recovery");
+    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Perfil de prueba" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Corridas" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Estrategias" })).not.toBeInTheDocument();
   });
@@ -209,6 +211,9 @@ describe("LW10 experiments list · data and navigation", () => {
     const card = within(cards).getByText("Fríos K1").closest("li")!;
     expect(within(card).queryByRole("link", { name: "Fríos K1" })).not.toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/experimentos/exp-completed-1");
+    await userEvent.setup().click(within(card).getByRole("button", { name: "Acciones de Fríos K1" }));
+    expect(within(card).getByRole("button", { name: "Acciones de Fríos K1" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Fríos K1" })).not.toBeInTheDocument();
     expect(within(card).getByText("Meta alcanzada")).toBeInTheDocument();
     expect(within(card).getByText(/\+.*837/)).toBeInTheDocument();
     expect(within(card).getByText(/2026/)).toBeInTheDocument();
@@ -250,8 +255,9 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(name).toHaveClass("table-name-text");
     expect(name.closest("td")).toHaveClass("table-name");
     const row = name.closest("tr")!;
+    expect(within(row).getByRole("link", { name: `Abrir resultado de ${longName}` })).toHaveAttribute("href", `/experimentos/${fixture.items[0].id}`);
     await userEvent.setup().click(within(row).getByRole("button", { name: `Acciones de ${longName}` }));
-    expect(screen.getByRole("menuitem", { name: `Abrir resultado de ${longName}` })).toHaveAttribute("href", `/experimentos/${fixture.items[0].id}`);
+    expect(screen.queryByRole("menuitem", { name: `Abrir resultado de ${longName}` })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Simulaciones" })).toHaveClass("overflow-x-auto");
     expect(screen.getByRole("region", { name: "Simulaciones" }).parentElement).toHaveClass("experiment-wide-table");
   });
@@ -308,16 +314,16 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(stat("En curso")).toHaveTextContent("de las 2 mostradas");
   });
 
-  it("offers one row entry point with result, base, and delete actions inside its menu", async () => {
+  it("offers one primary result link and a separate row actions menu", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     const { user } = setup();
     const row = (await screen.findByText("Fríos K1")).closest("tr")!;
     expect(within(row).getAllByRole("button")).toHaveLength(1);
-    expect(within(row).queryByRole("link")).not.toBeInTheDocument();
+    expect(within(row).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/experimentos/exp-completed-1");
     const trigger = within(row).getByRole("button", { name: "Acciones de Fríos K1" });
     expect(trigger).toHaveClass("ledger-button-ghost");
     await user.click(trigger);
-    expect(screen.getByRole("menuitem", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/experimentos/exp-completed-1");
+    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Fríos K1" })).not.toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveAttribute("href", "/experimentos/nuevo?base=exp-completed-1");
     expect(screen.getByRole("menuitem", { name: "Eliminar" })).toHaveClass("ledger-button-ghost");
   });
@@ -342,7 +348,11 @@ describe("LW10 experiments list · data and navigation", () => {
     const { container } = setup();
     await screen.findByText("Fríos K1");
     expect(container.querySelectorAll(".m3-extended-fab")).toHaveLength(1);
-    expect(container.querySelectorAll(".ledger-button-primary")).toHaveLength(0);
+    expect(container.querySelectorAll(".ledger-button-primary")).toHaveLength(fixture.items.length);
+    for (const row of within(screen.getByRole("table")).getAllByRole("row").slice(1)) {
+      expect(within(row).getAllByRole("link", { name: /Abrir resultado de/ })).toHaveLength(1);
+      expect(within(row).getAllByRole("button", { name: /Acciones de/ })).toHaveLength(1);
+    }
   });
 
   it("keeps creation on the FAB and exposes one detail affordance per desktop row", async () => {
@@ -355,7 +365,7 @@ describe("LW10 experiments list · data and navigation", () => {
     const row = screen.getByText("Fríos K1").closest("tr")!;
     expect(within(row).queryByRole("link", { name: "Fríos K1" })).not.toBeInTheDocument();
     expect(within(row).getAllByRole("button")).toHaveLength(1);
-    expect(within(row).queryByRole("link", { name: /Abrir resultado de/ })).not.toBeInTheDocument();
+    expect(within(row).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/experimentos/exp-completed-1");
   });
 
   it("paginates forward and back using the real offset/limit/total from the server", async () => {
@@ -396,8 +406,9 @@ describe("LW10 experiments list · data and navigation", () => {
     await screen.findByText("Fríos K1");
     expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 0, limit: 20, name_contains: "x", sort: "created_at", order: "desc" });
     const activeRow = screen.getByRole("row", { name: /Comparación mezcla/ });
+    expect(within(activeRow).getByRole("link", { name: "Abrir resultado de Comparación mezcla" })).toHaveAttribute("href", "/experimentos/exp-running-2");
     await userEvent.setup().click(within(activeRow).getByRole("button", { name: "Acciones de Comparación mezcla" }));
-    expect(screen.getByRole("menuitem", { name: "Abrir resultado de Comparación mezcla" })).toHaveAttribute("href", "/experimentos/exp-running-2");
+    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Comparación mezcla" })).not.toBeInTheDocument();
     expect(apiClient.getQueue).toHaveBeenCalledTimes(1);
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
@@ -458,9 +469,10 @@ describe("profile batch v5 experiment list compatibility", () => {
     const name = profileBatchV5.display.name;
     const trigger = await screen.findByRole("button", { name: `Acciones de ${name}` });
     expect(screen.getAllByText(name)).toHaveLength(2);
+    expect(within(trigger.closest("tr")!).getByRole("link", { name: `Abrir resultado de ${name}` })).toHaveAttribute("href", "/experimentos/batch-v5");
     await user.click(trigger);
     expect(screen.getByRole("menu", { name: `Acciones de ${name}` })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: `Abrir resultado de ${name}` })).toHaveAttribute("href", "/experimentos/batch-v5");
+    expect(screen.queryByRole("menuitem", { name: `Abrir resultado de ${name}` })).not.toBeInTheDocument();
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
     const dialog = screen.getByRole("alertdialog", { name: `¿Eliminar la simulación «${name}»?` });
     expect(dialog).toHaveTextContent("Se elimina de forma permanente.");

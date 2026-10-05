@@ -228,7 +228,7 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
       <div><h2 id="history-library-title" className="section-header">Biblioteca de historiales</h2></div>
       {libraryLoading && !datasets && <Loading rows={3} label="Cargando historiales guardados…" />}
       {libraryError && <div role="alert" className="space-y-2"><p>{libraryError}</p><button type="button" className="btn btn-secondary" onClick={() => setRetry((value) => value + 1)}>Reintentar biblioteca</button></div>}
-      {datasets && !libraryError && datasets.total === 0 && <div role="status"><p>Todavía no hay historiales guardados. Importá uno para usar sus sorteos en una simulación.</p><a className="btn btn-primary" href="#history-import-title">Importar historial</a></div>}
+      {datasets && !libraryError && datasets.total === 0 && <div role="status"><p>Todavía no hay historiales guardados. Importá uno para usar sus sorteos en una simulación.</p><a className="btn btn-primary" href="#history-import-title">Ir a importar historial</a></div>}
       {datasets && !libraryError && <ul aria-busy={libraryLoading} className="dataset-card-list">{datasets.items.map((item) => <li key={item.dataset_sha256} className="dataset-card">
         <h3 className="font-medium">Historial · {item.records_total.toLocaleString("es-ES")} sorteos</h3>
         <p className="field-help">Fuente: {item.source_id} · {item.first_draw} – {item.last_draw} · {item.positions} posiciones</p>

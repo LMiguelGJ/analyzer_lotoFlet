@@ -70,8 +70,9 @@ describe("visible game profiles", () => {
     render(<DataPage />);
     const library = await screen.findByRole("region", { name: "Biblioteca de historiales" });
     expect(within(library).getByRole("status")).toHaveTextContent(/Todavía no hay historiales guardados/);
-    expect(within(library).getByRole("link", { name: "Importar historial" })).toHaveAttribute("href", "#history-import-title");
+    expect(within(library).getByRole("link", { name: "Ir a importar historial" })).toHaveAttribute("href", "#history-import-title");
     expect(screen.getByRole("heading", { name: "Importar historial" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Importar historial" })).toBeDisabled();
     expect(screen.getByRole("heading", { name: "Más formas de importar" })).toBeInTheDocument();
     expect(screen.getByText("Importar archivo CSV o JSON")).toBeInTheDocument();
   });
