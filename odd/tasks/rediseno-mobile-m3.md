@@ -32,7 +32,7 @@ base de datos son de solo lectura: no se cambian endpoints ni payloads.
 - [x] T2. Asistente de configuración: Ajustes como guía paso a paso (reglas del
   juego, cuota, avanzado plegado). Superficies: webapp/frontend/src/pages/settings/**
   y componentes compartidos que use, tests colocados.
-- [ ] T3. Asistente de creación de simulaciones: flujo guiado por pasos
+- [x] T3. Asistente de creación de simulaciones: flujo guiado por pasos
   (datos → selección → límites → revisión → ejecutar), variantes perfil/lote
   alcanzables. Superficies: webapp/frontend/src/pages/new-experiment/** y
   componentes compartidos que use, tests colocados.
@@ -63,12 +63,25 @@ Aceptación manual del usuario: navegador en ancho de teléfono real + zoom.
   aprobada y quemada; hallazgos informativos R3: R3-hidden-save-results
   (settings/index.tsx:412-413), R3-readonly-review-quota (settings/index.tsx:398),
   R3-rules-failure-blocks-settings (settings/index.tsx)
-- T3: pendiente
+- T3: bf7cae2 (6 archivos) · revisión nativa review-6f7eafb0688d868d
+  aprobada y quemada; 5 rondas de writer (wizard aislado, guard de envío solo en
+  revisión, aserciones restauradas, a11y, timeouts acotados). Hallazgos R3:
+  R3-draw-retry-unreachable (new-experiment/index.tsx:469),
+  R3-validation-focus-step (new-experiment/index.tsx:477-480)
 - T4: pendiente
 - T5: pendiente
 - T6: pendiente
 
 ## Seguimientos de revisión (no bloqueantes)
+
+- R3-draw-retry-unreachable (pages/new-experiment/index.tsx:469): retry de sorteo
+  inalcanzable en algún estado.
+- R3-validation-focus-step (pages/new-experiment/index.tsx:477-480): el foco de
+  validación no siempre salta al paso con el error.
+- FLAKINESS TRANSVERSAL (T6): la suite completa mostró timeouts de 5s aleatorios
+  bajo carga (DataPage, SettingsPage, new-experiment) en corridas aisladas;
+  tratados con timeouts acotados por test. Falta una solución sistémica
+  (determinismo del runner) para T6.
 
 - R3-hidden-save-results (pages/settings/index.tsx:412-413): el resultado del
   guardado queda poco visible tras la acción final.
