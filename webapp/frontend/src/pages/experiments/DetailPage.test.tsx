@@ -116,6 +116,10 @@ describe("profile detail READ", () => {
     const { user, unmount } = setup();
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
     expect(within(run).getByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
+    expect(within(run).getByText("Capital inicial").nextElementSibling).toHaveTextContent("USD 100.00");
+    expect(within(run).getByText("Meta de saldo").nextElementSibling).toHaveTextContent("USD 200.00");
+    expect(within(run).getByText("Duración").nextElementSibling).toHaveTextContent("Sin resultado guardado");
+    expect(within(run).getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
     await user.click(within(run).getByRole("tab", { name: "Parámetros y datos" }));
     expect(within(run).getByText("Escalera cíclica Q80 · apuesta dinámica por sorteo")).toBeInTheDocument();
     expect(apiClient.getReplay).not.toHaveBeenCalled();

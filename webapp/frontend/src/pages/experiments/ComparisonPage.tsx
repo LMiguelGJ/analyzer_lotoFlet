@@ -55,11 +55,17 @@ export function ComparisonPage() {
   const [pair, setPair] = useState<Paired | null>(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
+  const [mobileLayout, setMobileLayout] = useState(() => window.innerWidth < 900);
   const [view, setView] = useState<SavedView>(() => readView(id));
   const [trajectories, setTrajectories] = useState<{ id: string; runs: Record<number, Trajectory> }>({ id, runs: {} });
   const onTrajectory = useCallback((ordinal: number, trajectory: Trajectory) => {
     setTrajectories((current) => ({ id, runs: { ...(current.id === id ? current.runs : {}), [ordinal]: trajectory } }));
   }, [id]);
+  useEffect(() => {
+    const updateLayout = () => setMobileLayout(window.innerWidth < 900);
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
   useEffect(() => {
     let live = true;
     let timer: ReturnType<typeof setTimeout>;
@@ -139,7 +145,26 @@ export function ComparisonPage() {
         <p className="mt-2 text-sm text-text-secondary">Estado: <StatusLabel kind="execution" value={data.comparison.status} />{nonterminal(data.comparison.status) ? " · Se actualiza solo." : ""}</p>
       </div>
       {!data.comparison.complete && <p role="status" className="border-y border-border py-3 text-sm">La comparación todavía está incompleta ({data.comparison.completed}/{data.comparison.requested} terminadas). Esperá a que finalicen las simulaciones; los resultados guardados se conservan y se actualizan automáticamente.</p>}
-      <details><summary className="disclosure-summary">Detalles técnicos · comparación</summary><div className="space-y-3 pt-3"><DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} /><p className="field-help">Métricas por corrida guardada; las razones y proporciones usan el cálculo informado por el servidor. Una corrida guardada no completa un lote con otras corridas pendientes.</p></div></details>
+      <details><summary className="disclosure-summary">Ver resultados de cada ejecución</summary><div className="space-y-3 pt-3">
+        {mobileLayout ? <ul className="comparison-card-list" aria-label="Resultados de la comparación">
+          {runs.map((run) => <li key={run.ordinal} className="comparison-card">
+            <div className="experiment-card-heading"><Link className="experiment-card-title" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`}>{names(run.ordinal)}</Link><StatusLabel kind="execution" value={run.status} /></div>
+            <dl className="comparison-card-metrics">
+              <div><dt>Saldo final</dt><dd>{run.result ? money(run.result.final_balance) : missingMetric()}</dd></div>
+              <div><dt>Cambio respecto del inicio</dt><dd>{run.result ? money(run.result.delta) : missingMetric()}</dd></div>
+              <div><dt>Motivo de cierre</dt><dd>{run.result ? isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : missingMetric()}</dd></div>
+              <div><dt>Sorteos jugados</dt><dd>{run.result ? isProfileRun(run) ? run.result.bet_draws : run.result.bets_count : missingMetric()}</dd></div>
+              <div><dt>Total apostado</dt><dd>{run.result ? money(run.result.wagered) : missingMetric()}</dd></div>
+              <div><dt>Total pagado</dt><dd>{run.result ? money(run.result.paid) : missingMetric()}</dd></div>
+              <div><dt>Retorno por peso apostado</dt><dd>{run.result ? metricRatio(run.result.return_per_wagered) : missingMetric()}</dd></div>
+              <div><dt>ROI neto</dt><dd>{run.result ? metricRatio(run.result.roi) : missingMetric()}</dd></div>
+              <div><dt>Caída máxima del saldo</dt><dd>{run.result?.max_drawdown == null ? missingMetric() : money(run.result.max_drawdown)}</dd></div>
+              {batchDetail && isProfileBatchRun(run) && <div><dt>Motivo de parada</dt><dd>{stopLabel(run.stop_category)} · {run.stop_reason}</dd></div>}
+            </dl>
+          </li>)}
+        </ul> : <div className="comparison-wide-table"><DataTable caption="Comparación de ejecuciones" columns={columns} rows={runs} getRowKey={(run) => String(run.ordinal)} /><p className="field-help">Métricas por corrida guardada; las razones y proporciones usan el cálculo informado por el servidor. Una corrida guardada no completa un lote con otras corridas pendientes.</p></div>}
+        {!data.comparison.complete && <p className="field-help">Estas cifras corresponden solo a las ejecuciones que ya guardaron un resultado; las demás siguen como «Sin dato» hasta que el servidor informe sus resultados.</p>}
+      </div></details>
       <section className="min-w-0 space-y-4"><ComparisonChart series={series} formatMoney={money} onToggle={(ordinal) => updateView({ ...view, hidden: view.hidden.includes(ordinal) ? view.hidden.filter((n) => n !== ordinal) : [...view.hidden, ordinal] })} />
         {runs.filter((run) => run.status === "completed" && !!run.result).map((run) => <RunTrajectory key={`${id}:${run.ordinal}`} id={id} ordinal={run.ordinal} name={names(run.ordinal)} money={money} goal={data.detail.request.conditions.goal} chart={false} onLoad={onTrajectory} />)}
       </section>

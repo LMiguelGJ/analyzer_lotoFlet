@@ -67,6 +67,7 @@ function setup(initialEntry = "/experimentos") {
 }
 
 beforeEach(() => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   vi.mocked(apiClient.listExperiments).mockReset();
   vi.mocked(apiClient.deleteExperiment).mockReset();
   vi.mocked(apiClient.getQueue).mockReset();
@@ -195,6 +196,20 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(screen.getByRole("columnheader", { name: "Corridas" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Estrategias" })).not.toBeInTheDocument();
   });
+  it("renders mobile result cards with a truthful headline and a direct detail action", async () => {
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
+    const previousWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    setup();
+
+    const cards = await screen.findByRole("list", { name: "Resultados de simulaciones" });
+    const card = within(cards).getByRole("link", { name: "Fríos K1" }).closest("li")!;
+    expect(within(card).getByText("Meta alcanzada")).toBeInTheDocument();
+    expect(within(card).getByText(/\+.*837/)).toBeInTheDocument();
+    expect(within(card).getByText(/2026/)).toBeInTheDocument();
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: previousWidth });
+  });
+
   it("requests the bounded default page (offset 0, limit 20) and renders truthful columns only", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     setup();

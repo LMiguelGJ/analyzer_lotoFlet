@@ -57,7 +57,7 @@ const batchV5Detail: ProfileBatchExperimentSummary = {
 const batchCompare: CompareResult = { id: "exp", status: "failed", request_kind: "profile", completed: 1, requested: 3, complete: false, runs: [batchFailed, batchSuccess, batchCancelled] };
 const page = (ordinal: number, offset = 0): Page<Bet> => ({ offset, limit: 100, total: ordinal ? 1 : 101, items: offset ? [bet("2025-01-01 11:00", 150)] : ordinal ? [bet("2025-01-01 10:30", 110)] : Array.from({ length: 100 }, (_, i) => bet(`2025-01-01 10:${String(i % 60).padStart(2, "0")}`, 101 + i)) });
 async function openDetailedComparison() {
-  const summary = await screen.findByText("Detalles técnicos · comparación");
+  const summary = await screen.findByText("Ver resultados de cada ejecución");
   await userEvent.setup().click(summary);
   await waitFor(() => expect(summary.closest("details")).toHaveAttribute("open", ""));
 }
@@ -66,6 +66,7 @@ function setup(path = "/experimentos/exp/comparacion") {
   return { router, user: userEvent.setup(), ...render(<RouterProvider router={router} />) };
 }
 beforeEach(() => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   sessionStorage.clear();
   vi.mocked(apiClient.getExperiment).mockReset().mockResolvedValue(detail);
   vi.mocked(apiClient.compareExperiment).mockReset().mockResolvedValue(comparison);
@@ -258,7 +259,7 @@ describe("LW12 comparison", () => {
     expect(screen.getByText("Volver a simulaciones")).toHaveClass("btn-tertiary");
     expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(screen.getByRole("link", { name: /Ver detalle de Primera/ })).toHaveClass("btn-primary");
-    const disclosure = screen.getByText("Detalles técnicos · comparación");
+    const disclosure = screen.getByText("Ver resultados de cada ejecución");
     expect(disclosure.closest("details")).not.toHaveAttribute("open");
     const technicalDisclosure = disclosure.closest("details")!;
     expect(technicalDisclosure).toContainElement(screen.getByRole("columnheader", { name: "ROI neto" }));
@@ -271,6 +272,23 @@ describe("LW12 comparison", () => {
     expect(screen.getByRole("table", { name: "Comparación de ejecuciones" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "ROI neto" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Caída máxima del saldo" })).toBeInTheDocument();
+  });
+
+  it("offers mobile comparison cards with literal missing metrics inside the details disclosure", async () => {
+    const previousWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    setup();
+    await openDetailedComparison();
+
+    const cards = await screen.findByRole("list", { name: "Resultados de la comparación" });
+    const rows = within(cards).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Primera");
+    expect(rows[0]).toHaveTextContent("RD$150");
+    expect(rows[1]).toHaveTextContent("Segunda");
+    expect(rows[1]).toHaveTextContent("Sin dato");
+    expect(rows[1]).not.toHaveTextContent("RD$0");
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: previousWidth });
   });
 
   it("uses server N/M and delta, shows absent values as dashes, and separates outcome from execution", async () => {

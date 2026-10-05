@@ -256,6 +256,21 @@
   .m3-review-list dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .queue-section + .queue-section { margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 20px; }
   .queue-row + .queue-row { border-top: 1px solid var(--md-sys-color-outline-variant); }
+  .experiment-card-list, .comparison-card-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .experiment-card, .comparison-card { min-width: 0; border: 1px solid var(--md-sys-color-outline-variant); border-radius: var(--md-sys-shape-corner-md); background: var(--md-sys-color-surface-container-low); padding: 16px; }
+  .experiment-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .experiment-card-title { min-width: 0; color: var(--md-sys-color-primary); font-size: var(--md-sys-typescale-title-medium-size); font-weight: 600; overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 0.16em; }
+  .experiment-card-meta { margin: 8px 0 0; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-body-small-size); overflow-wrap: anywhere; }
+  .experiment-card-outcome { display: grid; gap: 4px; margin: 16px 0; }
+  .experiment-card-outcome > span { color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-label-medium-size); }
+  .experiment-card-outcome > strong, .experiment-card-outcome > .ledger-figure { font-size: var(--md-sys-typescale-title-large-size); font-weight: 600; overflow-wrap: anywhere; }
+  .experiment-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .experiment-card-actions > * { min-height: 48px; }
+  .comparison-card-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0 0; }
+  .comparison-card-metrics > div { min-width: 0; }
+  .comparison-card-metrics dt { color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-label-medium-size); }
+  .comparison-card-metrics dd { margin: 2px 0 0; color: var(--md-sys-color-on-surface); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .experiment-wide-table, .comparison-wide-table { display: none; }
   .data-table-region { max-width: 100%; overflow-x: auto; border-radius: var(--md-sys-shape-corner-sm); }
   .data-table-region th { white-space: nowrap; }
   .data-table-region td { max-width: 24rem; overflow-wrap: break-word; }
@@ -277,6 +292,8 @@
 }
 
 @media (min-width: 900px) {
+  .experiment-card-list, .comparison-card-list { display: none; }
+  .experiment-wide-table, .comparison-wide-table { display: block; }
   .shell-layout { display: grid; min-height: 100vh; grid-template-columns: 88px minmax(0, 1fr); grid-template-rows: 64px minmax(0, 1fr); padding-bottom: 0; }
   .shell-app-bar { grid-column: 2; grid-row: 1; padding-inline: 24px; }
   .shell-brand { display: block; }
@@ -290,6 +307,10 @@
 }
 
 @media (max-width: 420px) {
+  .data-list { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .data-list dd { margin: 0 0 8px; }
+  .comparison-card-metrics { grid-template-columns: minmax(0, 1fr); }
+  .experiment-card-heading { flex-direction: column; }
   .shell-navigation { padding-inline: 2px; }
   .shell-nav-link { font-size: 0.6875rem; }
   .shell-main { padding-inline: 12px; }

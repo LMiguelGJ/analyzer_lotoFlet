@@ -132,6 +132,7 @@ export function ExperimentsPage() {
   const [text, setText] = useState(query.name);
   const [items, setItems] = useState<ExperimentSummary[]>([]);
   const [total, setTotal] = useState(0);
+  const [mobileLayout, setMobileLayout] = useState(() => window.innerWidth < 900);
   const [state, setState] = useState<ListState>("loading");
   const { status: queue, error: queueError } = useQueue();
   const [deleteTarget, setDeleteTarget] = useState<ExperimentSummary | null>(null);
@@ -145,6 +146,12 @@ export function ExperimentsPage() {
   queryRef.current = query;
   const offset = (query.page - 1) * PAGE_SIZE;
   const key = searchParams.toString();
+
+  useEffect(() => {
+    const updateLayout = () => setMobileLayout(window.innerWidth < 900);
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
 
   const update = (changes: Partial<Query>) => {
     const next = { ...queryRef.current, ...changes };
@@ -264,6 +271,7 @@ export function ExperimentsPage() {
         </div>
       </Disclosure>
     </div>}
+    <p className="mb-4 text-sm text-text-secondary">Las simulaciones usan datos históricos: no predicen resultados futuros ni garantizan rentabilidad.</p>
     {state === "loading" && <Loading rows={6} label="Cargando simulaciones…" />}
     {state === "network-error" && <ErrorBanner cause="No se pudo contactar al servidor." recovery="Iniciá el laboratorio desde el lanzador y después reintentá." preserved actionLabel="Reintentar" onAction={() => load(query, offset)} />}
     {state === "server-error" && <ErrorBanner cause="No se pudo cargar el listado de simulaciones." recovery="El servidor respondió con un error. Reintentá en unos segundos; si persiste, reiniciá el laboratorio desde el lanzador." preserved actionLabel="Reintentar" onAction={() => load(query, offset)} />}
@@ -271,7 +279,31 @@ export function ExperimentsPage() {
       ? <section className="ledger-empty" aria-labelledby="empty-title"><h2 id="empty-title">Sin coincidencias</h2><p>Ninguna simulación cumple la búsqueda o el estado elegidos.</p><Button className="mt-3" onClick={clearFilters}>Limpiar filtros</Button></section>
       : <section className="ledger-empty" aria-labelledby="empty-title"><h2 id="empty-title">Todavía no hay simulaciones</h2><p>Las simulaciones muestran cómo se comportan tus estrategias con datos históricos.</p><Link to="/experimentos/nuevo" className="ledger-button ledger-button-primary mt-3">Nueva simulación</Link></section>)}
     {state === "ready" && total > 0 && <>
-      <DataTable caption="Simulaciones" columns={columns} rows={items} getRowKey={(row) => row.id} />
+      {mobileLayout ? <ul className="experiment-card-list" aria-label="Resultados de simulaciones">
+        {items.map((row) => {
+          const result = netResult(row);
+          const name = experimentName(row);
+          const strategy = isProfileBatchExperiment(row)
+            ? `${row.runs.length} estrategias`
+            : isProfileExperiment(row) ? row.display.staking_label
+              : row.request.strategies.length === 1 ? row.request.strategies[0]?.name ?? "Estrategia sin nombre" : `${row.request.strategies.length} estrategias`;
+          return <li key={row.id} className="experiment-card">
+            <div className="experiment-card-heading">
+              <Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="experiment-card-title">{name}</Link>
+              <StatusChip row={row} />
+            </div>
+            <p className="experiment-card-meta">{createdAt(row.created_at)} · {strategy}</p>
+            <p className="experiment-card-outcome">
+              <span>{row.runs.length === 1 && row.runs[0].result ? "Cambio respecto del inicio" : "Resultado financiero"}</span>
+              {result ? <Figure value={result.text} variant={result.variant} /> : <strong>{row.runs.length === 1 ? "Sin resultado guardado" : "Varias ejecuciones · abrí para revisar"}</strong>}
+            </p>
+            <div className="experiment-card-actions">
+              <Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="btn btn-secondary" aria-label={`Abrir resultado de ${name}`}>Abrir resultado</Link>
+              <RowActions row={row} onDelete={() => { setRowError(""); setDeleteTarget(row); }} />
+            </div>
+          </li>;
+        })}
+      </ul> : <div className="experiment-wide-table"><DataTable caption="Simulaciones" columns={columns} rows={items} getRowKey={(row) => row.id} /></div>}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
         <p className="text-text-secondary">Mostrando {offset + 1}–{offset + items.length} de {total}</p>
         <div className="flex gap-3"><Button disabled={offset === 0} onClick={() => update({ page: query.page - 1 })}>Anterior</Button><Button disabled={offset + PAGE_SIZE >= total} onClick={() => update({ page: query.page + 1 })}>Siguiente</Button></div>
