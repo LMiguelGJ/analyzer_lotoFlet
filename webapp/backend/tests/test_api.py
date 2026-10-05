@@ -249,6 +249,7 @@ def test_dataset_discovery_is_bounded_inert_and_metadata_only(setup, monkeypatch
         "source_id": "local-1",
         "source_kind": "historical",
         "source_revision": "v1",
+        "source_format": "json",
         "profile_id": "test-draw",
         "profile_revision": 1,
         "profile_sha256": profile_sha256(options()["profile"]),
@@ -1241,7 +1242,7 @@ def put_settings(client, body, **headers):
 
 
 def test_settings_exact_quota_and_validation(setup):
-    client, _, settings = setup
+    client, app, settings = setup
     initial = client.get("/api/v1/settings").json()
     assert initial["storage"]["limit_bytes"] == settings.quota_bytes
     assert initial["storage"]["sqlite_bytes"] >= 0
@@ -1254,10 +1255,20 @@ def test_settings_exact_quota_and_validation(setup):
     storage = initial["storage"]
     assert storage["logical_used_bytes_exact"] == "0"
     assert storage["profile_artifact_bytes_exact"] == str(
-        app_profile_bytes := len(legacy_quiniela_80_profile().model_dump_json().encode("utf-8"))
+        len(legacy_quiniela_80_profile().model_dump_json().encode("utf-8"))
     )
-    assert storage["admission_logical_bytes_exact"] == str(app_profile_bytes)
     assert storage["dataset_artifact_bytes_exact"] == "0"
+    # Admission accounting is the sum of every admitted artifact kind (experiments,
+    # profile, dataset and strategy). The app seeds a built-in strategy artifact, so
+    # admission is strictly larger than the profile artifact alone. Asserting the
+    # sum-of-parts invariant also catches double counting.
+    repo = app.state.repo
+    assert int(storage["admission_logical_bytes_exact"]) == (
+        repo.logical_experiment_bytes()
+        + repo.profile_artifact_bytes()
+        + repo.dataset_artifact_bytes()
+        + repo.strategy_artifact_bytes()
+    )
     maximum = str(2**63 - 1)
     assert put_settings(client, {"quota_bytes": maximum}).json()["quota"] == {
         "effective_bytes": maximum,
@@ -1338,7 +1349,15 @@ def test_settings_below_used_conflicts_without_mutation(setup):
     assert view["quota"]["persisted_bytes"] == str(used)
     assert view["storage"]["logical_used_bytes_exact"] == str(legacy_used)
     assert view["storage"]["admission_logical_bytes_exact"] == str(used)
-    assert view["storage"]["profile_artifact_bytes_exact"] == str(used - legacy_used)
+    # used - legacy_used covers every artifact kind, not profile alone: the app seeds
+    # a built-in strategy artifact. Assert the exact breakdown and the sum-of-parts.
+    repo = app.state.repo
+    assert int(view["storage"]["profile_artifact_bytes_exact"]) == repo.profile_artifact_bytes()
+    assert used - legacy_used == (
+        repo.profile_artifact_bytes()
+        + repo.dataset_artifact_bytes()
+        + repo.strategy_artifact_bytes()
+    )
     assert view["storage"]["limit_bytes"] == used
 
 
