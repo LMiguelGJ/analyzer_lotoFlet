@@ -116,7 +116,8 @@ export function ComparisonPage() {
   const leader = completedRuns.slice().sort((a, b) => b.result!.final_balance - a.result!.final_balance)[0];
   const capital = data ? isProfileExperiment(data.detail) ? data.detail.display.capital : data.detail.request.conditions.capital : 0;
   const goal = data ? isProfileExperiment(data.detail) ? data.detail.display.goal : data.detail.request.conditions.goal : 0;
-  const reached = completedRuns.some((run) => run.result?.outcome === "goal");
+  const goalRun = completedRuns.find((run) => run.result?.outcome === "goal");
+  const reached = !!goalRun;
   const delta = leader?.result?.delta;
   const deltaVariant: FigureVariant = delta == null || delta === 0 ? "neutral" : delta > 0 ? "positive" : "negative";
   return <div className="min-w-0 space-y-7">
@@ -125,7 +126,8 @@ export function ComparisonPage() {
     {error && <div role="alert" className="border-y border-border py-4"><p>{error}</p><p>La información guardada se conserva. Podés volver a cargar la comparación.</p><button type="button" className="btn btn-secondary mt-2" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></div>}
     {data && <>
       <section aria-label="Veredicto" className="ledger-block">
-        <h1 className="ledger-verdict-title">{leader ? `${data.comparison.complete ? names(leader.ordinal) : `Entre las simulaciones con resultado, ${names(leader.ordinal)}`} terminó con más saldo${reached ? " y se alcanzó la meta de saldo" : `; ninguna de las ${data.comparison.complete ? "simulaciones" : "finalizadas"} alcanzó la meta de saldo`}.` : "Todavía no hay saldos finales para comparar."}</h1>
+        <h1 className="ledger-verdict-title">{leader ? reached ? `${names(goalRun!.ordinal)} alcanzó la meta.` : data.comparison.complete ? "Ninguna alcanzó la meta." : "Ninguna alcanzó la meta entre las simulaciones con resultado." : "Sin resultado guardado."}</h1>
+        {leader && !reached && <p className="mt-2 text-sm">Entre las ejecuciones con resultado, {names(leader.ordinal)} terminó con más saldo.</p>}
         <div className="ledger-verdict-figures">
           <Stat label="Saldo final más alto" value={leader ? money(leader.result!.final_balance) : "Sin dato"} />
           <Stat label="Cambio respecto del inicio" value={leader ? money(delta!) : "Sin dato"} variant={deltaVariant} />
@@ -168,7 +170,7 @@ export function ComparisonPage() {
       <section className="min-w-0 space-y-4"><ComparisonChart series={series} formatMoney={money} onToggle={(ordinal) => updateView({ ...view, hidden: view.hidden.includes(ordinal) ? view.hidden.filter((n) => n !== ordinal) : [...view.hidden, ordinal] })} />
         {runs.filter((run) => run.status === "completed" && !!run.result).map((run) => <RunTrajectory key={`${id}:${run.ordinal}`} id={id} ordinal={run.ordinal} name={names(run.ordinal)} money={money} goal={data.detail.request.conditions.goal} chart={false} onLoad={onTrajectory} />)}
       </section>
-      <details className="space-y-3 text-sm"><summary className="disclosure-summary">Detalles técnicos · condiciones y datos de origen</summary>
+      <details className="space-y-3 text-sm"><summary className="disclosure-summary">Cómo se hizo · condiciones y datos de origen</summary>
         <dl className="data-list break-all">
           <dt>Versión de solicitud</dt><dd>{profileDetail ? `Perfil v${profileDetail.request.schema_version}` : batchDetail ? `Perfil v${batchDetail.request.schema_version}` : "No disponible"}</dd>
           {runs.map((run) => <Fragment key={run.ordinal}><dt>Resultado · {names(run.ordinal)}</dt><dd>{isProfileRun(run) && run.result ? `Perfil v${run.result.schema_version}` : "No disponible"}</dd>{batchDetail && isProfileBatchRun(run) && <><dt>Parada · {names(run.ordinal)}</dt><dd>{run.stop_category} · {run.stop_code} · {run.stop_reason}</dd></>}</Fragment>)}

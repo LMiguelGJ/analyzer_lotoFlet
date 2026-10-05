@@ -498,6 +498,8 @@ it("guides settings through rules, quota, advanced details, and a review before 
   const { user } = setup({ stayOnRules: true });
   expect(await screen.findByRole("heading", { name: "Reglas del sorteo" })).toBeInTheDocument();
   expect(screen.getByRole("progressbar", { name: /paso 1 de 4/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Guardar reglas" })).toBeVisible();
+  expect(screen.getByText(/Guardar ajustes aplica las reglas del sorteo y el límite de almacenamiento/i)).toBeInTheDocument();
   expect(screen.getByLabelText("Números posibles")).toHaveValue("100");
   expect(screen.getByLabelText("Números posibles").parentElement).toHaveTextContent(/números distintos puede elegir el sorteo/i);
   await user.click(screen.getByRole("button", { name: "Siguiente" }));

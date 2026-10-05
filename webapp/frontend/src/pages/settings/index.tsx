@@ -181,8 +181,7 @@ function GameRulesSection({ onSource, onSummary, onValidity, onLoadState, onRetr
       <p className="border border-border-control bg-field p-3 text-sm">{GAME_WARNING}</p>
       {saveError && <p role="alert" className="text-sm text-red-300">{saveError}</p>}
       {saved && <p role="status" className="text-sm text-accent">Reglas guardadas. Se usarán en las próximas simulaciones.</p>}
-      {/* The page keeps a single primary action (the capacity limit); this one is secondary. */}
-      <button type="submit" className="sr-only" disabled={saving || hasGameErrors(errors)}>Guardar reglas</button>
+      <button type="submit" className="btn btn-secondary" disabled={saving || hasGameErrors(errors)}>{saving ? "Guardando reglas…" : "Guardar reglas"}</button>
     </form>}
   </section>;
 }
@@ -413,6 +412,7 @@ export function SettingsPage() {
   const gameSourceName = gameSource === "stored" ? "Guardadas desde la web" : gameSource === "environment" ? "Variables de entorno LABORATORIO_GAME_*" : gameSource === "default" ? "Predeterminadas (Quiniela 80)" : "Sin leer";
   const sourceName = view?.quota.source === "environment" ? "Variable de entorno" : view?.quota.source === "persisted" ? "Preferencia guardada" : "Por defecto";
   const reviewQuota = draft && !validate(draft) ? draft : view?.quota.effective_bytes ?? "0";
+  const stepTitles = ["1 · ¿Qué reglas tendrá el sorteo?", "2 · ¿Cuánto espacio puede usar?", "3 · ¿Necesitás revisar detalles técnicos?", "4 · Revisá y guardá"];
   return <div className="max-w-5xl space-y-8">
     {loading && <Loading rows={3} label="Cargando ajustes…" className="border-y border-border py-5" />}
     {loadError && <ErrorBanner cause={loadError} recovery={view ? "Se muestra la última lectura; reintentá para actualizarla." : "Comprobá que el laboratorio siga abierto y reintentá."} preserved={!!view} actionLabel="Reintentar" onAction={() => setRefresh((previous) => previous + 1)} />}
@@ -423,6 +423,8 @@ export function SettingsPage() {
           <span />
         </div>
         <p className="m3-wizard-step">Paso {step + 1} de 4</p>
+        <h2 className="m3-wizard-title">{stepTitles[step]}</h2>
+        <p className="field-help">Guardar ajustes aplica las reglas del sorteo y el límite de almacenamiento a las simulaciones nuevas.</p>
         <div className="m3-wizard-actions">
           <button type="button" className="btn btn-outlined" disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>Atrás</button>
           {step < 3 ? <button type="button" className="btn btn-primary" disabled={(step === 0 && gameRulesState === "ready" && !gameValid) || (step === 1 && !quotaValid)} onClick={() => setStep((current) => Math.min(3, current + 1))}>Siguiente</button>

@@ -131,7 +131,7 @@ describe("profile detail READ", () => {
     const { user } = setup();
     await screen.findByText("-USD 2.50");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
-    await user.click(screen.getByText("Detalles técnicos"));
+    await user.click(screen.getByText("Cómo se hizo"));
     expect(screen.getByText("Escalera cíclica Q80 · apuesta dinámica por sorteo")).toBeInTheDocument();
     expect(screen.queryByText(/undefined por número/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
@@ -157,7 +157,7 @@ describe("profile detail READ", () => {
     const { user } = setup();
     await screen.findByText("-USD 2.50");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
-    await user.click(screen.getByText("Detalles técnicos"));
+    await user.click(screen.getByText("Cómo se hizo"));
     expect(screen.getByText("Audaz · apuesta dinámica por sorteo")).toBeInTheDocument();
     expect(screen.queryByText(/por número/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
@@ -178,7 +178,7 @@ describe("profile detail READ", () => {
     expect(await screen.findByText("Cambio respecto del inicio")).toBeInTheDocument();
     expect(screen.queryByText("Versión del resultado")).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
-    await user.click(screen.getByText("Detalles técnicos"));
+    await user.click(screen.getByText("Cómo se hizo"));
     expect(screen.getAllByText("Perfil v4")).toHaveLength(2);
     expect(screen.getByText("Escalera de recuperación · parámetros explícitos por perfil")).toBeInTheDocument();
     expect(screen.getByText("USD 12.50")).toBeInTheDocument();
@@ -196,8 +196,19 @@ describe("profile detail READ", () => {
     expect(within(run).getByText("Capital inicial").nextElementSibling).toHaveTextContent("USD 100.00");
     expect(within(run).getByText("Meta de saldo").nextElementSibling).toHaveTextContent("USD 200.00");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
-    expect(within(run).getByText("Detalles técnicos")).toBeInTheDocument();
+    expect(within(run).getByText("Cómo se hizo")).toBeInTheDocument();
     expect(within(run).queryByText(/Resultados históricos/)).not.toBeInTheDocument();
+  });
+
+  it("states the financial conclusion before figures and keeps calculation jargon inside technical details", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, outcome: "ruin" } }] });
+    const { user } = setup();
+    const verdict = await screen.findByRole("region", { name: "Veredicto" });
+    expect(within(verdict).getByText("Perdió: se quedó sin plata en 3 sorteos.")).toBeInTheDocument();
+    expect(within(verdict).getByText("Saldo final").nextElementSibling).toHaveTextContent("USD 97.50");
+    expect(within(verdict).getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    expect(screen.getByText("Cómo se hizo")).toBeInTheDocument();
   });
 
   it("leads with the verdict and keeps calculation jargon inside technical details", async () => {
@@ -205,6 +216,7 @@ describe("profile detail READ", () => {
     const { user } = setup();
     const verdict = await screen.findByRole("region", { name: "Veredicto" });
     expect(within(verdict).getByRole("heading", { level: 2 })).toHaveTextContent("Límite de sesión");
+    expect(within(verdict).getByText("Se detuvo en el límite de duración (3 sorteos).")).toBeInTheDocument();
     expect(verdict.querySelectorAll(".ledger-verdict-figures .ledger-stat")).toHaveLength(3);
     expect(within(verdict).getByText("Saldo final").nextElementSibling).toHaveTextContent("USD 97.50");
     expect(within(verdict).getByText("Mejor saldo").nextElementSibling).toHaveTextContent("USD 100.00");
@@ -271,7 +283,7 @@ describe("profile batch v5 detail", () => {
     const { user } = setup();
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
     expect(screen.getByRole("heading", { name: "Lote guardado · Snapshot cold" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Snapshot cold" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Snapshot cold" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Comparar simulaciones" })).toHaveAttribute("href", "/experimentos/exp/comparacion");
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
     expect(within(screen.getByRole("region", { name: "Veredicto" })).getByText(/Motivo de cierre:/)).toHaveTextContent("Límite configurado");
@@ -280,11 +292,13 @@ describe("profile batch v5 detail", () => {
     expect(screen.getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("configured_limit");
     expect(screen.getByText("Motivo informado").nextElementSibling).toHaveTextContent("max_bet_draws");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    await user.click(screen.getByText("Cómo se hizo"));
+    expect(screen.getByText("Nombre de ejecución").nextElementSibling).toHaveTextContent("Snapshot cold");
     expect(screen.getByText("Estrategia").nextElementSibling).toHaveTextContent("Snapshot cold · revisión 2");
     const parameters = screen.getByRole("region", { name: "Ejecución 1" });
     const identityDetails = Array.from(parameters.querySelectorAll("details")).find((details) => details.textContent?.includes("ID de estrategia"));
     expect(identityDetails).toBeDefined();
-    await user.click(within(identityDetails!).getByText("Detalles técnicos"));
+    await user.click(within(identityDetails!).getByText("Cómo se hizo"));
     expect(within(identityDetails!).getByText("ID de estrategia").nextElementSibling).toHaveTextContent("strategy-old");
     expect(within(identityDetails!).getByText("SHA-256 de definición").nextElementSibling).toHaveTextContent("c".repeat(64));
     expect(within(identityDetails!).getByText("Fuente canónica SHA-256").nextElementSibling).toHaveTextContent("e".repeat(64));
@@ -434,7 +448,7 @@ describe("LW11 detail", () => {
     expect(screen.getByText("Capital inicial").nextElementSibling).toHaveTextContent("RD$100");
     expect(screen.getByText("Meta de saldo").nextElementSibling).toHaveTextContent("RD$200");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
-    const technical = screen.getByText("Detalles técnicos");
+    const technical = screen.getByText("Cómo se hizo");
     expect(technical.closest("details")).not.toHaveAttribute("open");
     expect(screen.getByText("history.json")).not.toBeVisible();
     await user.click(technical);
@@ -446,11 +460,11 @@ describe("LW11 detail", () => {
     const { user } = setup();
     await screen.findByText("Prueba");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
-    await user.click(screen.getByText("Detalles técnicos"));
+    await user.click(screen.getByText("Cómo se hizo"));
     expect(screen.getByText("Un sistema de selección")).toBeInTheDocument();
     expect(screen.getByText("Plana")).toBeInTheDocument();
     expect(screen.getByText("Sumar los premios")).toBeInTheDocument();
-    expect(screen.getByText("Detalles técnicos")).toBeInTheDocument();
+    expect(screen.getByText("Cómo se hizo")).toBeInTheDocument();
     expect(screen.queryByText("Todas las posiciones")).not.toBeInTheDocument();
     expect(screen.queryByText("system")).not.toBeInTheDocument();
     expect(screen.queryByText("flat")).not.toBeInTheDocument();

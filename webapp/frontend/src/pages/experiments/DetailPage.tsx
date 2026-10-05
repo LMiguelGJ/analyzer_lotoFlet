@@ -42,6 +42,16 @@ export function verdictPhrase(outcome: string | undefined, status: string): stri
   return "Simulación cerrada";
 }
 
+function financialConclusion(run: AnyRunSummary): string | null {
+  if (!run.result) return null;
+  const draws = isProfileRun(run) ? run.result.elapsed_draws : run.result.bets_count;
+  if (run.result.outcome === "goal") return "Llegó a la meta.";
+  if (run.result.outcome === "ruin") return `Perdió: se quedó sin plata en ${draws} sorteos.`;
+  if (run.result.outcome === "limit") return `Se detuvo en el límite de duración (${draws} sorteos).`;
+  if (run.result.outcome === "history_exhausted") return "Se detuvo: terminó el historial disponible.";
+  return "La simulación terminó sin alcanzar la meta.";
+}
+
 function profileCloseReason(result: ProfileRunResult): string {
   const reasons = result.collisions.map((reason) => PROFILE_COLLISION_LABELS[reason]).filter((reason): reason is string => Boolean(reason));
   return `${PROFILE_OUTCOME_LABELS[result.outcome]}${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
@@ -281,6 +291,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
     {run.result && <>
       <section aria-label="Veredicto" className="ledger-block">
         <h2 className="ledger-verdict-title">{verdictPhrase(outcome, run.status)}</h2>
+        <p className="mt-3 text-lg font-medium">{financialConclusion(run)}</p>
         <div className="ledger-verdict-figures">
           <Stat label="Saldo final" value={money(run.result.final_balance)} variant={run.result.final_balance > capital ? "positive" : run.result.final_balance < capital ? "negative" : "neutral"} />
           <Stat label="Mejor saldo" value={trajectoryMaximum == null ? "—" : money(trajectoryMaximum)} variant="neutral" />
@@ -309,13 +320,13 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
         <dt>Duración</dt><dd className="data-list-numeric">Sin resultado guardado</dd>
       </dl>
     </>}
-    <div className="flex flex-wrap items-center gap-4"><h2 className="font-heading text-xl">{runName}</h2>{data.runs.length === 1 && <StatusLabel kind="execution" value={run.status} />}</div>
+    <div className="flex flex-wrap items-center gap-4">{data.runs.length === 1 && <StatusLabel kind="execution" value={run.status} />}</div>
     <div role="tablist" aria-label="Secciones del detalle" className="mt-6 flex flex-wrap gap-2 border-b border-border">
       {tabs.map((name, index) => <button key={name} ref={(node) => { tabRefs.current[index] = node; }} type="button" role="tab" id={`detail-tab-${index}`} aria-controls={`detail-panel-${index}`} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => selectTab(name)} onKeyDown={(event) => onTabKey(event, index)} className={`min-h-control px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${tab === name ? "border-b-2 border-accent text-text" : "text-text-secondary hover:text-text"}`}>{name}</button>)}
     </div>
     <div role="tabpanel" id={`detail-panel-${tabs.indexOf(tab)}`} aria-labelledby={`detail-tab-${tabs.indexOf(tab)}`} tabIndex={0} className="pt-5">
       {tab === "Parámetros y datos" ? (
-        <Disclosure summary="Detalles técnicos">{isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} run={run} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null}</Disclosure>
+        <Disclosure summary="Cómo se hizo"><dl className="data-list mb-4"><dt>Nombre de ejecución</dt><dd>{runName}</dd></dl>{isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} run={run} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null}</Disclosure>
       ) : !run.result ? (
         <div><p role="status">Esta ejecución todavía no tiene un resultado guardado. Volvé a la pestaña Resultado más tarde; el estado se actualiza automáticamente.</p>{isProfileBatchRun(run) && <><p className="mt-2 text-sm">{stopCategoryLabel(run.stop_category)}</p><Disclosure summary="Detalles técnicos"><dl className="data-list pt-2"><dt>Categoría de parada (código)</dt><dd>{run.stop_category}</dd><dt>Motivo informado</dt><dd>{run.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd>{run.error && <><dt>Error</dt><dd>{run.error}</dd></>}</dl></Disclosure></>}</div>
       ) : tab === "Resultado" ? (

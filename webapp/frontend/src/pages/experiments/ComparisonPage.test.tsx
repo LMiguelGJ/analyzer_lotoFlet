@@ -133,7 +133,7 @@ describe("profile comparison READ", () => {
     setup();
     await openDetailedComparison();
     await screen.findByRole("table", { name: "Comparación de ejecuciones" });
-    await userEvent.setup().click(screen.getByText("Detalles técnicos · condiciones y datos de origen"));
+    await userEvent.setup().click(screen.getByText("Cómo se hizo · condiciones y datos de origen"));
     expect(screen.getByText("Versión de solicitud").nextElementSibling).toHaveTextContent("Perfil v4");
     expect(screen.getByText("Resultado · Perfil EUR").nextElementSibling).toHaveTextContent("Perfil v4");
     expect(screen.getByText("EUR 5.00")).toBeInTheDocument();
@@ -201,7 +201,7 @@ describe("profile batch v5 comparison", () => {
     expect(rows[2]).toHaveTextContent(/Frozen B.*Cancelado.*Sin dato/);
     expect(rows[3]).toHaveTextContent(/Frozen C.*Con error.*strategy-local failure/);
     expect(screen.queryByText("Fin de la fuente guardada")).not.toBeInTheDocument();
-    await user.click(screen.getByText("Detalles técnicos · condiciones y datos de origen"));
+    await user.click(screen.getByText("Cómo se hizo · condiciones y datos de origen"));
     expect(screen.getByText("Definiciones congeladas").nextElementSibling).toHaveTextContent(`frozen-0 · revisión 4 · SHA-256 ${"a".repeat(64)}`);
     expect(within(rows[1]).getAllByText(/Ventana operativa; fuente incompleta/)).toHaveLength(2);
     expect(screen.getByText(/Límites efectivos guardados/).nextElementSibling).toHaveTextContent(/max_draws.*4/);
@@ -245,13 +245,26 @@ describe("profile batch v5 comparison", () => {
 });
 
 describe("LW12 comparison", () => {
+  it("states that no option reached the goal before a neutral highest-balance comparison", async () => {
+    const lostRun = { ...runs[0], result: { ...runs[0].result!, outcome: "limit" as const, final_balance: 80, delta: -20 } };
+    const noGoal = { ...detail, runs: [lostRun] };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(noGoal);
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...comparison, complete: true, requested: 1, completed: 1, runs: [lostRun] });
+    setup();
+    const verdict = await screen.findByRole("region", { name: "Veredicto" });
+    expect(within(verdict).getByRole("heading", { level: 1 })).toHaveTextContent("Ninguna alcanzó la meta");
+    expect(within(verdict).getByText(/terminó con más saldo/)).toBeInTheDocument();
+    expect(within(verdict).queryByText(/ganador|mejor estrategia/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Cómo se hizo · condiciones y datos de origen")).toBeInTheDocument();
+  });
+
   it("leads with a four-figure verdict while technical comparison stays closed", async () => {
     const enrichedRuns = [{ ...runs[0], result: { ...runs[0].result!, net: 25, roi: 2, return_per_wagered: 3, max_drawdown: 10 } }, runs[1]];
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...detail, runs: enrichedRuns });
     vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...comparison, runs: enrichedRuns });
     const { user } = setup();
     const verdict = await screen.findByRole("region", { name: "Veredicto" });
-    expect(within(verdict).getByRole("heading", { level: 1 })).toHaveTextContent(/Entre las simulaciones con resultado, Primera terminó con más saldo y se alcanzó la meta/);
+    expect(within(verdict).getByRole("heading", { level: 1 })).toHaveTextContent("Primera alcanzó la meta.");
     expect(within(verdict).getByText("Saldo final más alto").nextElementSibling).toHaveTextContent("RD$150");
     expect(within(verdict).getAllByText(/Saldo final más alto|Cambio respecto del inicio|Sorteos jugados|¿Alcanzó la meta\?/)).toHaveLength(4);
     expect(within(verdict).getByText(/Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad/)).toBeInTheDocument();

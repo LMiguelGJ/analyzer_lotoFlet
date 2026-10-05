@@ -467,7 +467,7 @@ export function NewExperimentPage() {
     (offeredDraws.includes(conditions.start_draw) || verifiedDraw === conditions.start_draw);
   const staleDraw = !!knownDraw && conditions.start_draw === knownDraw && !drawLoading && !drawError && !selectedAvailable;
   const summarySelection = strategies.map((strategy) => catalog ? strategyPlainText(strategy, catalog) : "Selección configurable").join(" · ");
-  const wizardSteps = ["Sorteos históricos", "Estrategia y selección", "Límites", "Revisar y lanzar"];
+  const wizardSteps = ["1 · ¿Qué sorteos alimentan la simulación?", "2 · ¿Cómo elegimos los números?", "3 · ¿Cuánto arriesgás y cuál es tu meta?", "4 · Revisá y lanzá"];
   function moveWizard(next: number) {
     if (next > wizardStep) {
       const available = drawDate && availability?.ranked_total === 0 ? [] : [...draws, ...(verifiedDraw ? [verifiedDraw] : [])];
@@ -510,7 +510,6 @@ export function NewExperimentPage() {
 
   return <>
     <Link to="/experimentos" className="mb-4 inline-block link">Volver a simulaciones</Link>
-    <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil y datos importados? <Link to="/experimentos/nuevo/perfil" className="link">Crear simulación con perfil</Link>.</p></div>
     <form className="max-w-4xl" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         <section className="m3-wizard" aria-label="Asistente para crear una simulación">
           <div className="m3-wizard-progress" role="progressbar" aria-label={`Paso ${wizardStep + 1} de ${wizardSteps.length}`} aria-valuenow={wizardStep + 1} aria-valuemin={1} aria-valuemax={wizardSteps.length}>
@@ -629,6 +628,11 @@ export function NewExperimentPage() {
             <div><dt>Cómo contar premios</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd></div>
           </dl>
           <OrderSummary capital={Number.isInteger(Number(conditions.capital)) && Number(conditions.capital) > 0 ? Number(conditions.capital) : null} goal={Number.isInteger(Number(conditions.goal)) && Number(conditions.goal) > 0 ? Number(conditions.goal) : null} duration={`${conditions.max_bets || "Sin límite"} sorteos`} coverage={summarySelection} caveat="Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad." />
+          <details className="mt-5 border-t border-border pt-4">
+            <summary className="disclosure-summary">¿Necesitás algo más?</summary>
+            <p className="mt-3 text-sm">Si trabajás con perfiles y datos importados, podés usar el flujo especializado.</p>
+            <Link to="/experimentos/nuevo/perfil" className="btn btn-tertiary mt-2">Crear simulación con perfil</Link>
+          </details>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
             <Button variant="ghost" onClick={() => navigate("/experimentos")}>Salir</Button>
             <Button variant="primary" type="submit" disabled={!catalog || loading || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable) || posting}>{posting ? "Creando…" : "Crear simulación"}</Button>

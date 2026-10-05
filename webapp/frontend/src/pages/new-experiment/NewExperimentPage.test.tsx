@@ -106,7 +106,8 @@ describe("S2 simple creation form", () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     expect(screen.getByRole("progressbar", { name: "Paso 1 de 4" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sorteos históricos" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "1 · ¿Qué sorteos alimentan la simulación?" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Crear simulación con perfil" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Nombre de la estrategia 1" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Capital (RD$)" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Lanzar simulación" })).not.toBeInTheDocument();
@@ -118,6 +119,7 @@ describe("S2 simple creation form", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
     await user.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(screen.getByRole("progressbar", { name: "Paso 2 de 4" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "2 · ¿Cómo elegimos los números?" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Sorteo inicial" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Capital (RD$)" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Siguiente" }));
@@ -128,6 +130,7 @@ describe("S2 simple creation form", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
     await user.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(screen.getByRole("progressbar", { name: "Paso 3 de 4" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "3 · ¿Cuánto arriesgás y cuál es tu meta?" })).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Nombre de la estrategia 1" })).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Lanzar simulación" })).not.toBeInTheDocument();
@@ -138,6 +141,7 @@ describe("S2 simple creation form", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(screen.getByRole("progressbar", { name: "Paso 4 de 4" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "4 · Revisá y lanzá" })).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Capital (RD$)" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveAttribute("type", "submit");
     expect(document.querySelectorAll("form button[type='submit']")).toHaveLength(1);
@@ -214,14 +218,23 @@ describe("S2 simple creation form", () => {
 });
 
 describe("profile creator discovery", () => {
-  it("# F-CREATE-009 links to the dedicated route without changing the legacy form", async () => {
+  it("# F-CREATE-009 delays the dedicated profile route until the review's secondary options", async () => {
     const { user, router } = setup();
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: "Crear simulación con perfil" });
+    expect(screen.queryByRole("link", { name: "Crear simulación con perfil" })).not.toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Clásico");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
+    await goToWizardStep(user, 1);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Estrategia");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Método de la estrategia 1" }), "system");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
+    await goToWizardStep(user, 3);
+    const extras = screen.getByText("¿Necesitás algo más?").closest("details")!;
+    expect(extras).not.toHaveAttribute("open");
+    await user.click(screen.getByText("¿Necesitás algo más?"));
+    const link = within(extras).getByRole("link", { name: "Crear simulación con perfil" });
     expect(link).toHaveAttribute("href", "/experimentos/nuevo/perfil");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
-    // The link is navigation only; existing legacy inputs remain usable.
-    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Clásico");
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
   });
 });
