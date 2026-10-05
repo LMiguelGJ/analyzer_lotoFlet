@@ -33,8 +33,30 @@ descartado y sirve solo como anti-referencia.
 - Estrategia: Restrained sobre la gramática M3 (neutrales + primary + accent de
   resultado); superficies tonales M3 (surface, surface-container), nunca gris puro.
 - Los roles M3 se nombran con el vocabulario oficial (`--md-sys-color-primary`,
-  `on-primary`, `surface-container-high`, `outline-variant`, …). Valores exactos
-  provisionales hasta que el build los asiente; se actualizan aquí.
+  `on-primary`, `surface-container-high`, `outline-variant`, …).
+
+### Tokens asentados por el build (2026-10-05)
+
+- Color: seed primario claro `#006a60` (teal profundo, hue ≈ 172°); secondary
+  `#4a635e`; tertiary/acento de resultado `#805600` (ámbar, hue ≈ 42°). Roles
+  tonales completos light y dark en `webapp/frontend/src/styles/tokens.css`.
+- Tipografía: `"Roboto Flex", system-ui, -apple-system, "Segoe UI", sans-serif`
+  para cuerpo y encabezados; cifras tabulares. Roboto Flex se entrega por el link
+  de Google Fonts en `index.html` (verificado en el build) con fallback de sistema
+  para uso offline.
+- Forma: xs 4px, sm 8px, md 12px, lg 16px, xl 28px, full 9999px; controles 8px;
+  cards 12px.
+- Elevación M3 niveles 0–5: nivel 1 botones primarios, 2 wizard sticky, 3
+  FAB/dialog/snackbar, 4 hover de FAB.
+- Motion: cortos 50/100/150 ms; medios 200/300 ms; largo 400 ms.
+  Easing estándar `cubic-bezier(0.2, 0, 0, 1)`, emphasized
+  `cubic-bezier(0.2, 0, 0, 0.2)`. El progreso del wizard anima con `transform`
+  (nunca propiedades de layout). `prefers-reduced-motion` reduce todo a 0.01 ms.
+- Navegación: Navigation Bar inferior (Experimentos · Estrategias · Datos ·
+  Ajustes) + FAB extendido «Nueva simulación»; top app bar pequeña con cola y tema
+  (acciones en flujo normal, sin reserva fija de gutter). A ≥900 px la navegación
+  se vuelve rail lateral. El FAB se oculta durante los flujos guiados (Ajustes y
+  creación) para no competir con las acciones fijas del wizard.
 
 ## Tipografía
 
@@ -46,8 +68,8 @@ descartado y sirve solo como anti-referencia.
 
 ## Forma, elevación, movimiento
 
-- Shape scale M3: xs 4, sm 8, md 12, lg 16, xl 28. Controles redondeados (radio 0
-  eliminado por completo).
+- Valores exactos asentados en la sección «Tokens asentados por el build» arriba;
+  esta sección fija las reglas. Controles redondeados (radio 0 eliminado).
 - Elevation M3 con surface tint; sombras solo donde M3 las define (FAB, dialogs,
   bottom sheets).
 - Motion M3 emphasized (desaceleración 200–350 ms) en transiciones de estado;
@@ -75,6 +97,16 @@ descartado y sirve solo como anti-referencia.
 - Sin gamificación, sin hype, sin promesas de ganancia.
 - Nada hardcodeado: las reglas del juego vienen de configuración, no de constantes
   de UI.
+
+## Pendientes conocidos (no bloqueantes, seguimiento futuro)
+
+- Hallazgos informativos de revisión nativa sin abrir corrección: R3-001
+  (pages/settings/index.tsx:380) y los anteriores ya cerrados.
+- Ceiling check de Material 3 (revisión de cierre): state layers más consistentes
+  en selección/press, jerarquía por elevación/superficie tonal en vez de bordes,
+  y uso más sistemático de los roles tipográficos M3 por pantalla.
+- Verificación manual pendiente del usuario: dispositivo físico, zoom del
+  navegador y ancho ≤320 px.
 
 ## Componentes M3 previstos
 
