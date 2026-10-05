@@ -166,3 +166,28 @@ Contrato y sistema: `DESIGN.md` (raíz). Verdad de producto: `PRODUCT.md` (raíz
   siempre la verdad del juego activo; (b) chips repetidos en pestañas de
   resultado (cosmético menor, detectado en captura, no corregido); (c) prueba
   de lanzador Windows y zoom nativo real, no cubiertos por el barrido.
+
+## Configuración de reglas de juego (solicitud del usuario: nada hardcodeado)
+
+Diagnóstico (explorado, no asumido): `Game.prizes` era `tuple[int,int,int,int,int]`
+de longitud fija 5 y `GAME = Game("Quiniela 80", 100, 5, (80,8,4,2,1), True)` era
+constante en `contracts.py:36` → atrapaba posiciones y premios. `session.py` ya
+itera `zip(GAME.prizes, results, strict=True)` (genérico). El frontend ya
+renderiza `catalog.game.{numbers,positions,allows_repeats,prizes}` dinámicamente
+solo que "Apuesta mínima por número" estaba fija en `RD$1`.
+
+Diseño (decision-complete):
+- `Game.prizes` → `tuple[int, ...]`; `make_game(...)` valida (numbers>=2,
+  positions>=1, positions<=numbers sin repeticiones, len(prizes)==positions,
+  prize>=1, minimum_stake>=1) y `configure_game()` reemplaza el global `GAME`.
+- `Settings` agrega `game_name/numbers/positions/prizes/allows_repeats/
+  minimum_stake` (defaults = Q80 actual) y `from_environment` lee
+  `LABORATORIO_GAME_{NAME,NUMBERS,POSITIONS,PRIZES,REPEATS,MINIMUM_STAKE}`;
+  `__post_init__` aplica `configure_game` (cualquier Settings configura el juego).
+- `api/catalog.py` expone el juego configurado, incluido `minimum_stake`.
+- Frontend: `Game.minimum_stake: number` en tipos y el `dd` lee
+  `formatDOP(catalog.game.minimum_stake)`; fixtures y tests actualizados.
+- Salvaguarda: `test_game_is_the_fixed_quiniela_80_profile` pasa a afirmar el
+  DEFAULT Q80 (no se retira, se refuerza con casos 3 posiciones 60/10/5).
+
+Estado: dos writers en paralelo, superficies disjuntas (backend vs frontend).
