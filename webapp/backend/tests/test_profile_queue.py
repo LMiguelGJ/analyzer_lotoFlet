@@ -100,6 +100,8 @@ def forged_cycling_entry(send, profile, request, rows, cancel):
     send.close()
 
 
+# B-QUE-027
+
 def test_submit_profile_spawn_static_and_random_three_positions(bound, tmp_path):
     repo, profile, dataset, request = bound
     repo.create_game_profile(profile)
@@ -132,6 +134,8 @@ def test_submit_profile_spawn_static_and_random_three_positions(bound, tmp_path)
         queue.shutdown()
 
 
+# B-QUE-028
+
 def test_submit_rejects_metadata_hash_mismatch_without_orphan(bound, tmp_path):
     repo, profile, _, request = bound
     repo.create_game_profile(profile)
@@ -158,6 +162,8 @@ def test_submit_rejects_metadata_hash_mismatch_without_orphan(bound, tmp_path):
         (silent_profile_entry, "without a final result"),
     ],
 )
+# B-QUE-029
+
 def test_bad_completed_profile_is_queue_fatal_and_preserves_prior_result(
     bound, tmp_path, monkeypatch, entry, expected
 ):
@@ -185,6 +191,8 @@ def test_bad_completed_profile_is_queue_fatal_and_preserves_prior_result(
     finally:
         queue.shutdown()
 
+
+# B-QUE-030
 
 def test_cancel_unresponsive_profile_discard_and_shutdown_interrupt(bound, tmp_path, monkeypatch):
     repo, profile, _, request = bound
@@ -225,6 +233,8 @@ def test_cancel_unresponsive_profile_discard_and_shutdown_interrupt(bound, tmp_p
         next_queue.shutdown()
 
 
+# B-QUE-031
+
 def test_cycling_preparation_cannot_enqueue_or_start_or_recover(cycling, tmp_path):
     repo, _, _, request = cycling
     identifier = repo.create_profile_cycling_experiment(request)
@@ -249,6 +259,8 @@ def test_cycling_preparation_cannot_enqueue_or_start_or_recover(cycling, tmp_pat
     finally:
         queue.shutdown()
 
+
+# B-QUE-032
 
 def test_private_cycling_spawn_authenticates_full_dataset_and_preserves_v1(cycling, tmp_path):
     repo, profile, dataset, request = cycling
@@ -298,6 +310,8 @@ def test_private_cycling_spawn_authenticates_full_dataset_and_preserves_v1(cycli
         (forged_cycling_entry, "differs"),
     ],
 )
+# B-QUE-033
+
 def test_private_cycling_bad_ipc_stops_queue_preserving_prior_and_later(
     cycling, tmp_path, monkeypatch, entry, expected
 ):
@@ -326,6 +340,8 @@ def test_private_cycling_bad_ipc_stops_queue_preserving_prior_and_later(
     finally:
         queue.shutdown()
 
+
+# B-QUE-034
 
 def test_private_cycling_enqueue_refuses_wrong_kind_version_status_and_duplicate(cycling, tmp_path):
     repo, profile, _, request = cycling
@@ -365,6 +381,8 @@ def test_private_cycling_enqueue_refuses_wrong_kind_version_status_and_duplicate
         queue.shutdown()
 
 
+# B-QUE-035
+
 def test_private_cycling_shutdown_interrupts_spawn_without_result(cycling, tmp_path, monkeypatch):
     from functools import partial
 
@@ -390,6 +408,8 @@ def test_private_cycling_shutdown_interrupts_spawn_without_result(cycling, tmp_p
     finally:
         queue.shutdown()
 
+
+# B-QUE-036
 
 def test_private_cycling_artifact_integrity_error_stops_before_spawn(
     cycling, tmp_path, monkeypatch
@@ -426,6 +446,8 @@ def test_private_cycling_artifact_integrity_error_stops_before_spawn(
         restarted.shutdown()
 
 
+# B-QUE-037
+
 def test_manual_resume_held_profile(bound, tmp_path):
     repo, profile, _, request = bound
     repo.create_game_profile(profile)
@@ -439,6 +461,8 @@ def test_manual_resume_held_profile(bound, tmp_path):
     finally:
         queue.shutdown()
 
+
+# B-QUE-038
 
 def test_audaz_schema3_held_cancel_manual_resume_and_spawned_replay(bound, tmp_path):
     from laboratorio.domain.profile_request import profile_sha256
