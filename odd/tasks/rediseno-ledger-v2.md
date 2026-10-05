@@ -191,3 +191,30 @@ Diseño (decision-complete):
   DEFAULT Q80 (no se retira, se refuerza con casos 3 posiciones 60/10/5).
 
 Estado: dos writers en paralelo, superficies disjuntas (backend vs frontend).
+
+## Cierre: reglas de juego configurables (commit `972f981`)
+
+- Backend: `Game.prizes: tuple[int, ...]` (antes longitud fija 5), `make_game()`
+  valida (numbers>=2, positions>=1, positions<=numbers sin repeticiones,
+  len(prizes)==positions, prize>=1, minimum_stake>=1) y `configure_game()`
+  aplica el juego al global `GAME` (mutación en el lugar, porque session.py y
+  catalog.py lo importan por nombre). `Settings` expone
+  game_name/numbers/positions/prizes/allows_repeats/minimum_stake con defaults
+  Q80 y lee `LABORATORIO_GAME_{NAME,NUMBERS,POSITIONS,PRIZES,REPEATS,MINIMUM_STAKE}`.
+  El catálogo expone `minimum_stake`.
+- Frontend: `Game.minimum_stake: number` en tipos; la regla "Apuesta mínima por
+  número" se renderiza con `formatDOP(catalog.game.minimum_stake)` en vez de
+  `RD$1` fijo.
+- Salvaguarda: `test_game_is_the_fixed_quiniela_80_profile` →
+  `test_default_game_is_quiniela_80` (afirma el DEFAULT, no se retira). +22
+  pruebas nuevas (make_game, configure_game, env parsing, bad input).
+- Verificación: backend 816 passed / 8 failed = subconjunto exacto de la base
+  limpia en HEAD (793/11) medido con worktree `../base-check`; ninguno
+  relacionado con el juego. Frontend 559/559. `tsc` limpio, `ruff` limpio,
+  detector Impeccable `[]`.
+- Revisión nativa R6: lineage `review-94f58b0ba28ad46f` **approved, ack quemado**
+  (advisories R3-001/002/003 no bloqueantes).
+- Push `origin/stage`: `a9f665d..972f981`.
+- Pendiente conocido (previo, ajeno a este cambio): 8 tests de backend fallan en
+  dataset/settings/profile_batch_queue/profile_storage/storage - ya fallaban en
+  la base limpia; documentados, no corregidos aquí.
