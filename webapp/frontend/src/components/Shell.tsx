@@ -23,8 +23,12 @@ function preferredTheme(): "light" | "dark" {
 export function Shell({ title, children }: ShellProps) {
   const [queueOpen, setQueueOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark" | null>(() => {
-    const stored = window.localStorage.getItem("laboratorio-theme");
-    return stored === "light" || stored === "dark" ? stored : null;
+    try {
+      const stored = window.localStorage.getItem("laboratorio-theme");
+      return stored === "light" || stored === "dark" ? stored : null;
+    } catch {
+      return null;
+    }
   });
   const { status, error } = useQueue();
   const queueRef = useRef<HTMLButtonElement>(null);
@@ -35,7 +39,7 @@ export function Shell({ title, children }: ShellProps) {
       return;
     }
     document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem("laboratorio-theme", theme);
+    try { window.localStorage.setItem("laboratorio-theme", theme); } catch { /* Theme remains active in memory for this session. */ }
   }, [theme]);
 
   function handleSkipLinkClick(event: React.MouseEvent<HTMLAnchorElement>) {
@@ -102,7 +106,6 @@ export function Shell({ title, children }: ShellProps) {
         >
           <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
         </button>
-
         <main id="main-content" tabIndex={-1} className="shell-main">
           <div className="shell-page-content">{children}</div>
         </main>

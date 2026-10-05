@@ -47,7 +47,7 @@
   .link:hover { color: var(--md-sys-color-on-surface); }
 
   .shell-root { min-height: 100vh; background: var(--md-sys-color-background); color: var(--md-sys-color-on-background); }
-  .shell-layout { min-height: 100vh; padding-bottom: 80px; }
+  .shell-layout { position: relative; min-height: 100vh; padding-bottom: 80px; }
   .shell-app-bar {
     position: sticky;
     top: 0;
@@ -57,7 +57,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 8px 16px;
+    padding: 8px 120px 8px 16px;
     background: color-mix(in srgb, var(--md-sys-color-surface) 96%, transparent);
     border-bottom: 1px solid var(--md-sys-color-outline-variant);
   }
@@ -65,7 +65,7 @@
   .shell-brand { display: none; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-label-medium-size); }
   .shell-app-bar h1 { overflow: hidden; margin: 0; font-size: var(--md-sys-typescale-title-large-size); line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
   .shell-app-bar-actions { display: flex; flex-shrink: 0; gap: 4px; }
-  .shell-theme-toggle { position: fixed; top: 8px; right: 64px; z-index: 21; }
+  .shell-theme-toggle { position: absolute; top: 8px; right: 68px; z-index: 21; }
   .m3-icon-button {
     position: relative;
     display: inline-grid;

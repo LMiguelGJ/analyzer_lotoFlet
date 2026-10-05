@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useBlocker } from "react-router-dom";
+import { Link, useBlocker } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
 import type { GameSettings, GameSettingsSource, SettingsView } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -74,7 +74,7 @@ function validateGame(draft: GameDraft): GameErrors {
 const hasGameErrors = (errors: GameErrors) =>
   !!(errors.name || errors.numbers || errors.positions || errors.stake || errors.prizes.some(Boolean));
 
-function GameRulesSection({ onSource, onSummary, onValidity }: { onSource: (source: GameSettingsSource) => void; onSummary: (draft: GameDraft) => void; onValidity: (valid: boolean) => void }) {
+function GameRulesSection({ onSource, onSummary, onValidity, onLoadState, onRetry, onOutcome, retry }: { onSource: (source: GameSettingsSource) => void; onSummary: (draft: GameDraft) => void; onValidity: (valid: boolean) => void; onLoadState: (state: "loading" | "ready" | "error") => void; onRetry: () => void; onOutcome: (message: string) => void; retry: number }) {
   const [draft, setDraft] = useState<GameDraft | null>(null);
   const [loadError, setLoadError] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -84,14 +84,16 @@ function GameRulesSection({ onSource, onSummary, onValidity }: { onSource: (sour
 
   useEffect(() => {
     let live = true;
+    onLoadState("loading");
+    setLoadError("");
     apiClient.getGameSettings().then((value) => {
       if (!live) return;
       const next = toDraft(value);
-      setDraft(next); onSummary(next); onValidity(!hasGameErrors(validateGame(next))); onSource(value.source);
-    }).catch(() => { if (live) setLoadError("No se pudieron cargar las reglas del juego."); });
+      setDraft(next); onSummary(next); onValidity(!hasGameErrors(validateGame(next))); onSource(value.source); onLoadState("ready");
+    }).catch(() => { if (live) { setLoadError("No se pudieron cargar las reglas del juego."); onLoadState("error"); } });
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onLoadState, retry]);
 
   function edit(change: Partial<GameDraft>) {
     setDraft((current) => {
@@ -100,7 +102,7 @@ function GameRulesSection({ onSource, onSummary, onValidity }: { onSource: (sour
       onSummary(next); onValidity(!hasGameErrors(validateGame(next)));
       return next;
     });
-    setSaved(false); setSaveError("");
+    setSaved(false); setSaveError(""); onOutcome("");
   }
   function changePositions(value: string) {
     const count = WHOLE.test(value) ? Number(value) : NaN;
@@ -119,11 +121,11 @@ function GameRulesSection({ onSource, onSummary, onValidity }: { onSource: (sour
         name: draft.name.trim(), numbers: Number(draft.numbers), positions: Number(draft.positions),
         prizes: draft.prizes.map(Number), allows_repeats: draft.repeats, minimum_stake: Number(draft.stake),
       });
-      setDraft(toDraft(value)); onSource(value.source); setSaved(true);
+      setDraft(toDraft(value)); onSource(value.source); setSaved(true); onOutcome("Reglas guardadas. Se usarán en las próximas simulaciones.");
     } catch (failure) {
-      if (failure instanceof ApiError && failure.status === 422) setSaveError(failure.detail);
-      else if (failure instanceof NetworkError) setSaveError("Sin respuesta del servidor. Revisá la conexión y reintentá.");
-      else setSaveError("No se pudieron guardar las reglas. Tus cambios siguen en el formulario; reintentá.");
+      if (failure instanceof ApiError && failure.status === 422) { setSaveError(failure.detail); onOutcome("No se guardaron las reglas. Revisá los datos y reintentá."); }
+      else if (failure instanceof NetworkError) { setSaveError("Sin respuesta del servidor. Revisá la conexión y reintentá."); onOutcome("No se guardaron las reglas. Revisá la conexión y reintentá."); }
+      else { setSaveError("No se pudieron guardar las reglas. Tus cambios siguen en el formulario; reintentá."); onOutcome("No se guardaron las reglas. Tus cambios siguen disponibles para reintentar."); }
     } finally { busyRef.current = false; setSaving(false); }
   }
 
@@ -131,7 +133,7 @@ function GameRulesSection({ onSource, onSummary, onValidity }: { onSource: (sour
   return <section aria-labelledby="game-rules-heading" className="mt-4">
     <h2 id="game-rules-heading" className="section-header">Reglas del sorteo</h2>
     <p className="field-help mb-4">Elegí cómo funciona el sorteo. Estos cambios se aplican a las simulaciones nuevas.</p>
-    {loadError && <p role="alert" className="text-sm text-red-300">{loadError}</p>}
+    {loadError && <div role="alert" className="mb-4 text-sm text-red-300"><p>{loadError} La cuota y los detalles avanzados siguen disponibles; las reglas no se modificarán.</p><button type="button" className="btn btn-tertiary mt-2" onClick={onRetry}>Reintentar reglas</button></div>}
     {draft && errors && <form id="game-rules-form" onSubmit={(event) => { void save(event); }} noValidate className="max-w-xl space-y-4">
       <div>
         <label htmlFor="game-name" className="field-label">Nombre</label>
@@ -193,12 +195,15 @@ export function SettingsPage() {
   const [fieldError, setFieldError] = useState("");
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [wizardOutcome, setWizardOutcome] = useState("");
   const [saving, setSaving] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [gameSource, setGameSource] = useState<GameSettingsSource | null>(null);
   const [step, setStep] = useState(0);
   const [gameSummary, setGameSummary] = useState<GameDraft | null>(null);
   const [gameValid, setGameValid] = useState(false);
+  const [gameRulesState, setGameRulesState] = useState<"loading" | "ready" | "error">("loading");
+  const [gameRulesRetry, setGameRulesRetry] = useState(0);
   const [agentCredential, setAgentCredential] = useState<string | null>(null);
   const [agentCredentialVisible, setAgentCredentialVisible] = useState(false);
   const [agentCredentialLoading, setAgentCredentialLoading] = useState(false);
@@ -373,7 +378,7 @@ export function SettingsPage() {
       setView(value);
       setDraft(value.quota.effective_bytes); // PUT returns the full authoritative view.
       dirtyRef.current = false;
-      setSaved(true);
+      setSaved(true); setWizardOutcome("Ajustes guardados. Se aplicarán a las simulaciones nuevas.");
     } catch (failure) {
       if (sequence !== requestRef.current) return;
       if (failure instanceof ApiError && failure.status === 422 && failure.fieldErrors?.some((entry) =>
@@ -390,6 +395,7 @@ export function SettingsPage() {
       } else {
         setSaveError("No se pudo guardar el límite. Tus cambios siguen en el campo; reintentá.");
       }
+      setWizardOutcome("No se guardó el límite. Tus cambios siguen disponibles para reintentar.");
     } finally { saveRef.current = false; setSaving(false); }
   }
 
@@ -399,6 +405,7 @@ export function SettingsPage() {
   return <div className="max-w-5xl space-y-8">
     {loading && <Loading rows={3} label="Cargando ajustes…" className="border-y border-border py-5" />}
     {loadError && <ErrorBanner cause={loadError} recovery={view ? "Se muestra la última lectura; reintentá para actualizarla." : "Comprobá que el laboratorio siga abierto y reintentá."} preserved={!!view} actionLabel="Reintentar" onAction={() => setRefresh((previous) => previous + 1)} />}
+    {wizardOutcome && step === 3 && <div role={wizardOutcome.startsWith("No se") ? "alert" : "status"} className="m3-review mb-4"><p className="font-medium">{wizardOutcome}</p>{!wizardOutcome.startsWith("No se") && <Link className="btn btn-tertiary mt-3" to="/experimentos/nuevo">Crear una simulación</Link>}</div>}
     {view && <>
       <section className="m3-wizard" aria-label="Asistente de ajustes">
         <div className="m3-wizard-progress" role="progressbar" aria-label={`Paso ${step + 1} de 4`} aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={4}>
@@ -407,15 +414,15 @@ export function SettingsPage() {
         <p className="m3-wizard-step">Paso {step + 1} de 4</p>
         <div className="m3-wizard-actions">
           <button type="button" className="btn btn-outlined" disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>Atrás</button>
-          {step < 3 ? <button type="button" className="btn btn-primary" disabled={(step === 0 && !gameValid) || (step === 1 && !quotaValid)} onClick={() => setStep((current) => Math.min(3, current + 1))}>Siguiente</button>
-            : <button type="button" className="btn btn-primary" disabled={!gameValid || !quotaValid || saving} onClick={() => {
+          {step < 3 ? <button type="button" className="btn btn-primary" disabled={(step === 0 && gameRulesState === "ready" && !gameValid) || (step === 1 && !quotaValid)} onClick={() => setStep((current) => Math.min(3, current + 1))}>Siguiente</button>
+            : <button type="button" className="btn btn-primary" disabled={(gameRulesState === "ready" && !gameValid) || !quotaValid || saving} onClick={() => {
               (document.getElementById("game-rules-form") as HTMLFormElement | null)?.requestSubmit();
               (document.getElementById("quota-form") as HTMLFormElement | null)?.requestSubmit();
             }}>{saving ? "Guardando…" : "Guardar ajustes"}</button>}
         </div>
       </section>
       <div hidden={step !== 0}>
-        <GameRulesSection onSource={setGameSource} onSummary={setGameSummary} onValidity={setGameValid} />
+        <GameRulesSection onSource={setGameSource} onSummary={(summary) => { setGameSummary(summary); setWizardOutcome(""); }} onValidity={setGameValid} onLoadState={setGameRulesState} onRetry={() => setGameRulesRetry((value) => value + 1)} onOutcome={setWizardOutcome} retry={gameRulesRetry} />
       </div>
       <div hidden={step !== 1}>
       <div className="flex justify-end">
@@ -441,7 +448,7 @@ export function SettingsPage() {
         <h2 id="quota-form-heading" className="section-header">Cambiar límite</h2>
         {view.quota.writable ? <form id="quota-form" onSubmit={(event) => { void save(event); }} noValidate className="max-w-xl">
           <label htmlFor="quota-bytes" className="field-label">Nuevo límite de almacenamiento</label>
-          <input ref={inputRef} id="quota-bytes" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={draft ?? ""} disabled={saving} aria-invalid={!!fieldError} aria-describedby={fieldError ? "quota-help quota-error" : "quota-help"} onChange={(event) => { setDraft(event.target.value); setFieldError(""); setSaveError(""); setSaved(false); }} className="control font-mono tabular-nums" />
+          <input ref={inputRef} id="quota-bytes" type="text" inputMode="numeric" autoComplete="off" spellCheck={false} value={draft ?? ""} disabled={saving} aria-invalid={!!fieldError} aria-describedby={fieldError ? "quota-help quota-error" : "quota-help"} onChange={(event) => { setDraft(event.target.value); setFieldError(""); setSaveError(""); setSaved(false); setWizardOutcome(""); }} className="control font-mono tabular-nums" />
           <p id="quota-help" className="field-help">Entero positivo, sin separadores. Mínimo {readableCapacity(used.toString())} ({bytes(used.toString())}). Ej.: 5368709120 (5 GiB).</p>
           {fieldError && <p id="quota-error" className="mt-2 text-sm text-red-300">{fieldError}</p>}
           {saveError && <p role="alert" className="mt-2 text-sm text-red-300">{saveError}</p>}
@@ -550,6 +557,8 @@ export function SettingsPage() {
           <div><dt>Apuesta mínima por número</dt><dd>{formatDOP(Number(gameSummary.stake))}</dd></div>
         </dl>}
         <dl className="m3-review-list"><div><dt>Límite de almacenamiento</dt><dd>{readableCapacity(reviewQuota)} ({bytes(reviewQuota)})</dd></div><div><dt>Uso actual</dt><dd>{readableCapacity(used.toString())} ({bytes(used.toString())})</dd></div></dl>
+        <button type="button" className="btn btn-outlined mt-3" onClick={() => setStep(1)}>Editar cuota</button>
+        {gameRulesState === "error" && <p role="status" className="mt-3 text-sm text-text-secondary">Las reglas no pudieron verificarse. Podés guardar la cuota y volver a intentar cargarlas después.</p>}
         <p className="field-help">Cambiar las reglas afecta simulaciones futuras; las ya guardadas conservan sus reglas. Esto simula resultados históricos: no predice sorteos ni garantiza ganancias.</p>
       </section>
     </>}

@@ -716,6 +716,15 @@ describe("LW09 single-form creation", () => {
     unmount();
   });
 
+  it("keeps draw retry reachable from the first wizard step after a load failure", async () => {
+    vi.mocked(apiClient.getStartingDraws).mockRejectedValueOnce(new NetworkError());
+    const { user } = setup();
+    const retry = await screen.findByRole("button", { name: "Reintentar" });
+    expect(screen.getByRole("progressbar", { name: "Paso 1 de 4" })).toBeInTheDocument();
+    await user.click(retry);
+    expect(await screen.findByRole("option", { name: /2025-09-02 05:10/ })).toBeInTheDocument();
+  });
+
   it("# F-CREATE-025 loads further ranked draws on demand without requesting all history", async () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 150, offset: 0, limit: 100, items: ["2025-09-02 05:10"] });
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 150, offset: 1, limit: 100, items: ["2025-09-02 05:15"] });
@@ -769,6 +778,7 @@ describe("LW09 single-form creation", () => {
     expect(activeSeed).toHaveAccessibleDescription(`${help.textContent} Ingresá un código de repetición válido.`);
     for (const id of activeSeed.getAttribute("aria-describedby")!.split(" ")) expect(document.getElementById(id)).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Paso 2 de 4" })).toBeInTheDocument();
+    expect(activeSeed).toHaveFocus();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 

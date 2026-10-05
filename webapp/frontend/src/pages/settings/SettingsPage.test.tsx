@@ -62,6 +62,18 @@ afterEach(() => {
   else Reflect.deleteProperty(navigator, "clipboard");
 });
 
+it("keeps quota and advanced settings reachable when game rules fail to load", async () => {
+  vi.mocked(apiClient.getGameSettings).mockRejectedValueOnce(new Error("temporary failure"));
+  const { user } = setup();
+  expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudieron cargar las reglas del juego/);
+  expect(screen.getByRole("button", { name: "Reintentar reglas" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  expect(await screen.findByRole("heading", { name: "Presupuesto y cuota" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  expect(await screen.findByRole("heading", { name: "Detalles avanzados" })).toBeInTheDocument();
+  expect(apiClient.updateSettings).not.toHaveBeenCalled();
+});
+
 it("loads the actual view, distinguishing logical quota, physical files and free disk", async () => {
   let resolve!: (view: SettingsView) => void;
   vi.mocked(apiClient.getSettings).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
@@ -99,6 +111,23 @@ it("loads the actual view, distinguishing logical quota, physical files and free
   expect(screen.getByText("chance_express_history.json")).toBeInTheDocument();
   expect(screen.getByText("127.0.0.1:8765")).toBeInTheDocument();
   expect(within(diagnostics).getByText("Por defecto")).toBeInTheDocument();
+});
+
+it("offers a quota edit path from review and keeps the save outcome visible", async () => {
+  const { user } = setup();
+  await openQuota(user);
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  await screen.findByRole("heading", { name: "Detalles avanzados" });
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  expect(await screen.findByRole("heading", { name: "Revisá tus ajustes" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Editar cuota" }));
+  expect(await screen.findByRole("heading", { name: "Presupuesto y cuota" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  await screen.findByRole("heading", { name: "Revisá tus ajustes" });
+  await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
+  expect(await screen.findByRole("status")).toHaveTextContent(/Ajustes guardados/);
+  expect(screen.getByRole("link", { name: "Crear una simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
 });
 
 it("distinguishes disconnected from generic errors and retries", async () => {

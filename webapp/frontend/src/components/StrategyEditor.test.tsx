@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 // Contract coverage: F-LIST-026 flat labels with enum preservation and accessible stake/error help, including bare components.N errors.
 import { describe, expect, it, vi } from "vitest";
 import { StrategyEditor } from "./StrategyEditor";
@@ -29,6 +29,17 @@ describe("shared strategy vocabulary", () => {
     expect(staking).toHaveAttribute("aria-describedby", "strategies.0.staking.help strategies.0.staking.error");
     expect(staking).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("combobox", { name: "Método de la estrategia 1" })).not.toHaveAttribute("aria-describedby");
+  });
+});
+
+describe("progressive advanced disclosure", () => {
+  it("opens advanced settings when an advanced field has a validation error", async () => {
+    const { rerender } = render(<StrategyEditor value={newStrategy(1)} index={0} catalog={catalog} errors={{}} onChange={vi.fn()} progressiveDisclosure />);
+    const disclosure = screen.getByText("Avanzado").closest("details")!;
+    expect(disclosure).not.toHaveAttribute("open");
+    rerender(<StrategyEditor value={newStrategy(1)} index={0} catalog={catalog} errors={{ "strategies.0.coverage": "Elegí una cobertura válida." }} onChange={vi.fn()} progressiveDisclosure />);
+    await waitFor(() => expect(disclosure).toHaveAttribute("open"));
+    expect(screen.getByRole("combobox", { name: "Cobertura de la estrategia 1" })).toHaveAttribute("aria-invalid", "true");
   });
 });
 

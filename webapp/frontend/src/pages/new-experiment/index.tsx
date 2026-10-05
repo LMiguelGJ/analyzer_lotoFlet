@@ -394,15 +394,21 @@ export function NewExperimentPage() {
       ...validateStrategies(strategies, catalog),
     };
     setErrors(found); setNotice("");
-    const first = Object.keys(found)[0];
-    if (first) {
+    const keys = Object.keys(found);
+    if (keys.length) {
+      const first = keys.find((key) => key === "name" || key === "start_draw")
+        ?? keys.find((key) => key.startsWith("strategies."))
+        ?? keys.find((key) => ["capital", "goal", "max_bets"].includes(key))
+        ?? keys.find((key) => key === "seed" || key === "max_minutes")
+        ?? keys[0];
       const strategyMatch = first.match(/^strategies\.(\d+)/);
       if (strategyMatch) { setWizardStep(1); setActive(Number(strategyMatch[1])); setAdvancedOpen(true); setStrategyAdvancedOpen(true); }
-      else if (first === "name" || first === "start_draw") setWizardStep(0);
       else if (["capital", "goal", "max_bets"].includes(first)) setWizardStep(2);
-      if (Object.keys(found).some((key) => key === "seed" || key === "max_minutes")) { setWizardStep(1); setAdvancedOpen(true); }
-      if (Object.hasOwn(found, "seed")) setSeedEditing(true);
-      if (first !== "conditions" && first !== "strategies") setPendingFocus(first);
+      else if (["name", "start_draw", "conditions"].includes(first)) setWizardStep(0);
+      else if (first === "seed" || first === "max_minutes") { setWizardStep(1); setAdvancedOpen(true); }
+      if (first === "seed") setSeedEditing(true);
+      const target = firstFocusTarget({ [first]: found[first] }) ?? (first === "conditions" ? "start_draw" : null);
+      if (target) setPendingFocus(target);
       return false;
     }
     return true;
@@ -474,10 +480,12 @@ export function NewExperimentPage() {
         setNotice("Completá los datos de este paso para continuar.");
         const first = Object.keys(stepErrors)[0];
         if (wizardStep === 1) { setAdvancedOpen(true); setStrategyAdvancedOpen(true); }
-        if (wizardStep === 2 && (Object.hasOwn(stepErrors, "seed") || Object.hasOwn(stepErrors, "max_minutes"))) {
-          setWizardStep(1); setAdvancedOpen(true); if (Object.hasOwn(stepErrors, "seed")) setSeedEditing(true);
+        const advancedError = ["seed", "max_minutes"].find((key) => Object.hasOwn(stepErrors, key));
+        if (wizardStep === 2 && advancedError) {
+          setWizardStep(1); setAdvancedOpen(true); if (advancedError === "seed") setSeedEditing(true);
         }
-        if (first !== "strategies" && first !== "conditions") setPendingFocus(first);
+        const target = firstFocusTarget(advancedError ? { [advancedError]: stepErrors[advancedError] } : stepErrors) ?? (first === "conditions" ? "start_draw" : null);
+        if (target) setPendingFocus(target);
         return;
       }
       setErrors({}); setNotice("");
@@ -530,6 +538,7 @@ export function NewExperimentPage() {
         {errors.conditions && <div className="mb-4 text-sm text-red-300"><p>{errorMessage(errors.conditions)}</p>{errorDetail(errors.conditions) && <details className="mt-1 text-xs text-text-secondary"><summary className="disclosure-summary">Detalles técnicos</summary><p className="mt-1">{errorDetail(errors.conditions)}</p></details>}</div>}
         {loading && <p role="status">Cargando catálogo…</p>}
         {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
+        {drawError && <p role="alert" className="mb-4 text-red-300">{drawError} <button type="button" className="btn btn-tertiary" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
 
         {wizardStep === 0 && <section aria-labelledby="history-step-heading">
         <h2 id="history-step-heading" className="section-header">Elegí desde qué sorteo empezar</h2>
@@ -562,7 +571,6 @@ export function NewExperimentPage() {
         <fieldset aria-labelledby="selection-heading" className="mb-8 min-w-0 border-0 p-0">
           <SectionHeader id="selection-heading" number="02" title="Selección" className="mb-3" />
           {drawLoading && <p role="status" className="mb-3">Cargando sorteos disponibles…</p>}
-          {drawError && <p role="alert" className="mb-3 text-red-300">{drawError} <button type="button" className="btn btn-tertiary" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
           {staleDraw && <p role="status" className="mb-3 text-text-secondary">Ese sorteo ya no está disponible. Elegí otro.</p>}
           {catalog && !drawLoading && !drawError && offeredDraws.length === 0 && !knownDraw && <p role="status" className="mb-3">{drawDate && availability?.history_total === 0 ? "No hay sorteos en esta fecha. Probá otra." : drawDate && availability?.ranked_total === 0 ? "Ningún sorteo de esta fecha tiene ranking. Probá otra." : "No hay sorteos iniciales disponibles."}</p>}
 

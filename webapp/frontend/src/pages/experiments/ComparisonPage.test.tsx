@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
@@ -289,6 +289,24 @@ describe("LW12 comparison", () => {
     expect(rows[1]).toHaveTextContent("Sin dato");
     expect(rows[1]).not.toHaveTextContent("RD$0");
     Object.defineProperty(window, "innerWidth", { configurable: true, value: previousWidth });
+  });
+
+  it("switches between mobile cards and the wide table when the viewport resizes", async () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+    setup();
+    const disclosure = await screen.findByText("Ver resultados de cada ejecución");
+    await userEvent.setup().click(disclosure);
+    expect(await screen.findByRole("table", { name: "Comparación de ejecuciones" })).toBeInTheDocument();
+
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    fireEvent(window, new Event("resize"));
+    expect(await screen.findByRole("list", { name: "Resultados de la comparación" })).toBeInTheDocument();
+    expect(screen.queryByRole("table", { name: "Comparación de ejecuciones" })).not.toBeInTheDocument();
+
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+    fireEvent(window, new Event("resize"));
+    expect(await screen.findByRole("table", { name: "Comparación de ejecuciones" })).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Resultados de la comparación" })).not.toBeInTheDocument();
   });
 
   it("uses server N/M and delta, shows absent values as dashes, and separates outcome from execution", async () => {

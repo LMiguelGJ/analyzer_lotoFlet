@@ -16,11 +16,13 @@ const light = scheme(":root");
 const dark = scheme('[data-theme="dark"]');
 const requiredColors = [
   "primary", "on-primary", "primary-container", "on-primary-container",
-  "secondary", "on-secondary", "tertiary", "on-tertiary",
+  "secondary", "on-secondary", "secondary-container", "on-secondary-container",
+  "tertiary", "on-tertiary", "tertiary-container", "on-tertiary-container",
   "background", "on-background", "surface", "on-surface", "surface-variant",
-  "on-surface-variant", "surface-container-low", "surface-container",
+  "on-surface-variant", "surface-container-lowest", "surface-container-low", "surface-container",
   "surface-container-high", "surface-container-highest", "outline", "outline-variant",
-  "error", "on-error",
+  "error", "on-error", "error-container", "on-error-container", "shadow", "scrim",
+  "inverse-surface", "inverse-on-surface", "inverse-primary", "surface-tint",
 ];
 
 function color(tokens: Map<string, string>, role: string): string {
@@ -44,6 +46,11 @@ describe("Material 3 design tokens", () => {
     expect(tokensCss).toContain("prefers-color-scheme: dark");
     expect(tokensCss).toContain("font-variant-numeric: tabular-nums");
     expect(tokensCss).not.toMatch(/Georgia|Times New Roman|border-radius:\s*0(?:px|rem)?\b/i);
+  });
+
+  it("covers every Material 3 color role in the explicitly selected dark scheme", () => {
+    for (const role of requiredColors) expect(color(dark, role)).toMatch(/^#[\da-f]{6}$/i);
+    expect(tokensCss).toMatch(/\[data-theme="dark"\][^{]*\{[^}]*color-scheme:\s*dark/s);
   });
 
   it.each([["claro", light], ["oscuro", dark]] as const)("keeps key %s role pairs accessible", (_scheme, tokens) => {

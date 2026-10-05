@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Shell } from "./Shell";
 import { QueueProvider } from "./QueueProvider";
 
@@ -59,12 +59,34 @@ describe("Shell navigation", () => {
     expect(heading.className).not.toMatch(/\bbreak-(?:all|words)\b/);
   });
 
+  it("falls back to a session-only theme when localStorage is unavailable", async () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("storage blocked"); });
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage blocked"); });
+    try {
+      const user = userEvent.setup();
+      renderShell();
+      const toggle = screen.getByRole("button", { name: /Cambiar tema/ });
+      expect(toggle).toBeInTheDocument();
+      await user.click(toggle);
+      expect(document.documentElement.dataset.theme).toMatch(/light|dark/);
+    } finally {
+      getItem.mockRestore();
+      setItem.mockRestore();
+      delete document.documentElement.dataset.theme;
+    }
+  });
+
   it("# F-SHELL-012 keeps bottom navigation as the mobile base and exposes theme controls", () => {
     renderShell();
     const nav = screen.getByRole("navigation", { name: "Navegación principal" });
     expect(nav.className).toMatch(/shell-navigation/);
     expect(nav.className).not.toMatch(/hidden/);
-    expect(screen.getByRole("button", { name: /Cambiar tema/ })).toBeInTheDocument();
+    const theme = screen.getByRole("button", { name: /Cambiar tema/ });
+    expect(theme).toBeInTheDocument();
+    const queue = screen.getByRole("button", { name: "Abrir cola de cálculo" });
+    expect(theme.compareDocumentPosition(queue) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(theme.closest(".shell-layout")).toBeInTheDocument();
+    expect(theme.className).toContain("shell-theme-toggle");
     expect(screen.getAllByRole("link")).toHaveLength(6); // Skip link, four destinations, and extended FAB.
   });
 });
