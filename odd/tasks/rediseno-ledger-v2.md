@@ -144,3 +144,25 @@ Contrato y sistema: `DESIGN.md` (raíz). Verdad de producto: `PRODUCT.md` (raíz
 - Defecto de enrutamiento (ODD): el primer intento de arreglar las 21 pruebas se
   hizo inline en el padre cuando ya eran 7 archivos; se corrigió delegando a un
   writer acotado (S9) con superficie explícita.
+
+## Cierre S9 y entrega (evidencia final)
+
+- S9 `cf34dd4` (hallazgos del barrido etapa 2: separador de miles es-ES
+  "RD$2.800", overflow 320px corregido, `/datos` con acción primaria única y
+  "Reintentar perfiles" real, `/configuraciones` con reintento nombrado y crear
+  deshabilitado sin catálogo). Revisión nativa S9: lineage
+  `review-d2c1a59fe65b909d` **approved, ack quemado** (advisories R3-001/002 no
+  bloqueantes).
+- Gates finales: 557/557 tests seriales, `tsc --noEmit` limpio, `vite build` ok
+  (3.06s), detector Impeccable `[]` exit 0.
+- Push `origin/stage`: `871a69e..cf34dd4`, adelantados/atrasados 0/0.
+- Revisiones nativas del proyecto: R1 `review-19b9c053f317da0f`, R2
+  `review-e6be18c715098705`, R3a `review-412d072b93cb8ea4`, R3b
+  `review-eb3406633418e22b`, R3c `review-5315f527ee084785`, R4
+  `review-07275744209932dd`, R5 `review-d2c1a59fe65b909d` — todas approved y
+  quemadas con su ack exacto.
+- PENDIENTE DE ACEPTACIÓN MANUAL: (a) los valores del brief "3 posiciones,
+  premios 60/10/5" vs el motor Q80 (5 posiciones, 80/8/4/2/1): la UI muestra
+  siempre la verdad del juego activo; (b) chips repetidos en pestañas de
+  resultado (cosmético menor, detectado en captura, no corregido); (c) prueba
+  de lanzador Windows y zoom nativo real, no cubiertos por el barrido.
