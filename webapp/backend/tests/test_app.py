@@ -40,6 +40,8 @@ def _client(settings):
     )
 
 
+# B-SET-011
+# B-SET-012 is covered by the route-specific direct-navigation tests below.
 def test_production_static_spa_and_api_isolation(local_settings):
     with _client(local_settings) as client:
         for route in (
@@ -72,6 +74,7 @@ def test_production_static_spa_and_api_isolation(local_settings):
         assert client.get("/api/v1/catalog").status_code == 200
 
 
+# B-SET-012
 def test_profile_creation_direct_navigation_serves_only_the_spa_route(local_settings):
     expected = (local_settings.frontend_dist / "index.html").read_text(encoding="utf-8")
     with _client(local_settings) as client:
@@ -91,6 +94,7 @@ def test_profile_creation_direct_navigation_serves_only_the_spa_route(local_sett
                 assert method(path).status_code == 404, path
 
 
+# B-SET-012
 def test_batch_session_direct_navigation_serves_only_the_spa_route(local_settings):
     expected = (local_settings.frontend_dist / "index.html").read_text(encoding="utf-8")
     with _client(local_settings) as client:
@@ -116,6 +120,7 @@ def test_batch_session_direct_navigation_serves_only_the_spa_route(local_setting
                 assert method(path).status_code == 404, path
 
 
+# B-SET-012
 def test_datos_direct_navigation_serves_only_the_spa_route(local_settings):
     expected = (local_settings.frontend_dist / "index.html").read_text(encoding="utf-8")
     with _client(local_settings) as client:
@@ -127,6 +132,7 @@ def test_datos_direct_navigation_serves_only_the_spa_route(local_settings):
             assert client.get(path).status_code == 404
 
 
+# B-SET-013
 def test_static_never_leaks_outside_build(local_settings, tmp_path):
     secret = tmp_path / "private.txt"
     secret.write_text("not public", encoding="utf-8")
@@ -150,6 +156,7 @@ def test_static_never_leaks_outside_build(local_settings, tmp_path):
         assert client.get("/", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403
 
 
+# B-SET-014
 def test_missing_build_fails_production_startup_but_api_factory_remains_usable(local_settings):
     local_settings.frontend_dist.joinpath("index.html").unlink()
     with pytest.raises(RuntimeError, match="npm run build"):
@@ -162,6 +169,7 @@ def test_missing_build_fails_production_startup_but_api_factory_remains_usable(l
         assert client.get("/api/v1/queue").status_code == 200
 
 
+# B-SET-015
 def test_settings_paths_are_absolute_and_cwd_independent(local_settings, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("LABORATORIO_HISTORY", raising=False)
@@ -173,6 +181,7 @@ def test_settings_paths_are_absolute_and_cwd_independent(local_settings, tmp_pat
     assert settings.frontend_dist == Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 
+# B-SET-016
 def test_browser_only_after_own_server_started_and_once(local_settings, monkeypatch):
     from laboratorio.app import BrowserServer
 
@@ -194,6 +203,7 @@ def test_browser_only_after_own_server_started_and_once(local_settings, monkeypa
     assert opened == ["http://127.0.0.1:8765/"]
 
 
+# B-SET-017
 def test_port_busy_never_creates_or_opens_server(local_settings):
     from laboratorio.app import run_production
 
@@ -205,12 +215,14 @@ def test_port_busy_never_creates_or_opens_server(local_settings):
             run_production(settings, browser_open=lambda _: pytest.fail("opened other instance"))
 
 
+# B-SET-018
 def test_frozen_inputs_fail_before_browser_opens(local_settings):
     with pytest.raises(ValueError, match="file not found"):
         with TestClient(create_app(local_settings, serve_frontend=True)):
             pass
 
 
+# B-SET-018
 def test_corrupt_frozen_input_refuses_startup(local_settings):
     local_settings.history_path.write_bytes(b"tampered")
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
@@ -218,6 +230,7 @@ def test_corrupt_frozen_input_refuses_startup(local_settings):
             pass
 
 
+# B-SET-019
 def test_real_uvicorn_opens_once_after_owned_listener_is_ready():
     from laboratorio.app import BrowserServer
 
@@ -256,6 +269,7 @@ def test_real_uvicorn_opens_once_after_owned_listener_is_ready():
             assert not thread.is_alive()
 
 
+# B-SET-020
 def test_windows_launcher_has_foreground_and_failure_guards():
     launcher = Path(__file__).resolve().parents[3] / "iniciar-laboratorio.bat"
     text = launcher.read_text(encoding="utf-8").lower()

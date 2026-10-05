@@ -25,6 +25,7 @@ def record(hora, numbers, url="https://premios.do/x"):
     return {"hora": hora, "numeros": [f"{n:02d}" for n in numbers], "source_url": url}
 
 
+# B-SET-021
 def test_parse_orders_days_and_hours_and_skips_empty_days():
     history = parse_history(
         raw(
@@ -40,6 +41,7 @@ def test_parse_orders_days_and_hours_and_skips_empty_days():
     assert history.nums.dtype == np.uint8
 
 
+# B-SET-022
 def test_identical_duplicates_merge_and_conflicts_stop_the_load():
     same = parse_history(
         raw(
@@ -70,11 +72,13 @@ def test_identical_duplicates_merge_and_conflicts_stop_the_load():
         {"2025-01-01": "not a list"},
     ],
 )
+# B-SET-023
 def test_malformed_history_is_rejected(bad):
     with pytest.raises(DataError):
         parse_history(raw(bad))
 
 
+# B-SET-024
 def test_missing_files_and_changed_hashes_fail_with_clear_errors(tmp_path):
     with pytest.raises(DataError, match="not found"):
         load_history(tmp_path / "missing.json", HISTORY_SHA256)
@@ -107,6 +111,7 @@ def small_history():
     return parse_history(raw(days))
 
 
+# B-SET-025
 def test_rankings_align_with_history_rows(tmp_path):
     history = small_history()
     path = synthetic_rankings(tmp_path, history, [2, 3, 5])
@@ -118,6 +123,7 @@ def test_rankings_align_with_history_rows(tmp_path):
         rankings.family("logistic")
 
 
+# B-SET-026
 def test_rankings_use_the_verified_snapshot_after_path_replacement(tmp_path):
     history = small_history()
     path = synthetic_rankings(tmp_path, history, [2, 3])
@@ -136,6 +142,7 @@ def test_rankings_use_the_verified_snapshot_after_path_replacement(tmp_path):
     assert np.array_equal(rankings.family("transition"), original)
 
 
+# B-SET-027
 def test_misaligned_or_invalid_rankings_are_rejected(tmp_path):
     history = small_history()
     path = tmp_path / "bad.npz"
@@ -172,6 +179,7 @@ def parity_lab(tmp_path, data_dir):
     return adapter.LabData(history, rankings, Settings.from_environment())
 
 
+# B-SET-028
 def test_parity_cache_is_reused_by_a_fresh_instance(tmp_path, data_dir, monkeypatch):
     lab = parity_lab(tmp_path, data_dir)
     original_compute = adapter.compute_parity_votes
@@ -189,6 +197,7 @@ def test_parity_cache_is_reused_by_a_fresh_instance(tmp_path, data_dir, monkeypa
     assert calls == [True]
 
 
+# B-SET-029
 def test_parity_cache_recovers_from_shape_valid_changed_votes(tmp_path, data_dir, monkeypatch):
     lab = parity_lab(tmp_path, data_dir)
     expected = lab.parity_votes().copy()
@@ -219,6 +228,7 @@ def test_parity_cache_recovers_from_shape_valid_changed_votes(tmp_path, data_dir
 
 
 @pytest.mark.parametrize("field", ["history_sha256", "algorithm"])
+# B-SET-030
 def test_parity_cache_recomputes_when_provenance_is_wrong(tmp_path, data_dir, monkeypatch, field):
     lab = parity_lab(tmp_path, data_dir)
     expected = lab.parity_votes().copy()
@@ -241,6 +251,7 @@ def test_parity_cache_recomputes_when_provenance_is_wrong(tmp_path, data_dir, mo
     assert calls == [True]
 
 
+# B-SET-031
 @pytest.mark.real_data
 def test_frozen_history_matches_the_reference_loader():
     settings = Settings.from_environment()
@@ -255,6 +266,7 @@ def test_frozen_history_matches_the_reference_loader():
     )
 
 
+# B-SET-032
 @pytest.mark.real_data
 def test_frozen_rankings_and_parity_votes_match_the_reference(data_dir):
     lab = open_lab_data(Settings.from_environment())
