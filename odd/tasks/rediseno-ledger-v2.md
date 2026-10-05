@@ -239,3 +239,32 @@ Lanes en vuelo:
 
 Pendiente de aceptación manual ([A4]): zoom nativo del navegador y prueba del
 lanzador `iniciar-laboratorio.bat` en Windows real.
+
+## Reescritura completa de pruebas (modo YOLO, ejecución nocturna)
+
+Commit `f954758`: contratos de comportamiento versionados (backend 497 ítems /
+40 archivos; frontend 290 ítems / 37 archivos, 201 de riesgo alto).
+
+Piloto `B-SET` integrado (`dcef636` + merge `6eb528b`): 32/32 IDs, patrón fijado
+(tests citan su `B-SET-xxx`, `_contract_ids.py` para chequeo mecánico, retiros
+registrados). Resolución de conflicto en `test_settings.py` por UNIÓN (bloque del
+editor + bloque de la reescritura, 17 tests, sin duplicados): los 7 tests de
+endpoint del editor cubren más que `test_game_rules.py` (source del GET, roundtrip,
+7+2 casos 422, orden de resolución, [A7]) y `[A5]` exige cobertura igual o mejor.
+Bug de test corregido: `test_game_rules_editor_persists_and_is_loaded_on_restart`
+hacía PUT sin header `Origin` (403 correcto); se agregó el header.
+
+Lanes de reescritura en paralelo (worktrees aislados, ownership de archivos
+disjunto, cada uno con su propio registro para no chocar en el merge):
+
+| Lane | Área | Worktree | Ítems | Archivos |
+|---|---|---|---|---|
+| B-API | Contratos de API | `wt-rw-api` | 114 | 6 |
+| B-DOM | Dominio y contratos | `wt-rw-dom` | 186 | 22 |
+| B-STO | Persistencia | `wt-rw-sto` | 103 | 7 |
+| B-QUE | Cola y trabajos | `wt-rw-que` | 50 | 3 |
+| FE | Frontend completo | `wt-rw-fe` | 290 | 37 |
+
+Regla común: tests-only (sin tocar `laboratorio/` ni fuentes del frontend);
+los bugs de producto reales se reportan, no se parchean sin revisión; los tests
+flaky de SQLite se vuelven determinísticos cuando el flakiness es del test.
