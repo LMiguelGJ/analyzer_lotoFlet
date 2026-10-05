@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+// Contract coverage: F-RESULT-006 backend-only financial values and unavailable/null handling; F-RESULT-007 money-only semantic color; F-RESULT-008 technical terminology remains folded.
 import { describe, expect, it } from "vitest";
 import { FinancialMetrics } from "./FinancialMetrics";
 

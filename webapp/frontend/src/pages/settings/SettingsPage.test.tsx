@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+// Contract coverage: F-LIST-064–F-LIST-080 — capacity-first display, honest errors, exact ASCII int64 quota input/save, read-only environment mode, aggregate capacity math, dirty navigation, explicit secret retrieval/copy/clearing/unmount safety, and axe. Additional game-rules editor tests are retained as stricter legacy coverage (contract gap recorded).
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";

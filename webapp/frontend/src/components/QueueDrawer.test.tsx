@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router-dom";
+// Contract coverage: F-LIST-084–F-LIST-098 — retained last-known state, safe copy, modal/focus behavior, cancellation/start request lanes and explicit resend gates, cross-route/page locks, inline errors, and focused success notices.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient, ApiError, NetworkError } from "../api/client";
 import type { QueueStatus } from "../api/types";

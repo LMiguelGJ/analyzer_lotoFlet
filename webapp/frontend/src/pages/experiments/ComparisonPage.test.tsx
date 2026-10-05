@@ -2,6 +2,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+// Contract coverage: F-RESULT-004, F-RESULT-013–F-RESULT-014, F-RESULT-021, F-RESULT-028–F-RESULT-030, F-RESULT-032–F-RESULT-040: backend-classified closure, profile formats, bounded charts/polling/stale reads/errors, truthful comparison, frozen batch results, no fabricated pending metrics, retries and preserved context.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";

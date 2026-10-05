@@ -66,7 +66,7 @@ function storePendingDraft() {
 }
 
 describe("guided v5 profile batch", () => {
-  it("presents the renamed artifact and keeps strategy internals closed by default", async () => {
+  it("# F-CREATE-044 presents the renamed artifact and keeps strategy internals closed by default", async () => {
     mount();
     expect(screen.getByRole("heading", { name: "Lote de simulaciones" })).toBeInTheDocument();
     await screen.findByRole("heading", { name: /Fijas/ });
@@ -75,7 +75,7 @@ describe("guided v5 profile batch", () => {
     expect(strategyArticle!.querySelector("details")?.open).toBe(false);
     expect(within(strategyArticle!).getByText("static-numbers/v1")).not.toBeVisible();
   });
-  it("binds profile and exact dataset, preserves shared inputs, and enables simulation only after current server validation", async () => {
+  it("# F-CREATE-045 binds profile and exact dataset, preserves shared inputs, and enables simulation only after current server validation", async () => {
     const user = userEvent.setup(); mount();
     await screen.findByRole("option", { name: /historial/ });
     await user.selectOptions(screen.getByLabelText("Historial"), dataset.dataset_sha256);
@@ -108,7 +108,7 @@ describe("guided v5 profile batch", () => {
     expect(screen.getByRole("button", { name: "Crear simulaciones" })).toBeDisabled();
   });
 
-  it("looks up the frozen client request identity before retrying an uncertain create", async () => {
+  it("# F-CREATE-046 looks up the frozen client request identity before retrying an uncertain create", async () => {
     const user = userEvent.setup(); mount();
     await screen.findByRole("option", { name: /historial/ });
     await user.selectOptions(screen.getByLabelText("Perfil de juego"), "local@2");
@@ -138,7 +138,7 @@ describe("guided v5 profile batch", () => {
     await waitFor(() => expect(parseBatchDraft(sessionStorage.getItem(BATCH_DRAFT_STORAGE_KEY))?.pending).toBeNull());
   });
 
-  it("recovers a frozen request without current form/catalog readiness and retires storage before navigation", async () => {
+  it("# F-CREATE-047 recovers a frozen request without current form/catalog readiness and retires storage before navigation", async () => {
     storePendingDraft();
     vi.mocked(apiClient.getProfiles).mockRejectedValue(new NetworkError());
     vi.mocked(apiClient.getDatasets).mockRejectedValue(new NetworkError());
@@ -155,7 +155,7 @@ describe("guided v5 profile batch", () => {
     expect(apiClient.createProfileBatch).not.toHaveBeenCalled();
   });
 
-  it("retries only the frozen body after a lookup 404, despite edited current inputs", async () => {
+  it("# F-CREATE-048 retries only the frozen body after a lookup 404, despite edited current inputs", async () => {
     storePendingDraft();
     vi.mocked(apiClient.getProfileBatchByClientRequestId).mockRejectedValueOnce(new ApiError(404, "resource not found"));
     vi.mocked(apiClient.createProfileBatch).mockRejectedValueOnce(new NetworkError());
@@ -170,7 +170,7 @@ describe("guided v5 profile batch", () => {
   });
 
   it.each([[0, 1_000, "1000"], [2, 100_000, "1000.00"], [3, 1_000_000, "1000.000"], [2, 123_456, "1234.56"]] as const)(
-    "round-trips unchanged minor units %i at scale %i as ungrouped decimal text", async (scale, minorUnits, decimal) => {
+    "# F-CREATE-049 round-trips unchanged minor units %i at scale %i as ungrouped decimal text", async (scale, minorUnits, decimal) => {
       const scaleProfile = { ...profile, profile: { ...profile.profile, scale, minimum_stake: 1, maximum_stake: 1_000_000_000, stake_increment: 1 } };
       const storedStrategy = { ...strategy, definition: { ...definition, staking_parameters: { per_number_stake: minorUnits } } };
       vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [scaleProfile], templates: [] });
@@ -186,7 +186,7 @@ describe("guided v5 profile batch", () => {
         expect.objectContaining({ staking_parameters: expect.objectContaining({ per_number_stake: minorUnits }) })));
     });
 
-  it("copies supported definitions without dropping their closed defaults or protected metadata", async () => {
+  it("# F-CREATE-050 copies supported definitions without dropping their closed defaults or protected metadata", async () => {
     const protectedStrategy = { ...strategy, protected: true, definition: { ...definition,
       closing_defaults: { settlement: "best" as const, max_elapsed_draws: 15, max_bet_draws: 12 } } };
     vi.mocked(apiClient.listProfileBatchStrategies).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [protectedStrategy] });
@@ -203,7 +203,7 @@ describe("guided v5 profile batch", () => {
     })));
   });
 
-  it("does not present an unsupported closed strategy as an editable flat/static replacement", async () => {
+  it("# F-CREATE-051 does not present an unsupported closed strategy as an editable flat/static replacement", async () => {
     const advanced = { ...strategy, definition: { ...definition, selector: "archived-cold/v1" as const,
       staking: "profile-recovery-ladder/v1" as const, selector_parameters: { system: "closed-system" },
       staking_parameters: { per_number_stake: 100, rounds: 4, end_mode: "stop" as const, target_margin: 25 },
@@ -221,7 +221,7 @@ describe("guided v5 profile batch", () => {
     expect(screen.queryByRole("button", { name: /Guardar como estrategia nueva/ })).not.toBeInTheDocument();
   });
 
-  it("keeps a selected canonical start draw while browsing another draw page", async () => {
+  it("# F-CREATE-052 keeps a selected canonical start draw while browsing another draw page", async () => {
     vi.mocked(apiClient.getDatasetDraws).mockImplementation(async (_hash, offset) => ({ total: 101, offset: offset ?? 0, limit: 100,
       items: offset === 0 ? ["2025-01-01 08:30"] : ["2025-01-02 08:30"] }));
     const user = userEvent.setup(); mount();
@@ -244,7 +244,7 @@ describe("guided v5 profile batch", () => {
     expect(apiClient.validateProfileBatch).toHaveBeenCalledWith(expect.objectContaining({ conditions: expect.objectContaining({ start_draw: "2025-01-01 08:30" }) }));
   });
 
-  it("accepts the current dataset draw page response after an unrelated condition edit", async () => {
+  it("# F-CREATE-052 accepts the current dataset draw page response after an unrelated condition edit", async () => {
     let resolveDraws!: (page: { total: number; offset: number; limit: number; items: string[] }) => void;
     vi.mocked(apiClient.getDatasetDraws).mockReturnValueOnce(new Promise((resolve) => { resolveDraws = resolve; }));
     const user = userEvent.setup(); mount();
@@ -254,7 +254,7 @@ describe("guided v5 profile batch", () => {
     expect(await screen.findByRole("option", { name: "2025-01-01 08:30" })).toBeInTheDocument();
   });
 
-  it("does not submit an invalid or stale profile binding and reports source references without financial claims", async () => {
+  it("# F-CREATE-053 does not submit an invalid or stale profile binding and reports source references without financial claims", async () => {
     const user = userEvent.setup(); mount();
     await screen.findByRole("option", { name: /historial/ });
     await user.selectOptions(screen.getByLabelText("Historial"), dataset.dataset_sha256);

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+// Contract coverage: F-LIST-056–F-LIST-063 — Quiniela defaults/technical disclosure, bounded controls, exact minor-unit profile document/server digest, partial templates and validation/focus/pending lock.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiClient } from "../../api/client";
 import type { PartialProfileTemplate, ProfileListing } from "../../api/types";

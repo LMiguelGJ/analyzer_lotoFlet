@@ -55,7 +55,7 @@ export const recoveryDataset = { ...datasetItem, profile_id: "rational-recovery"
   profile_execution: recoveryProfile.profile_execution } as DatasetListing;
 
 describe("profile request v1 builder", () => {
-  it("builds explicit Q80 cycling without a fixed stake and rejects absent capability", () => {
+  it("# F-UTIL-020 builds explicit Q80 cycling without a fixed stake and rejects absent capability", () => {
     const draft = { ...validDraft, capital: "2000", goal: "2800", per_number_stake: "" };
     const request = buildProfileRequest(draft, cyclingProfile, datasetItem, draft.start_draw, "cycling");
     expect(request.schema_version).toBe(2);
@@ -64,7 +64,7 @@ describe("profile request v1 builder", () => {
     expect(() => buildProfileRequest(draft, profileItem, datasetItem, draft.start_draw, "cycling")).toThrow(/capacidad/);
     expect(() => buildProfileRequest({ ...draft, coverage: "80" }, cyclingProfile, datasetItem, draft.start_draw, "cycling")).toThrow();
   });
-  it("uses server binding, explicit fixed selector and integer money units without legacy envelope", () => {
+  it("# F-UTIL-021 uses server binding, explicit fixed selector and integer money units without legacy envelope", () => {
     expect(buildProfileRequest(validDraft, profileItem, datasetItem, validDraft.start_draw)).toEqual({
       kind: "profile", schema_version: 1, name: "Sesión local", dataset_sha256: "b".repeat(64),
       profile_id: "local-game", profile_revision: 2, profile_sha256: "a".repeat(64), entry_policy: "all_rows/v1",
@@ -75,7 +75,7 @@ describe("profile request v1 builder", () => {
       staking: { schema_version: 1, capability: "flat-per-number/v1", per_number_stake: 125 },
     });
   });
-  it("builds generic Audaz schema 3 without a fixed stake using server rational-payout compatibility", () => {
+  it("# F-UTIL-022 builds generic Audaz schema 3 without a fixed stake using server rational-payout compatibility", () => {
     const draft = { ...validDraft, coverage: "1", numbers: "0", per_number_stake: "" };
     const request = buildProfileRequest(draft, audazProfile, { ...datasetItem,
       profile_id: "rational-game", profile_sha256: audazProfile.profile_sha256,
@@ -92,14 +92,14 @@ describe("profile request v1 builder", () => {
       { ...datasetItem, profile_id: "rational-game", profile_sha256: audazProfile.profile_sha256,
         profile_execution: audazProfile.profile_execution }, draft.start_draw, "audaz")).toThrow(/no está disponible/);
   });
-  it.each(["cycle", "stop"] as const)("builds schema-4 recovery for a rational non-Q80 profile with %s exhaustion", (end_mode) => {
+  it.each(["cycle", "stop"] as const)("# F-UTIL-023 builds schema-4 recovery for a rational non-Q80 profile with %s exhaustion", (end_mode) => {
     const draft = { ...validDraft, coverage: "2", numbers: "0,1", per_number_stake: "", target_margin: "12.34", rounds: "4", end_mode };
     const request = buildProfileRequest(draft, recoveryProfile, recoveryDataset, draft.start_draw, "recovery");
     expect(request).toMatchObject({ schema_version: 4, selector: { coverage: 2 },
       staking: { schema_version: 1, target_margin: 1234, rounds: 4, end_mode } });
     expect(JSON.stringify(request)).not.toContain("per_number_stake");
   });
-  it("rejects recovery coverage outside server-derived rational compatibility and missing parameters", () => {
+  it("# F-UTIL-023 rejects recovery coverage outside server-derived rational compatibility and missing parameters", () => {
     const base = { ...validDraft, per_number_stake: "", target_margin: "10", rounds: "3", end_mode: "stop" as const };
     expect(() => buildProfileRequest({ ...base, coverage: "3", numbers: "0,1,2" }, recoveryProfile, recoveryDataset, base.start_draw, "recovery")).toThrow(/hasta 2/);
     expect(() => buildProfileRequest({ ...base, rounds: "10001" }, recoveryProfile, recoveryDataset, base.start_draw, "recovery")).toThrow(/Rondas/);
@@ -108,13 +108,13 @@ describe("profile request v1 builder", () => {
       staking_capabilities: ["flat-per-number/v1"], recovery_compatibility: { available: false, maximum_compatible_coverage: 0,
         coverage_rule: "selected coverage must be strictly less than multiplier[0]", parameters: [] } } }, recoveryDataset, base.start_draw, "recovery")).toThrow(/capacidad/);
   });
-  it("builds deterministic random only with explicit safe seed and algorithm", () => {
+  it("# F-UTIL-024 builds deterministic random only with explicit safe seed and algorithm", () => {
     const request = buildProfileRequest({ ...validDraft, selector: "random", seed: "9007199254740991" }, profileItem, datasetItem, validDraft.start_draw);
     expect(request.selector).toEqual({ schema_version: 1, capability: "seeded-random/hash-sha256-v1",
       coverage: 2, numbers: null, seed: Number.MAX_SAFE_INTEGER, algorithm_version: "hash-sha256-v1" });
     expect(() => buildProfileRequest({ ...validDraft, selector: "random", seed: "9007199254740992" }, profileItem, datasetItem, validDraft.start_draw)).toThrow(/Semilla/);
   });
-  it("rejects stale/mismatched binding, draw, unsupported capability and settlement", () => {
+  it("# F-UTIL-025 rejects stale/mismatched binding, draw, unsupported capability and settlement", () => {
     expect(matchingDataset(profileItem, { ...datasetItem, profile_sha256: "c".repeat(64) })).toBe(false);
     expect(() => buildProfileRequest(validDraft, profileItem, { ...datasetItem, profile_revision: 3 }, validDraft.start_draw)).toThrow();
     expect(() => buildProfileRequest(validDraft, profileItem, datasetItem, "")).toThrow(/Sorteo/);
@@ -129,7 +129,7 @@ describe("profile request v1 builder", () => {
     [{ ...validDraft, capital: "9007199254740992" }, /Capital/],
     [{ ...validDraft, max_elapsed_draws: "" }, /Sorteos transcurridos/],
     [{ ...validDraft, goal: "1000" }, /meta/i],
-  ])("rejects invalid admission inputs", (draft, message) => {
+  ])("# F-UTIL-026 rejects invalid admission inputs", (draft, message) => {
     expect(() => buildProfileRequest(draft, profileItem, datasetItem, validDraft.start_draw)).toThrow(message);
   });
 });

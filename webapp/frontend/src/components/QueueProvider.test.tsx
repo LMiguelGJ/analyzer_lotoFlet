@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+// Contract coverage: F-LIST-081–F-LIST-083 — one shared bounded queue page with independent lanes, stale/out-of-range reconciliation, and mutually exclusive failure/pending states.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient, NetworkError } from "../api/client";
 import type { QueueStatus } from "../api/types";

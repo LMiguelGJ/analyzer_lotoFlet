@@ -192,7 +192,7 @@ const settingsView = {
 } as const satisfies SettingsView;
 
 describe("API response contract (types.ts vs backend serialization)", () => {
-  it("discriminates profile detail, comparison, run and replay while retaining omitted legacy markers", () => {
+  it("# F-API-025 discriminates profile detail, comparison, run and replay while retaining omitted legacy markers", () => {
     const legacy: ExperimentSummary = experimentDetail;
     const oldReplay: ReplayPage = { total: 1, offset: 0, limit: 20, items: replayBets.map((bet) => ({ ...bet, numbers: [...bet.numbers], results: [...bet.results] })) };
     expect(isProfileExperiment(legacy)).toBe(false);
@@ -205,7 +205,7 @@ describe("API response contract (types.ts vs backend serialization)", () => {
     expect(profileExperiment.runs[0].result).not.toHaveProperty("kind");
     expect(profileReplay.items[0]).not.toHaveProperty("per_number");
   });
-  it("narrows cycling requests without inventing a flat stake or v1 result discriminator", () => {
+  it("# F-API-026 narrows cycling requests without inventing a flat stake or v1 result discriminator", () => {
     expect(isProfileExperiment(cyclingExperiment)).toBe(true);
     if (cyclingExperiment.request.schema_version === 2) {
       expect(cyclingExperiment.request.staking).toEqual({ schema_version: 1, capability: "q80-first-prize-cycling/v1" });
@@ -217,7 +217,7 @@ describe("API response contract (types.ts vs backend serialization)", () => {
     expect(cyclingReplay).toHaveProperty("schema_version", 2);
     expect(cyclingReplay.items[0]).not.toHaveProperty("per_number");
   });
-  it("types schema-3 Audaz requests, results, comparison and replay without a fixed stake", () => {
+  it("# F-API-027 types schema-3 Audaz requests, results, comparison and replay without a fixed stake", () => {
     const audaz: ProfileExperimentSummary = { ...profileExperiment,
       request: { ...profileExperiment.request, schema_version: 3, staking: { schema_version: 1, capability: "profile-audaz/v1" } },
       display: { ...profileExperiment.display, staking_label: "Audaz · apuesta dinámica por sorteo" },
@@ -230,7 +230,7 @@ describe("API response contract (types.ts vs backend serialization)", () => {
     expect(audaz.runs[0].result?.schema_version).toBe(3);
     expect(isProfileReplay(replay)).toBe(true);
   });
-  it.each(["cycle", "stop"] as const)("types schema-4 recovery request, result, comparison and replay with %s mode", (end_mode) => {
+  it.each(["cycle", "stop"] as const)("# F-API-027 types schema-4 recovery request, result, comparison and replay with %s mode", (end_mode) => {
     const recovery: ProfileExperimentSummary = { ...profileExperiment, request: { ...profileExperiment.request,
       schema_version: 4, staking: { schema_version: 1, target_margin: 250, rounds: 4, end_mode } },
       display: { ...profileExperiment.display, staking_label: "Escalera de recuperación · parámetros explícitos por perfil" },
@@ -244,7 +244,7 @@ describe("API response contract (types.ts vs backend serialization)", () => {
     expect(isProfileReplay(replay)).toBe(true);
     expect(replay.schema_version).toBe(4);
   });
-  it("keeps historical settings fixture fields and adds exact admission components", () => {
+  it("# F-API-029 keeps historical settings fixture fields and adds exact admission components", () => {
     expect(settingsView).toMatchObject(settingsFixture);
     expect(settingsView.quota.effective_bytes).toBe("5368709120");
     expect(settingsView.storage.logical_used_bytes_exact).toBe("1024");
@@ -255,12 +255,12 @@ describe("API response contract (types.ts vs backend serialization)", () => {
       BigInt(settingsView.storage.admission_logical_bytes_exact));
     expect(settingsView).not.toHaveProperty("adjustment_persistence");
   });
-  it("matches the parsed fixture fields and values (not raw JSON formatting)", () => {
+  it("# F-API-028 matches the parsed fixture fields and values (not raw JSON formatting)", () => {
     expect(experimentDetailFixture).toEqual(experimentDetail);
     expect(replayFixture.items).toEqual(replayBets);
   });
 
-  it("matches the projected experiment detail run result: bets_count/wagered/paid/final_balance/delta, no bets_placed", () => {
+  it("# F-API-028 matches the projected experiment detail run result: bets_count/wagered/paid/final_balance/delta, no bets_placed", () => {
     const run = experimentDetail.runs[0];
     expect(run.result).toMatchObject({
       outcome: "goal",
@@ -273,14 +273,14 @@ describe("API response contract (types.ts vs backend serialization)", () => {
     expect(run.result && "bets" in run.result).toBe(false);
   });
 
-  it("types metadata-only dataset discovery without implying execution support", () => {
+  it("# F-API-030 types metadata-only dataset discovery without implying execution support", () => {
     expect(datasetPage.items[0].execution_supported).toBe(false);
     expect(datasetPage.items[0].clock).toEqual({ mode: "naive_legacy", zone: null });
     expect(datasetPage.items[0]).not.toHaveProperty("raw_bytes");
     expect(datasetPage.items[0]).not.toHaveProperty("canonical_json");
   });
 
-  it("types the exact legacy snapshot and keeps older captured fixtures compatible", () => {
+  it("# F-API-031 types the exact legacy snapshot and keeps older captured fixtures compatible", () => {
     expect(currentExperiment.profile.multipliers[0]).toEqual({ numerator: 80, denominator: 1 });
     expect(experimentDetailFixture).not.toHaveProperty("profile");
     expect(profileCatalog.items[0].execution_supported).toBe(true);
@@ -289,7 +289,7 @@ describe("API response contract (types.ts vs backend serialization)", () => {
     expect(profileCatalog.templates.every((item) => item.execution_supported === false)).toBe(true);
   });
 
-  it("matches the real replay bet shape: label/per_number/wagered/results, not drawn_at/amount_per_number/total_spent/drawn_numbers/payout", () => {
+  it("# F-API-028 matches the real replay bet shape: label/per_number/wagered/results, not drawn_at/amount_per_number/total_spent/drawn_numbers/payout", () => {
     expect(replayBets[0]).toMatchObject({
       label: "2025-01-01 05:10",
       per_number: 1,

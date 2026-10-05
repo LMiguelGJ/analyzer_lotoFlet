@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+// Contract coverage: F-LIST-026 flat labels with enum preservation and accessible stake/error help, including bare components.N errors.
 import { describe, expect, it, vi } from "vitest";
 import { StrategyEditor } from "./StrategyEditor";
 import { newStrategy } from "../pages/new-experiment/model";

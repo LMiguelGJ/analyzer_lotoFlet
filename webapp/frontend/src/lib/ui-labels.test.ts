@@ -1,3 +1,4 @@
+// Contract coverage: F-SHELL-013 exhaustive plain labels; F-SHELL-014 exact safe seed help; F-SHELL-015 required non-empty field labels/help/caveat constants.
 import { describe, expect, it } from "vitest";
 import type { SelectorKind, SettlementMode, StakingStyle } from "../api/types";
 import {

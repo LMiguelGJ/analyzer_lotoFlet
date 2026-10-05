@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+// Contract coverage: F-RESULT-017 execution/outcome vocabularies stay distinct; F-RESULT-018 text-authoritative semantic chips and hidden glyph; F-RESULT-019 unknown status values throw.
 import { describe, expect, it } from "vitest";
 import type { ExperimentStatus, Outcome, RunStatus } from "../api/types";
 import { StatusLabel } from "./StatusLabel";

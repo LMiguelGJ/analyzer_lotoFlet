@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+// Contract coverage: F-RESULT-020 persisted-only balances, real goal and textual alternative; empty state has no fictional outcome.
 import { describe, expect, it } from "vitest";
 import { BalanceChart } from "./BalanceChart";
 

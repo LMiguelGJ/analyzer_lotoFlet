@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
+// Contract coverage: F-LIST-021 table region/caption/cells/empty state; F-LIST-022 local scroll/wrapping/compact fields; F-LIST-023 keyboard actions/hairline styling/axe.
 import { describe, expect, it, vi } from "vitest";
 import { DataTable } from "./DataTable";
 import type { DataTableColumn } from "./DataTable";

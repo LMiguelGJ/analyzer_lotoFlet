@@ -69,7 +69,7 @@ beforeEach(() => {
 });
 
 describe("S2 simple creation form", () => {
-  it.each([[5, "RD$5"], [2800, "RD$2.800"]])("renders the catalog minimum stake %i as %s instead of a hardcoded literal", async (minimumStake, expected) => {
+  it.each([[5, "RD$5"], [2800, "RD$2.800"]])("# F-CREATE-003 renders the catalog minimum stake %i as %s instead of a hardcoded literal", async (minimumStake, expected) => {
     vi.mocked(apiClient.getCatalog).mockResolvedValue({ ...catalog, game: { ...catalog.game, minimum_stake: minimumStake } } as never);
     setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
@@ -77,7 +77,7 @@ describe("S2 simple creation form", () => {
     expect(within(rules).getByText("Apuesta mínima por número").nextElementSibling).toHaveTextContent(expected);
   });
 
-  it("shows three numbered groups, truthful rules, prefilled choices, live order summary and one primary action", async () => {
+  it("# F-CREATE-001 F-CREATE-002 F-CREATE-004 F-CREATE-005 F-CREATE-006 F-CREATE-008 shows three numbered groups, truthful rules, prefilled choices, live order summary and one primary action", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
 
@@ -132,7 +132,7 @@ describe("S2 simple creation form", () => {
 });
 
 describe("profile creator discovery", () => {
-  it("links to the dedicated route without changing the legacy form", async () => {
+  it("# F-CREATE-009 links to the dedicated route without changing the legacy form", async () => {
     const { user, router } = setup();
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "Crear simulación con perfil" });
@@ -146,7 +146,7 @@ describe("profile creator discovery", () => {
 
 describe("LW13 library templates", () => {
   const saved = { id: "cfg-1", name: "Biblioteca", strategy: { name: "Fríos", selector: "system" as const, system: "cold", coverage: 1, staking: "flat" as const } };
-  it("prefills only one strategy from a configuration; conditions remain fresh and unsubmitted", async () => {
+  it("# F-CREATE-010 prefills only one strategy from a configuration; conditions remain fresh and unsubmitted", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
     expect(await screen.findByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("");
@@ -159,7 +159,7 @@ describe("LW13 library templates", () => {
     await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   });
-  it("appends one selected template without changing conditions or existing strategies, and rejects a normalized duplicate", async () => {
+  it("# F-CREATE-011 appends one selected template without changing conditions or existing strategies, and rejects a normalized duplicate", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user } = setup();
     await conditions(user);
@@ -175,7 +175,7 @@ describe("LW13 library templates", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/nombre.*único/i);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
-  it("guards semantic configuration changes and removal, stays or leaves; rejects base/configuration conflict", async () => {
+  it("# F-CREATE-012 F-CREATE-013 guards semantic configuration changes and removal, stays or leaves; rejects base/configuration conflict", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
     await screen.findByRole("textbox", { name: "Nombre de la simulación" });
@@ -192,7 +192,7 @@ describe("LW13 library templates", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/dos orígenes/);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
-  it("ignores a stale configuration response after a clean query change", async () => {
+  it("# F-CREATE-014 ignores a stale configuration response after a clean query change", async () => {
     let resolveOld!: (value: { id: string; name: string; strategy: { name: string; selector: "system"; system: string; coverage: number; staking: "flat" } }) => void;
     vi.mocked(apiClient.getConfiguration).mockImplementation((id) => id === "other" ? Promise.resolve({ ...saved, id, strategy: { ...saved.strategy, name: "Nueva" } }) : new Promise((resolve) => { resolveOld = resolve; }));
     const { router, user } = setup("/experimentos/nuevo?configuration=cfg-1");
@@ -211,7 +211,7 @@ describe("LW13 library templates", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     expect(apiClient.getConfiguration).toHaveBeenCalledTimes(2);
   });
-  it("caps append at five and keeps failed library saves and the wizard draft without an experiment POST", async () => {
+  it("# F-CREATE-011 F-CREATE-015 caps append at five and keeps failed library saves and the wizard draft without an experiment POST", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user } = setup();
     await conditions(user);
@@ -231,7 +231,7 @@ describe("LW13 library templates", () => {
     expect(screen.getByRole("textbox", { name: "Nombre para guardar en biblioteca" })).toHaveValue("Guardada");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
-  it("maps library save 422 to its own name and strategy field while preserving the draft", async () => {
+  it("# F-CREATE-015 maps library save 422 to its own name and strategy field while preserving the draft", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
@@ -248,7 +248,7 @@ describe("LW13 library templates", () => {
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Una");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
-  it("reports missing, network and catalog-invalid templates without posting", async () => {
+  it("# F-CREATE-016 reports missing, network and catalog-invalid templates without posting", async () => {
     vi.mocked(apiClient.getConfiguration).mockRejectedValueOnce(new ApiError(404, "missing"));
     const first = setup("/experimentos/nuevo?configuration=gone");
     expect(await screen.findByRole("alert")).toHaveTextContent(/ya no existe/);
@@ -265,7 +265,7 @@ describe("LW13 library templates", () => {
 });
 
 describe("LW10 use as base", () => {
-  it("loads a saved request through detail, locates a ranked draw beyond the first catalog page, and leaves it clean until edited", async () => {
+  it("# F-CREATE-017 loads a saved request through detail, locates a ranked draw beyond the first catalog page, and leaves it clean until edited", async () => {
     const saved = { ...detail, request: { ...detail.request, name: "Original", conditions: { ...detail.request.conditions, start_draw: "2025-09-03 05:10", seed: 9007199254740991, max_minutes: 90 }, strategies: [
       { name: "Mix", selector: "blend", system: null, components: [{ system: "transition", weight: 60 }, { system: "cold", weight: 40 }], coverage: 10, staking: "bold" },
       { name: "Par", selector: "parity", system: null, components: null, coverage: 50, staking: "flat" },
@@ -304,7 +304,7 @@ describe("LW10 use as base", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
-  it("keeps the prefilled draft guarded only after a change through the in-app back link", async () => {
+  it("# F-CREATE-017 F-CREATE-034 keeps the prefilled draft guarded only after a change through the in-app back link", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(detail as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
     const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
@@ -316,7 +316,7 @@ describe("LW10 use as base", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
-  it("blocks a new base query from replacing an edited prefilled draft", async () => {
+  it("# F-CREATE-012 blocks a new base query from replacing an edited prefilled draft", async () => {
     vi.mocked(apiClient.getExperiment).mockImplementation(async (id) => id === "other"
       ? { ...detail, request: { ...detail.request, name: "Next base" } } as never : detail as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
@@ -338,7 +338,7 @@ describe("LW10 use as base", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
-  it("guards base removal for an edited prefill, then clears the draft on leave", async () => {
+  it("# F-CREATE-012 guards base removal for an edited prefill, then clears the draft on leave", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(detail as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
     const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
@@ -354,7 +354,7 @@ describe("LW10 use as base", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
-  it("loads another base without a prompt while clean and resets on clean base removal", async () => {
+  it("# F-CREATE-012 loads another base without a prompt while clean and resets on clean base removal", async () => {
     vi.mocked(apiClient.getExperiment).mockImplementation(async (id) => id === "other"
       ? { ...detail, request: { ...detail.request, name: "Next base" } } as never : detail as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
@@ -369,7 +369,7 @@ describe("LW10 use as base", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
-  it("guards a dirty blank draft when adding a base, but allows unrelated query changes", async () => {
+  it("# F-CREATE-012 guards a dirty blank draft when adding a base, but allows unrelated query changes", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(detail as never);
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
@@ -385,7 +385,7 @@ describe("LW10 use as base", () => {
     expect(router.state.location.search).toBe("?view=compact");
   });
 
-  it("ignores a delayed previous base response after navigating to a new base", async () => {
+  it("# F-CREATE-014 ignores a delayed previous base response after navigating to a new base", async () => {
     let resolveOld!: (value: typeof detail) => void;
     vi.mocked(apiClient.getExperiment).mockImplementation((id) => id === "other"
       ? Promise.resolve({ ...detail, request: { ...detail.request, name: "Next base" } } as never)
@@ -400,7 +400,7 @@ describe("LW10 use as base", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
-  it("distinguishes a missing base from a network error without posting", async () => {
+  it("# F-CREATE-016 distinguishes a missing base from a network error without posting", async () => {
     vi.mocked(apiClient.getExperiment).mockRejectedValueOnce(new ApiError(404, "not found"));
     const first = setup("/experimentos/nuevo?base=gone");
     expect(await screen.findByRole("alert")).toHaveTextContent(/ya no existe/);
@@ -413,7 +413,7 @@ describe("LW10 use as base", () => {
 });
 
 describe("ODD03b dated starting draws", () => {
-  it("labels the date filter, keeps a same-day selection and clears it without choosing a different day", async () => {
+  it("# F-CREATE-018 labels the date filter, keeps a same-day selection and clears it without choosing a different day", async () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
     await openAdvanced(user);
@@ -434,7 +434,7 @@ describe("ODD03b dated starting draws", () => {
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
   });
 
-  it("distinguishes dates without history from dates with only unranked history", async () => {
+  it("# F-CREATE-019 distinguishes dates without history from dates with only unranked history", async () => {
     vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => ({
       total: date ? 0 : 2, offset, limit, items: date ? [] : ["2025-09-02 05:10"],
     }));
@@ -454,7 +454,7 @@ describe("ODD03b dated starting draws", () => {
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeDisabled();
   });
 
-  it("ignores older filter and pagination responses after a newer date is selected", async () => {
+  it("# F-CREATE-020 ignores older filter and pagination responses after a newer date is selected", async () => {
     let resolveOld!: (page: { total: number; offset: number; limit: number; items: string[] }) => void;
     let resolveMore!: (page: { total: number; offset: number; limit: number; items: string[] }) => void;
     vi.mocked(apiClient.getStartingDraws).mockImplementation((offset = 0, limit = 100, date) => {
@@ -482,7 +482,7 @@ describe("ODD03b dated starting draws", () => {
     expect(screen.queryByRole("button", { name: "Cargar más sorteos" })).not.toBeInTheDocument();
   });
 
-  it("does not accept a selected draw after its same-day reload reports no ranking", async () => {
+  it("# F-CREATE-021 does not accept a selected draw after its same-day reload reports no ranking", async () => {
     let datedLoads = 0;
     vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => {
       if (date === "2025-09-02") {
@@ -512,7 +512,7 @@ describe("ODD03b dated starting draws", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
-  it("rechecks a selected off-page draw within its day and keeps it valid after reloading", async () => {
+  it("# F-CREATE-022 rechecks a selected off-page draw within its day and keeps it valid after reloading", async () => {
     const late = "2025-09-03 05:10";
     vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => ({
       total: date ? 101 : 1000, offset, limit,
@@ -546,7 +546,7 @@ describe("ODD03b dated starting draws", () => {
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toBeInTheDocument();
   });
 
-  it("paginates only the selected day and retries a failed dated request", async () => {
+  it("# F-CREATE-023 paginates only the selected day and retries a failed dated request", async () => {
     vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => {
       if (date === "2025-09-03" && offset === 0) throw new NetworkError();
       return { total: date ? 101 : 2, offset, limit, items: [date ? `${date} ${offset ? "05:15" : "05:10"}` : "2025-09-02 05:10"] };
@@ -569,7 +569,7 @@ describe("ODD03b dated starting draws", () => {
 });
 
 describe("LW09 single-form creation", () => {
-  it("shows empty and disconnected catalog states without inventing a default draw, then retries", async () => {
+  it("# F-CREATE-024 shows empty and disconnected catalog states without inventing a default draw, then retries", async () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 0, offset: 0, limit: 100, items: [] });
     const { user, unmount: unmountFirst } = setup();
     expect(await screen.findByText(/No hay sorteos iniciales/)).toBeInTheDocument();
@@ -586,7 +586,7 @@ describe("LW09 single-form creation", () => {
     unmount();
   });
 
-  it("loads further ranked draws on demand without requesting all history", async () => {
+  it("# F-CREATE-025 loads further ranked draws on demand without requesting all history", async () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 150, offset: 0, limit: 100, items: ["2025-09-02 05:10"] });
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 150, offset: 1, limit: 100, items: ["2025-09-02 05:15"] });
     const { user } = setup();
@@ -596,7 +596,7 @@ describe("LW09 single-form creation", () => {
     expect(apiClient.getStartingDraws).toHaveBeenNthCalledWith(2, 1, 100);
   });
 
-  it("keeps the seed control inside the advanced disclosure", async () => {
+  it("# F-CREATE-007 keeps the seed control inside the advanced disclosure", async () => {
     setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     expect(screen.queryByRole("textbox", { name: "Código de repetición" })).not.toBeInTheDocument();
@@ -605,7 +605,7 @@ describe("LW09 single-form creation", () => {
     expect((screen.getByText("Estrategia avanzada").closest("details") as HTMLDetailsElement | null)?.open).toBe(false);
   });
 
-  it("announces the seed help together with validation errors, without losing either reference", async () => {
+  it("# F-CREATE-026 announces the seed help together with validation errors, without losing either reference", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await revealSeed(user);
@@ -626,7 +626,7 @@ describe("LW09 single-form creation", () => {
     expect(draw).toHaveAccessibleDescription(/Elegí un sorteo con ranking disponible/);
   });
 
-  it("loads ranked starting draws and keeps conditions and settlement controls available", async () => {
+  it("# F-CREATE-004 loads ranked starting draws and keeps conditions and settlement controls available", async () => {
     const { user } = setup();
     await conditions(user);
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100);
@@ -639,7 +639,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByRole("button", { name: "Salir" })).toHaveClass("ledger-button-ghost");
   });
 
-  it("rejects invalid money, goal, start, limits and seed without rounding", async () => {
+  it("# F-CREATE-027 rejects invalid money, goal, start, limits and seed without rounding", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await user.clear(screen.getByRole("textbox", { name: "Capital (RD$)" }));
@@ -657,7 +657,7 @@ describe("LW09 single-form creation", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
-  it("names server failures in the alert and keeps technical details disclosed", async () => {
+  it("# F-CREATE-028 names server failures in the alert and keeps technical details disclosed", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Mi estrategia");
@@ -673,7 +673,7 @@ describe("LW09 single-form creation", () => {
     expect(apiClient.createExperiment).toHaveBeenCalledTimes(1);
   });
 
-  it("builds accepted 60/40 mix K10 max12 and posts exact body once, then stable detail path", async () => {
+  it("# F-CREATE-029 builds accepted 60/40 mix K10 max12 and posts exact body once, then stable detail path", async () => {
     let resolve!: (value: { id: string; status: string }) => void;
     vi.mocked(apiClient.createExperiment).mockReturnValue(new Promise((r) => { resolve = r; }));
     const { user, router } = setup();
@@ -698,7 +698,7 @@ describe("LW09 single-form creation", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos/exp-1"));
   });
 
-  it("parity forces coverage 50 and duplicate strategy names block creation", async () => {
+  it("# F-CREATE-030 parity forces coverage 50 and duplicate strategy names block creation", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Par");
@@ -712,7 +712,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByText(/El nombre debe ser único/i)).toBeInTheDocument();
   });
 
-  it("maps a field-located duplicate-name 422 to the offending strategy name field", async () => {
+  it("# F-CREATE-031 maps a field-located duplicate-name 422 to the offending strategy name field", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
@@ -724,7 +724,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveAttribute("aria-invalid", "true");
   });
 
-  it("maps 422 field errors; 507 and network failures preserve entered values", async () => {
+  it("# F-CREATE-031 F-CREATE-033 maps 422 field errors; 507 and network failures preserve entered values", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
@@ -742,7 +742,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Una");
   });
 
-  it("blocks browser back while dirty, then proceeds when confirmed", async () => {
+  it("# F-CREATE-034 blocks browser back while dirty, then proceeds when confirmed", async () => {
     const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/ajustes", "/experimentos/nuevo"] });
     const user = userEvent.setup();
     render(<RouterProvider router={router} />);
@@ -755,7 +755,7 @@ describe("LW09 single-form creation", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/ajustes"));
   });
 
-  it("requests native refresh confirmation only while dirty and cleans listener on leave", async () => {
+  it("# F-CREATE-035 requests native refresh confirmation only while dirty and cleans listener on leave", async () => {
     const add = vi.spyOn(window, "addEventListener");
     const remove = vi.spyOn(window, "removeEventListener");
     const { user } = setup();
@@ -769,7 +769,7 @@ describe("LW09 single-form creation", () => {
     add.mockRestore(); remove.mockRestore();
   });
 
-  it("does not block a clean wizard navigation", async () => {
+  it("# F-CREATE-034 does not block a clean wizard navigation", async () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await user.click(screen.getByRole("link", { name: "Ajustes" }));
@@ -777,7 +777,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
-  it("focuses and clears a bare mix component error when its subfield changes while retaining unrelated errors", async () => {
+  it("# F-CREATE-031 focuses and clears a bare mix component error when its subfield changes while retaining unrelated errors", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Mix");
@@ -801,7 +801,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByRole("combobox", { name: "Forma de ajustar la apuesta" })).toHaveAttribute("aria-invalid", "true");
   });
 
-  it("maps a strategy-level 422 without a field to that strategy's block, expands it and keeps the server detail", async () => {
+  it("# F-CREATE-031 maps a strategy-level 422 without a field to that strategy's block, expands it and keeps the server detail", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
@@ -821,7 +821,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" })).not.toHaveAttribute("aria-invalid", "true");
   });
 
-  it("maps a conditions-level 422 without a field to the conditions section, not silently onto goal", async () => {
+  it("# F-CREATE-031 maps a conditions-level 422 without a field to the conditions section, not silently onto goal", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
@@ -834,7 +834,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByText(/goal is the final balance and must exceed capital/)).toBeInTheDocument();
   });
 
-  it("clears the server notice and the matching field error on edit, keeping an unrelated field's error", async () => {
+  it("# F-CREATE-032 clears the server notice and the matching field error on edit, keeping an unrelated field's error", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
@@ -857,7 +857,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Revisá los errores señalados junto a los campos antes de crear la simulación.");
   });
 
-  it("moves focus to the first offending field after a server error, not just the alert", async () => {
+  it("# F-CREATE-031 moves focus to the first offending field after a server error, not just the alert", async () => {
     const { user } = setup();
     await conditions(user);
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
@@ -869,7 +869,7 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveFocus();
   });
 
-  it("guards dirty navigation with accessible stay/leave, without canceling backend work", async () => {
+  it("# F-CREATE-034 guards dirty navigation with accessible stay/leave, without canceling backend work", async () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");

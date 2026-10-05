@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+// Contract coverage: F-RESULT-023 bounded trajectory/reduction/index selection; F-RESULT-024 canonical/local v5 indexes; F-RESULT-025 exact lookup links without replay; F-RESULT-026 empty/error/unmount/malformed-index handling; F-RESULT-006 backend metrics.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "../api/client";
 import type { Trajectory } from "../api/types";

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+// Contract coverage: F-RESULT-001–F-RESULT-018 detail verdict, honest closure, backend values, dynamic stakes, absent results, profile currency/positions, status vocabularies and folded technical copy; F-RESULT-027 exact deep-link replay; F-RESULT-028 polling; F-RESULT-029 stale response rejection; F-RESULT-030 differentiated errors; F-RESULT-031 paginated/keyboard replay with immutable final metrics; F-RESULT-032 axe.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { verdictPhrase } from "./DetailPage";

@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+// Contract coverage: F-LIST-038–F-LIST-055 — ordered history/import tasks, original Blob and explicit confirmation, hash-bound promote, library paging/errors/stale requests, uncertain promotion lock, and no continuation for non-executable profiles.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import { DataPage } from "./index";

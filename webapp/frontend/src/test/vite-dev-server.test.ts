@@ -6,11 +6,11 @@ import { describe, expect, it, vi } from "vitest";
 import viteConfig from "../../vite.config";
 
 describe("vite dev/preview server binding (explicit loopback)", () => {
-  it("binds the dev server explicitly to 127.0.0.1", () => {
+  it("# F-UTIL-027 binds the dev server explicitly to 127.0.0.1", () => {
     expect(viteConfig.server?.host).toBe("127.0.0.1");
   });
 
-  it("binds the preview server explicitly to 127.0.0.1", () => {
+  it("# F-UTIL-027 binds the preview server explicitly to 127.0.0.1", () => {
     expect(viteConfig.preview?.host).toBe("127.0.0.1");
   });
 });
@@ -18,11 +18,11 @@ describe("vite dev/preview server binding (explicit loopback)", () => {
 describe("vite dev proxy: Origin normalization and backend-down handling", () => {
   const proxy = viteConfig.server?.proxy?.["/api"];
 
-  it("is configured for /api", () => {
+  it("# F-UTIL-028 is configured for /api", () => {
     expect(proxy).toBeDefined();
   });
 
-  it("normalizes the Origin header via new URL(target).origin, not the raw target string", () => {
+  it("# F-UTIL-028 normalizes the Origin header via new URL(target).origin, not the raw target string", () => {
     const handlers: Record<string, (...args: never[]) => void> = {};
     const fakeProxy = {
       on: (event: string, handler: (...args: never[]) => void) => {
@@ -40,7 +40,7 @@ describe("vite dev proxy: Origin normalization and backend-down handling", () =>
     expect(proxyReq.setHeader).toHaveBeenCalledWith("origin", new URL(target).origin);
   });
 
-  it("responds 502 with a disconnection marker header when the backend is unreachable", () => {
+  it("# F-UTIL-028 responds 502 with a disconnection marker header when the backend is unreachable", () => {
     const handlers: Record<string, (...args: never[]) => void> = {};
     const fakeProxy = {
       on: (event: string, handler: (...args: never[]) => void) => {
