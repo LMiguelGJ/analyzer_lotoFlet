@@ -3,7 +3,7 @@ import { formatDOP, formatTwoDigit } from "./format";
 
 describe("formatDOP", () => {
   it("formats a whole DOP amount with the currency symbol", () => {
-    expect(formatDOP(2800)).toBe("RD$2,800");
+    expect(formatDOP(2800)).toBe("RD$2.800");
   });
 
   it("formats zero", () => {

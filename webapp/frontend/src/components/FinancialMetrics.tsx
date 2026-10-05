@@ -19,12 +19,12 @@ export function FinancialMetrics({ result, money, omitNet = false }: {
   return <section aria-label="Métricas financieras" className="my-6 border-t border-border pt-5">
     <SectionHeader title="Resumen financiero" />
     <dl className="data-list">
-      <dt>Total apostado</dt><dd className="data-list-numeric">{money(result.wagered)}</dd>
-      <dt>Total pagado</dt><dd className="data-list-numeric">{money(result.paid)}</dd>
-      {!omitNet && <><dt>Neto</dt><dd className="data-list-numeric">{result.net == null ? "No disponible" : <Figure value={money(result.net)} variant={moneyVariant(result.net)} />}</dd></>}
-      <dt>Retorno por peso apostado</dt><dd className="data-list-numeric"><Figure value={metricRatio(result.return_per_wagered)} /></dd>
-      <dt>Cambio sobre lo apostado</dt><dd className="data-list-numeric"><Figure value={metricRatio(result.roi)} /></dd>
-      <dt>Máximo de saldo perdido desde un pico</dt><dd className="data-list-numeric">{result.max_drawdown == null ? "No disponible" : <Figure value={money(result.max_drawdown)} />}</dd>
+      <dt>Total apostado</dt><dd className="data-list-numeric min-w-0">{money(result.wagered)}</dd>
+      <dt>Total pagado</dt><dd className="data-list-numeric min-w-0">{money(result.paid)}</dd>
+      {!omitNet && <><dt>Neto</dt><dd className="data-list-numeric min-w-0">{result.net == null ? "No disponible" : <Figure value={money(result.net)} variant={moneyVariant(result.net)} />}</dd></>}
+      <dt>Retorno por peso apostado</dt><dd className="data-list-numeric min-w-0"><Figure value={metricRatio(result.return_per_wagered)} /></dd>
+      <dt>Cambio sobre lo apostado</dt><dd className="data-list-numeric min-w-0"><Figure value={metricRatio(result.roi)} /></dd>
+      <dt>Máximo de saldo perdido desde un pico</dt><dd className="data-list-numeric min-w-0">{result.max_drawdown == null ? "No disponible" : <Figure value={money(result.max_drawdown)} />}</dd>
     </dl>
     <Disclosure summary="Detalles técnicos" className="mt-2">
       <p className="field-help">Las métricas provienen del servidor para esta corrida guardada. El ROI y los ratios usan redondeo HALF_UP a seis decimales; «N/D» corresponde a una razón no disponible.</p>

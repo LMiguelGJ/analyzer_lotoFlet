@@ -65,7 +65,7 @@ export function ConfigurationsPage() {
       if (offset > 0 && value.items.length === 0 && value.total <= offset) { setOffset(Math.max(0, Math.ceil(value.total / pageSize) - 1) * pageSize); return; }
       setPage(value);
     }).catch((error: unknown) => {
-      if (live) setListError(error instanceof NetworkError ? "No se pudo contactar al servidor. Reintentá." : "No se pudo cargar las estrategias guardadas.");
+      if (live) setListError(error instanceof NetworkError ? "No se pudo contactar al servidor. Reintentá la carga." : "No se pudo cargar las estrategias guardadas. Usá «Volver a cargar las estrategias guardadas».");
     });
     return () => { live = false; };
   }, [offset, retry]);
@@ -157,7 +157,7 @@ export function ConfigurationsPage() {
   return <>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <p className="text-sm text-text-secondary">Guardá un método para reutilizarlo.</p>
-      <button type="button" className={`btn ${editor ? "btn-secondary" : "btn-primary"}`} onClick={create}>{page?.total === 0 ? "Crear estrategia guardada" : "Nueva estrategia guardada"}</button>
+      <button type="button" disabled={!!catalogError} className={`btn ${editor ? "btn-secondary" : "btn-primary"}`} onClick={create}>{page?.total === 0 ? "Crear estrategia guardada" : "Nueva estrategia guardada"}</button>
     </div>
     {success && <p ref={successRef} tabIndex={-1} role="status" className="mb-4 text-sm text-accent focus:outline-none" onBlur={() => setSuccess("")}>{success}</p>}
     {message && <p role="alert" className="mb-4 text-sm text-red-300">{message}</p>}

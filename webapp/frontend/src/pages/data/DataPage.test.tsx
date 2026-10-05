@@ -79,6 +79,27 @@ describe("visible game profiles", () => {
     expect(within(importing).getByRole("button", { name: "Crear perfil de juego" })).toBeVisible();
     expect(within(importing).getByRole("link", { name: /Ver Perfiles de juego/ })).toHaveAttribute("href", "#perfiles");
   });
+
+  it("makes the empty-state create-profile actions primary", async () => {
+    vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 0, offset: 0, limit: 100, items: [], templates: [] });
+    render(<DataPage />);
+    const importing = await screen.findByRole("region", { name: "Importar historial" });
+    expect(within(importing).getByRole("button", { name: "Crear perfil de juego" })).toHaveClass("btn-primary");
+  });
+
+  it("offers a retry for failed profile loads in both sections and re-runs the profiles fetch", async () => {
+    vi.mocked(apiClient.getProfiles).mockRejectedValueOnce(new NetworkError());
+    const user = userEvent.setup();
+    render(<DataPage />);
+    const importing = await screen.findByRole("region", { name: "Importar historial" });
+    const retryInImport = await within(importing).findByRole("button", { name: "Reintentar perfiles" });
+    expect(within(screen.getByRole("region", { name: "Perfiles de juego" })).getByRole("button", { name: "Reintentar perfiles" })).toBeVisible();
+    expect(screen.getAllByRole("button", { name: "Reintentar perfiles" })).toHaveLength(2);
+    expect(apiClient.getProfiles).toHaveBeenCalledTimes(1);
+    await user.click(retryInImport);
+    await waitFor(() => expect(apiClient.getProfiles).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Reintentar perfiles" })).toHaveLength(0));
+  });
 });
 
 describe("bounded local import", () => {
@@ -292,7 +313,7 @@ describe("bounded local import", () => {
     const user = await setup(); await preview(user);
     await user.click(screen.getByRole("button", { name: "Confirmar y guardar importación" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo contactar al servidor para guardar el archivo/i);
-    expect(screen.getByRole("alert")).toHaveTextContent(/Revisá la conexión antes de reintentar/);
+    expect(screen.getByRole("alert")).toHaveTextContent(/Iniciá el laboratorio desde el lanzador y volvé a intentar/);
     expect(apiClient.promoteImport).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Confirmar y guardar importación" })).not.toBeInTheDocument();
   });

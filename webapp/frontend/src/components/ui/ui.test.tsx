@@ -25,7 +25,7 @@ describe("ledger blocks and headers", () => {
 describe("ledger figures and states", () => {
   it("formats Dominican pesos and uses mono tabular figure classes", () => {
     render(<Money amount={2800} align="right" variant="positive" />);
-    const figure = screen.getByText("RD$2,800");
+    const figure = screen.getByText("RD$2.800");
     expect(figure.classList.contains("ledger-figure")).toBe(true);
     expect(figure.classList.contains("ledger-figure-right")).toBe(true);
     expect(figure.classList.contains("ledger-money-positive")).toBe(true);
@@ -166,6 +166,6 @@ describe("signature components", () => {
     expect(summary.textContent).toContain("Cobertura");
     expect(summary.textContent).toContain("Esto simula escenarios");
     rerender(<OrderSummary capital={2000} goal={2800} duration="40 sorteos" coverage="50 números" />);
-    expect(screen.getByRole("region", { name: "Resumen de la orden" }).textContent).toContain("RD$2,000");
+    expect(screen.getByRole("region", { name: "Resumen de la orden" }).textContent).toContain("RD$2.000");
   });
 });

@@ -49,13 +49,13 @@ function encodeBytes(bytes: Uint8Array): string {
 }
 
 function failureMessage(error: unknown, action: string): string {
-  if (error instanceof NetworkError) return `No se pudo contactar al servidor para ${action}. Revisá la conexión antes de reintentar.`;
+  if (error instanceof NetworkError) return `No se pudo contactar al servidor para ${action}. Iniciá el laboratorio desde el lanzador y volvé a intentar.`;
   if (error instanceof ApiError && error.status === 409) return "Los datos cambiaron o no hay espacio. Generá una vista previa nueva antes de guardar.";
   if (error instanceof ApiError && error.status === 413) return action.includes("historial")
     ? "El historial supera el límite de 32 MB. Elegí uno más pequeño."
     : "El archivo supera el límite de 2 MB. Elegí uno más pequeño.";
   if (error instanceof ApiError && error.status === 422) return "El servidor rechazó la solicitud. Revisá el archivo y los campos.";
-  return `No se pudo ${action}. Revisá la conexión y los datos.`;
+  return `No se pudo ${action}. Revisá el archivo y los campos; si persiste, reiniciá el laboratorio desde el lanzador.`;
 }
 
 type HistoryMetadata = {
@@ -77,7 +77,7 @@ function boundedText(file: File): Promise<string> {
   });
 }
 
-function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onCreateProfile }: { profiles: ProfileListing[]; profilesLoading: boolean; profilesError: string; onCreateProfile: () => void }) {
+function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onCreateProfile, onRetryProfiles }: { profiles: ProfileListing[]; profilesLoading: boolean; profilesError: string; onCreateProfile: () => void; onRetryProfiles: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [metadata, setMetadata] = useState<HistoryMetadata | null>(null);
   const [profileKey, setProfileKey] = useState("");
@@ -205,7 +205,7 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
         <select id="history-profile" className="control" value={profileKey} disabled={busy === "promote" || profilesLoading} onChange={(event) => { invalidate(); setProfileKey(event.target.value); }}>
           <option value="">Elegí las reglas del juego</option>{profiles.map(({ profile }) => <option key={`${profile.profile_id}@${profile.revision}`} value={`${profile.profile_id}@${profile.revision}`}>{profile.universe_size} números · {profile.positions} posiciones · {profile.currency}</option>)}
         </select>
-        {profilesLoading ? <p role="status" className="field-help">Cargando perfiles…</p> : profilesError ? <p role="alert" className="field-help">{profilesError}</p> : profiles.length === 0 && <div className="field-help space-y-2"><p>No hay perfiles todavía; creá uno para importar este historial.</p><button type="button" className="btn btn-secondary" onClick={onCreateProfile}>Crear perfil de juego</button><a className="link ml-3" href="#perfiles">Ver Perfiles de juego</a></div>}</div>
+        {profilesLoading ? <p role="status" className="field-help">Cargando perfiles…</p> : profilesError ? <><p role="alert" className="field-help">{profilesError}</p><button type="button" className="btn btn-tertiary" onClick={onRetryProfiles}>Reintentar perfiles</button></> : profiles.length === 0 && <div className="field-help space-y-2"><p>No hay perfiles todavía; creá uno para importar este historial.</p><button type="button" className="btn btn-primary" onClick={onCreateProfile}>Crear perfil de juego</button><a className="link ml-3" href="#perfiles">Ver Perfiles de juego</a></div>}</div>
       {!preview && <div>
         <button type="submit" className="btn btn-primary" aria-busy={busy === "preview"} aria-describedby={importReason ? "history-import-reason" : undefined} disabled={busy !== null || promotionUncertain || !file || !metadata || !selected}>Importar historial</button>
         {importReason && <p id="history-import-reason" className="field-help">{importReason}</p>}
@@ -228,7 +228,7 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
       <div><h2 id="history-library-title" className="section-header">Biblioteca de historiales</h2></div>
       {libraryLoading && !datasets && <Loading rows={3} label="Cargando historiales guardados…" />}
       {libraryError && <div role="alert" className="space-y-2"><p>{libraryError}</p><button type="button" className="btn btn-secondary" onClick={() => setRetry((value) => value + 1)}>Reintentar biblioteca</button></div>}
-      {datasets && !libraryError && datasets.total === 0 && <div role="status"><p>Todavía no hay historiales guardados. Importá uno para usar sus sorteos en una simulación.</p><a className="link" href="#history-import-title">Importar historial</a></div>}
+      {datasets && !libraryError && datasets.total === 0 && <div role="status"><p>Todavía no hay historiales guardados. Importá uno para usar sus sorteos en una simulación.</p><a className="btn btn-primary" href="#history-import-title">Importar historial</a></div>}
       {datasets && !libraryError && <ul aria-busy={libraryLoading} className="divide-y divide-border">{datasets.items.map((item) => <li key={item.dataset_sha256} className="space-y-2 py-4">
         <h3 className="font-medium">Historial · {item.records_total.toLocaleString("es-ES")} sorteos</h3>
         <p className="field-help">Fuente: {item.source_id} · {item.first_draw} – {item.last_draw} · {item.positions} posiciones</p>
@@ -254,6 +254,7 @@ export function DataPage() {
   const [profileTotal, setProfileTotal] = useState(0);
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [profilesError, setProfilesError] = useState("");
+  const [profilesRetry, setProfilesRetry] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [draft, setDraft] = useState<Draft>(initial);
   const [preview, setPreview] = useState<{ body: ImportRequest; result: ImportPreview; generation: number } | null>(null);
@@ -271,6 +272,8 @@ export function DataPage() {
 
   useEffect(() => {
     let live = true;
+    setProfilesError("");
+    setProfilesLoading(true);
     apiClient.getProfiles(0, 100).then((catalog) => {
       if (!live) return;
       setProfiles(catalog.items);
@@ -282,8 +285,11 @@ export function DataPage() {
       setProfilesError(failureMessage(cause, "cargar los perfiles"));
       setProfilesLoading(false);
     });
-    return () => { live = false; generation.current++; };
-  }, []);
+    return () => { live = false; };
+  }, [profilesRetry]);
+
+  // A profiles retry must not invalidate an in-flight preview; only unmount does.
+  useEffect(() => () => { generation.current++; }, []);
 
   useEffect(() => {
     if (!error) return;
@@ -395,7 +401,7 @@ export function DataPage() {
     <section id="perfiles" aria-labelledby="profiles-title" className="space-y-4">
       <h2 id="profiles-title" className="section-header">Perfiles de juego</h2>
       {profilesLoading && <Loading rows={2} label="Cargando perfiles guardados…" />}
-      {profilesError && <p role="alert" className="field-help">{profilesError}</p>}
+      {profilesError && <div role="alert" className="field-help space-y-2"><p>{profilesError}</p><button type="button" className="btn btn-tertiary" onClick={() => setProfilesRetry((value) => value + 1)}>Reintentar perfiles</button></div>}
       {!profilesLoading && !profilesError && profiles.length === 0 && <p role="status">Todavía no hay perfiles guardados. Creá uno para definir las reglas del sorteo con el botón «Crear perfil de juego».</p>}
       {profiles.length > 0 && <ul className="divide-y divide-border">{profiles.map(({ profile }) => <li key={`${profile.profile_id}@${profile.revision}`} className="py-3">
         <h3 className="font-medium">{profile.universe_size} números · {profile.positions} posiciones</h3>
@@ -414,7 +420,7 @@ export function DataPage() {
             positions: Array.from({ length: item.profile.positions }, (_, index) => `pos${index + 1}`) }));
         }} />
     </section>
-    <HistoryImportAndLibrary profiles={profiles} profilesLoading={profilesLoading} profilesError={profilesError}
+    <HistoryImportAndLibrary profiles={profiles} profilesLoading={profilesLoading} profilesError={profilesError} onRetryProfiles={() => setProfilesRetry((value) => value + 1)}
       onCreateProfile={() => setProfileOpenRequest((value) => value + 1)} />
     <section aria-labelledby="advanced-title" className="border-t border-border pt-5">
     <h2 id="advanced-title" className="section-header">Más formas de importar</h2>
