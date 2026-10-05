@@ -1,59 +1,59 @@
-// Contract coverage: F-UI-019 typographic scale; F-UI-020 text contrast; F-UI-021 accent/control contrast; F-UI-022 semantic colors.
+// Contract coverage: Material 3 token completeness and accessible role-pair contrast.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { contrastRatio, WCAG_AA_TEXT_RATIO, WCAG_AA_UI_RATIO } from "./contrast";
 
-const tokensPath = resolve(import.meta.dirname, "../styles/tokens.css");
-const tokensCss = readFileSync(tokensPath, "utf-8");
+const tokensCss = readFileSync(resolve(import.meta.dirname, "../styles/tokens.css"), "utf-8");
 
-function readToken(name: string): string {
-  const match = tokensCss.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`));
-  if (!match) throw new Error(`token ${name} not found in tokens.css`);
-  return match[1];
+function scheme(selector: string): Map<string, string> {
+  const block = tokensCss.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*\\{([^}]+)\\}`))?.[1];
+  if (!block) throw new Error(`scheme ${selector} not found in tokens.css`);
+  return new Map(Array.from(block.matchAll(/(--[\w-]+):\s*([^;]+);/g), ([, name, value]) => [name, value.trim()]));
 }
 
-function readRemToken(name: string): number {
-  const match = tokensCss.match(new RegExp(`${name}:\\s*([\\d.]+)rem`));
-  if (!match) throw new Error(`token ${name} not found as a rem value in tokens.css`);
-  return Number(match[1]);
+const light = scheme(":root");
+const dark = scheme('[data-theme="dark"]');
+const requiredColors = [
+  "primary", "on-primary", "primary-container", "on-primary-container",
+  "secondary", "on-secondary", "tertiary", "on-tertiary",
+  "background", "on-background", "surface", "on-surface", "surface-variant",
+  "on-surface-variant", "surface-container-low", "surface-container",
+  "surface-container-high", "surface-container-highest", "outline", "outline-variant",
+  "error", "on-error",
+];
+
+function color(tokens: Map<string, string>, role: string): string {
+  const value = tokens.get(`--md-sys-color-${role}`);
+  if (!value || !/^#[\da-f]{6}$/i.test(value)) throw new Error(`invalid or missing color role ${role}`);
+  return value;
 }
 
-describe("typographic scale", () => {
-  const scale = ["--type-small", "--type-body", "--type-subsection", "--type-section", "--type-large", "--type-display", "--type-h1"].map(readRemToken);
-  it("# F-UI-019 uses a consistent 1.125–1.2 ratio and keeps desktop H1 within 32–40px", () => {
-    for (let index = 1; index < scale.length; index += 1) {
-      const ratio = scale[index] / scale[index - 1];
-      expect(ratio).toBeGreaterThanOrEqual(1.125);
-      expect(ratio).toBeLessThanOrEqual(1.2);
+describe("Material 3 design tokens", () => {
+  it("provides complete light and dark color schemes and the full type/shape/motion system", () => {
+    for (const tokens of [light, dark]) {
+      for (const role of requiredColors) expect(color(tokens, role)).toMatch(/^#[\da-f]{6}$/i);
+      for (const name of [
+        "--md-sys-typescale-display-large-size", "--md-sys-typescale-headline-small-size",
+        "--md-sys-typescale-title-medium-size", "--md-sys-typescale-body-large-size",
+        "--md-sys-typescale-label-small-size", "--md-sys-shape-corner-xs",
+        "--md-sys-shape-corner-xl", "--md-sys-motion-duration-medium2",
+        "--md-sys-motion-easing-emphasized", "--md-sys-elevation-level2",
+      ]) expect(tokensCss).toContain(name);
     }
-    expect(scale.at(-1)! * 16).toBeGreaterThanOrEqual(32);
-    expect(scale.at(-1)! * 16).toBeLessThanOrEqual(40);
+    expect(tokensCss).toContain("prefers-color-scheme: dark");
+    expect(tokensCss).toContain("font-variant-numeric: tabular-nums");
+    expect(tokensCss).not.toMatch(/Georgia|Times New Roman|border-radius:\s*0(?:px|rem)?\b/i);
   });
-});
 
-describe("token contrast (UX2-UX3)", () => {
-  const bg = readToken("--color-bg");
-  const surface = readToken("--color-surface");
-  const field = readToken("--color-field");
-  const text = readToken("--color-text");
-  const textSecondary = readToken("--color-text-secondary");
-  const accent = readToken("--color-accent");
-  const borderControl = readToken("--color-border-control");
-
-  it.each([["text on bg", text, bg], ["text on surface", text, surface], ["text on field", text, field], ["secondary text on bg", textSecondary, bg], ["secondary text on surface", textSecondary, surface], ["secondary text on field", textSecondary, field]])("%s meets WCAG AA text contrast (>=4.5:1)", (_label, fg, background) => {
-    expect(contrastRatio(fg, background)).toBeGreaterThanOrEqual(WCAG_AA_TEXT_RATIO);
-  });
-  it.each([["accent on bg", accent, bg], ["accent on surface", accent, surface], ["accent on field", accent, field], ["control border on bg", borderControl, bg], ["control border on surface", borderControl, surface], ["control border on field", borderControl, field]])("%s meets WCAG AA UI-component contrast (>=3:1)", (_label, fg, background) => {
-    expect(contrastRatio(fg, background)).toBeGreaterThanOrEqual(WCAG_AA_UI_RATIO);
-  });
-  it.each([["accent as text on bg", accent, bg], ["accent as text on surface", accent, surface], ["accent as text on field", accent, field]])("%s meets WCAG AA text contrast (>=4.5:1)", (_label, fg, background) => {
-    expect(contrastRatio(fg, background)).toBeGreaterThanOrEqual(WCAG_AA_TEXT_RATIO);
-  });
-  it.each(["--color-positive", "--color-negative", "--color-warning", "--color-info"])("%s meets WCAG AA text contrast on ledger surfaces", (token) => {
-    const color = readToken(token);
-    for (const background of [bg, surface, field]) {
-      expect(contrastRatio(color, background)).toBeGreaterThanOrEqual(WCAG_AA_TEXT_RATIO);
-    }
+  it.each([["claro", light], ["oscuro", dark]] as const)("keeps key %s role pairs accessible", (_scheme, tokens) => {
+    for (const [foreground, background] of [
+      ["on-surface", "surface"],
+      ["on-background", "background"],
+      ["on-primary", "primary"],
+      ["on-primary-container", "primary-container"],
+      ["on-tertiary", "tertiary"],
+    ]) expect(contrastRatio(color(tokens, foreground), color(tokens, background))).toBeGreaterThanOrEqual(WCAG_AA_TEXT_RATIO);
+    expect(contrastRatio(color(tokens, "outline"), color(tokens, "surface"))).toBeGreaterThanOrEqual(WCAG_AA_UI_RATIO);
   });
 });

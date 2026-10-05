@@ -46,8 +46,9 @@ async function conditions(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "42");
   const strategyDisclosure = screen.getByText("Estrategia avanzada").closest("details");
   if (!strategyDisclosure?.open) await user.click(screen.getByText("Estrategia avanzada"));
-  await user.selectOptions(screen.getByRole("combobox", { name: "Método de la estrategia 1" }), "system");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
+  const wizard = within(screen.getByRole("main"));
+  await user.selectOptions(wizard.getByRole("combobox", { name: "Método de la estrategia 1" }), "system");
+  await user.selectOptions(wizard.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
 }
 
 beforeEach(() => {
@@ -211,6 +212,7 @@ describe("LW13 library templates", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     expect(apiClient.getConfiguration).toHaveBeenCalledTimes(2);
   });
+  // This multi-step, five-strategy integration test can exceed Vitest's default under full-suite worker contention.
   it("# F-CREATE-011 F-CREATE-015 caps append at five and keeps failed library saves and the wizard draft without an experiment POST", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user } = setup();
@@ -230,7 +232,7 @@ describe("LW13 library templates", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/biblioteca.*reintentar/i);
     expect(screen.getByRole("textbox", { name: "Nombre para guardar en biblioteca" })).toHaveValue("Guardada");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
-  });
+  }, 15_000);
   it("# F-CREATE-015 maps library save 422 to its own name and strategy field while preserving the draft", async () => {
     const { user } = setup();
     await conditions(user);

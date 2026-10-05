@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -14,27 +14,31 @@ function renderShell(path = "/experimentos") {
 }
 
 describe("Shell navigation", () => {
-  it("# F-SHELL-003 F-SHELL-004 exposes exactly four canonical destinations", () => {
+  it("# F-SHELL-003 F-SHELL-004 exposes four canonical mobile destinations and the extended action", () => {
     renderShell();
     const navigation = screen.getByRole("navigation", { name: "Navegación principal" });
     const destinations = [
-      ["Simulaciones", "/experimentos"],
+      ["Experimentos", "/experimentos"],
       ["Estrategias", "/configuraciones"],
       ["Datos", "/datos"],
       ["Ajustes", "/ajustes"],
     ];
     expect(navigation.querySelectorAll("a")).toHaveLength(4);
     for (const [name, href] of destinations) {
-      expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+      const link = navigation.querySelector<HTMLAnchorElement>(`a[href="${href}"]`);
+      expect(link).not.toBeNull();
+      expect(link).toHaveTextContent(name);
+      if (name !== "Experimentos") expect(within(navigation).getByRole("link", { name })).toHaveAttribute("href", href);
     }
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
   });
 
-  it("# F-SHELL-006 marks the current destination and uses a two-pixel active accent rule", () => {
+  it("# F-SHELL-006 marks the current destination with the Material 3 active indicator", () => {
     renderShell("/configuraciones");
     const link = screen.getByRole("link", { name: "Estrategias" });
     expect(link).toHaveAttribute("aria-current", "page");
-    expect(link.className).toMatch(/border-l-2/);
-    expect(link.className).toMatch(/border-accent/);
+    expect(link.className).toMatch(/shell-nav-link/);
+    expect(link.className).not.toMatch(/border-l-2/);
   });
 
   it("# F-SHELL-010 keeps the queue control accessible and connected to QueueDrawer", async () => {
@@ -55,12 +59,12 @@ describe("Shell navigation", () => {
     expect(heading.className).not.toMatch(/\bbreak-(?:all|words)\b/);
   });
 
-  it("# F-SHELL-012 keeps navigation visible and compact below the desktop rail breakpoint", () => {
+  it("# F-SHELL-012 keeps bottom navigation as the mobile base and exposes theme controls", () => {
     renderShell();
     const nav = screen.getByRole("navigation", { name: "Navegación principal" });
-    expect(nav.className).toMatch(/w-full/);
-    expect(nav.className).toMatch(/min-\[900px\]:w-\[210px\]/);
+    expect(nav.className).toMatch(/shell-navigation/);
     expect(nav.className).not.toMatch(/hidden/);
-    expect(screen.getAllByRole("link")).toHaveLength(5); // Skip link plus four destinations.
+    expect(screen.getByRole("button", { name: /Cambiar tema/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(6); // Skip link, four destinations, and extended FAB.
   });
 });

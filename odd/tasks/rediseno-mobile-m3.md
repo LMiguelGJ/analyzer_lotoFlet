@@ -13,6 +13,11 @@ Decisiones confirmadas por entrevista (2026-10-05):
 Contrato de dirección (Material 3 web + Impeccable, mobile-first): ver `DESIGN.md`.
 Anti-referencia: el mundo visual anterior (oscuro «Pi», Georgia, radio 0).
 
+Modo de ejecución: YOLO nocturno (usuario ausente, «nunca pares»). Sin preguntas:
+las decisiones de producto razonables se toman y se documentan acá. La calidad se
+mide contra la especificación Material 3 + craft floor de Impeccable (el usuario
+fijó el canon M3; no hay roll de conceptos).
+
 ## Alcance
 
 Frontend `webapp/frontend` únicamente. Backend, API, contratos, datos históricos y

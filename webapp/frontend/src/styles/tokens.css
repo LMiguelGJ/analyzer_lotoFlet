@@ -1,101 +1,279 @@
 /*
- * Design tokens (spec especificaciones-laboratorio-web.md, UX2-UX11).
- * --color-border-control is an addition on top of the spec's UX2 table: the
- * spec's single "Separador" token (#3b4652) measures ~1.4-1.75:1 against the
- * surfaces it separates, which is correct for a decorative panel divider but
- * fails the UX3 3:1 target for functional UI-component borders (inputs,
- * buttons, dialog panels). --color-border-control (#6c7f92) is the smallest
- * adjustment that clears 3:1 against bg/surface/field while staying in the
- * same blue-gray family. Measured ratios (src/lib/tokens.test.ts, WCAG
- * relative-luminance formula):
- *   text/bg 11.27  text/surface 9.96  text/field 9.12
- *   secondary/bg 8.11  secondary/surface 7.17  secondary/field 6.56
- *   accent/bg 7.48  accent/surface 6.61  accent/field 6.05
- *   border-control/bg 4.07  border-control/surface 3.60  border-control/field 3.29
- * --color-border (decorative separators) is exempt from the 3:1 rule and
- * keeps the spec's exact value. The visible focus ring itself
- * (:focus-visible in index.css) uses --color-accent, not this token; this
- * token only covers static borders on fields/buttons/dialog panels.
- */
+THESIS: A personal financial-simulation lab that behaves like a modern mobile Material 3 app: guided step-by-step configuration, plain language, financial truth always visible. It refuses the old dark ledger dashboard with dense technical panels.
+OWN-WORLD: Material 3 tonal system — deep teal primary, amber result accents, neutral tonal surfaces, Roboto Flex with tabular figures, M3 shape, elevation and state layers, bottom navigation plus extended FAB.
+STORY: The user configures game rules, runs a simulation, and reads whether the strategy survives — with zero jargon.
+FIRST VIEWPORT: Phone width: small top app bar with screen title and actions, one clear task surface, extended FAB "Nueva simulación", bottom navigation with four destinations (Experimentos, Estrategias, Datos, Ajustes); financial summary visible at a glance.
+FORM: Material 3 app grammar, brief-pinned by the user (m3.material.io/develop/web + Impeccable); no concept roll — the pinned canon is the commitment.
+*/
+
 :root {
-  --color-bg: #171e26;
-  --color-surface: #222830;
-  --color-field: #242f3b;
-  --color-text: #d0d4d8;
-  --color-text-secondary: #adb5bf;
-  --color-accent: #7eb3da;
-  --color-border: #3b4652;
-  --color-border-control: #6c7f92;
-  --chart-1: #876c42;
-  --chart-2: #6a7e9c;
-  --chart-3: #925e6d;
-  --chart-4: #60877a;
+  color-scheme: light;
+  --md-sys-color-primary: #006a60;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #9ff2e5;
+  --md-sys-color-on-primary-container: #00201c;
+  --md-sys-color-secondary: #4a635e;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #cce9e2;
+  --md-sys-color-on-secondary-container: #06201c;
+  --md-sys-color-tertiary: #805600;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #ffdea6;
+  --md-sys-color-on-tertiary-container: #291900;
+  --md-sys-color-error: #ba1a1a;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #ffdad6;
+  --md-sys-color-on-error-container: #410002;
+  --md-sys-color-background: #f8faf7;
+  --md-sys-color-on-background: #191c1b;
+  --md-sys-color-surface: #f8faf7;
+  --md-sys-color-on-surface: #191c1b;
+  --md-sys-color-surface-variant: #dce5e1;
+  --md-sys-color-on-surface-variant: #414845;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f2f4f1;
+  --md-sys-color-surface-container: #eceeeb;
+  --md-sys-color-surface-container-high: #e6e9e6;
+  --md-sys-color-surface-container-highest: #e1e3e0;
+  --md-sys-color-outline: #626a66;
+  --md-sys-color-outline-variant: #c1c9c5;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #2e3130;
+  --md-sys-color-inverse-on-surface: #eff1ee;
+  --md-sys-color-inverse-primary: #80d5c8;
+  --md-sys-color-surface-tint: #006a60;
 
-  --font-heading: Georgia, "Times New Roman", serif;
-  --font-mono: ui-monospace, Consolas, "SFMono-Regular", Menlo, monospace;
-  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --md-sys-typescale-display-large-size: 3.5625rem;
+  --md-sys-typescale-display-large-line-height: 4rem;
+  --md-sys-typescale-display-large-weight: 400;
+  --md-sys-typescale-display-medium-size: 2.8125rem;
+  --md-sys-typescale-display-medium-line-height: 3.25rem;
+  --md-sys-typescale-display-medium-weight: 400;
+  --md-sys-typescale-display-small-size: 2.25rem;
+  --md-sys-typescale-display-small-line-height: 2.75rem;
+  --md-sys-typescale-display-small-weight: 400;
+  --md-sys-typescale-headline-large-size: 2rem;
+  --md-sys-typescale-headline-large-line-height: 2.5rem;
+  --md-sys-typescale-headline-large-weight: 400;
+  --md-sys-typescale-headline-medium-size: 1.75rem;
+  --md-sys-typescale-headline-medium-line-height: 2.25rem;
+  --md-sys-typescale-headline-medium-weight: 400;
+  --md-sys-typescale-headline-small-size: 1.5rem;
+  --md-sys-typescale-headline-small-line-height: 2rem;
+  --md-sys-typescale-headline-small-weight: 400;
+  --md-sys-typescale-title-large-size: 1.375rem;
+  --md-sys-typescale-title-large-line-height: 1.75rem;
+  --md-sys-typescale-title-large-weight: 400;
+  --md-sys-typescale-title-medium-size: 1rem;
+  --md-sys-typescale-title-medium-line-height: 1.5rem;
+  --md-sys-typescale-title-medium-weight: 500;
+  --md-sys-typescale-title-small-size: 0.875rem;
+  --md-sys-typescale-title-small-line-height: 1.25rem;
+  --md-sys-typescale-title-small-weight: 500;
+  --md-sys-typescale-body-large-size: 1rem;
+  --md-sys-typescale-body-large-line-height: 1.5rem;
+  --md-sys-typescale-body-large-weight: 400;
+  --md-sys-typescale-body-medium-size: 0.875rem;
+  --md-sys-typescale-body-medium-line-height: 1.25rem;
+  --md-sys-typescale-body-medium-weight: 400;
+  --md-sys-typescale-body-small-size: 0.75rem;
+  --md-sys-typescale-body-small-line-height: 1rem;
+  --md-sys-typescale-body-small-weight: 400;
+  --md-sys-typescale-label-large-size: 0.875rem;
+  --md-sys-typescale-label-large-line-height: 1.25rem;
+  --md-sys-typescale-label-large-weight: 500;
+  --md-sys-typescale-label-medium-size: 0.75rem;
+  --md-sys-typescale-label-medium-line-height: 1rem;
+  --md-sys-typescale-label-medium-weight: 500;
+  --md-sys-typescale-label-small-size: 0.6875rem;
+  --md-sys-typescale-label-small-line-height: 1rem;
+  --md-sys-typescale-label-small-weight: 500;
 
-  --type-small: 0.875rem;
-  --type-body: 1rem;
-  --type-subsection: 1.125rem;
-  --type-section: 1.265625rem;
-  --type-large: 1.5rem;
-  --type-display: 1.75rem;
-  --type-h1: 2rem;
+  --md-sys-shape-corner-xs: 4px;
+  --md-sys-shape-corner-sm: 8px;
+  --md-sys-shape-corner-md: 12px;
+  --md-sys-shape-corner-lg: 16px;
+  --md-sys-shape-corner-xl: 28px;
+  --md-sys-shape-corner-full: 9999px;
+  --md-sys-elevation-level0: none;
+  --md-sys-elevation-level1: 0 1px 2px rgb(25 28 27 / 12%), 0 1px 3px 1px rgb(25 28 27 / 8%);
+  --md-sys-elevation-level2: 0 1px 2px rgb(25 28 27 / 15%), 0 2px 6px 2px rgb(25 28 27 / 10%);
+  --md-sys-elevation-level3: 0 4px 8px 3px rgb(25 28 27 / 12%), 0 1px 3px rgb(25 28 27 / 15%);
+  --md-sys-elevation-level4: 0 6px 10px 4px rgb(25 28 27 / 12%), 0 2px 3px rgb(25 28 27 / 15%);
+  --md-sys-elevation-level5: 0 8px 12px 6px rgb(25 28 27 / 12%), 0 4px 4px rgb(25 28 27 / 15%);
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-medium1: 200ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-long1: 400ms;
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 0.2);
 
+  --font-body: "Roboto Flex", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: "Roboto Flex", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --type-small: var(--md-sys-typescale-body-medium-size);
+  --type-body: var(--md-sys-typescale-body-large-size);
+  --type-subsection: var(--md-sys-typescale-title-large-size);
+  --type-section: var(--md-sys-typescale-headline-small-size);
+  --type-large: var(--md-sys-typescale-headline-medium-size);
+  --type-display: var(--md-sys-typescale-headline-large-size);
+  --type-h1: var(--md-sys-typescale-headline-large-size);
+  --type-label: var(--font-body);
+  --type-figure: var(--font-body);
+  --tracking-label: 0;
   --space-1: 8px;
   --space-2: 16px;
   --space-3: 24px;
   --space-4: 40px;
   --space-5: 64px;
-  --space-page-margin: 28px;
+  --space-page-margin: 16px;
   --space-section-gap: 24px;
-  --radius-control: 0;
-  --control-height: 42px;
+  --radius-control: var(--md-sys-shape-corner-sm);
+  --control-height: 48px;
+  --motion-fast: var(--md-sys-motion-duration-short3);
+  --motion-easing: var(--md-sys-motion-easing-standard);
+  --motion-control-duration: var(--md-sys-motion-duration-medium1);
+  --motion-control-easing: var(--md-sys-motion-easing-emphasized);
 
-  --motion-fast: 150ms;
-  --motion-easing: ease-out;
-
-  /* Ledger roles: semantic hues are reserved for figures, state chips and indicators. */
-  --color-positive: #8fc7a3;
-  --color-negative: #e29a9a;
-  --color-warning: #e5bd72;
-  --color-info: #7eb3da;
+  /* Compatibility aliases keep existing screens on the same M3 semantic roles. */
+  --color-bg: var(--md-sys-color-background);
+  --color-surface: var(--md-sys-color-surface-container-low);
+  --color-field: var(--md-sys-color-surface-container-lowest);
+  --color-text: var(--md-sys-color-on-surface);
+  --color-text-secondary: var(--md-sys-color-on-surface-variant);
+  --color-accent: var(--md-sys-color-primary);
+  --color-border: var(--md-sys-color-outline-variant);
+  --color-border-control: var(--md-sys-color-outline);
+  --color-positive: var(--md-sys-color-tertiary);
+  --color-negative: var(--md-sys-color-error);
+  --color-warning: var(--md-sys-color-tertiary);
+  --color-info: var(--md-sys-color-primary);
+  --chart-1: #006a60;
+  --chart-2: #805600;
+  --chart-3: #ba1a1a;
+  --chart-4: #4a635e;
   --border-hairline: 1px solid var(--color-border);
   --border-control: 1px solid var(--color-border-control);
-  --motion-control-duration: 150ms;
-  --motion-control-easing: ease-out;
+}
 
-  --type-figure: var(--font-mono);
-  --type-label: var(--font-body);
-  --tracking-label: 0.08em;
+[data-theme="dark"] {
+  color-scheme: dark;
+  --md-sys-color-primary: #80d5c8;
+  --md-sys-color-on-primary: #003730;
+  --md-sys-color-primary-container: #005048;
+  --md-sys-color-on-primary-container: #9ff2e5;
+  --md-sys-color-secondary: #b1ccc5;
+  --md-sys-color-on-secondary: #1c3530;
+  --md-sys-color-secondary-container: #334b46;
+  --md-sys-color-on-secondary-container: #cce9e2;
+  --md-sys-color-tertiary: #ffdea6;
+  --md-sys-color-on-tertiary: #432c00;
+  --md-sys-color-tertiary-container: #614000;
+  --md-sys-color-on-tertiary-container: #ffdea6;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffdad6;
+  --md-sys-color-background: #101f1d;
+  --md-sys-color-on-background: #e0e3df;
+  --md-sys-color-surface: #101f1d;
+  --md-sys-color-on-surface: #e0e3df;
+  --md-sys-color-surface-variant: #414845;
+  --md-sys-color-on-surface-variant: #c1c9c5;
+  --md-sys-color-surface-container-lowest: #0b1412;
+  --md-sys-color-surface-container-low: #172624;
+  --md-sys-color-surface-container: #1b2a28;
+  --md-sys-color-surface-container-high: #253431;
+  --md-sys-color-surface-container-highest: #303f3c;
+  --md-sys-color-outline: #8b938f;
+  --md-sys-color-outline-variant: #414845;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-inverse-surface: #e0e3df;
+  --md-sys-color-inverse-on-surface: #2e3130;
+  --md-sys-color-inverse-primary: #006a60;
+  --md-sys-color-surface-tint: #80d5c8;
+  --color-positive: var(--md-sys-color-tertiary);
+  --color-negative: var(--md-sys-color-error);
+  --color-warning: var(--md-sys-color-tertiary);
+  --color-info: var(--md-sys-color-primary);
+  --chart-1: #80d5c8;
+  --chart-2: #ffdea6;
+  --chart-3: #ffb4ab;
+  --chart-4: #b1ccc5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --md-sys-color-primary: #80d5c8;
+    --md-sys-color-on-primary: #003730;
+    --md-sys-color-primary-container: #005048;
+    --md-sys-color-on-primary-container: #9ff2e5;
+    --md-sys-color-secondary: #b1ccc5;
+    --md-sys-color-on-secondary: #1c3530;
+    --md-sys-color-secondary-container: #334b46;
+    --md-sys-color-on-secondary-container: #cce9e2;
+    --md-sys-color-tertiary: #ffdea6;
+    --md-sys-color-on-tertiary: #432c00;
+    --md-sys-color-tertiary-container: #614000;
+    --md-sys-color-on-tertiary-container: #ffdea6;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error-container: #93000a;
+    --md-sys-color-on-error-container: #ffdad6;
+    --md-sys-color-background: #101f1d;
+    --md-sys-color-on-background: #e0e3df;
+    --md-sys-color-surface: #101f1d;
+    --md-sys-color-on-surface: #e0e3df;
+    --md-sys-color-surface-variant: #414845;
+    --md-sys-color-on-surface-variant: #c1c9c5;
+    --md-sys-color-surface-container-lowest: #0b1412;
+    --md-sys-color-surface-container-low: #172624;
+    --md-sys-color-surface-container: #1b2a28;
+    --md-sys-color-surface-container-high: #253431;
+    --md-sys-color-surface-container-highest: #303f3c;
+    --md-sys-color-outline: #8b938f;
+    --md-sys-color-outline-variant: #414845;
+    --md-sys-color-inverse-surface: #e0e3df;
+    --md-sys-color-inverse-on-surface: #2e3130;
+    --md-sys-color-inverse-primary: #006a60;
+    --md-sys-color-surface-tint: #80d5c8;
+    --color-positive: var(--md-sys-color-tertiary);
+    --color-negative: var(--md-sys-color-error);
+    --color-warning: var(--md-sys-color-tertiary);
+    --color-info: var(--md-sys-color-primary);
+    --chart-1: #80d5c8;
+    --chart-2: #ffdea6;
+    --chart-3: #ffb4ab;
+    --chart-4: #b1ccc5;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition-duration: 1ms !important;
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 }
 
-html,
-body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
+html, body {
+  min-height: 100%;
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
   font-family: var(--font-body);
-  font-size: var(--type-body);
+  font-size: var(--md-sys-typescale-body-large-size);
   font-style: normal;
+  font-synthesis: none;
+  font-optical-sizing: auto;
 }
 
-/* Faint, static graph-paper texture (UX11): a measuring-tool grid, not a decorative
-   gradient. Part of the pinned Pi identity (subtle page grid, like pi.dev). Kept at
-   very low opacity and only on the page background, never animated. */
-body {
-  background-image:
-    repeating-linear-gradient(0deg, rgba(59, 70, 82, 0.35) 0 1px, transparent 1px 32px),
-    repeating-linear-gradient(90deg, rgba(59, 70, 82, 0.35) 0 1px, transparent 1px 32px);
-  background-blend-mode: normal;
-}
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; }
+figure, .metric-value, .data-list-numeric, .table-numeric, .ledger-figure, .ledger-verdict-figures { font-variant-numeric: tabular-nums; }
+body { margin: 0; }
