@@ -94,6 +94,7 @@ def _request(profile, dataset_sha, definition, start="2025-01-01 00:00", max_dra
 
 
 def test_closed_definition_and_canonical_batch_codec_reject_legacy_versions():
+    """B-DOM-171: v5 batch request codec is closed, canonical, and version-specific."""
     profile = legacy_quiniela_80_profile()
     definition = StrategyDefinition.reference_transition_audaz()
     request = _request(profile, "a" * 64, definition)
@@ -129,6 +130,7 @@ def test_closed_definition_and_canonical_batch_codec_reject_legacy_versions():
 
 
 def test_archive_session_requires_ranked_start_and_skips_gap_rows(tmp_path, monkeypatch):
+    """B-DOM-172: archived runs need ranked start and preserve unranked elapsed rows."""
     binding, dataset = _archive_fixture(tmp_path, monkeypatch)
     profile = legacy_quiniela_80_profile()
     definition = StrategyDefinition.reference_cold_25()
@@ -169,6 +171,7 @@ def test_archive_session_requires_ranked_start_and_skips_gap_rows(tmp_path, monk
 
 
 def test_reference_parity_uses_full_causal_history_and_settlement(tmp_path, monkeypatch):
+    """B-DOM-173: reference parity uses causal history before settlement."""
     binding, dataset = _archive_fixture(tmp_path, monkeypatch)
     profile = legacy_quiniela_80_profile()
     definition = StrategyDefinition.reference_parity_50()
@@ -182,6 +185,7 @@ def test_reference_parity_uses_full_causal_history_and_settlement(tmp_path, monk
 
 
 def test_v5_operation_budget_does_not_apply_legacy_source_row_ceiling(tmp_path, monkeypatch):
+    """B-DOM-174: v5 operation budget is explicit and independent of legacy row ceiling."""
     binding, dataset = _archive_fixture(tmp_path, monkeypatch)
     profile = legacy_quiniela_80_profile()
     request = _request(
@@ -195,6 +199,7 @@ def test_v5_operation_budget_does_not_apply_legacy_source_row_ceiling(tmp_path, 
 
 
 def test_batch_rejects_duplicate_names_invalid_limits_and_close_override():
+    """B-DOM-175: v5 batches validate names, limits, and settlement recommendations."""
     profile = legacy_quiniela_80_profile()
     definition = StrategyDefinition.reference_cold_25()
     request = _request(profile, "a" * 64, definition)
@@ -212,6 +217,7 @@ def test_batch_rejects_duplicate_names_invalid_limits_and_close_override():
 
 
 def test_v5_codecs_reject_unknown_nested_fields_and_result_version(tmp_path, monkeypatch):
+    """B-DOM-176: v5 codecs reject unknown nested selector fields and result versions."""
     binding, dataset = _archive_fixture(tmp_path, monkeypatch)
     profile = legacy_quiniela_80_profile()
     request = _request(
@@ -233,6 +239,7 @@ def test_v5_codecs_reject_unknown_nested_fields_and_result_version(tmp_path, mon
 
 
 def test_transition_reference_definition_rejects_invalid_coverage():
+    """B-DOM-177: Transition-Audaz reference definition requires coverage one."""
     transition = StrategyDefinition.reference_transition_audaz()
     assert transition.selector == "archived-transition/v1"
     assert transition.staking == "q80-reference-audaz/v1"
@@ -250,6 +257,7 @@ def test_transition_reference_definition_rejects_invalid_coverage():
 
 
 def test_generic_audaz_coverage_uses_profile_domain_not_q80_reference_limit():
+    """B-DOM-178: Audaz and reference selectors enforce their distinct coverage domains."""
     for coverage in (79, 80, 100, 101, 1_000):
         definition = StrategyDefinition(
             1,
@@ -302,6 +310,7 @@ def test_generic_audaz_coverage_uses_profile_domain_not_q80_reference_limit():
 
 
 def test_custom_1000_universe_flat_and_profile_audaz_run_one_draw():
+    """B-DOM-179: custom 1000-number profile executes flat and Audaz one-draw runs."""
     from laboratorio.domain.contracts import GameProfile
 
     values = legacy_quiniela_80_profile().model_dump(mode="python")
@@ -351,6 +360,7 @@ def test_custom_1000_universe_flat_and_profile_audaz_run_one_draw():
 
 
 def test_v5_recovery_round_limit_result_round_trips_and_replays(tmp_path):
+    """B-DOM-180: v5 recovery limit result round-trips and authenticates by replay."""
     from laboratorio.domain.contracts import GameProfile
 
     values = legacy_quiniela_80_profile().model_dump(mode="python")
@@ -442,6 +452,7 @@ def test_v5_recovery_round_limit_result_round_trips_and_replays(tmp_path):
 
 
 def test_v5_closing_defaults_do_not_override_shared_conditions_on_replay(tmp_path, monkeypatch):
+    """B-DOM-181: strategy closing defaults do not override shared replay conditions."""
     binding, dataset = _archive_fixture(tmp_path, monkeypatch)
     profile = legacy_quiniela_80_profile()
     first = replace(

@@ -24,6 +24,7 @@ EXPECTED = {
 
 
 def test_registry_unique_closed_versions_and_pending_status():
+    """B-DOM-121: capability registry is unique, closed, versioned, and marks pending."""
     entries = registry.PROFILE_CAPABILITIES
     assert len({(item.kind, item.identifier) for item in entries}) == len(entries)
     projected = {kind: registry.supported(cast(registry.CapabilityKind, kind)) for kind in EXPECTED}
@@ -57,6 +58,7 @@ def test_registry_unique_closed_versions_and_pending_status():
 
 
 def test_exact_admission_rejects_pending_unknown_wrong_kind_and_schema():
+    """B-DOM-122: capability admission requires exact supported axis/id/schema."""
     for kind, identifiers in EXPECTED.items():
         axis = cast(registry.CapabilityKind, kind)
         for identifier in identifiers:
@@ -105,6 +107,7 @@ def test_exact_admission_rejects_pending_unknown_wrong_kind_and_schema():
 
 
 def test_api_matrix_exact_projection_and_no_pending_families(monkeypatch):
+    """B-DOM-123: API capability matrix projects the live registry and profile readiness."""
     expected = {
         "ready": True,
         "selector_capabilities": list(EXPECTED["selector"]),
@@ -144,6 +147,7 @@ def test_api_matrix_exact_projection_and_no_pending_families(monkeypatch):
 
 
 def test_audaz_metadata_reports_profile_specific_coverage_bound():
+    """B-DOM-124: Audaz compatible coverage depends on profile multiplier."""
     profile = legacy_quiniela_80_profile()
     metadata = catalog.profile_execution(True, profile)
     assert metadata["audaz_compatibility"]["maximum_compatible_coverage"] == 50

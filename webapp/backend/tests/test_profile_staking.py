@@ -30,6 +30,7 @@ def profile(**changes: Any) -> GameProfile:
 
 
 def test_profile_audaz_generalizes_q80_reference_for_coverage_one_and_fifty():
+    """B-DOM-099: profile Audaz generalizes Q80 stake math across coverage."""
     p = profile()
     assert profile_audaz_stake(p, 1, 2000, 2800) == (800 + 79 - 1) // 79
     assert profile_audaz_stake(p, 50, 2000, 2800) == min((800 + 30 - 1) // 30, 2000 // 50)
@@ -38,6 +39,7 @@ def test_profile_audaz_generalizes_q80_reference_for_coverage_one_and_fifty():
 
 
 def test_profile_audaz_supports_custom_universe_positions_rational_payouts_and_grid():
+    """B-DOM-100: profile Audaz supports custom universes, payouts, and stake grids."""
     p = profile(
         universe_size=37,
         positions=3,
@@ -54,6 +56,7 @@ def test_profile_audaz_supports_custom_universe_positions_rational_payouts_and_g
 
 
 def test_profile_audaz_caps_by_balance_maximum_and_exposure():
+    """B-DOM-101: profile Audaz respects balance, maximum-stake, and exposure caps."""
     p = profile(maximum_stake=10)
     assert profile_audaz_stake(p, 1, 2000, 2800) == 10
     exposed = profile(max_coverage=10, max_exposure=20, maximum_stake=20)
@@ -70,6 +73,7 @@ def test_profile_audaz_caps_by_balance_maximum_and_exposure():
     ],
 )
 def test_profile_audaz_uses_configured_positions_on_non_100_universes(positions, multipliers):
+    """B-DOM-100: profile Audaz uses configured positions for alternate universes."""
     p = profile(
         universe_size=23,
         positions=positions,
@@ -85,12 +89,14 @@ def test_profile_audaz_uses_configured_positions_on_non_100_universes(positions,
 
 
 def test_profile_audaz_rejects_nonpositive_first_hit_margin():
+    """B-DOM-102: profile Audaz requires a positive first-hit margin."""
     p = profile(positions=1, multipliers=[(2, 1)])
     with pytest.raises(ValueError, match="greater than coverage"):
         profile_audaz_stake(p, 2, 100, 200)
 
 
 def test_recovery_ladder_generalizes_universe_positions_rationals_and_increment_grid():
+    """B-DOM-103: recovery ladder generalizes exact math over profiles and stake grids."""
     for positions, multipliers in (
         (1, [(25, 2)]),
         (3, [(40, 1), (6, 1), (2, 1)]),
@@ -119,6 +125,7 @@ def test_recovery_ladder_generalizes_universe_positions_rationals_and_increment_
 
 
 def test_recovery_ladder_matches_q80_reference_and_separates_original70():
+    """B-DOM-104: generalized recovery matches Q80 and distinguishes Original70."""
     p = profile()
     assert profile_recovery_ladder(p, 50, 10, 10) == (1, 2, 6, 16, 42, 112, 299, 797, 2126, 5669)
     # Same formula as rules.py for the compatible Original70 prize table; its
@@ -133,6 +140,7 @@ def test_recovery_ladder_matches_q80_reference_and_separates_original70():
 
 
 def test_recovery_ladder_rejects_nonpositive_margin_bad_gain_and_full_ladder_caps():
+    """B-DOM-105: recovery rejects invalid parameters and caps clipping its full ladder."""
     with pytest.raises(ValueError, match="target_margin"):
         ProfileRecoveryLadderStaking(0, 10, "cycle")
     with pytest.raises(ValueError, match="rounds"):
@@ -148,12 +156,14 @@ def test_recovery_ladder_rejects_nonpositive_margin_bad_gain_and_full_ladder_cap
 
 
 def test_profile_audaz_policy_identity_is_private_and_immutable():
+    """B-DOM-106: profile Audaz policy identity is private and immutable."""
     assert ProfileAudazStaking() == ProfileAudazStaking(1, "profile-audaz/v1")
     with pytest.raises(FrozenInstanceError):
         ProfileAudazStaking().__setattr__("capability", "other")
 
 
 def test_exact_ten_round_q80_recovery_and_distinct_lower_coverage():
+    """B-DOM-107: Q80 recovery ladder matches exact ten-round reference values."""
     # repo_ref/strategy_tests/rules.py:first_prize_ladder (lines 72-87),
     # repo_ref/quiniela_compare.py:_ladder (lines 80-82); not ORIGINAL70.LADDER.
     p = profile()
@@ -170,6 +180,7 @@ def test_exact_ten_round_q80_recovery_and_distinct_lower_coverage():
 
 
 def test_secondary_only_pays_without_resetting_and_first_position_resets():
+    """B-DOM-108: secondary payout advances while first prize resets the cycle."""
     # repo_ref/quiniela_compare.py:step (lines 101-124) resets ONLY on first_hit.
     p = profile()
     initial = Q80LadderState(2000, 0)
@@ -193,6 +204,7 @@ def test_secondary_only_pays_without_resetting_and_first_position_resets():
 
 
 def test_ten_misses_cycle_in_compare_variant_not_e5_terminal_loss():
+    """B-DOM-109: ten failed Q80 rungs cycle instead of terminal E5 loss."""
     # repo_ref/quiniela_compare.py:step (lines 117-123) cycles modulo ten;
     # repo_ref/strategy_tests/test_quiniela80_experiments.py E5 counts a
     # complete loss after its tenth bet instead. This is the compare variant.
@@ -209,6 +221,7 @@ def test_ten_misses_cycle_in_compare_variant_not_e5_terminal_loss():
 
 
 def test_exact_funds_boundary_and_unaffordable_current_or_next_rung():
+    """B-DOM-110: current/next rung funding obeys exact balance boundaries."""
     p = profile()
     exact = step_q80_first_prize_cycle(p, 50, Q80LadderState(50), 0, False, 500)
     assert (exact.cost, exact.paid, exact.state, exact.outcome) == (
@@ -253,11 +266,13 @@ def test_exact_funds_boundary_and_unaffordable_current_or_next_rung():
     ],
 )
 def test_incompatible_profiles_or_coverage_are_rejected(changes, error):
+    """B-DOM-111: Q80 cycling rejects profiles/capabilities incompatible with reference."""
     with pytest.raises(ValueError, match=error):
         q80_first_prize_ladder(profile(**changes), 50)
 
 
 def test_profile_caps_reject_whole_ladder_not_clip_a_later_rung():
+    """B-DOM-112: profile caps validate the entire Q80 ladder, not clipped rungs."""
     with pytest.raises(ValueError, match="maximum stake"):
         q80_first_prize_ladder(profile(maximum_stake=100), 50)
     with pytest.raises(ValueError, match="exposure"):
@@ -273,6 +288,7 @@ def test_profile_caps_reject_whole_ladder_not_clip_a_later_rung():
 
 @pytest.mark.parametrize("coverage", [True, 0, 80, 100, 1.0])
 def test_invalid_reference_coverage_is_rejected(coverage):
+    """B-DOM-113: Q80 reference coverage rejects bool, invalid, and non-integer values."""
     with pytest.raises(ValueError, match="coverage"):
         q80_first_prize_ladder(profile(), coverage)
 
@@ -287,23 +303,27 @@ def test_invalid_reference_coverage_is_rejected(coverage):
     ],
 )
 def test_invalid_step_inputs_fail_explicitly(state, unit, first, goal):
+    """B-DOM-113: cycle step validates exact state, unit, hit, and goal inputs."""
     with pytest.raises(ValueError):
         step_q80_first_prize_cycle(profile(), 50, state, unit, first, goal)
 
 
 @pytest.mark.parametrize("balance, round_index", [(-1, 0), (100, 10), (True, 0)])
 def test_invalid_state_fails_explicitly(balance, round_index):
+    """B-DOM-113: Q80 ladder state rejects invalid balance, round, and bool values."""
     with pytest.raises(ValueError):
         Q80LadderState(balance, round_index)
 
 
 def test_legacy_descriptor_has_same_q80_financial_ladder():
+    """B-DOM-107: legacy descriptor shares the exact Q80 financial ladder."""
     assert q80_first_prize_ladder(legacy_quiniela_80_profile(), 50) == (
         q80_first_prize_ladder(profile(), 50)
     )
 
 
 def test_forged_profile_cannot_bypass_financial_gate():
+    """B-DOM-114: forged profile copies cannot bypass Q80 financial validation."""
     forged = profile().model_copy(update={"scale": 1})
     with pytest.raises(ValueError, match="scale"):
         q80_first_prize_ladder(forged, 50)

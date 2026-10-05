@@ -28,6 +28,7 @@ from laboratorio.storage.repository import (
 
 
 def test_default_policy_is_conservative_and_workers_are_not_editable():
+    """B-DOM-052: execution defaults stay conservative and worker count is fixed."""
     policy = ExecutionPolicy.defaults()
     assert policy.max_strategies_per_batch == 3
     assert policy.worker_count == 1
@@ -40,6 +41,7 @@ def test_default_policy_is_conservative_and_workers_are_not_editable():
 
 
 def test_policy_fields_are_bounded_not_arbitrary():
+    """B-DOM-053: policy limits reject out-of-range values."""
     defaults = ExecutionPolicy.defaults().as_dict()
     with pytest.raises(ValueError):
         ExecutionPolicy.from_values({**defaults, "max_pending_runs": 101})
@@ -88,6 +90,7 @@ def _saved_inputs(repo, *, row_count=2):
 
 
 def test_admission_uses_exact_revision_persists_snapshot_and_is_idempotent(tmp_path):
+    """B-DOM-054: batch admission freezes exact revisions and is idempotent."""
     repo = _new_repo(tmp_path)
     _, _, definition, saved_strategy, submission = _saved_inputs(repo)
     first = admit_profile_batch(repo, submission)
@@ -127,6 +130,7 @@ def test_admission_uses_exact_revision_persists_snapshot_and_is_idempotent(tmp_p
 
 
 def test_batch_ordinals_and_policy_limits_are_frozen_as_explicit_conditions(tmp_path):
+    """B-DOM-055: strategy ordinals and effective policy constraints are persisted."""
     repo = _new_repo(tmp_path)
     _, _, _, _, submission = _saved_inputs(repo)
     second = repo.create_strategy(StrategyDefinition.static_numbers("Second", (8,)))
@@ -162,6 +166,7 @@ def test_batch_ordinals_and_policy_limits_are_frozen_as_explicit_conditions(tmp_
 
 
 def test_archived_strategy_requires_trusted_binding_context(tmp_path):
+    """B-DOM-056: archived strategies require trusted binding context."""
     repo = _new_repo(tmp_path)
     _, _, _, _, submission = _saved_inputs(repo)
     archived = repo.create_strategy(StrategyDefinition.reference_cold_25())
@@ -178,6 +183,7 @@ def test_archived_strategy_requires_trusted_binding_context(tmp_path):
 
 
 def test_admission_rejects_unfunded_and_untrusted_revision_inputs(tmp_path):
+    """B-DOM-057: admission verifies revision hashes and initial funding."""
     repo = _new_repo(tmp_path)
     _, _, _, saved_strategy, submission = _saved_inputs(repo)
     assert saved_strategy is not None
@@ -216,6 +222,7 @@ def test_admission_rejects_unfunded_and_untrusted_revision_inputs(tmp_path):
     ids=("static", "seeded"),
 )
 def test_non_archived_start_must_match_one_saved_source_label_before_writes(tmp_path, definition):
+    """B-DOM-058: unarchived start must resolve uniquely before any write."""
     repo = _new_repo(tmp_path)
     game, dataset, _, _, submission = _saved_inputs(repo)
     saved = repo.create_strategy(definition)
@@ -250,6 +257,7 @@ def test_non_archived_start_must_match_one_saved_source_label_before_writes(tmp_
 
 
 def test_quota_failure_does_not_reserve_a_batch_identity(tmp_path):
+    """B-DOM-059: quota failure leaves batch identity available for retry."""
     repo = _new_repo(tmp_path)
     _, _, _, _, submission = _saved_inputs(repo)
     with pytest.raises(QuotaExceeded):
@@ -261,6 +269,7 @@ def test_quota_failure_does_not_reserve_a_batch_identity(tmp_path):
 
 
 def test_batch_quota_matches_measured_sqlite_delta_at_exact_boundary(tmp_path):
+    """B-DOM-060: quota estimate matches SQLite delta at the exact boundary."""
     def seeded_repo(path):
         repo = _new_repo(path)
         _saved_inputs(repo)
@@ -301,6 +310,7 @@ def test_batch_quota_matches_measured_sqlite_delta_at_exact_boundary(tmp_path):
 
 
 def test_global_pending_run_limit_is_atomic_for_old_submission_shapes(tmp_path):
+    """B-DOM-061: legacy admission enforces the global pending-run limit atomically."""
     repo = _new_repo(tmp_path)
     request = legacy_request("legacy")
     for _ in range(10):
@@ -326,6 +336,7 @@ def test_global_pending_run_limit_is_atomic_for_old_submission_shapes(tmp_path):
 
 
 def test_pending_limit_is_shared_between_profile_v5_and_legacy_admission(tmp_path):
+    """B-DOM-062: pending-run quota is shared across legacy and v5 admission."""
     repo = _new_repo(tmp_path)
     _, _, _, _, submission = _saved_inputs(repo)
     legacy = legacy_request("legacy")
@@ -369,6 +380,7 @@ def test_pending_limit_is_shared_between_profile_v5_and_legacy_admission(tmp_pat
 
 
 def test_static_admission_keeps_full_dataset_above_legacy_ten_thousand_rows(tmp_path):
+    """B-DOM-063: static admission preserves datasets larger than legacy ceiling."""
     repo = _new_repo(tmp_path)
     game = legacy_quiniela_80_profile()
     repo.create_game_profile(game)
@@ -421,6 +433,7 @@ def test_static_admission_keeps_full_dataset_above_legacy_ten_thousand_rows(tmp_
 
 
 def test_client_request_lookup_is_read_only_and_verifies_the_experiment(tmp_path, monkeypatch):
+    """B-DOM-064: client identity lookup is read-only and validates its target."""
     repo = _new_repo(tmp_path)
     _, _, _, _, submission = _saved_inputs(repo)
     identifier = admit_profile_batch(repo, submission)

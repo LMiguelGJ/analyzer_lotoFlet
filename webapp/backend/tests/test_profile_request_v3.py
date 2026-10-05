@@ -27,6 +27,7 @@ def make_request():
 
 
 def test_schema3_roundtrip_is_distinct_from_v1_and_v2():
+    """B-DOM-077: Audaz v3 has distinct schema and never infers a stake."""
     request = make_request()
     wire = serialize_profile_audaz_request(request)
     assert json.loads(wire)["schema_version"] == 3
@@ -38,6 +39,7 @@ def test_schema3_roundtrip_is_distinct_from_v1_and_v2():
 
 
 def test_v3_does_not_infer_stake_and_rejects_unknown_fields_and_types():
+    """B-DOM-077: v3 rejects inferred stake, unknown fields, and malformed types."""
     request = make_request()
     body = json.loads(serialize_profile_audaz_request(request))
     assert "per_number_stake" not in body["staking"]

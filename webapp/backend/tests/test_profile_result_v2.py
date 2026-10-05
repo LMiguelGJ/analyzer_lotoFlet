@@ -78,6 +78,7 @@ def admitted(request, profile, rows, result):
 
 
 def test_roundtrip_and_crossversion_rejection_with_canonical_bytes():
+    """B-DOM-089: cycling result v2 has canonical private wire disjoint from v1."""
     request, profile, rows, result = setup()
     admitted(request, profile, rows, result)
     wire = serialize_profile_cycling_result(result)
@@ -92,6 +93,7 @@ def test_roundtrip_and_crossversion_rejection_with_canonical_bytes():
 
 @pytest.mark.parametrize("settlement,paid", [(SettlementMode.ALL, 184), (SettlementMode.BEST, 160)])
 def test_secondary_payout_first_hit_reset_and_tamper_replay(settlement, paid):
+    """B-DOM-090: cycling secondary payout/reset and replay tampering are verified."""
     rows = [draw(0, (1, 7, 2, 3, 4)), draw(1, (50, 50, 50, 7, 9)), draw(2)]
     request, profile, rows, result = setup(rows, settlement=settlement, capital=2000)
     session = admitted(request, profile, rows, result)
@@ -120,6 +122,7 @@ def test_secondary_payout_first_hit_reset_and_tamper_replay(settlement, paid):
 
 
 def test_ten_misses_cycle_and_policy_profile_source_binding():
+    """B-DOM-091: cycling sequence and policy/profile/source binding are verified."""
     rows = [draw(i) for i in range(11)]
     request, profile, rows, result = setup(rows)
     assert [bet.wagered for bet in admitted(request, profile, rows, result).bets] == [
@@ -159,6 +162,7 @@ def test_ten_misses_cycle_and_policy_profile_source_binding():
 
 
 def test_non_q80_and_full_ladder_caps_rejected_on_trusted_admission():
+    """B-DOM-092: cycling admission requires compatible Q80 and full ladder caps."""
     request, profile, rows, result = setup()
     profile_data = profile.model_dump(mode="python")
     profile_data.update(
@@ -193,6 +197,7 @@ def test_non_q80_and_full_ladder_caps_rejected_on_trusted_admission():
 
 
 def test_cancellation_requires_opt_in_and_no_prestart_provenance_inference():
+    """B-DOM-093: cancelled cycling result needs opt-in; prior provenance is not inferred."""
     rows = [draw(-1), draw(0), draw(1)]
     request, profile, rows, _ = setup(rows)
     cancelled = ProfileCyclingResult(
@@ -238,6 +243,7 @@ def test_cancellation_requires_opt_in_and_no_prestart_provenance_inference():
     ],
 )
 def test_malformed_wire_rejected(path, bad):
+    """B-DOM-094: cycling result rejects malformed wire types and values."""
     _, _, _, result = setup()
     value = json.loads(serialize_profile_cycling_result(result))
     target = value
@@ -249,6 +255,7 @@ def test_malformed_wire_rejected(path, bad):
 
 
 def test_extra_missing_nested_duplicate_and_non_json_rejected():
+    """B-DOM-094: cycling result rejects extra/missing/duplicate and non-JSON fields."""
     _, _, _, result = setup()
     value = json.loads(serialize_profile_cycling_result(result))
     for changed in (

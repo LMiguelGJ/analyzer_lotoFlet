@@ -38,6 +38,7 @@ def round_limit():
 
 
 def test_v4_collision_roundtrips_but_older_wires_refuse_it():
+    """B-DOM-097: recovery-only collision round-trips and older result wires reject it."""
     session = round_limit()
     result = ProfileRecoveryResult("profile", 4, session)
     wire = serialize_profile_recovery_result(result)
@@ -58,6 +59,7 @@ def test_v4_collision_roundtrips_but_older_wires_refuse_it():
 
 
 def test_v4_rejects_unknown_versions_and_collision_values():
+    """B-DOM-098: recovery result rejects unknown versions and collisions."""
     wire = serialize_profile_recovery_result(ProfileRecoveryResult("profile", 4, round_limit()))
     raw = json.loads(wire)
     raw["schema_version"] = 5

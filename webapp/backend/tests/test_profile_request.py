@@ -78,6 +78,7 @@ def wire(**changes):
 
 
 def test_profile_hash_is_full_validated_sorted_compact_utf8_json_not_dataset_digest():
+    """B-DOM-065: profile digest hashes the full canonical validated profile."""
     p = GameProfile.model_validate(PROFILE)
     reference = hashlib.sha256(
         json.dumps(PROFILE, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
@@ -100,6 +101,7 @@ def test_profile_hash_is_full_validated_sorted_compact_utf8_json_not_dataset_dig
 
 
 def test_full_roundtrip_frozen_typed_nested_objects_and_explicit_null_slots():
+    """B-DOM-066: v1 request round-trips with typed immutable values and explicit nulls."""
     source = request()
     text = serialize_profile_request(source)
     canonical = json.dumps(
@@ -157,11 +159,13 @@ def test_full_roundtrip_frozen_typed_nested_objects_and_explicit_null_slots():
     ],
 )
 def test_malformed_envelope_rejected(field, bad):
+    """B-DOM-067: malformed request envelope values are rejected."""
     with pytest.raises((ValueError, ValidationError)):
         load_profile_request(wire(**{field: bad}))
 
 
 def test_no_hidden_seed_stake_settlement_or_version_and_no_extra_fields():
+    """B-DOM-068: v1 request has no hidden defaults, extra fields, or duplicate keys."""
     base = json.loads(wire())
     for path, field in (
         ((), "kind"),
@@ -212,6 +216,7 @@ def test_no_hidden_seed_stake_settlement_or_version_and_no_extra_fields():
     ],
 )
 def test_nested_invalid_exact_types_capabilities_and_money(section, field, bad):
+    """B-DOM-069: nested request fields enforce exact types, capabilities, and money bounds."""
     value = json.loads(wire())
     value[section][field] = bad
     with pytest.raises((ValueError, TypeError)):
@@ -219,6 +224,7 @@ def test_nested_invalid_exact_types_capabilities_and_money(section, field, bad):
 
 
 def test_static_numbers_are_exact_integers_and_unknown_entry_or_numbers_shape_rejected():
+    """B-DOM-070: static selector numbers and entry policy reject malformed values."""
     value = json.loads(
         serialize_profile_request(
             request(
@@ -239,6 +245,7 @@ def test_static_numbers_are_exact_integers_and_unknown_entry_or_numbers_shape_re
 
 
 def test_forged_frozen_nested_objects_are_revalidated_before_serialization():
+    """B-DOM-071: serialization revalidates forged frozen nested objects."""
     source = request()
     object.__setattr__(source.selector, "algorithm_version", "other")
     with pytest.raises(ValueError, match="algorithm"):
@@ -248,6 +255,7 @@ def test_forged_frozen_nested_objects_are_revalidated_before_serialization():
 
 
 def test_legacy_experiment_contract_is_unchanged_and_separate():
+    """B-DOM-072: legacy request contract remains separate from profile wire."""
     legacy = ExperimentRequest.model_validate(
         {
             "name": "Old",

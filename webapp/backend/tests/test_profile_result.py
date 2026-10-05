@@ -91,6 +91,7 @@ def result_for(request, profile, rows, **kwargs):
 
 @pytest.mark.parametrize("random", [False, True])
 def test_roundtrip_and_known_valid_static_random_admission(random):
+    """B-DOM-079: v1 result codec is canonical; admission authenticates by replay."""
     request, profile, rows = setup(random=random)
     result = result_for(request, profile, rows)
     wire = serialize_profile_result(result)
@@ -103,6 +104,7 @@ def test_roundtrip_and_known_valid_static_random_admission(random):
 
 
 def test_repeated_positions_non100_and_exact_scaled_integer_accounting():
+    """B-DOM-080: result accounts exactly for repeated positions and scaled money."""
     request, profile, rows = setup()
     result = result_for(request, profile, rows)
     assert result.bets[0].results == (1, 1, 2)
@@ -133,6 +135,7 @@ def test_repeated_positions_non100_and_exact_scaled_integer_accounting():
     ],
 )
 def test_structurally_valid_forgery_rejected_by_replay(path, bad):
+    """B-DOM-081: replay rejects structurally valid result forgeries."""
     request, profile, rows = setup()
     value = json.loads(serialize_profile_result(result_for(request, profile, rows)))
     target = value
@@ -145,6 +148,7 @@ def test_structurally_valid_forgery_rejected_by_replay(path, bad):
 
 
 def test_counts_that_are_internally_inconsistent_rejected_at_parse():
+    """B-DOM-082: inconsistent elapsed/bet counts fail parsing."""
     request, profile, rows = setup()
     value = json.loads(serialize_profile_result(result_for(request, profile, rows)))
     for changes in ({"bet_draws": 0}, {"elapsed_draws": 0}):
@@ -153,6 +157,7 @@ def test_counts_that_are_internally_inconsistent_rejected_at_parse():
 
 
 def test_profile_binding_and_source_rows_mismatch():
+    """B-DOM-083: result validation binds profile identity and bounded source rows."""
     request, profile, rows = setup()
     result = result_for(request, profile, rows)
     with pytest.raises(ValueError, match="binding"):
@@ -174,6 +179,7 @@ def test_profile_binding_and_source_rows_mismatch():
 
 
 def test_request_configuration_is_bound_by_replay():
+    """B-DOM-084: selector, stake, and start draw are bound by replay."""
     request, profile, rows = setup(rows=[draw(START), draw("2025-01-01 05:15")])
     result = result_for(request, profile, rows)
     variants = (
@@ -190,6 +196,7 @@ def test_request_configuration_is_bound_by_replay():
 
 
 def test_full_source_including_prestart_and_skipped_entries_is_required():
+    """B-DOM-085: replay validates the full source including prestart/skipped rows."""
     earlier = draw("2025-01-01 05:05")
     request, profile, rows = setup(rows=[earlier, draw(START)])
     result = result_for(request, profile, rows)
@@ -203,6 +210,7 @@ def test_full_source_including_prestart_and_skipped_entries_is_required():
 
 
 def test_cancelled_parses_but_cannot_admit_completed_job():
+    """B-DOM-086: cancelled results parse but require explicit non-completed admission."""
     request, profile, rows = setup(rows=[draw(START), draw("2025-01-01 05:15")])
     result = result_for(request, profile, rows, cancel_after_elapsed_draws=1)
     assert result.outcome is ProfileOutcome.CANCELLED
@@ -236,6 +244,7 @@ def test_cancelled_parses_but_cannot_admit_completed_job():
     ],
 )
 def test_bad_wire_fields_rejected_with_value_error(path, bad):
+    """B-DOM-087: v1 result wire enforces exact field types and values."""
     request, profile, rows = setup()
     value = json.loads(serialize_profile_result(result_for(request, profile, rows)))
     target = value
@@ -247,6 +256,7 @@ def test_bad_wire_fields_rejected_with_value_error(path, bad):
 
 
 def test_missing_extra_duplicate_keys_and_invalid_unicode_are_controlled():
+    """B-DOM-088: result codec controls missing/extra/duplicate and invalid JSON data."""
     request, profile, rows = setup()
     value = json.loads(serialize_profile_result(result_for(request, profile, rows)))
     for key in ("kind", "bets", "profile_id", "paid"):

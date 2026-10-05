@@ -64,6 +64,7 @@ def draw(label, results, order=tuple(range(7, 100)) + tuple(range(7))):
 
 
 def test_repeated_numbers_pay_each_position_or_only_best_per_number():
+    """B-DOM-038: ALL/BEST settlement and immutable per-bet accounting."""
     rows = [draw("2025-01-01 05:10", (7, 7, 8, 7, 8))]
     all_result = run_session(
         conditions(capital=10, goal=100, settlement="all"), strategy(coverage=5), rows
@@ -90,6 +91,7 @@ def test_repeated_numbers_pay_each_position_or_only_best_per_number():
 @pytest.mark.parametrize("staking,stake", (("flat", 1), ("ladder", 1), ("bold", 2)))
 @pytest.mark.parametrize("mode,prize", (("all", 95), ("best", 84)))
 def test_synthetic_coverage_accounting_with_repeated_numbers(coverage, staking, stake, mode, prize):
+    """B-DOM-039: coverage, staking, and settlement modes reconcile exactly."""
     # Selected: 7, 8, then 20 onward; the other numbers cannot win this draw.
     selected = (7, 8, *range(20, 20 + coverage - 2))
     row = draw("2025-01-01 05:10", (7, 7, 8, 7, 8), selected)
@@ -121,6 +123,7 @@ def test_synthetic_coverage_accounting_with_repeated_numbers(coverage, staking, 
 
 
 def test_initial_and_post_settlement_insolvency_do_not_overdraft():
+    """B-DOM-040: insolvency never overdrafts and invalid ordering is rejected."""
     rows = [draw("2025-01-01 05:10", (0, 1, 2, 3, 4))]
     with pytest.raises(ValueError, match="afford"):
         run_session(conditions(capital=4), strategy(coverage=5), rows)
@@ -140,6 +143,7 @@ def test_initial_and_post_settlement_insolvency_do_not_overdraft():
 @pytest.mark.parametrize("staking", ("flat", "ladder", "bold"))
 @pytest.mark.parametrize("coverage", (5, 50))
 def test_preflight_rejects_unfunded_first_bet_and_accepts_exact_boundary(staking, coverage):
+    """B-DOM-041: initial-stake preflight enforces exact funding boundaries."""
     selected = strategy(staking=staking, coverage=coverage)
     with pytest.raises(ValueError, match="initial capital cannot afford"):
         preflight_initial_stake(conditions(capital=coverage - 1), selected)
@@ -154,6 +158,7 @@ def test_preflight_rejects_unfunded_first_bet_and_accepts_exact_boundary(staking
 
 
 def test_preflight_bold_stake_matches_first_executed_wager():
+    """B-DOM-042: bold preflight equals the actual first stake."""
     opts = conditions(capital=2000, goal=2800)
     selected = strategy(staking="bold", coverage=50)
     stake = preflight_initial_stake(opts, selected)
@@ -162,6 +167,7 @@ def test_preflight_bold_stake_matches_first_executed_wager():
 
 
 def test_ladder_uses_coverage_recovery_rounds_and_resets_on_first_hit():
+    """B-DOM-043: ladder recovery depends on coverage and resets on first hit."""
     rows = [
         draw("2025-01-01 05:10", (0, 1, 2, 3, 4)),
         draw("2025-01-01 05:15", (0, 1, 2, 3, 4)),
@@ -186,6 +192,7 @@ def test_ladder_uses_coverage_recovery_rounds_and_resets_on_first_hit():
 
 
 def test_settlement_precedes_goal_and_limit_and_goal_is_final_balance():
+    """B-DOM-044: settlement runs before goal/limit checks; goal is final balance."""
     result = run_session(
         conditions(capital=10, goal=89, max_bets=1),
         strategy(),
@@ -195,6 +202,7 @@ def test_settlement_precedes_goal_and_limit_and_goal_is_final_balance():
 
 
 def test_gaps_consume_time_and_deadline_equality_excludes_draw():
+    """B-DOM-045: unranked gaps consume time and deadline equality excludes a draw."""
     rows = [
         draw("2025-01-01 05:10", (0, 1, 2, 3, 4)),
         draw("2025-01-01 05:15", (7, 1, 2, 3, 4), None),
@@ -207,6 +215,7 @@ def test_gaps_consume_time_and_deadline_equality_excludes_draw():
 
 
 def test_first_limit_wins_and_history_exhaustion_is_separate():
+    """B-DOM-046: limits stop sessions; history exhaustion remains distinct."""
     rows = [
         draw("2025-01-01 05:10", (0, 1, 2, 3, 4)),
         draw("2025-01-01 05:15", (0, 1, 2, 3, 4)),
@@ -221,6 +230,7 @@ def test_first_limit_wins_and_history_exhaustion_is_separate():
 
 
 def test_ruin_precedes_simultaneous_bet_limit_after_settlement():
+    """B-DOM-047: post-settlement ruin wins over a simultaneous bet limit."""
     result = run_session(
         conditions(capital=1, max_bets=1), strategy(), [draw("2025-01-01 05:10", (0, 1, 2, 3, 4))]
     )
@@ -228,6 +238,7 @@ def test_ruin_precedes_simultaneous_bet_limit_after_settlement():
 
 
 def test_bold_integer_stake_is_goal_gap_over_first_prize_net_and_capped():
+    """B-DOM-048: bold stake covers the goal gap and respects caps."""
     result = run_session(
         conditions(capital=2000, goal=2800, max_bets=1),
         strategy(staking="bold", coverage=50),
@@ -237,6 +248,7 @@ def test_bold_integer_stake_is_goal_gap_over_first_prize_net_and_capped():
 
 
 def test_adapter_routes_selectors_and_preserves_unranked_clock(data_dir):
+    """B-DOM-049: adapter routes selectors while retaining unranked clock rows."""
     labels = ("2025-01-01 05:10", "2025-01-01 05:15", "2025-01-01 05:20")
     minutes = np.array([draw(label, (0, 1, 2, 3, 4)).minute for label in labels])
     history = History(labels, np.array([[7, 0, 0, 0, 0]] * 3, dtype=np.uint8), minutes, "test")
@@ -292,6 +304,7 @@ def test_adapter_routes_selectors_and_preserves_unranked_clock(data_dir):
 def test_adapter_blend_and_random_accounting_at_wider_coverages(
     data_dir, coverage, selector, mode, prize
 ):
+    """B-DOM-050: blend/random adapter accounting supports wider coverages."""
     label = "2025-01-01 05:10"
     ranked = (7, 8, *range(20, 100), *range(7), *range(9, 20))
     if selector == "random":
@@ -351,6 +364,7 @@ def test_adapter_blend_and_random_accounting_at_wider_coverages(
 
 @pytest.mark.real_data
 def test_all_frozen_reference_sessions(data_dir):
+    """B-DOM-051: legacy engine matches every frozen real-data reference session."""
     data = open_lab_data(Settings.from_environment())
     assert len(FIXTURE["cases"]) == 141
     assert len(FIXTURE["cases"]) == len(

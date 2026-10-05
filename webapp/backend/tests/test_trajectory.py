@@ -13,6 +13,7 @@ def bets(balances):
 
 
 def test_empty_and_short_trajectories_are_not_fabricated():
+    """B-DOM-034: empty and short trajectories remain unaggregated."""
     assert reduce_trajectory(10, (), 4) == {
         "initial_capital": 10,
         "total": 0,
@@ -31,6 +32,7 @@ def test_empty_and_short_trajectories_are_not_fabricated():
 
 
 def test_reduction_keeps_endpoints_extrema_earliest_ties_and_replay_indices():
+    """B-DOM-035: min/max reduction preserves bounds, earliest ties, and replay indices."""
     result = reduce_trajectory(10, bets([8, 3, 3, 15, 9, 15, 11]), 4)
     points = result["points"]
     assert [point["source_index"] for point in points] == sorted(
@@ -45,6 +47,7 @@ def test_reduction_keeps_endpoints_extrema_earliest_ties_and_replay_indices():
 
 
 def test_initial_capital_participates_in_extrema_with_earliest_tie():
+    """B-DOM-036: initial capital is considered when finding extrema."""
     result = reduce_trajectory(10, bets([10, 12, 8]), 4)
     assert result["minimum"] == {"balance": 8, "source_index": 2}
     assert result["maximum"] == {"balance": 12, "source_index": 1}
@@ -54,5 +57,6 @@ def test_initial_capital_participates_in_extrema_with_earliest_tie():
 
 @pytest.mark.parametrize("limit", [3, 2001, True])
 def test_point_limit_is_explicitly_bounded(limit):
+    """B-DOM-037: trajectory point limit is explicitly bounded and non-bool."""
     with pytest.raises(ValueError):
         reduce_trajectory(10, (), limit)
