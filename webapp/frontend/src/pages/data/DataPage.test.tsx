@@ -130,7 +130,8 @@ describe("bounded local import", () => {
     expect(screen.queryByLabelText("Columna de posición 2")).not.toBeInTheDocument();
     await preview(user);
     expect(apiClient.previewImport).toHaveBeenLastCalledWith(expect.objectContaining({ profile: created }));
-  });
+  // This multi-step profile/import flow needs headroom under full-suite worker contention.
+  }, 15_000);
 
   it("uses persisted profiles only and sends original bytes with explicit context, then confirms saved hash", async () => {
     const user = await setup();

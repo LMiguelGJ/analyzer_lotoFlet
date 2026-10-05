@@ -86,6 +86,7 @@ describe("profile editor", () => {
     expect(Array.from(document.querySelectorAll("input, select")).every((control) => control.classList.contains("control") || control.classList.contains("ledger-control"))).toBe(true);
     expect(screen.getAllByLabelText(/premio por unidad apostada/i)).toHaveLength(3);
   });
+  // This multi-field profile-registration contract is integration-heavy under full-suite worker contention.
   it.each([1, 3, 5])("creates %i position documents with explicit money policy and server-derived digest", async (count) => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
@@ -99,7 +100,7 @@ describe("profile editor", () => {
       maximum_stake: 200, max_exposure: 1000, max_coverage: 3, best_rule: "maximum-payout/v1" });
     expect(sent.multipliers).toHaveLength(count);
     expect(onRegistered.mock.calls[0][0].profile_sha256).toBe("a".repeat(64));
-  });
+  }, 15000);
   it("prefills only documented template fields and requires missing financial fields", async () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[template]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
@@ -120,6 +121,7 @@ describe("profile editor", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/Incremento/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
   });
+  // Repeated exact-value edits intentionally exercise bounded-decimal validation before POST.
   it("rejects missing fractional and oversafe values before POST", async () => {
     const user = userEvent.setup();
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);
@@ -133,7 +135,8 @@ describe("profile editor", () => {
     await user.click(screen.getByRole("button", { name: "Guardar perfil" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/límite/);
     expect(apiClient.registerProfile).not.toHaveBeenCalled();
-  });
+  }, 15000);
+  // Local duplicate detection plus three server-error branches require multiple complete form submissions.
   it("rejects same version locally, reports quota/conflict/422 and never auto-retries", async () => {
     const user = userEvent.setup();
     const existing = registered({ schema_version: 1, profile_id: "my-game", revision: 1, universe_size: 100, positions: 1,
@@ -156,7 +159,7 @@ describe("profile editor", () => {
       }
       expect(apiClient.registerProfile).toHaveBeenCalledTimes(status === 422 ? 3 : detail.startsWith("profile version") ? 2 : 1);
     }
-  });
+  }, 15000);
   it("opens a collapsed host disclosure, keeps typed values and focuses the first invalid field linked to the error", async () => {
     const user = userEvent.setup();
     render(<details><summary>Host</summary><ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} /></details>);

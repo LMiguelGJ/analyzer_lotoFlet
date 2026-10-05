@@ -242,6 +242,11 @@
   .m3-wizard-progress { height: 4px; overflow: hidden; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-surface-container-highest); }
   .m3-wizard-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--md-sys-color-primary); transition: width var(--md-sys-motion-duration-medium1) var(--md-sys-motion-easing-emphasized); }
   .m3-wizard-step { margin: 0; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-label-large-size); }
+  .m3-wizard-title { margin: 0; color: var(--md-sys-color-on-surface); font-size: var(--md-sys-typescale-title-large-size); }
+  .m3-wizard-financial { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .m3-wizard-financial > div { min-width: 0; }
+  .m3-wizard-financial dt { color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-label-medium-size); }
+  .m3-wizard-financial dd { margin: 0; color: var(--md-sys-color-tertiary); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .m3-wizard-actions { display: flex; justify-content: space-between; gap: 12px; }
   .m3-wizard-actions .btn { min-width: 112px; }
   .m3-review { max-width: 48rem; }

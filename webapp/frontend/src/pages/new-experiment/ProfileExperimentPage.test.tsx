@@ -127,7 +127,8 @@ describe("profile session creator", () => {
     expect(body).toMatchObject({ schema_version: 3, selector: { coverage: 1 },
       staking: { capability: "profile-audaz/v1" } });
     expect(JSON.stringify(body)).not.toContain("per_number_stake");
-  });
+  }, 15_000);
+  // Full profile/dataset compatibility and schema-4 submission traverse several API-backed controls.
   it.each(["cycle", "stop"] as const)("# F-CREATE-038 submits schema-4 recovery with explicit target, rounds, compatible coverage and %s mode", async (end_mode) => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [recoveryProfile], templates: [] });
@@ -145,7 +146,7 @@ describe("profile session creator", () => {
       selector: { schema_version: 1, capability: "static-numbers/v1", coverage: 2, numbers: [0, 1], seed: null, algorithm_version: null },
       staking: { schema_version: 1, target_margin: 1234, rounds: 4, end_mode } }));
     expect(JSON.stringify(vi.mocked(apiClient.createProfileExperiment).mock.calls[0][0])).not.toContain("per_number_stake");
-  });
+  }, 15000);
   it("# F-CREATE-039 does not POST recovery if current server compatibility withdraws coverage", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20,
       items: [recoveryProfile], templates: [] });

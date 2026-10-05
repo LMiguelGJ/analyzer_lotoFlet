@@ -23,6 +23,13 @@ function setup(path = "/experimentos/nuevo") {
   return { user: userEvent.setup(), router, ...view };
 }
 async function openAdvanced(user: ReturnType<typeof userEvent.setup>) {
+  if (!screen.queryByText("Avanzado")) {
+    const name = screen.getByRole("textbox", { name: "Nombre de la simulación" });
+    if (!name.getAttribute("value") && !(name as HTMLInputElement).value) await user.type(name, "Wizard test");
+    const draw = screen.getByRole("combobox", { name: "Sorteo inicial" });
+    if (!(draw as HTMLSelectElement).value) await user.selectOptions(draw, "2025-09-02 05:10");
+    await goToWizardStep(user, 1);
+  }
   const summary = screen.getByText("Avanzado");
   const details = summary.closest("details");
   if (!details?.open) await user.click(summary);
@@ -31,16 +38,28 @@ async function revealSeed(user: ReturnType<typeof userEvent.setup>) {
   await openAdvanced(user);
   if (!screen.queryByRole("textbox", { name: "Código de repetición" })) await user.click(screen.getByRole("button", { name: "Cambiar" }));
 }
+async function goToWizardStep(user: ReturnType<typeof userEvent.setup>, step: number) {
+  while (Number(screen.getByRole("progressbar").getAttribute("aria-valuenow")) > step + 1) {
+    const current = Number(screen.getByRole("progressbar").getAttribute("aria-valuenow"));
+    await user.click(screen.getByRole("button", { name: "Atrás" }));
+    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(current - 1)));
+  }
+  while (Number(screen.getByRole("progressbar").getAttribute("aria-valuenow")) < step + 1) {
+    const current = Number(screen.getByRole("progressbar").getAttribute("aria-valuenow"));
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(current + 1)));
+  }
+}
+async function launchFromReview(user: ReturnType<typeof userEvent.setup>) {
+  await goToWizardStep(user, 3);
+  await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+}
 async function conditions(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByRole("option", { name: /2025-09-02 05:10/ });
   await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Prueba Q80");
   await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
-  await user.clear(screen.getByRole("textbox", { name: "Capital (RD$)" }));
-  await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "2000");
-  await user.clear(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }));
-  await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "2800");
-  await user.clear(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }));
-  await user.type(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }), "12");
+  await user.click(screen.getByRole("button", { name: "Siguiente" }));
+  await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
   await revealSeed(user);
   await user.clear(screen.getByRole("textbox", { name: "Código de repetición" }));
   await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "42");
@@ -49,6 +68,19 @@ async function conditions(user: ReturnType<typeof userEvent.setup>) {
   const wizard = within(screen.getByRole("main"));
   await user.selectOptions(wizard.getByRole("combobox", { name: "Método de la estrategia 1" }), "system");
   await user.selectOptions(wizard.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
+  await user.type(wizard.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Temporal");
+  expect(wizard.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Temporal");
+  await goToWizardStep(user, 2);
+  await user.clear(screen.getByRole("textbox", { name: "Capital (RD$)" }));
+  await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "2000");
+  await user.clear(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }));
+  await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "2800");
+  await user.clear(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }));
+  await user.type(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }), "12");
+  await goToWizardStep(user, 3);
+  await user.click(screen.getByRole("button", { name: "Atrás" }));
+  await user.click(screen.getByRole("button", { name: "Atrás" }));
+  await user.clear(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }));
 }
 
 beforeEach(() => {
@@ -70,6 +102,49 @@ beforeEach(() => {
 });
 
 describe("S2 simple creation form", () => {
+  it("# F-CREATE-054 isolates wizard steps and reserves submission for review", async () => {
+    const { user } = setup();
+    await screen.findByRole("option", { name: /2025-09-02 05:10/ });
+    expect(screen.getByRole("progressbar", { name: "Paso 1 de 4" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sorteos históricos" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Nombre de la estrategia 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Capital (RD$)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lanzar simulación" })).not.toBeInTheDocument();
+    expect(document.querySelectorAll("form button[type='submit']")).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar", { name: "Paso 1 de 4" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/completá los datos de este paso/i);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Asistente");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar", { name: "Paso 2 de 4" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Sorteo inicial" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Capital (RD$)" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar", { name: "Paso 2 de 4" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/completá los datos de este paso/i);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Estrategia de prueba");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Método de la estrategia 1" }), "system");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar", { name: "Paso 3 de 4" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Nombre de la estrategia 1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lanzar simulación" })).not.toBeInTheDocument();
+    const limits = screen.getByRole("region", { name: "Límites" });
+    expect(limits).toHaveAttribute("aria-labelledby", "limits-heading");
+    expect(document.getElementById("limits-heading")).toHaveTextContent("Límites");
+    fireEvent.submit(document.querySelector("form")!);
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar", { name: "Paso 4 de 4" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Capital (RD$)" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveAttribute("type", "submit");
+    expect(document.querySelectorAll("form button[type='submit']")).toHaveLength(1);
+    expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent("RD$2.000");
+    await user.click(screen.getByRole("button", { name: "Atrás" }));
+    expect(screen.getByRole("progressbar", { name: "Paso 3 de 4" })).toBeInTheDocument();
+  }, 15_000);
   it.each([[5, "RD$5"], [2800, "RD$2.800"]])("# F-CREATE-003 renders the catalog minimum stake %i as %s instead of a hardcoded literal", async (minimumStake, expected) => {
     vi.mocked(apiClient.getCatalog).mockResolvedValue({ ...catalog, game: { ...catalog.game, minimum_stake: minimumStake } } as never);
     setup();
@@ -81,15 +156,9 @@ describe("S2 simple creation form", () => {
   it("# F-CREATE-001 F-CREATE-002 F-CREATE-004 F-CREATE-005 F-CREATE-006 F-CREATE-008 shows three numbered groups, truthful rules, prefilled choices, live order summary and one primary action", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
-
-    for (const [number, group] of [["01", "Reglas del sorteo"], ["02", "Selección"], ["03", "Límites"]]) {
-      const section = screen.getByRole("group", { name: group });
-      expect(section).toHaveTextContent(number);
-    }
     const rules = screen.getByRole("group", { name: "Reglas del sorteo" });
-    for (const label of ["Números posibles", "Posiciones por sorteo", "Repeticiones", "Premios por posición", "Apuesta mínima por número"]) {
-      expect(within(rules).getByText(label)).toBeInTheDocument();
-    }
+    expect(rules).toHaveTextContent("01");
+    for (const label of ["Números posibles", "Posiciones por sorteo", "Repeticiones", "Premios por posición", "Apuesta mínima por número"]) expect(within(rules).getByText(label)).toBeInTheDocument();
     expect(rules).toHaveTextContent("00–99 (100 números)");
     expect(rules).toHaveTextContent("5");
     expect(rules).toHaveTextContent("1: 80 · 2: 8 · 3: 4 · 4: 2 · 5: 1");
@@ -98,21 +167,16 @@ describe("S2 simple creation form", () => {
     expect(screen.getByRole("link", { name: "Editar reglas" })).toHaveAttribute("href", "/datos#perfiles");
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
-    expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).toHaveValue("2800");
-    expect(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" })).toHaveValue("12");
+    expect(screen.queryByRole("group", { name: "Selección" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Capital (RD$)" })).not.toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Prueba");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
+    await goToWizardStep(user, 1);
+    expect(screen.getByRole("group", { name: "Selección" })).toHaveTextContent("02");
     expect(screen.getByRole("group", { name: "Selección" })).toHaveTextContent("Transición 60% + Fríos 40%, cobertura 10 números");
     expect(screen.getByRole("combobox", { name: "Cómo contar los premios" })).toHaveValue("all");
-    const summary = screen.getByRole("region", { name: "Resumen de la orden" });
-    expect(summary).toHaveTextContent(/RD\$2[.,]000/);
-    expect(summary).toHaveTextContent(/RD\$2[.,]800/);
-    expect(summary).toHaveTextContent("12 sorteos");
-    expect(summary).toHaveTextContent("Transición 60% + Fríos 40%");
-    expect(screen.getAllByText(/Esto simula/)).toHaveLength(1);
-    expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
-    expect(summary).not.toHaveTextContent(/Sin nombre:|\(\)/);
-    expect(screen.queryByText(/9\.007\.199\.254\.740\.991|9007199254740991/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Código de repetición" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Capital (RD$)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Crear simulación" })).not.toBeInTheDocument();
     const advanced = screen.getByText("Avanzado").closest("details");
     expect(advanced).not.toHaveAttribute("open");
     await user.click(within(advanced!).getByText("Avanzado"));
@@ -126,6 +190,23 @@ describe("S2 simple creation form", () => {
     await user.click(within(advanced!).getByRole("button", { name: "Cambiar" }));
     expect(within(advanced!).getByRole("textbox", { name: "Código de repetición" })).toBeInTheDocument();
     expect(within(advanced!).queryByText(/9\.007\.199\.254\.740\.991|9007199254740991/)).not.toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Estrategia");
+    await goToWizardStep(user, 2);
+    expect(screen.getByRole("group", { name: "Límites" })).toHaveTextContent("03");
+    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
+    expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).toHaveValue("2800");
+    expect(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" })).toHaveValue("12");
+    await goToWizardStep(user, 3);
+    const summary = screen.getByRole("region", { name: "Resumen de la orden" });
+    expect(summary).toHaveTextContent(/RD\$2[.,]000/);
+    expect(summary).toHaveTextContent(/RD\$2[.,]800/);
+    expect(summary).toHaveTextContent("12 sorteos");
+    expect(summary).toHaveTextContent("Transición 60% + Fríos 40%");
+    // The disclaimer is unique within the mounted review summary; inactive steps are not mounted.
+    expect(within(summary).getAllByText(/Esto simula/)).toHaveLength(1);
+    expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(summary).not.toHaveTextContent(/Sin nombre:|\(\)/);
+    expect(screen.queryByText(/9\.007\.199\.254\.740\.991|9007199254740991/)).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Crear simulación" })).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveClass("ledger-button-primary");
     expect(screen.getByRole("button", { name: "Salir" })).toHaveClass("ledger-button-ghost");
@@ -151,13 +232,14 @@ describe("LW13 library templates", () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
     expect(await screen.findByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("");
-    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
+    expect(screen.getByLabelText("Límites financieros siempre visibles")).toHaveTextContent("RD$2.000");
     await openAdvanced(user);
     expect(Number.isSafeInteger(Number(document.getElementById("seed-summary")?.textContent))).toBe(true);
     expect(screen.getByRole("group", { name: "Selección" })).toHaveTextContent("Fríos: Fríos, cobertura 1 números");
     expect(apiClient.getConfiguration).toHaveBeenCalledWith("cfg-1");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   });
   it("# F-CREATE-011 appends one selected template without changing conditions or existing strategies, and rejects a normalized duplicate", async () => {
@@ -169,13 +251,15 @@ describe("LW13 library templates", () => {
     await user.click(screen.getByRole("button", { name: "Agregar desde biblioteca" }));
     await user.click(screen.getByRole("button", { name: "Añadir Biblioteca" }));
     expect(await screen.findByRole("button", { name: /Estrategia 2.*Fríos/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Límites financieros siempre visibles")).toHaveTextContent("RD$2.000");
+    await goToWizardStep(user, 0);
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Prueba Q80");
-    expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
+    await goToWizardStep(user, 1);
     await user.click(screen.getByRole("button", { name: "Agregar desde biblioteca" }));
     await user.click(screen.getByRole("button", { name: "Añadir Biblioteca" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/nombre.*único/i);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
-  });
+  }, 15000); // Sequential library, routing, and wizard integration exceeds 5s under full-suite contention.
   it("# F-CREATE-012 F-CREATE-013 guards semantic configuration changes and removal, stays or leaves; rejects base/configuration conflict", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
     const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
@@ -204,9 +288,12 @@ describe("LW13 library templates", () => {
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Nueva prueba");
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
+    await goToWizardStep(user, 1);
+    await revealSeed(user);
+    await goToWizardStep(user, 2);
     await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "100");
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "200");
-    await revealSeed(user);
+    await goToWizardStep(user, 1);
     await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "0");
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Nueva");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
@@ -299,6 +386,7 @@ describe("LW10 use as base", () => {
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" })).toHaveValue("Par");
     expect(screen.getAllByText(/50 números/).length).toBeGreaterThan(0);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
+    await goToWizardStep(user, 3);
     expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent(/Mix: Transición 60% \+ Fríos 40%/);
     expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent(/Par: Selección por paridad/);
     await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
@@ -418,16 +506,21 @@ describe("ODD03b dated starting draws", () => {
   it("# F-CREATE-018 labels the date filter, keeps a same-day selection and clears it without choosing a different day", async () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Fecha");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:15");
+    await goToWizardStep(user, 1);
     await openAdvanced(user);
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     expect(date).toHaveAttribute("type", "date");
     expect(date).toHaveAccessibleDescription(/Vacío: todas las fechas/);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:15");
     fireEvent.change(date, { target: { value: "2025-09-02" } });
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-02 05:15"));
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-02");
     expect(apiClient.getStartingDrawAvailability).toHaveBeenCalledWith("2025-09-02");
-    fireEvent.change(date, { target: { value: "2025-09-03" } });
+    await goToWizardStep(user, 0);
+    expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-02 05:15");
+    await goToWizardStep(user, 1);
+    fireEvent.change(screen.getByLabelText("Filtrar sorteos por fecha"), { target: { value: "2025-09-03" } });
+    await goToWizardStep(user, 0);
     await screen.findByRole("option", { name: "2025-09-03 05:10" });
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("");
     expect(screen.queryByRole("option", { name: "2025-09-02 05:15" })).not.toBeInTheDocument();
@@ -449,10 +542,11 @@ describe("ODD03b dated starting draws", () => {
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     fireEvent.change(date, { target: { value: "2025-09-03" } });
     expect(await screen.findByText(/No hay sorteos en esta fecha/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Crear simulación" })).not.toBeInTheDocument();
     fireEvent.change(date, { target: { value: "2025-09-04" } });
     await waitFor(() => expect(apiClient.getStartingDrawAvailability).toHaveBeenCalledWith("2025-09-04"));
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-04");
+    await goToWizardStep(user, 0);
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeDisabled();
   });
 
@@ -473,6 +567,7 @@ describe("ODD03b dated starting draws", () => {
     fireEvent.change(date, { target: { value: "2025-09-03" } });
     await waitFor(() => expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100, "2025-09-03"));
     fireEvent.change(date, { target: { value: "2025-09-04" } });
+    await goToWizardStep(user, 0);
     await screen.findByRole("option", { name: "2025-09-04 05:10" });
     await act(async () => {
       resolveOld({ total: 2, offset: 0, limit: 100, items: ["2025-09-03 05:10"] });
@@ -480,7 +575,10 @@ describe("ODD03b dated starting draws", () => {
     });
     expect(screen.queryByRole("option", { name: "2025-09-03 05:10" })).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "2025-09-02 05:15" })).not.toBeInTheDocument();
+    await goToWizardStep(user, 0);
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-04 05:10");
+    await goToWizardStep(user, 1);
     expect(screen.queryByRole("button", { name: "Cargar más sorteos" })).not.toBeInTheDocument();
   });
 
@@ -502,15 +600,19 @@ describe("ODD03b dated starting draws", () => {
     await openAdvanced(user);
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     fireEvent.change(date, { target: { value: "2025-09-02" } });
+    await goToWizardStep(user, 0);
     await screen.findByRole("option", { name: "2025-09-02 05:10" });
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
-    fireEvent.change(date, { target: { value: "" } });
-    await screen.findByRole("option", { name: "2025-09-02 05:10" });
-    fireEvent.change(date, { target: { value: "2025-09-02" } });
-    expect(await screen.findByText(/Ese sorteo ya no está disponible/i)).toBeInTheDocument();
+    await goToWizardStep(user, 1);
+    fireEvent.change(screen.getByLabelText("Filtrar sorteos por fecha"), { target: { value: "" } });
+    await waitFor(() => expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100));
+    fireEvent.change(screen.getByLabelText("Filtrar sorteos por fecha"), { target: { value: "2025-09-02" } });
+    await screen.findByText("Ese sorteo ya no está disponible. Elegí otro.");
+    expect(screen.getByText("Ese sorteo ya no está disponible. Elegí otro.")).toHaveAttribute("role", "status");
+    await goToWizardStep(user, 0);
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("2025-09-02 05:10");
-    expect(screen.getByRole("option", { name: /2025-09-02 05:10/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeDisabled();
+    expect(screen.getByRole("option", { name: /2025-09-02 05:10 \(sin ranking disponible\)/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Crear simulación" })).not.toBeInTheDocument();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
@@ -528,24 +630,43 @@ describe("ODD03b dated starting draws", () => {
     await openAdvanced(user);
     const date = screen.getByLabelText("Filtrar sorteos por fecha");
     fireEvent.change(date, { target: { value: "2025-09-03" } });
+    await goToWizardStep(user, 0);
     await screen.findByRole("option", { name: "2025-09-03 00:00" });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-03 00:00");
+    await goToWizardStep(user, 1);
     await user.click(screen.getByRole("button", { name: "Cargar más sorteos" }));
+    await goToWizardStep(user, 0);
     await screen.findByRole("option", { name: late });
     await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), late);
-    fireEvent.change(date, { target: { value: "" } });
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue(late));
-    fireEvent.change(date, { target: { value: "2025-09-03" } });
-    await waitFor(() => expect(screen.getByRole("button", { name: "Crear simulación" })).toBeEnabled());
+    await goToWizardStep(user, 1);
+    fireEvent.change(screen.getByLabelText("Filtrar sorteos por fecha"), { target: { value: "" } });
+    await waitFor(() => expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100));
+    fireEvent.change(screen.getByLabelText("Filtrar sorteos por fecha"), { target: { value: "2025-09-03" } });
+    await goToWizardStep(user, 0);
+    await screen.findByRole("option", { name: late });
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue(late);
     expect(screen.getByRole("option", { name: late })).toBeEnabled();
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(100, 100, "2025-09-03");
-    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Prueba");
+    await goToWizardStep(user, 1);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Estrategia");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Método de la estrategia 1" }), "system");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
+    await revealSeed(user);
+    await user.clear(screen.getByRole("textbox", { name: "Código de repetición" }));
+    await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "42");
+    await goToWizardStep(user, 2);
+    await user.clear(screen.getByRole("textbox", { name: "Capital (RD$)" }));
     await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "100");
+    await user.clear(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }));
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "200");
-    await user.click(screen.getByText("Avanzado"));
-    await user.click(screen.getByRole("button", { name: "Cambiar" }));
-    await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "0");
+    await user.clear(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }));
+    await user.type(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }), "12");
+    await goToWizardStep(user, 1);
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toBeInTheDocument();
+    await goToWizardStep(user, 3);
+    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeEnabled();
+    expect(screen.getByText(late)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent("RD$100");
   });
 
   it("# F-CREATE-023 paginates only the selected day and retries a failed dated request", async () => {
@@ -558,13 +679,17 @@ describe("ODD03b dated starting draws", () => {
     await openAdvanced(user);
     fireEvent.change(screen.getByLabelText("Filtrar sorteos por fecha"), { target: { value: "2025-09-03" } });
     expect(await screen.findByRole("alert")).toHaveTextContent(/Reintentá/);
-    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Crear simulación" })).not.toBeInTheDocument();
     vi.mocked(apiClient.getStartingDraws).mockImplementation(async (offset = 0, limit = 100, date) => ({
       total: date ? 101 : 2, offset, limit, items: [date ? `${date} ${offset ? "05:15" : "05:10"}` : "2025-09-02 05:10"],
     }));
     await user.click(screen.getByRole("button", { name: "Reintentar" }));
+    await goToWizardStep(user, 0);
     await screen.findByRole("option", { name: "2025-09-03 05:10" });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-03 05:10");
+    await goToWizardStep(user, 1);
     await user.click(screen.getByRole("button", { name: "Cargar más sorteos" }));
+    await goToWizardStep(user, 0);
     expect(await screen.findByRole("option", { name: "2025-09-03 05:15" })).toBeInTheDocument();
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(1, 100, "2025-09-03");
   });
@@ -574,9 +699,12 @@ describe("LW09 single-form creation", () => {
   it("# F-CREATE-024 shows empty and disconnected catalog states without inventing a default draw, then retries", async () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 0, offset: 0, limit: 100, items: [] });
     const { user, unmount: unmountFirst } = setup();
-    expect(await screen.findByText(/No hay sorteos iniciales/)).toBeInTheDocument();
+    await waitFor(() => expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100));
+    expect(screen.getByText("No hay sorteos iniciales disponibles.")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Crear simulación" })).not.toBeInTheDocument();
+    fireEvent.submit(document.querySelector("form")!);
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
     // A fresh visit after a disconnection retains no fake draw.
     unmountFirst();
     vi.mocked(apiClient.getCatalog).mockRejectedValueOnce(new NetworkError());
@@ -593,7 +721,11 @@ describe("LW09 single-form creation", () => {
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 150, offset: 1, limit: 100, items: ["2025-09-02 05:15"] });
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Carga");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-09-02 05:10");
+    await goToWizardStep(user, 1);
     await user.click(screen.getByRole("button", { name: "Cargar más sorteos" }));
+    await goToWizardStep(user, 0);
     expect(await screen.findByRole("option", { name: /2025-09-02 05:15/ })).toBeInTheDocument();
     expect(apiClient.getStartingDraws).toHaveBeenNthCalledWith(2, 1, 100);
   });
@@ -602,14 +734,23 @@ describe("LW09 single-form creation", () => {
     setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     expect(screen.queryByRole("textbox", { name: "Código de repetición" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Crear simulación" })).toBeInTheDocument();
-    expect((document.getElementById("advanced-settings") as HTMLDetailsElement | null)?.open).toBe(false);
-    expect((screen.getByText("Estrategia avanzada").closest("details") as HTMLDetailsElement | null)?.open).toBe(false);
+    expect(screen.queryByRole("button", { name: "Crear simulación" })).not.toBeInTheDocument();
+    expect((document.getElementById("advanced-settings") as HTMLDetailsElement | null)).toBeNull();
+    expect(screen.queryByText("Estrategia avanzada")).not.toBeInTheDocument();
   });
 
   it("# F-CREATE-026 announces the seed help together with validation errors, without losing either reference", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    const startDraw = screen.getByRole("combobox", { name: "Sorteo inicial" });
+    expect(startDraw).toHaveAttribute("aria-invalid", "true");
+    expect(startDraw).toHaveAttribute("aria-describedby", "start_draw-help start_draw-error");
+    expect(screen.getByText(/Elegí un sorteo histórico con ranking disponible/)).toBeInTheDocument();
+    for (const id of startDraw.getAttribute("aria-describedby")!.split(" ")) expect(document.getElementById(id)).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Repetible");
+    await user.selectOptions(startDraw, "2025-09-02 05:10");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
     await revealSeed(user);
     const seed = screen.getByRole("textbox", { name: "Código de repetición" });
     const help = screen.getByText(/Este código permite repetir la misma selección/);
@@ -618,44 +759,64 @@ describe("LW09 single-form creation", () => {
     expect(help).toHaveTextContent("Se genera automáticamente");
     await user.clear(seed);
     await user.type(seed, "invalido");
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
-    expect(seed).toHaveAttribute("aria-invalid", "true");
-    expect(seed).toHaveAttribute("aria-describedby", "seed-help seed-error");
-    expect(seed).toHaveAccessibleDescription(`${help.textContent} Ingresá un código de repetición válido.`);
-    for (const id of seed.getAttribute("aria-describedby")!.split(" ")) expect(document.getElementById(id)).toBeInTheDocument();
-    const draw = screen.getByRole("combobox", { name: "Sorteo inicial" });
-    expect(draw).toHaveAttribute("aria-describedby", "start_draw-help start_draw-error");
-    expect(draw).toHaveAccessibleDescription(/Elegí un sorteo con ranking disponible/);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Estrategia válida");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    await goToWizardStep(user, 1);
+    const activeSeed = screen.getByRole("textbox", { name: "Código de repetición" });
+    expect(activeSeed).toHaveAttribute("aria-invalid", "true");
+    expect(activeSeed).toHaveAttribute("aria-describedby", "seed-help seed-error");
+    expect(activeSeed).toHaveAccessibleDescription(`${help.textContent} Ingresá un código de repetición válido.`);
+    for (const id of activeSeed.getAttribute("aria-describedby")!.split(" ")) expect(document.getElementById(id)).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Paso 2 de 4" })).toBeInTheDocument();
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
   it("# F-CREATE-004 loads ranked starting draws and keeps conditions and settlement controls available", async () => {
     const { user } = setup();
     await conditions(user);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Estrategia válida");
     expect(apiClient.getStartingDraws).toHaveBeenCalledWith(0, 100);
+    await goToWizardStep(user, 2);
     expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveValue("2000");
+    await goToWizardStep(user, 1);
     expect(screen.getByRole("combobox", { name: "Cómo contar los premios" })).toHaveValue("all");
     expect(screen.getByRole("option", { name: "Sumar los premios" })).toHaveValue("all");
     expect(screen.getByRole("option", { name: "Contar solo el mayor premio por número" })).toHaveValue("best");
     expect(screen.getByText(/Este código permite repetir la misma selección/)).toBeInTheDocument();
+    await goToWizardStep(user, 3);
     expect(screen.getByRole("button", { name: "Crear simulación" })).toHaveClass("ledger-button-primary");
     expect(screen.getByRole("button", { name: "Salir" })).toHaveClass("ledger-button-ghost");
   });
 
   it("# F-CREATE-027 rejects invalid money, goal, start, limits and seed without rounding", async () => {
     const { user } = setup();
-    await screen.findByRole("option", { name: /2025-09-02 05:10/ });
+    await conditions(user);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Estrategia válida");
+    await goToWizardStep(user, 2);
     await user.clear(screen.getByRole("textbox", { name: "Capital (RD$)" }));
     await user.type(screen.getByRole("textbox", { name: "Capital (RD$)" }), "2.5");
     await user.clear(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }));
     await user.type(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" }), "1");
     await user.type(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" }), "10000001");
+    await goToWizardStep(user, 1);
+    await user.clear(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }));
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Estrategia válida");
     await revealSeed(user);
     await user.clear(screen.getByRole("textbox", { name: "Código de repetición" }));
     await user.type(screen.getByRole("textbox", { name: "Código de repetición" }), "9007199254740992");
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(/errores/i);
+    await goToWizardStep(user, 2);
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/Completá los datos de este paso/i);
+    const seed = screen.getByRole("textbox", { name: "Código de repetición" });
+    expect(seed).toHaveAttribute("aria-invalid", "true");
+    expect(seed).toHaveValue("9007199254740992");
+    await user.clear(seed);
+    await user.type(seed, "42");
+    await goToWizardStep(user, 2);
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(screen.getByRole("textbox", { name: "Capital (RD$)" })).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("textbox", { name: "Código de repetición" })).toHaveValue("9007199254740992");
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
@@ -665,7 +826,7 @@ describe("LW09 single-form creation", () => {
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Mi estrategia");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(500, "internal failure"));
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/servidor/i);
     expect(alert).toHaveTextContent(/revisá Simulaciones/i);
@@ -689,7 +850,7 @@ describe("LW09 single-form creation", () => {
     await user.clear(screen.getByRole("textbox", { name: "Peso 2 (%)" }));
     await user.type(screen.getByRole("textbox", { name: "Peso 2 (%)" }), "40");
     await user.selectOptions(screen.getByRole("combobox", { name: "Cobertura de la estrategia 1" }), "10");
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
     expect(screen.getByRole("button", { name: "Creando…" })).toBeDisabled();
     expect(apiClient.createExperiment).toHaveBeenCalledTimes(1);
     expect(apiClient.createExperiment).toHaveBeenCalledWith({ request: {
@@ -710,7 +871,7 @@ describe("LW09 single-form creation", () => {
     await user.click(screen.getByRole("button", { name: "Agregar estrategia" }));
     await user.click(screen.getByRole("button", { name: /Estrategia 2/ }));
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 2" }), " pAR ");
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(screen.getByText(/El nombre debe ser único/i)).toBeInTheDocument();
   });
 
@@ -722,7 +883,8 @@ describe("LW09 single-form creation", () => {
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "strategies", 0, "name"], msg: "Value error", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
+    await goToWizardStep(user, 1);
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveAttribute("aria-invalid", "true");
   });
 
@@ -732,15 +894,18 @@ describe("LW09 single-form creation", () => {
     await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [{ loc: ["body", "request", "conditions", "goal"], msg: "Value error", type: "value_error" }]));
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
+    await goToWizardStep(user, 2);
     await screen.findByRole("textbox", { name: "Meta de saldo (RD$)" });
     expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).toHaveAttribute("aria-invalid", "true");
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(507, "quota exceeded"));
+    await goToWizardStep(user, 3);
     await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/No hay espacio para crear el experimento/);
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new NetworkError());
     await user.click(screen.getByRole("button", { name: "Crear simulación" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/Sin respuesta del servidor\. Puede que el experimento se haya creado/);
+    await goToWizardStep(user, 1);
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Una");
   });
 
@@ -794,7 +959,8 @@ describe("LW09 single-form creation", () => {
       { loc: ["body", "request", "strategies", 0, "components", 1], msg: "component rejected", type: "value_error" },
       { loc: ["body", "request", "strategies", 0, "staking"], msg: "staking rejected", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
+    await goToWizardStep(user, 1);
     const system = await screen.findByRole("combobox", { name: "Sistema 2" });
     expect(system).toHaveFocus();
     expect(screen.getByText(/component rejected/)).toBeInTheDocument();
@@ -816,7 +982,8 @@ describe("LW09 single-form creation", () => {
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "strategies", 1], msg: "blend weights must add up to 100", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
+    await goToWizardStep(user, 1);
     expect(screen.getByRole("button", { name: /Estrategia 2/, expanded: true })).toBeInTheDocument();
     expect(screen.getByText(/Estrategia rechazada/i)).toBeInTheDocument();
     expect(screen.getByText(/blend weights must add up to 100/)).toBeInTheDocument();
@@ -831,7 +998,8 @@ describe("LW09 single-form creation", () => {
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "conditions"], msg: "goal is the final balance and must exceed capital", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
+    await goToWizardStep(user, 2);
     expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText(/goal is the final balance and must exceed capital/)).toBeInTheDocument();
   });
@@ -845,7 +1013,8 @@ describe("LW09 single-form creation", () => {
       { loc: ["body", "request", "conditions", "goal"], msg: "Value error", type: "value_error" },
       { loc: ["body", "request", "conditions", "max_bets"], msg: "Value error", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
+    await goToWizardStep(user, 2);
     expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("textbox", { name: "Duración máxima (sorteos)" })).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(/Revisá los campos señalados/);
@@ -867,7 +1036,8 @@ describe("LW09 single-form creation", () => {
     vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(422, "inválido", [
       { loc: ["body", "request", "strategies", 0, "name"], msg: "Value error", type: "value_error" },
     ]));
-    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    await launchFromReview(user);
+    await goToWizardStep(user, 1);
     expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveFocus();
   });
 
