@@ -126,3 +126,21 @@ Contrato y sistema: `DESIGN.md` (raíz). Verdad de producto: `PRODUCT.md` (raíz
   revisión nativa de S8 y push.
 - Incidentes de proceso: caída de Pi y de un writer sin reporte (S8b); el estado
   se recuperó verificando el árbol (typecheck + suite) antes de commitear.
+
+## S9 cierre: barrido etapa 2 y correcciones (en curso)
+
+- Barrido etapa 2 (`webapp/reports/verification/rediseno-v2/barrido/etapa2.md`,
+  API simulada, datos sintéticos): overflow solo en `/detalle` a 320px (2 spans
+  "N/D", 3px); teclado con indicador visible en los stops reales y foco atrapado
+  y devuelto en la cola; reduced-motion respetado en las 10 vistas; creador con
+  capital 2.000 / meta 2.800 / duración 12, resumen sin palabras pegadas y un
+  solo caveat; vacíos que enseñan en `/experimentos` y `/configuraciones`.
+- Hallazgos corregidos (5): separador de miles a es-ES ("RD$2.800", ya no la
+  coma que imponía es-DO y contradecía la ayuda del brief); overflow de "N/D" en
+  FinancialMetrics (`min-w-0`); `/datos` con acción primaria única y "Reintentar
+  perfiles" real (estado `profilesRetry`; antes el fetch corría una sola vez con
+  `[]`); `/configuraciones` nombra su reintento y deshabilita "Nueva estrategia
+  guardada" sin catálogo.
+- Defecto de enrutamiento (ODD): el primer intento de arreglar las 21 pruebas se
+  hizo inline en el padre cuando ya eran 7 archivos; se corrigió delegando a un
+  writer acotado (S9) con superficie explícita.
