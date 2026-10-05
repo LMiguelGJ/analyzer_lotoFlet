@@ -61,7 +61,7 @@ mismos resultados; las divergencias son bugs a corregir.
   juego por corrida (100/5/80-8-4-2-1 configurables). Tests-first con valores
   dorados del MD (fixtures pequeñas + al menos 2 escenarios completos).
   Superficies: webapp/backend/laboratorio/domain/**, webapp/backend/tests/**.
-- [ ] T2. API + persistencia: crear/correr/reportar backtests multi-sesión con
+- [x] T2. API + persistencia: crear/correr/reportar backtests multi-sesión con
   estrategia configurable (6 sistemas × coberturas × 3 apuestas), pin de hashes,
   validación de payloads. Superficies: webapp/backend/laboratorio/api/**,
   storage/** si hace falta, tests.
@@ -92,7 +92,12 @@ Aceptación: los 14 escenarios reproducen exactamente la tabla del MD.
   (fila 1: 681/963, 70,7%, 282, +10,3 · fila 14: 13/91, 14,3%, 78, −1.572,8);
   suite backend 863/863; ruff limpio. Hallazgos informativos: R3-bold-minimum
   (domain/backtest.py:81-83), R3-config-integer-validation (domain/backtest.py:23-30)
-- T2: pendiente
+- T2: 06f2764 (8 archivos, +454) · revisión nativa review-f815afebe2807a39
+  aprobada y quemada; API POST/GET /api/v1/backtests + persistencia (migración
+  0013, schema v13); test dorado vía API reproduce fila 14 exacta; suite backend
+  866/866; ruff limpio. Informativos: R3-snapshot-validation
+  (storage/repository.py:2780-2787), R3-system-selection-assertions
+  (api/backtests.py:67-83)
 - T3: pendiente
 - T4: pendiente
 - T5: pendiente
