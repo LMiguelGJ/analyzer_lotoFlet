@@ -96,6 +96,9 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
   }
 
   if (!open) return null;
+  // The drawer shows at most one primary action: the first row with a real next step.
+  let primaryClaimed = false;
+  const claimPrimary = () => { if (primaryClaimed) return false; primaryClaimed = true; return true; };
   const pageReady = status && status.pending.offset === offset && status.held.offset === offset;
   const row = (id: string, kind: "active" | "pending" | "held") => {
     const request = requests[id];
@@ -118,21 +121,23 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
             : request.kind === "cancel"
               ? "Solicitud recibida; esperando confirmación del estado."
               : "Inicio solicitado; esperando confirmación del estado.";
-    // One primary action per state; everything else is secondary.
+    // Cancelling is destructive, so it is never primary; one primary exists in the whole drawer.
     const primaryIsCheck = canCheck && !canResend;
-    const startClass = !locked && kind === "held" ? "btn btn-primary" : control;
-    const cancelClass = !locked && kind !== "held" ? "btn btn-primary" : control;
+    const checkClass = primaryIsCheck && claimPrimary() ? "btn btn-primary" : control;
+    const resendClass = canResend && claimPrimary() ? "btn btn-primary" : control;
+    const startClass = !locked && kind === "held" && claimPrimary() ? "btn btn-primary" : control;
+    const cancelClass = control;
     return <li key={`${kind}-${id}`} className="queue-row py-3" data-lane={lane}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <Link to={`/experimentos/${encodeURIComponent(id)}`} onClick={onClose} className="break-all font-mono text-sm link" aria-label={`Inspeccionar ${id}`}>{id}</Link>
+          <Link to={`/experimentos/${encodeURIComponent(id)}`} onClick={onClose} className="break-all font-mono text-xs text-text-secondary link" aria-label={`Inspeccionar ${id}`}>{id}</Link>
           <p className="mt-1 text-sm text-text-secondary">{statusCopy}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {kind === "held" && <button className={startClass} type="button" disabled={!!busy || locked} onClick={() => submit({ id, kind: "start" })} aria-label={`Iniciar ${id}`}>Iniciar</button>}
           <button className={cancelClass} type="button" disabled={!!busy || locked} onClick={(event) => requestConfirmation(event, { id, kind: "cancel" })} aria-label={`Cancelar ${id}`}>Cancelar</button>
-          {canCheck && <button className={primaryIsCheck ? "btn btn-primary" : control} type="button" disabled={!!busy || !!request.checking} onClick={() => void check(id)} aria-label={`Comprobar estado ${id}`}>{request.checking ? "Comprobando…" : "Comprobar estado"}</button>}
-          {canResend && <button className="btn btn-primary" type="button" disabled={!!busy} onClick={(event) => requestConfirmation(event, { id, kind: request.kind, repeat: true })} aria-label={request.kind === "cancel" ? `Reenviar cancelación ${id}` : `Reintentar inicio ${id}`}>{request.kind === "cancel" ? "Reenviar cancelación" : "Reintentar inicio"}</button>}
+          {canCheck && <button className={checkClass} type="button" disabled={!!busy || !!request.checking} onClick={() => void check(id)} aria-label={`Comprobar estado ${id}`}>{request.checking ? "Comprobando…" : "Comprobar estado"}</button>}
+          {canResend && <button className={resendClass} type="button" disabled={!!busy} onClick={(event) => requestConfirmation(event, { id, kind: request.kind, repeat: true })} aria-label={request.kind === "cancel" ? `Reenviar cancelación ${id}` : `Reintentar inicio ${id}`}>{request.kind === "cancel" ? "Reenviar cancelación" : "Reintentar inicio"}</button>}
         </div>
       </div>
       {errors[id] && errors[id] !== statusCopy && <p role="alert" className="mt-2 text-sm text-text">{errors[id]}</p>}

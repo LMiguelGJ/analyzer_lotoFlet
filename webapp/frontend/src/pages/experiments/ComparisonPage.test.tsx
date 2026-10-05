@@ -254,8 +254,9 @@ describe("LW12 comparison", () => {
     expect(within(verdict).getAllByText(/Saldo final más alto|Cambio respecto del inicio|Sorteos jugados|¿Alcanzó la meta\?/)).toHaveLength(4);
     expect(within(verdict).getByText(/Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad/)).toBeInTheDocument();
     expect(screen.getByText("El saldo no equivale a ganancia o pérdida; el cambio se calcula frente al capital inicial.")).toBeInTheDocument();
-    expect(screen.getByText("Volver a simulaciones")).toHaveClass("btn-primary");
+    expect(screen.getByText("Volver a simulaciones")).toHaveClass("btn-tertiary");
     expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /Ver detalle de Primera/ })).toHaveClass("btn-primary");
     const disclosure = screen.getByText("Detalles técnicos · comparación");
     expect(disclosure.closest("details")).not.toHaveAttribute("open");
     const technicalDisclosure = disclosure.closest("details")!;

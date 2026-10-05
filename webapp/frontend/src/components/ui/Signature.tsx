@@ -31,33 +31,32 @@ export function Verdict({ phrase, figures, closeReason, caveat = DEFAULT_CAVEAT 
   </section>;
 }
 
-export interface OrderSummaryRow {
-  label: string;
-  value: ReactNode;
-}
-
 export interface OrderSummaryProps {
-  capital: number;
-  goal: number;
+  /** null renders "Sin definir" (e.g. a draft whose input is still empty). */
+  capital: number | null;
+  goal: number | null;
   duration: ReactNode;
   coverage: ReactNode;
   caveat?: string;
 }
 
-export function OrderSummary({ capital, goal, duration, coverage, caveat = DEFAULT_CAVEAT }: OrderSummaryProps) {
-  const rows: OrderSummaryRow[] = [
-    { label: "Capital", value: <Money amount={capital} align="right" /> },
-    { label: "Meta de saldo", value: <Money amount={goal} align="right" /> },
-    { label: "Duración", value: duration },
-    {label: "Cobertura", value: coverage},
-  ];
+function SummaryCell({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="ledger-summary-cell">
+    <span className="ledger-label">{label}</span>
+    {typeof children === "string" || typeof children === "number" ? <Figure value={children} /> : children}
+  </div>;
+}
 
+export function OrderSummary({ capital, goal, duration, coverage, caveat = DEFAULT_CAVEAT }: OrderSummaryProps) {
   return <section className="ledger-block" aria-label="Resumen de la orden">
-    <div className="ledger-summary-rows">
-      {rows.map(({ label, value }) => <div className="ledger-summary-row" key={label}>
-        <span className="ledger-label">{label}</span>
-        {typeof value === "string" || typeof value === "number" ? <Figure value={value} align="right" /> : value}
-      </div>)}
+    <div className="ledger-summary-cells">
+      <SummaryCell label="Capital">{capital == null ? "Sin definir" : <Money amount={capital} />}</SummaryCell>
+      <SummaryCell label="Meta de saldo">{goal == null ? "Sin definir" : <Money amount={goal} />}</SummaryCell>
+      <SummaryCell label="Duración">{duration}</SummaryCell>
+    </div>
+    <div className="ledger-summary-selection">
+      <span className="ledger-label">Cobertura</span>
+      <p>{coverage}</p>
     </div>
     <p className="ledger-caveat">{caveat}</p>
   </section>;

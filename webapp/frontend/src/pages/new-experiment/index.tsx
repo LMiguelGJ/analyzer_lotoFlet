@@ -6,7 +6,7 @@ import { isProfileExperiment } from "../../api/types";
 import type { Catalog, ConfigurationSummary, Page, StartingDrawAvailability } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { StrategyEditor } from "../../components/StrategyEditor";
-import { Block, Button, Figure, SectionHeader } from "../../components/ui";
+import { Block, Button, OrderSummary, SectionHeader } from "../../components/ui";
 import { buildRequest, buildStrategy, diffStrategyKey, draftFromRequest, draftFromStrategy, errorDetail, errorMessage, initialConditions, initialStrategy, newStrategy, trimName, validateConditions, validateStrategies } from "./model";
 import type { ConditionsDraft, Errors, StrategyDraft } from "./model";
 import { FIELD_LABEL_SEED, FIELD_LABEL_SETTLEMENT, SELECTOR_LABELS, SETTLEMENT_LABELS } from "../../lib/ui-labels";
@@ -456,7 +456,7 @@ export function NewExperimentPage() {
   const staleDraw = !!knownDraw && conditions.start_draw === knownDraw && !drawLoading && !drawError && !selectedAvailable;
   const summarySelection = strategies.map((strategy) => catalog ? strategyPlainText(strategy, catalog) : "Selección configurable").join(" · ");
 
-  if (baseId && configurationId) return <div><Link to="/experimentos" className="link">Volver a experimentos</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
+  if (baseId && configurationId) return <div><Link to="/experimentos" className="link">Volver a simulaciones</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
 
   if (configurationId && (configurationState !== "ready" || catalogError)) return <div>
     <Link to="/configuraciones" className="link">Volver a estrategias guardadas</Link>
@@ -464,12 +464,12 @@ export function NewExperimentPage() {
   </div>;
 
   if (baseId && (baseState !== "ready" || catalogError)) return <div>
-    <Link to="/experimentos" className="link">Volver a experimentos</Link>
+    <Link to="/experimentos" className="link">Volver a simulaciones</Link>
     {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor." : baseState === "invalid" ? "El experimento base no es compatible con este asistente." : "No se pudo cargar el experimento base."} <button type="button" className="btn btn-tertiary" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   return <>
-    <Link to="/experimentos" className="mb-4 inline-block link">Volver a experimentos</Link>
+    <Link to="/experimentos" className="mb-4 inline-block link">Volver a simulaciones</Link>
     <div className="mb-5 border-y border-border py-4 text-sm"><p>¿Tenés un perfil y datos importados? <Link to="/experimentos/nuevo/perfil" className="link">Crear simulación con perfil</Link>.</p></div>
     <form className="max-w-4xl" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         {(Object.keys(errors).length > 0 || notice) && <div ref={errorRef} tabIndex={-1} role="alert" className="mb-5 border border-border-control p-3 text-sm focus:outline-accent">
@@ -481,7 +481,6 @@ export function NewExperimentPage() {
         {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
 
         <Block border="top" className="mb-6">
-          <SectionHeader title="Nombre de la simulación" />
           <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
             {input("name", "Nombre de la simulación")}
             {field("start_draw", "Sorteo inicial", <select {...attrs("start_draw", true)} className={control} value={conditions.start_draw} disabled={!catalog || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable)} onChange={(event) => editCondition("start_draw", event.target.value)}>
@@ -552,15 +551,7 @@ export function NewExperimentPage() {
         </details>
         <section className="mb-6">
           <SectionHeader title="Resumen de la orden" className="mb-3" />
-          <section className="ledger-block" aria-label="Resumen de la orden">
-            <div className="ledger-summary-rows">
-              <div className="ledger-summary-row"><span className="ledger-label">Capital</span><Figure value={conditions.capital ? `RD$${conditions.capital}` : "Sin definir"} align="right" /></div>
-              <div className="ledger-summary-row"><span className="ledger-label">Meta de saldo</span><Figure value={conditions.goal ? `RD$${conditions.goal}` : "Sin definir"} align="right" /></div>
-              <div className="ledger-summary-row"><span className="ledger-label">Duración</span><Figure value={`${conditions.max_bets || "Sin límite"} sorteos`} align="right" /></div>
-              <div className="ledger-summary-row"><span className="ledger-label">Cobertura</span><Figure value={summarySelection} align="right" /></div>
-            </div>
-            <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
-          </section>
+          <OrderSummary capital={Number.isInteger(Number(conditions.capital)) && Number(conditions.capital) > 0 ? Number(conditions.capital) : null} goal={Number.isInteger(Number(conditions.goal)) && Number(conditions.goal) > 0 ? Number(conditions.goal) : null} duration={`${conditions.max_bets || "Sin límite"} sorteos`} coverage={summarySelection} caveat="Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad." />
         </section>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
           <Button variant="ghost" onClick={() => navigate("/experimentos")}>Salir</Button>

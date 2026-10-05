@@ -94,8 +94,8 @@ describe("S2 simple creation form", () => {
     expect(screen.getByRole("group", { name: "Selección" })).toHaveTextContent("Transición 60% + Fríos 40%, cobertura 10 números");
     expect(screen.getByRole("combobox", { name: "Cómo contar los premios" })).toHaveValue("all");
     const summary = screen.getByRole("region", { name: "Resumen de la orden" });
-    expect(summary).toHaveTextContent("RD$2000");
-    expect(summary).toHaveTextContent("RD$2800");
+    expect(summary).toHaveTextContent(/RD\$2[.,]000/);
+    expect(summary).toHaveTextContent(/RD\$2[.,]800/);
     expect(summary).toHaveTextContent("12 sorteos");
     expect(summary).toHaveTextContent("Transición 60% + Fríos 40%");
     expect(screen.getAllByText(/Esto simula/)).toHaveLength(1);
@@ -147,7 +147,7 @@ describe("LW13 library templates", () => {
     expect(screen.getByRole("group", { name: "Selección" })).toHaveTextContent("Fríos: Fríos, cobertura 1 números");
     expect(apiClient.getConfiguration).toHaveBeenCalledWith("cfg-1");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
+    await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
   });
   it("appends one selected template without changing conditions or existing strategies, and rejects a normalized duplicate", async () => {
@@ -290,7 +290,7 @@ describe("LW10 use as base", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent(/Mix: Transición 60% \+ Fríos 40%/);
     expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent(/Par: Selección por paridad/);
-    await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
+    await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
@@ -301,7 +301,7 @@ describe("LW10 use as base", () => {
     const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
     await screen.findByDisplayValue("Trial");
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " edited");
-    await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
+    await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
@@ -420,7 +420,7 @@ describe("ODD03b dated starting draws", () => {
     await screen.findByRole("option", { name: "2025-09-03 05:10" });
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toHaveValue("");
     expect(screen.queryByRole("option", { name: "2025-09-02 05:15" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Volver a experimentos" }));
+    await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/experimentos/nuevo");
   });

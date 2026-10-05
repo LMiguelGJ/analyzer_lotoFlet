@@ -294,9 +294,8 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
         <dt>Capital inicial</dt><dd className="data-list-numeric">{money(capital)}</dd>
         <dt>Meta de saldo</dt><dd className="data-list-numeric">{money(goal)}</dd>
         <dt>Duración</dt><dd className="data-list-numeric">{isProfileRun(run) ? `${run.result.elapsed_draws} sorteos transcurridos` : `${run.result.bets_count} sorteos jugados`}</dd>
-        <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help"><Figure value={money(delta!)} variant={deltaVariant} align="right" /></dd>
+        <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help"><Figure value={money(delta!)} variant={deltaVariant} align="right" /><span id="detail-delta-help" className="field-help block text-right">{FIELD_HELP_DELTA}</span></dd>
       </dl>
-      <p id="detail-delta-help" className="field-help">{FIELD_HELP_DELTA}</p>
     </>}
     <div className="flex flex-wrap items-center gap-4"><h2 className="font-heading text-xl">{runName}</h2><StatusLabel kind="execution" value={run.status} /></div>
     <div role="tablist" aria-label="Secciones del detalle" className="mt-6 flex flex-wrap gap-2 border-b border-border">
@@ -386,7 +385,7 @@ export function DetailPage() {
       <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-border pt-4"><h2 className="font-heading text-2xl">{isProfileBatchExperiment(data) ? data.display.name : data.request.name}</h2><StatusLabel kind="execution" value={data.status} /></div>
       {(data.status === "running" || data.status === "pending" || data.status === "held") && <p className="mt-3 text-sm text-text-secondary">El cálculo puede continuar en el servidor; comprobá el estado desde la cola antes de reintentar.</p>}
       {data.runs.length > 1 && <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
-        {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {isProfileBatchRun(run) ? run.strategy.name ?? `Estrategia ${run.ordinal + 1}` : isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? "Estrategia"} · <StatusLabel kind="execution" value={run.status} /></button>)}
+        {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {isProfileBatchRun(run) ? run.strategy.name ?? `Estrategia ${run.ordinal + 1}` : isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? "Estrategia"} <StatusLabel kind="execution" value={run.status} className="ledger-chip-compact ml-2" /></button>)}
       </div>}
       <nav aria-label="Navegación del experimento" className="mt-6 flex flex-wrap gap-2 text-sm">
         <Link className="btn btn-tertiary" to="/experimentos">Volver a simulaciones</Link>

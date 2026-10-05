@@ -537,8 +537,9 @@ describe("LW15 queue drawer", () => {
     expect(heldRow.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(within(heldRow as HTMLElement).getByRole("button", { name: "Iniciar held-1" })).toHaveClass("btn-primary");
     expect(within(heldRow as HTMLElement).getByRole("button", { name: "Cancelar held-1" })).toHaveClass("btn-secondary");
-    expect(pendingRow.querySelectorAll(".btn-primary")).toHaveLength(1);
-    expect(within(pendingRow as HTMLElement).getByRole("button", { name: "Cancelar pending-1" })).toHaveClass("btn-primary");
+    expect(pendingRow.querySelectorAll(".btn-primary")).toHaveLength(0);
+    expect(within(pendingRow as HTMLElement).getByRole("button", { name: "Cancelar pending-1" })).toHaveClass("btn-secondary");
+    expect(dialog.querySelectorAll(".btn-primary")).toHaveLength(1);
     await user.click(within(pendingRow as HTMLElement).getByRole("button", { name: "Cancelar pending-1" }));
     // Long consequences live in the confirmation, not in the row.
     const confirmation = screen.getByRole("alertdialog");
@@ -550,6 +551,7 @@ describe("LW15 queue drawer", () => {
     expect(pendingRow).not.toHaveTextContent(/Actualizando…|Sin conexión/);
     expect(pendingRow.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(within(pendingRow as HTMLElement).getByRole("button", { name: "Comprobar estado pending-1" })).toHaveClass("btn-primary");
+    expect(dialog.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(within(pendingRow as HTMLElement).getByRole("button", { name: "Cancelar pending-1" })).toBeDisabled();
   });
 

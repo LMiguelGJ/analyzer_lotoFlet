@@ -144,6 +144,19 @@ describe("signature components", () => {
     expect(screen.queryByText(/Esto simula escenarios/)).toBeNull();
   });
 
+  it("renders each order label and value as a separate cell, with the selection on its own row", () => {
+    render(<OrderSummary capital={2000} goal={2800} duration="12 sorteos" coverage="Fríos: números que menos salieron" />);
+    const summary = screen.getByRole("region", { name: "Resumen de la orden" });
+    const cells = Array.from(summary.querySelectorAll(".ledger-summary-cell"));
+    expect(cells).toHaveLength(3);
+    expect(cells.map((cell) => cell.querySelector(".ledger-label")?.textContent)).toEqual(["Capital", "Meta de saldo", "Duración"]);
+    expect(cells[0].textContent).toMatch(/^Capital.*2[.,]000$/);
+    const selection = summary.querySelector(".ledger-summary-selection")!;
+    expect(selection.querySelector(".ledger-label")?.textContent).toBe("Cobertura");
+    expect(selection.querySelector("p")?.textContent).toBe("Fríos: números que menos salieron");
+    expect(cells.some((cell) => cell.contains(selection))).toBe(false);
+  });
+
   it("shows all live order figures and keeps the caveat visible", () => {
     const { rerender } = render(<OrderSummary capital={1000} goal={1500} duration="30 sorteos" coverage="25 números" />);
     const summary = screen.getByRole("region", { name: "Resumen de la orden" });

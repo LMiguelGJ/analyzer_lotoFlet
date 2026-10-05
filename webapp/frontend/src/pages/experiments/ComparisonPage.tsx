@@ -114,7 +114,7 @@ export function ComparisonPage() {
   const delta = leader?.result?.delta;
   const deltaVariant: FigureVariant = delta == null || delta === 0 ? "neutral" : delta > 0 ? "positive" : "negative";
   return <div className="min-w-0 space-y-7">
-    <Link to="/experimentos" className="btn btn-primary">Volver a simulaciones</Link>
+    <Link to="/experimentos" className="btn btn-tertiary self-start">Volver a simulaciones</Link>
     {!data && !error && <Loading rows={4} label="Cargando la comparación…" className="my-4" />}
     {error && <div role="alert" className="border-y border-border py-4"><p>{error}</p><p>La información guardada se conserva. Podés volver a cargar la comparación.</p><button type="button" className="btn btn-secondary mt-2" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></div>}
     {data && <>
@@ -128,6 +128,7 @@ export function ComparisonPage() {
         </div>
         <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
         <p className="text-sm">El saldo no equivale a ganancia o pérdida; el cambio se calcula frente al capital inicial.</p>
+        {leader && <p className="mt-3"><Link className="btn btn-primary" to={`/experimentos/${encodeURIComponent(id)}?run=${leader.ordinal}&from=comparison`}>Ver detalle de {names(leader.ordinal)}</Link></p>}
       </section>
       <dl className="data-list border-b border-border py-3">
         <dt>Capital inicial</dt><dd className="data-list-numeric">{money(capital)}</dd>
