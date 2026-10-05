@@ -53,7 +53,7 @@ beforeEach(() => {
 });
 
 describe("profile session creator", () => {
-  it("shows the three plain rule groups and keeps technical values behind closed disclosures", async () => {
+  it("# F-CREATE-001 F-CREATE-036 shows the three plain rule groups and keeps technical values behind closed disclosures", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: "Perfil de juego 1" });
     await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
@@ -67,7 +67,7 @@ describe("profile session creator", () => {
     expect(screen.queryByLabelText(/Semilla/)).not.toBeInTheDocument();
     expect(screen.queryByText(/schema_version/)).not.toBeInTheDocument();
   });
-  it("shows the chosen history identity and the scale context for summary amounts", async () => {
+  it("# F-CREATE-036 shows the chosen history identity and the scale context for summary amounts", async () => {
     const { user } = setup();
     await user.selectOptions(await screen.findByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
     await user.selectOptions(await screen.findByRole("combobox", { name: "Historial compatible" }), datasetItem.dataset_sha256);
@@ -79,7 +79,7 @@ describe("profile session creator", () => {
     expect(within(historyDetails!).getByText(datasetItem.dataset_sha256)).toBeInTheDocument();
   });
 
-  it("keeps a library dataset URL as a read-only identity hint without auto-selecting another profile or dataset", async () => {
+  it("# F-CREATE-037 keeps a library dataset URL as a read-only identity hint without auto-selecting another profile or dataset", async () => {
     const selectedHash = "f".repeat(64);
     setup(`/experimentos/nuevo/perfil?dataset_sha256=${selectedHash}`);
     const status = await screen.findByRole("status");
@@ -89,7 +89,7 @@ describe("profile session creator", () => {
     expect(screen.getByRole("combobox", { name: "Historial compatible" })).toHaveValue("");
   });
 
-  it("submits explicitly selected Q80 cycling without fixed stake and blocks uncertain duplicate", async () => {
+  it("# F-CREATE-038 F-CREATE-042 submits explicitly selected Q80 cycling without fixed stake and blocks uncertain duplicate", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [cyclingProfile], templates: [] });
     const { user } = setup();
@@ -104,7 +104,7 @@ describe("profile session creator", () => {
     expect(body).toMatchObject({ schema_version: 2, staking: { capability: "q80-first-prize-cycling/v1" } });
     expect(JSON.stringify(body)).not.toContain("per_number_stake");
   });
-  it("offers generic Audaz only for server-compatible selected coverage and posts schema 3", async () => {
+  it("# F-CREATE-038 offers generic Audaz only for server-compatible selected coverage and posts schema 3", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [audazProfile], templates: [] });
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20,
@@ -128,7 +128,7 @@ describe("profile session creator", () => {
       staking: { capability: "profile-audaz/v1" } });
     expect(JSON.stringify(body)).not.toContain("per_number_stake");
   });
-  it.each(["cycle", "stop"] as const)("submits schema-4 recovery with explicit target, rounds, compatible coverage and %s mode", async (end_mode) => {
+  it.each(["cycle", "stop"] as const)("# F-CREATE-038 submits schema-4 recovery with explicit target, rounds, compatible coverage and %s mode", async (end_mode) => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [recoveryProfile], templates: [] });
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [recoveryDataset] });
@@ -146,7 +146,7 @@ describe("profile session creator", () => {
       staking: { schema_version: 1, target_margin: 1234, rounds: 4, end_mode } }));
     expect(JSON.stringify(vi.mocked(apiClient.createProfileExperiment).mock.calls[0][0])).not.toContain("per_number_stake");
   });
-  it("does not POST recovery if current server compatibility withdraws coverage", async () => {
+  it("# F-CREATE-039 does not POST recovery if current server compatibility withdraws coverage", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20,
       items: [recoveryProfile], templates: [] });
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [recoveryDataset] });
@@ -166,7 +166,7 @@ describe("profile session creator", () => {
     expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
   });
   it.each(["selector_capabilities", "settlements", "entry_policies"] as const)(
-    "does not POST when the server withdraws %s at recheck", async (capability) => {
+    "# F-CREATE-039 does not POST when the server withdraws %s at recheck", async (capability) => {
       vi.mocked(apiClient.getProfiles).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20,
         items: [profileItem], templates: [] });
       vi.mocked(apiClient.getProfiles).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20,
@@ -180,7 +180,7 @@ describe("profile session creator", () => {
       expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
     },
   );
-  it("does not POST Q80 if the server withdraws the capability at recheck", async () => {
+  it("# F-CREATE-039 does not POST Q80 if the server withdraws the capability at recheck", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20,
       items: [cyclingProfile], templates: [] });
     const { user } = setup();
@@ -190,7 +190,7 @@ describe("profile session creator", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/cambiaron/);
     expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
   });
-  it("creates the exact request once and opens existing detail", async () => {
+  it("# F-CREATE-040 creates the exact request once and opens existing detail", async () => {
     const { user, router } = setup();
     await fill(user);
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
@@ -203,7 +203,7 @@ describe("profile session creator", () => {
       staking: { capability: "flat-per-number/v1", per_number_stake: 125 },
     });
   });
-  it("finds profiles, datasets and draws beyond the first page and date filter", async () => {
+  it("# F-CREATE-041 finds profiles, datasets and draws beyond the first page and date filter", async () => {
     vi.mocked(apiClient.getProfiles).mockImplementation(async (offset = 0) => ({ total: 21, offset, limit: 20,
       items: offset ? [profileItem] : [{ ...profileItem, profile: { ...profileItem.profile, profile_id: "other" } }], templates: [] }));
     vi.mocked(apiClient.getDatasets).mockImplementation(async (offset = 0) => ({ total: 21, offset, limit: 20,
@@ -225,7 +225,7 @@ describe("profile session creator", () => {
     expect(apiClient.getDatasets).toHaveBeenCalledWith(20, 20);
     expect(apiClient.getDatasetDraws).toHaveBeenCalledWith(datasetItem.dataset_sha256, 0, 100, "2025-01-01");
   });
-  it("blocks stale server bindings before POST, and preserves the draft", async () => {
+  it("# F-CREATE-039 blocks stale server bindings before POST, and preserves the draft", async () => {
     const { user } = setup();
     await fill(user);
     vi.mocked(apiClient.getDataset).mockResolvedValueOnce({ ...datasetItem, profile_sha256: "e".repeat(64) });
@@ -234,7 +234,7 @@ describe("profile session creator", () => {
     expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Simulación local");
   });
-  it("does not lock submission when preflight failed before any POST", async () => {
+  it("# F-CREATE-042 does not lock submission when preflight failed before any POST", async () => {
     const { user } = setup(); await fill(user);
     vi.mocked(apiClient.getDataset).mockRejectedValueOnce(new NetworkError());
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
@@ -242,7 +242,7 @@ describe("profile session creator", () => {
     expect(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" })).toBeEnabled();
     expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
   });
-  it("never automatically resubmits after an uncertain network outcome or double click", async () => {
+  it("# F-CREATE-042 never automatically resubmits after an uncertain network outcome or double click", async () => {
     const { user } = setup(); await fill(user);
     vi.mocked(apiClient.createProfileExperiment).mockRejectedValueOnce(new NetworkError());
     await user.dblClick(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
@@ -251,7 +251,7 @@ describe("profile session creator", () => {
     expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("link", { name: "Revisá Simulaciones" })).toHaveAttribute("href", "/experimentos");
   });
-  it("shows no false compatibility and keeps keyboard-labeled controls accessible", async () => {
+  it("# F-CREATE-043 shows no false compatibility and keeps keyboard-labeled controls accessible", async () => {
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [{ ...datasetItem, profile_sha256: "e".repeat(64) }] });
     const { user, container } = setup();

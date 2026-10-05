@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+// Contract coverage: F-LIST-027–F-LIST-037 — optional reusable library, honest empty/error/search states, dirty guard, DOM order, labels/validation/single-save, exact delete identity, and persistent success focus.
 import { beforeEach, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";

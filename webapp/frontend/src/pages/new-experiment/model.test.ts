@@ -8,20 +8,20 @@ const valid = { ...initialConditions, name: "Ejemplo", start_draw: "2025-09-02 0
 const draws = [valid.start_draw];
 
 describe("wire contract validation", () => {
-  it("starts with the brief's valid financial limits and blended selection", () => {
+  it("# F-UTIL-013 starts with the brief's valid financial limits and blended selection", () => {
     expect(initialConditions).toMatchObject({ capital: "2000", goal: "2800", max_bets: "12" });
     expect(initialStrategy(1)).toMatchObject({
       selector: "blend", components: [{ system: "transition", weight: "60" }, { system: "cold", weight: "40" }], coverage: "10",
     });
     expect(validateConditions({ ...initialConditions, name: "Prueba", start_draw: draws[0], seed: "0" }, draws)).toEqual({});
   });
-  it("round-trips one library strategy without substituting the library name", () => {
+  it("# F-UTIL-014 round-trips one library strategy without substituting the library name", () => {
     const strategy = { name: "Estrategia", selector: "blend" as const, components: [{ system: "transition", weight: 60 }, { system: "cold", weight: 40 }], coverage: 10, staking: "bold" as const };
     const draft = draftFromStrategy(strategy, 7);
     expect(draft).toMatchObject({ id: 7, name: "Estrategia", components: [{ weight: "60" }, { weight: "40" }] });
     expect(buildStrategy(draft, catalog)).toEqual(strategy);
   });
-  it("prefills every saved request field and all mix components without rounding or mutating the source", () => {
+  it("# F-UTIL-014 prefills every saved request field and all mix components without rounding or mutating the source", () => {
     const request = buildRequest({ ...valid, max_minutes: "90", seed: "9007199254740991" }, [
       { ...newStrategy(1), name: "Mix", selector: "blend", coverage: "10", staking: "bold", components: [{ system: "transition", weight: "60" }, { system: "cold", weight: "40" }] },
     ], catalog);
@@ -32,7 +32,7 @@ describe("wire contract validation", () => {
     draft.strategies[0].components[0].weight = "70";
     expect(JSON.stringify(request)).toBe(snapshot);
   });
-  it("rejects decimals, exponents, negatives, overflow, invalid ranked start and equal final goal", () => {
+  it("# F-UTIL-015 rejects decimals, exponents, negatives, overflow, invalid ranked start and equal final goal", () => {
     expect(integer("1.1", 0n, 10n)).toBeNull();
     expect(integer("1e2", 0n, 100n)).toBeNull();
     expect(integer("-1", 0n, 100n)).toBeNull();
@@ -40,20 +40,20 @@ describe("wire contract validation", () => {
     expect(validateConditions({ ...valid, goal: "2000" }, draws).goal).toMatch(/superar/);
     expect(validateConditions(valid, draws)).toEqual({});
   });
-  it("accepts the max safe integer seed, sends it as a JSON number and rejects one above it", () => {
+  it("# F-UTIL-016 accepts the max safe integer seed, sends it as a JSON number and rejects one above it", () => {
     const conditions = { ...valid, seed: "9007199254740991" };
     expect(validateConditions(conditions, draws)).toEqual({});
     const strategy = { ...newStrategy(1), name: "Una", system: "transition" };
     expect(buildRequest(conditions, [strategy], catalog).conditions.seed).toBe(9007199254740991);
     expect(validateConditions({ ...valid, seed: "9007199254740992" }, draws).seed).toEqual(expect.any(String));
   });
-  it("round-trips the entered seed through a backend-shaped JSON response", () => {
+  it("# F-UTIL-016 round-trips the entered seed through a backend-shaped JSON response", () => {
     const entered = 9007199254740991;
     const responseBody = JSON.stringify({ conditions: { seed: entered } });
     const parsed: { conditions: { seed: number } } = JSON.parse(responseBody);
     expect(parsed.conditions.seed).toBe(entered);
   });
-  it("agrees with the backend's duplicate-name verdict for every case in the shared fixture", () => {
+  it("# F-UTIL-017 agrees with the backend's duplicate-name verdict for every case in the shared fixture", () => {
     for (const testCase of nameCases as { category: string; a: string; b: string; duplicate: boolean }[]) {
       const equal = normalizeStrategyName(testCase.a) === normalizeStrategyName(testCase.b);
       expect(equal, testCase.category).toBe(testCase.duplicate);
@@ -63,7 +63,7 @@ describe("wire contract validation", () => {
       expect(!!errors["strategies.1.name"], testCase.category).toBe(testCase.duplicate);
     }
   });
-  it("trims a stored name with the same explicit charset used for duplicate detection, keeping BOM/NEL as-is", () => {
+  it("# F-UTIL-018 trims a stored name with the same explicit charset used for duplicate detection, keeping BOM/NEL as-is", () => {
     // U+FEFF and U+0085 are excluded from the shared trim charset on both sides, so
     // buildRequest must not fall back to JS's built-in trim(), which strips U+FEFF.
     expect(trimName("\uFEFFName")).toBe("\uFEFFName");
@@ -74,7 +74,7 @@ describe("wire contract validation", () => {
     expect(built.strategies[0].name).toBe("\uFEFFUna");
     expect(built.name).toBe(valid.name);
   });
-  it("rejects duplicate names, six strategies, invalid mix sums and repeated systems", () => {
+  it("# F-UTIL-019 rejects duplicate names, six strategies, invalid mix sums and repeated systems", () => {
     const first = { ...newStrategy(1), name: " Una ", system: "transition" };
     expect(validateStrategies([first, { ...first, id: 2, name: "una" }], catalog)["strategies.1.name"]).toMatch(/único/);
     expect(validateStrategies(Array.from({ length: 6 }, (_, i) => ({ ...first, id: i, name: `n${i}` })), catalog).strategies).toMatch(/1 y 5/);

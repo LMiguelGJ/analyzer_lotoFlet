@@ -12,7 +12,7 @@ function renderAt(path: string) {
 }
 
 describe("routing", () => {
-  it("redirects the root path to /experimentos", () => {
+  it("# F-SHELL-001 redirects the root path to /experimentos", () => {
     renderAt("/");
     expect(screen.getByRole("heading", { name: "Simulaciones" })).toBeInTheDocument();
   });
@@ -27,12 +27,12 @@ describe("routing", () => {
     ["/configuraciones", "Estrategias"],
     ["/datos", "Datos e historial"],
     ["/ajustes", "Ajustes"],
-  ])("shows the canonical title for %s", (path, title) => {
+  ])("# F-SHELL-002 shows the canonical title for %s", (path, title) => {
     renderAt(path);
     expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
   });
 
-  it("keeps route paths and canonical destinations stable", () => {
+  it("# F-SHELL-003 keeps route paths and canonical destinations stable", () => {
     renderAt("/configuraciones");
     expect(screen.getByRole("link", { name: "Estrategias" })).toHaveAttribute("href", "/configuraciones");
     renderAt("/datos");
@@ -43,21 +43,21 @@ describe("routing", () => {
     expect(screen.getByRole("link", { name: "Simulaciones" })).toHaveAttribute("href", "/experimentos");
   });
 
-  it("renders an honest not-found state for unknown paths", () => {
+  it("# F-SHELL-005 renders an honest not-found state for unknown paths", () => {
     renderAt("/algo-inexistente");
     expect(screen.getByRole("heading", { name: "Página no encontrada" })).toBeInTheDocument();
     expect(screen.getByText(/Elegí una sección de la navegación/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ir a Simulaciones" })).toHaveAttribute("href", "/experimentos");
   });
 
-  it("marks the current nav destination as active", () => {
+  it("# F-SHELL-006 marks the current nav destination as active", () => {
     renderAt("/configuraciones");
     expect(screen.getByRole("link", { name: "Estrategias" })).toHaveAttribute("aria-current", "page");
   });
 });
 
 describe("skip link", () => {
-  it("is the first focusable element and moves focus to main content", async () => {
+  it("# F-SHELL-007 is the first focusable element and moves focus to main content", async () => {
     const user = userEvent.setup();
     renderAt("/experimentos");
     await user.tab();
@@ -68,7 +68,7 @@ describe("skip link", () => {
 });
 
 describe("keyboard access", () => {
-  it("keeps all destinations and the queue control in the tab order", async () => {
+  it("# F-SHELL-008 keeps all destinations and the queue control in the tab order", async () => {
     const user = userEvent.setup();
     renderAt("/experimentos");
     await user.tab();
@@ -85,7 +85,7 @@ describe("keyboard access", () => {
 });
 
 describe("shell accessibility", () => {
-  it("has no axe violations on the default screen", async () => {
+  it("# F-SHELL-009 has no axe violations on the default screen", async () => {
     const { container } = renderAt("/experimentos");
     const results = await axe(container);
     expect(results).toHaveNoViolations();

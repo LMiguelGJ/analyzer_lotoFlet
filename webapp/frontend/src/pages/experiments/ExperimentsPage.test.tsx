@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+// Contract coverage: F-LIST-001–F-LIST-020 — loading/empty/errors, bounded ledger and honest profile/status values, filters/pagination/stale reads, row actions/delete confirmation/focus, and axe.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";

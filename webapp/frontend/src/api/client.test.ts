@@ -27,7 +27,7 @@ describe("apiClient error mapping", () => {
   });
 
   it.each([400, 403, 404, 409, 422, 507])(
-    "maps HTTP %i to an ApiError with that status and detail",
+    "# F-API-001 maps HTTP %i to an ApiError with that status and detail",
     async (status: number) => {
       vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(status, { detail: `error ${status}` }));
 
@@ -35,7 +35,7 @@ describe("apiClient error mapping", () => {
     },
   );
 
-  it("falls back to the status text when the error body has no detail", async () => {
+  it("# F-API-002 falls back to the status text when the error body has no detail", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response("not json", { status: 500, statusText: "Internal Server Error" }),
     );
@@ -46,7 +46,7 @@ describe("apiClient error mapping", () => {
     });
   });
 
-  it("maps a fetch rejection to NetworkError, never claiming the server stopped", async () => {
+  it("# F-API-003 maps a fetch rejection to NetworkError, never claiming the server stopped", async () => {
     vi.mocked(globalThis.fetch).mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
     const error = await apiClient.getCatalog().catch((e: unknown) => e);
@@ -54,26 +54,26 @@ describe("apiClient error mapping", () => {
     expect((error as Error).message).not.toMatch(/detuvo|stopped/i);
   });
 
-  it("requests a bounded whole-run trajectory with an encoded identifier", async () => {
+  it("# F-API-009 F-API-010 requests a bounded whole-run trajectory with an encoded identifier", async () => {
     const trajectory = { total: 1001, points: [], reduction_method: "minmax-even-v1" };
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, trajectory));
     await expect(apiClient.getTrajectory("a/b", 2, 500)).resolves.toEqual(trajectory);
     expect(globalThis.fetch).toHaveBeenCalledWith("/api/v1/experiments/a%2Fb/runs/2/trajectory?max_points=500", expect.anything());
   });
-  it("resolves with the parsed JSON body on success", async () => {
+  it("# F-API-005 resolves with the parsed JSON body on success", async () => {
     const catalog = { game: { name: "Quiniela 80" } };
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, catalog));
 
     await expect(apiClient.getCatalog()).resolves.toEqual(catalog);
   });
 
-  it("resolves with undefined on a 204 No Content", async () => {
+  it("# F-API-005 resolves with undefined on a 204 No Content", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(apiClient.deleteExperiment("abc", "abc")).resolves.toBeUndefined();
   });
 
-  it("requests same-origin relative URLs under /api/v1", async () => {
+  it("# F-API-008 requests same-origin relative URLs under /api/v1", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, {}));
 
     await apiClient.getCatalog();
@@ -82,7 +82,7 @@ describe("apiClient error mapping", () => {
     expect(String(url)).toBe("/api/v1/catalog");
   });
 
-  it("reads bounded profiles and partial template metadata without a write request", async () => {
+  it("# F-API-011 reads bounded profiles and partial template metadata without a write request", async () => {
     const page = {
       total: 1, offset: 0, limit: 20,
       items: [{ profile: { profile_id: "legacy-quiniela-80", revision: 1 }, execution_supported: true }],
@@ -99,7 +99,7 @@ describe("apiClient error mapping", () => {
     expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => init?.method === undefined)).toBe(true);
   });
 
-  it("registers a complete profile once and trusts the server response digest/readiness", async () => {
+  it("# F-API-015 registers a complete profile once and trusts the server response digest/readiness", async () => {
     const profile = { schema_version: 1, profile_id: "new-profile", revision: 1, universe_size: 100,
       positions: 1, allows_repeats: true, multipliers: [{ numerator: 5, denominator: 4 }],
       currency: "DOP", scale: 2, stake_increment: 4, minimum_stake: 4, maximum_stake: 100,
@@ -120,7 +120,7 @@ describe("apiClient error mapping", () => {
     for (const status of [409, 409, 422]) await expect(apiClient.registerProfile(profile)).rejects.toMatchObject({ status });
   });
 
-  it("reads bounded inert datasets through GET only", async () => {
+  it("# F-API-011 reads bounded inert datasets through GET only", async () => {
     const page = { total: 1, offset: 0, limit: 20, items: [{
       dataset_sha256: "a".repeat(64), source_sha256: "b".repeat(64),
       source_id: "local", source_revision: "v1", profile_id: "test-draw",
@@ -139,7 +139,7 @@ describe("apiClient error mapping", () => {
     expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => init?.method === undefined)).toBe(true);
   });
 
-  it("keeps unfiltered starting draws compatible and encodes dated pagination and availability", async () => {
+  it("# F-API-012 keeps unfiltered starting draws compatible and encodes dated pagination and availability", async () => {
     const page = { total: 125, offset: 100, limit: 100, items: ["2025-09-03 08:00"] };
     const availability = { date: "2025-09-03", history_total: 150, ranked_total: 125 };
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, page))
@@ -156,7 +156,7 @@ describe("apiClient error mapping", () => {
     expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => init?.method === undefined)).toBe(true);
   });
 
-  it("encodes server-side experiment filters, ordering and bounded offset without interpreting Unicode", async () => {
+  it("# F-API-013 encodes server-side experiment filters, ordering and bounded offset without interpreting Unicode", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, { total: 0, offset: 20, limit: 20, items: [] }));
     await apiClient.listExperiments({ offset: 20, limit: 20, name_contains: "Fríos & 50%", status: "running", sort: "name", order: "asc" });
     expect(vi.mocked(globalThis.fetch).mock.calls[0][0]).toBe(
@@ -164,7 +164,7 @@ describe("apiClient error mapping", () => {
     );
   });
 
-  it("sends confirm_id tied to the target resource on delete", async () => {
+  it("# F-API-014 sends confirm_id tied to the target resource on delete", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await apiClient.deleteExperiment("exp-1", "exp-1");
@@ -173,7 +173,7 @@ describe("apiClient error mapping", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ confirm_id: "exp-1" });
   });
 
-  it("encodes a path id that contains reserved URL characters", async () => {
+  it("# F-API-009 encodes a path id that contains reserved URL characters", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, {}));
 
     await apiClient.getExperiment("a/b c");
@@ -182,7 +182,7 @@ describe("apiClient error mapping", () => {
     expect(String(url)).toBe(`/api/v1/experiments/${encodeURIComponent("a/b c")}`);
   });
 
-  it("parses a FastAPI 422 array detail into field errors with a Spanish generic message", async () => {
+  it("# F-API-007 parses a FastAPI 422 array detail into field errors with a Spanish generic message", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       jsonResponse(422, {
         detail: [
@@ -203,7 +203,7 @@ describe("apiClient error mapping", () => {
     ]);
   });
 
-  it("still supports a plain string detail (no field errors)", async () => {
+  it("# F-API-007 still supports a plain string detail (no field errors)", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(400, { detail: "start draw has no ranking" }));
 
     const error = await apiClient.getCatalog().catch((e: unknown) => e);
@@ -212,7 +212,7 @@ describe("apiClient error mapping", () => {
     expect((error as ApiError).detail).toBe("start draw has no ranking");
   });
 
-  it("maps a 2xx response with a non-JSON body to a typed ApiError, not a raw SyntaxError", async () => {
+  it("# F-API-006 maps a 2xx response with a non-JSON body to a typed ApiError, not a raw SyntaxError", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response("not json", { status: 200, headers: { "Content-Type": "text/plain" } }),
     );
@@ -222,7 +222,7 @@ describe("apiClient error mapping", () => {
     expect(error).not.toBeInstanceOf(SyntaxError);
   });
 
-  it("GET and PUT settings use the full view, exact string payload and same-origin URL", async () => {
+  it("# F-API-016 GET and PUT settings use the full view, exact string payload and same-origin URL", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, settingsFixture)).mockResolvedValueOnce(jsonResponse(200, {
       ...settingsFixture, quota: { effective_bytes: "9223372036854775807", persisted_bytes: "9223372036854775807", source: "persisted", writable: true },
     }));
@@ -238,7 +238,7 @@ describe("apiClient error mapping", () => {
     expect(init?.body).toBe('{"quota_bytes":"9223372036854775807"}');
   });
 
-  it("encodes queue action IDs, sends POST without a body, and reads acknowledgements only", async () => {
+  it("# F-API-017 encodes queue action IDs, sends POST without a body, and reads acknowledgements only", async () => {
     vi.mocked(globalThis.fetch)
       .mockResolvedValueOnce(jsonResponse(200, { id: "a/b c", status: "queued" }))
       .mockResolvedValueOnce(jsonResponse(200, { id: "a/b c", status: "cancellation_requested" }));
@@ -251,7 +251,7 @@ describe("apiClient error mapping", () => {
     expect(calls.every(([, init]) => init?.method === "POST" && init.body === undefined)).toBe(true);
   });
 
-  it("uploads canonical history as original Blob bytes with registered profile and exact metadata headers", async () => {
+  it("# F-API-018 uploads canonical history as original Blob bytes with registered profile and exact metadata headers", async () => {
     const file = new Blob(["{\\\"metadata\\\":{}}"], { type: "application/json" });
     const profile = { profile: { profile_id: "saved", revision: 3 }, profile_sha256: "b".repeat(64) } as never;
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, { promotable: true }))
@@ -270,7 +270,7 @@ describe("apiClient error mapping", () => {
     expect(calls[1][1]?.headers).toMatchObject({ "X-Expected-Dataset-Sha256": "a".repeat(64) });
   });
 
-  it("submits the same explicit import envelope to preview and hash-bound promotion", async () => {
+  it("# F-API-019 submits the same explicit import envelope to preview and hash-bound promotion", async () => {
     const body = {
       raw_base64: "AP8K", format: "csv" as const,
       mapping: { date: "date", time: "time", positions: ["pos1"] },
@@ -288,7 +288,7 @@ describe("apiClient error mapping", () => {
     expect(JSON.parse(String(calls[1][1]?.body))).toEqual({ ...body, expected_dataset_sha256: "a".repeat(64) });
   });
 
-  it("posts an exact profile request document without the legacy request envelope", async () => {
+  it("# F-API-020 posts an exact profile request document without the legacy request envelope", async () => {
     const body: ProfileExperimentRequest = { kind: "profile", schema_version: 1, name: "Local", dataset_sha256: "a".repeat(64),
       profile_id: "local", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
       conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 200, goal: 300,
@@ -302,7 +302,7 @@ describe("apiClient error mapping", () => {
     ]);
   });
 
-  it("posts schema-3 Audaz with no fixed per-number stake", async () => {
+  it("# F-API-020 posts schema-3 Audaz with no fixed per-number stake", async () => {
     const body: ProfileAudazRequest = { kind: "profile", schema_version: 3, name: "Audaz", dataset_sha256: "a".repeat(64),
       profile_id: "rational", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
       conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 20000, goal: 30000,
@@ -316,7 +316,7 @@ describe("apiClient error mapping", () => {
     ]);
     expect(JSON.stringify(body)).not.toContain("per_number_stake");
   });
-  it("posts schema-4 recovery with explicit profile-generic parameters", async () => {
+  it("# F-API-020 posts schema-4 recovery with explicit profile-generic parameters", async () => {
     const body: ProfileRecoveryRequest = { kind: "profile", schema_version: 4, name: "Recovery", dataset_sha256: "a".repeat(64),
       profile_id: "rational", profile_revision: 1, profile_sha256: "b".repeat(64), entry_policy: "all_rows/v1",
       conditions: { schema_version: 1, start_draw: "2025-01-01 05:10", capital: 20000, goal: 30000,
@@ -329,7 +329,7 @@ describe("apiClient error mapping", () => {
       "/api/v1/experiments/profiles", { method: "POST", body: JSON.stringify(body) },
     ]);
   });
-  it("fetches verified dataset identity and paged draw labels with date encoding", async () => {
+  it("# F-API-021 fetches verified dataset identity and paged draw labels with date encoding", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, {}))
       .mockResolvedValueOnce(jsonResponse(200, { total: 1, items: ["2025-01-01 05:10"] }));
     await apiClient.getDataset("a".repeat(64));
@@ -340,7 +340,7 @@ describe("apiClient error mapping", () => {
     ]);
   });
 
-  it("uses the closed v1 batch routes and exact client identity for validation, submit and recovery lookup", async () => {
+  it("# F-API-022 uses the closed v1 batch routes and exact client identity for validation, submit and recovery lookup", async () => {
     const body = { schema_version: 1 as const, profile: { id: "local", revision: 2, sha256: "a".repeat(64) },
       dataset_sha256: "b".repeat(64), strategies: [{ id: "s/1", revision: 3, definition_sha256: "c".repeat(64) }],
       conditions: { schema_version: 1 as const, start_draw: "2025-01-01 05:10", capital: 100, goal: 200,
@@ -360,7 +360,7 @@ describe("apiClient error mapping", () => {
     expect(vi.mocked(globalThis.fetch).mock.calls[1][1]).toMatchObject({ method: "POST", body: JSON.stringify(body) });
   });
 
-  it("reads strategies, exact profile compatibility, revisions and policy without changing legacy requests", async () => {
+  it("# F-API-023 reads strategies, exact profile compatibility, revisions and policy without changing legacy requests", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, { items: [], total: 0, offset: 0, limit: 20 }))
       .mockResolvedValueOnce(jsonResponse(200, {})).mockResolvedValueOnce(jsonResponse(200, {}))
       .mockResolvedValueOnce(jsonResponse(200, {})).mockResolvedValueOnce(jsonResponse(200, {}));
@@ -377,7 +377,7 @@ describe("apiClient error mapping", () => {
     ]);
   });
 
-  it("retrieves the actual agent credential by same-origin POST with an empty JSON body", async () => {
+  it("# F-API-024 retrieves the actual agent credential by same-origin POST with an empty JSON body", async () => {
     const credential = { token: "test-only-agent-token" };
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, credential));
 
@@ -390,7 +390,7 @@ describe("apiClient error mapping", () => {
     expect(init?.headers).not.toHaveProperty("Authorization");
   });
 
-  it("maps a proxy-marked disconnection response to NetworkError instead of ApiError", async () => {
+  it("# F-API-004 maps a proxy-marked disconnection response to NetworkError instead of ApiError", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ detail: "unreachable" }), {
         status: 502,

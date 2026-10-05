@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+// Contract coverage: F-LIST-038–F-LIST-048 — task-order/profile discovery and import, explicit source/context, preview hash gate, stale/pending promotion, quota/conflict uncertainty, file-size validation and accessible first-error focus.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
 import { DataPage } from "./index";

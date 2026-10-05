@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+// Contract coverage: F-LIST-024 labelled modal, initial/trapped focus; F-LIST-025 Escape/cancel focus restoration, inert root, and stable focus on parent rerender.
 import { describe, expect, it, vi } from "vitest";
 import { ConfirmDialog } from "./ConfirmDialog";
 

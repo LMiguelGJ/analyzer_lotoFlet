@@ -1,3 +1,4 @@
+// Contract coverage: F-UI-019 typographic scale; F-UI-020 text contrast; F-UI-021 accent/control contrast; F-UI-022 semantic colors.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -20,7 +21,7 @@ function readRemToken(name: string): number {
 
 describe("typographic scale", () => {
   const scale = ["--type-small", "--type-body", "--type-subsection", "--type-section", "--type-large", "--type-display", "--type-h1"].map(readRemToken);
-  it("uses a consistent 1.125–1.2 ratio and keeps desktop H1 within 32–40px", () => {
+  it("# F-UI-019 uses a consistent 1.125–1.2 ratio and keeps desktop H1 within 32–40px", () => {
     for (let index = 1; index < scale.length; index += 1) {
       const ratio = scale[index] / scale[index - 1];
       expect(ratio).toBeGreaterThanOrEqual(1.125);

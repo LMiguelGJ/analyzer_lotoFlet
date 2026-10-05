@@ -14,7 +14,7 @@ function renderShell(path = "/experimentos") {
 }
 
 describe("Shell navigation", () => {
-  it("exposes exactly four canonical destinations", () => {
+  it("# F-SHELL-003 F-SHELL-004 exposes exactly four canonical destinations", () => {
     renderShell();
     const navigation = screen.getByRole("navigation", { name: "Navegación principal" });
     const destinations = [
@@ -29,7 +29,7 @@ describe("Shell navigation", () => {
     }
   });
 
-  it("marks the current destination and uses a two-pixel active accent rule", () => {
+  it("# F-SHELL-006 marks the current destination and uses a two-pixel active accent rule", () => {
     renderShell("/configuraciones");
     const link = screen.getByRole("link", { name: "Estrategias" });
     expect(link).toHaveAttribute("aria-current", "page");
@@ -37,7 +37,7 @@ describe("Shell navigation", () => {
     expect(link.className).toMatch(/border-accent/);
   });
 
-  it("keeps the queue control accessible and connected to QueueDrawer", async () => {
+  it("# F-SHELL-010 keeps the queue control accessible and connected to QueueDrawer", async () => {
     const user = userEvent.setup();
     renderShell();
     const queue = screen.getByRole("button", { name: "Abrir cola de cálculo" });
@@ -48,14 +48,14 @@ describe("Shell navigation", () => {
     expect(screen.getByRole("dialog", { name: "Cola de cálculo" })).toBeInTheDocument();
   });
 
-  it("does not break route titles mid-word", () => {
+  it("# F-SHELL-011 does not break route titles mid-word", () => {
     renderShell();
     const heading = screen.getByRole("heading", { name: "Prueba" });
     expect(heading.className).toMatch(/\bbreak-normal\b/);
     expect(heading.className).not.toMatch(/\bbreak-(?:all|words)\b/);
   });
 
-  it("keeps navigation visible and compact below the desktop rail breakpoint", () => {
+  it("# F-SHELL-012 keeps navigation visible and compact below the desktop rail breakpoint", () => {
     renderShell();
     const nav = screen.getByRole("navigation", { name: "Navegación principal" });
     expect(nav.className).toMatch(/w-full/);

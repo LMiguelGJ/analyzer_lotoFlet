@@ -1,3 +1,4 @@
+// Contract coverage: F-UI-024 DOP whole-number formatting; F-UI-025 Q80 two-digit formatting and range validation.
 import { describe, expect, it } from "vitest";
 import { formatDOP, formatTwoDigit } from "./format";
 

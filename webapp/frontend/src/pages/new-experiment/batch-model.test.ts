@@ -23,14 +23,14 @@ const definition: ClosedStrategyDefinition = {
 const baseDraft = createBatchDraft("a".repeat(64));
 
 describe("bounded profile batch draft and request", () => {
-  it("persists only versioned identities and editable inputs, never library/history records", () => {
+  it("# F-UTIL-009 persists only versioned identities and editable inputs, never library/history records", () => {
     const serialized = serializeBatchDraft({ ...baseDraft, strategyRefs: [{ id: "s-1", revision: 2, definition_sha256: "b".repeat(64) }] });
     expect(serialized).toContain(`"version":${BATCH_DRAFT_VERSION}`);
     expect(serialized).not.toMatch(/\"(?:history|records|token|file|historyRows)\"/i);
     expect(parseBatchDraft(serialized)).toMatchObject({ datasetSha256: "a".repeat(64), strategyRefs: [{ id: "s-1", revision: 2 }] });
   });
 
-  it("rejects malformed or unknown-version drafts instead of upgrading frozen references", () => {
+  it("# F-UTIL-010 rejects malformed or unknown-version drafts instead of upgrading frozen references", () => {
     expect(parseBatchDraft('{"version":99}')).toBeNull();
     expect(parseBatchDraft('{"version":1,"datasetSha256":"bad"}')).toBeNull();
     const withUnknownField = JSON.parse(serializeBatchDraft(baseDraft)) as Record<string, unknown>;
@@ -38,7 +38,7 @@ describe("bounded profile batch draft and request", () => {
     expect(parseBatchDraft(JSON.stringify(withUnknownField))).toBeNull();
   });
 
-  it("persists a bounded selected draw identity with dataset binding and rejects mismatched restored metadata", () => {
+  it("# F-UTIL-011 persists a bounded selected draw identity with dataset binding and rejects mismatched restored metadata", () => {
     const startDraw = "2025-01-01 08:30";
     const draft = { ...baseDraft, selectedDraw: { datasetSha256: "a".repeat(64), index: 101, draw: startDraw },
       conditions: { ...baseDraft.conditions, start_draw: startDraw } };
@@ -50,7 +50,7 @@ describe("bounded profile batch draft and request", () => {
     expect(parseBatchDraft(JSON.stringify(mismatched))?.selectedDraw).toBeNull();
   });
 
-  it("builds the exact closed batch body with ordered immutable references and explicit shared conditions", () => {
+  it("# F-UTIL-012 builds the exact closed batch body with ordered immutable references and explicit shared conditions", () => {
     const body: BatchSubmissionBody = {
       schema_version: 1,
       profile: { id: "local", revision: 4, sha256: "c".repeat(64) },

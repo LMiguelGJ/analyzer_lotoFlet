@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+// Contract coverage: F-RESULT-021 shared date axis, persisted endpoints, non-color patterns, textual legend/data and scroll alternative; F-RESULT-022 keyboard series toggles preserve text data.
 import { describe, expect, it } from "vitest";
 import { ComparisonChart } from "./ComparisonChart";
 

@@ -1,3 +1,4 @@
+// Contract coverage: F-UI-023 WCAG contrastRatio behavior (identity, extremes, symmetry, measured ratio).
 import { describe, expect, it } from "vitest";
 import { contrastRatio } from "./contrast";
 
