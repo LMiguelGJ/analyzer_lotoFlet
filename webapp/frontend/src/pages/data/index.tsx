@@ -229,9 +229,10 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
       {libraryLoading && !datasets && <Loading rows={3} label="Cargando historiales guardados…" />}
       {libraryError && <div role="alert" className="space-y-2"><p>{libraryError}</p><button type="button" className="btn btn-secondary" onClick={() => setRetry((value) => value + 1)}>Reintentar biblioteca</button></div>}
       {datasets && !libraryError && datasets.total === 0 && <div role="status"><p>Todavía no hay historiales guardados. Importá uno para usar sus sorteos en una simulación.</p><a className="btn btn-primary" href="#history-import-title">Importar historial</a></div>}
-      {datasets && !libraryError && <ul aria-busy={libraryLoading} className="divide-y divide-border">{datasets.items.map((item) => <li key={item.dataset_sha256} className="space-y-2 py-4">
+      {datasets && !libraryError && <ul aria-busy={libraryLoading} className="dataset-card-list">{datasets.items.map((item) => <li key={item.dataset_sha256} className="dataset-card">
         <h3 className="font-medium">Historial · {item.records_total.toLocaleString("es-ES")} sorteos</h3>
         <p className="field-help">Fuente: {item.source_id} · {item.first_draw} – {item.last_draw} · {item.positions} posiciones</p>
+        <p className="dataset-card-status" role="status">{item.profile_execution.ready ? "Reglas disponibles para usar este historial." : "No se puede usar todavía: faltan las reglas de juego guardadas."}</p>
         <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="break-all text-sm">Formato: {item.source_format} · revisión de fuente: {item.source_revision} · identificadores del perfil y la fuente: <code>{item.profile_id}@{item.profile_revision}</code> · huella del historial <code>{item.dataset_sha256}</code> · huella de la fuente <code>{item.source_sha256}</code></p></details>
         {item.profile_execution.ready
           ? <Link className="btn btn-tertiary" to={`/experimentos/nuevo/sesion?dataset_sha256=${encodeURIComponent(item.dataset_sha256)}`}>Usar este historial</Link>
@@ -403,7 +404,7 @@ export function DataPage() {
       {profilesLoading && <Loading rows={2} label="Cargando perfiles guardados…" />}
       {profilesError && <div role="alert" className="field-help space-y-2"><p>{profilesError}</p><button type="button" className="btn btn-tertiary" onClick={() => setProfilesRetry((value) => value + 1)}>Reintentar perfiles</button></div>}
       {!profilesLoading && !profilesError && profiles.length === 0 && <p role="status">Todavía no hay perfiles guardados. Creá uno para definir las reglas del sorteo con el botón «Crear perfil de juego».</p>}
-      {profiles.length > 0 && <ul className="divide-y divide-border">{profiles.map(({ profile }) => <li key={`${profile.profile_id}@${profile.revision}`} className="py-3">
+      {profiles.length > 0 && <ul className="profile-card-list">{profiles.map(({ profile }) => <li key={`${profile.profile_id}@${profile.revision}`} className="profile-card">
         <h3 className="font-medium">{profile.universe_size} números · {profile.positions} posiciones</h3>
         <p className="field-help">{profile.allows_repeats ? "Permite repeticiones" : "Sin repeticiones"} · {profile.currency}</p>
         <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="text-sm">ID: <code>{profile.profile_id}</code> · revisión: {profile.revision}</p></details>

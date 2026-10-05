@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { Catalog, SelectorKind, StakingStyle } from "../api/types";
 import type { Errors, StrategyDraft } from "../pages/new-experiment/model";
 import { errorDetail, errorMessage } from "../pages/new-experiment/model";
@@ -10,10 +11,11 @@ interface Props {
   catalog: Catalog;
   errors: Errors;
   onChange: (value: StrategyDraft) => void;
+  progressiveDisclosure?: boolean;
 }
 
 /** Shared editor for the wizard and the LW13 configuration library. No financial rules live here. */
-export function StrategyEditor({ value, index, catalog, errors, onChange }: Props) {
+export function StrategyEditor({ value, index, catalog, errors, onChange, progressiveDisclosure = false }: Props) {
   const prefix = `strategies.${index}`;
   function field(key: string, label: string, node: React.ReactNode, description?: string) {
     const entry = errors[`${prefix}.${key}`];
@@ -32,11 +34,14 @@ export function StrategyEditor({ value, index, catalog, errors, onChange }: Prop
   }
   const systems = Object.entries(catalog.systems);
   const systemOptions = <><option value="">Elegí un sistema</option>{systems.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</>;
-  return <Block className="space-y-4">
-    {field("name", `Nombre de la estrategia ${index + 1}`, <input {...attributes("name")} className="control" value={value.name} maxLength={81} onChange={(event) => onChange({ ...value, name: event.target.value })} />)}
-    {field("selector", `Método de la estrategia ${index + 1}`, <select {...attributes("selector")} className="control" value={value.selector} onChange={(event) => onChange({ ...value, selector: event.target.value as SelectorKind, coverage: event.target.value === "parity" ? String(catalog.parity_coverage) : value.selector === "parity" ? String(catalog.coverages[0]) : value.coverage })}>
-      {catalog.selectors.map((selector) => <option value={selector} key={selector}>{SELECTOR_LABELS[selector]}</option>)}
-    </select>)}
+  const advancedRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (!progressiveDisclosure) return;
+    if (Object.keys(errors).some((key) => key.startsWith(`${prefix}.`) && key !== `${prefix}.name` && key !== `${prefix}.selector`)) {
+      if (advancedRef.current) advancedRef.current.open = true;
+    }
+  }, [errors, prefix, progressiveDisclosure]);
+  const advancedFields = <>
     {value.selector === "system" && field("system", "Método de selección", <select {...attributes("system")} aria-label="Sistema de ranking" className="control" value={value.system} onChange={(event) => onChange({ ...value, system: event.target.value })}>{systemOptions}</select>)}
     {value.selector === "blend" && <section aria-label="Sistemas de la mezcla" className="mb-5 border-t border-border pt-4">
       <Disclosure summary="Detalles técnicos"><p className="field-help">Cada clasificación otorga 100 puntos al primer puesto hasta 1 al último. Los porcentajes ponderan puntos, no son probabilidades; los empates priorizan el número menor.</p></Disclosure>
@@ -65,5 +70,12 @@ export function StrategyEditor({ value, index, catalog, errors, onChange }: Prop
         {(Object.keys(STAKING_LABELS) as StakingStyle[]).map((key) => <option value={key} key={key}>{STAKING_LABELS[key]}</option>)}
       </select>, STAKING_DESCRIPTIONS[value.staking])}
     </div>
+  </>;
+  return <Block className="space-y-4">
+    {field("name", `Nombre de la estrategia ${index + 1}`, <input {...attributes("name")} className="control" value={value.name} maxLength={81} onChange={(event) => onChange({ ...value, name: event.target.value })} />)}
+    {field("selector", `Método de la estrategia ${index + 1}`, <select {...attributes("selector")} className="control" value={value.selector} onChange={(event) => onChange({ ...value, selector: event.target.value as SelectorKind, coverage: event.target.value === "parity" ? String(catalog.parity_coverage) : value.selector === "parity" ? String(catalog.coverages[0]) : value.coverage })}>
+      {catalog.selectors.map((selector) => <option value={selector} key={selector}>{SELECTOR_LABELS[selector]}</option>)}
+    </select>)}
+    {progressiveDisclosure ? <details ref={advancedRef} className="strategy-advanced"><summary className="disclosure-summary">Avanzado</summary><div className="space-y-4 pt-2">{advancedFields}</div></details> : advancedFields}
   </Block>;
 }

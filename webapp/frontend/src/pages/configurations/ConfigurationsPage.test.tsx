@@ -97,7 +97,7 @@ it("keeps saved data and actions in DOM order with a full-width data row and wra
   setup();
   const template = await screen.findByText("Mi plantilla");
   const row = template.closest("li")!;
-  expect(row).toHaveClass("saved-strategy-row");
+  expect(row).toHaveClass("saved-strategy-row", "saved-strategy-card");
   expect(within(row).getAllByRole("link")).toHaveLength(1);
   expect(within(row).getAllByRole("button").map((button) => button.textContent)).toEqual(["Editar Mi plantilla", "Eliminar Mi plantilla"]);
   expect(within(row).getAllByRole("button").every((button) => button.classList.contains("btn-tertiary"))).toBe(true);
@@ -120,6 +120,12 @@ it("lists a bounded page, offers use and edit, and preserves distinct library an
   expect(templateName).toHaveValue("Mi plantilla");
   expect(templateName).toHaveAccessibleName("Nombre guardado");
   expect(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" })).toHaveValue("Fríos");
+  const advanced = screen.getByText("Avanzado").closest("details") as HTMLDetailsElement;
+  expect(advanced).not.toHaveAttribute("open");
+  expect(screen.getByRole("combobox", { name: "Sistema de ranking" })).not.toBeVisible();
+  await user.click(screen.getByText("Avanzado"));
+  expect(screen.getByRole("combobox", { name: "Sistema de ranking" })).toBeVisible();
+  expect(screen.getByRole("combobox", { name: "Sistema de ranking" })).toHaveValue("cold");
   await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
   await waitFor(() => expect(apiClient.updateConfiguration).toHaveBeenCalledWith("cfg-1", "Mi plantilla", strategy));
 });

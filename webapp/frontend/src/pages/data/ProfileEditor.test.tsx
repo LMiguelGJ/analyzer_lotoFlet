@@ -73,6 +73,8 @@ describe("profile editor", () => {
     expect(screen.getByLabelText(/Apuesta mínima/)).toHaveValue("1");
     expect(screen.getByText(/sin devolución adicional de la apuesta/)).toBeInTheDocument();
     expect(screen.getByText("Detalles técnicos").closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("textbox", { name: "ID nuevo del perfil" })).not.toBeVisible();
+    expect(screen.getByText(/Sin repeticiones, no pueden ser más que los números posibles/)).toBeInTheDocument();
   });
   it("groups decisions into bounded ledger blocks and styles every native control", async () => {
     render(<ProfileEditor templates={[]} profiles={[]} onRegistered={onRegistered} onBusyChange={onBusyChange} />);

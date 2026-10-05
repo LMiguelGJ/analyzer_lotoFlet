@@ -72,6 +72,8 @@ describe("canonical history import and saved library", () => {
     await user.click(await screen.findByRole("button", { name: /Confirmar y guardar historial/i }));
     expect(await screen.findByText("Historial guardado.")).toBeInTheDocument();
     expect(await screen.findByText(/Historial · 1 sorteos/)).toBeInTheDocument();
+    expect(screen.getByText(/Historial · 1 sorteos/).closest("li")).toHaveClass("dataset-card");
+    expect(within(library()).getByRole("status")).toHaveTextContent("Reglas disponibles para usar este historial.");
     expect(within(library()).getByText(/Fuente: operador-local/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Usar este historial/i })).toHaveAttribute("href", `/experimentos/nuevo/sesion?dataset_sha256=${dataset.dataset_sha256}`);
   });
