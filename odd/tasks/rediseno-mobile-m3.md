@@ -36,7 +36,7 @@ base de datos son de solo lectura: no se cambian endpoints ni payloads.
   (datos → selección → límites → revisión → ejecutar), variantes perfil/lote
   alcanzables. Superficies: webapp/frontend/src/pages/new-experiment/** y
   componentes compartidos que use, tests colocados.
-- [ ] T4. Resultados: listado, detalle y comparación en lenguaje cotidiano, cards
+- [x] T4. Resultados: listado, detalle y comparación en lenguaje cotidiano, cards
   en móvil, verdad financiera siempre visible. Superficies:
   webapp/frontend/src/pages/experiments/** y presentación compartida que usen,
   tests colocados.
@@ -68,12 +68,16 @@ Aceptación manual del usuario: navegador en ancho de teléfono real + zoom.
   revisión, aserciones restauradas, a11y, timeouts acotados). Hallazgos R3:
   R3-draw-retry-unreachable (new-experiment/index.tsx:469),
   R3-validation-focus-step (new-experiment/index.tsx:477-480)
-- T4: pendiente
+- T4: e64747f (7 archivos) · revisión nativa review-7c98d43a012cd6df
+  aprobada y quemada; suite 553/553 x2. Hallazgo R3: R3-resize-coverage
+  (experiments/ComparisonPage.tsx:65-68)
 - T5: pendiente
 - T6: pendiente
 
 ## Seguimientos de revisión (no bloqueantes)
 
+- R3-resize-coverage (pages/experiments/ComparisonPage.tsx:65-68): falta
+  cobertura de cambio de ancho de ventana entre cards y tabla.
 - R3-draw-retry-unreachable (pages/new-experiment/index.tsx:469): retry de sorteo
   inalcanzable en algún estado.
 - R3-validation-focus-step (pages/new-experiment/index.tsx:477-480): el foco de
