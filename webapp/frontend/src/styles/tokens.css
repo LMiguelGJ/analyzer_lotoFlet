@@ -7,7 +7,7 @@ FORM: Material 3 app grammar, brief-pinned by the user (m3.material.io/develop/w
 */
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   --md-sys-color-primary: #006a60;
   --md-sys-color-on-primary: #ffffff;
   --md-sys-color-primary-container: #9ff2e5;
@@ -206,8 +206,7 @@ FORM: Material 3 app grammar, brief-pinned by the user (m3.material.io/develop/w
   --chart-4: #b1ccc5;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
+:root:not([data-theme="light"]) {
     color-scheme: dark;
     --md-sys-color-primary: #80d5c8;
     --md-sys-color-on-primary: #003730;
@@ -250,7 +249,6 @@ FORM: Material 3 app grammar, brief-pinned by the user (m3.material.io/develop/w
     --chart-2: #ffdea6;
     --chart-3: #ffb4ab;
     --chart-4: #b1ccc5;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

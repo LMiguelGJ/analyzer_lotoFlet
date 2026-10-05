@@ -33,12 +33,14 @@ describe("Shell navigation", () => {
     expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
   });
 
-  it("suppresses the global FAB while settings and guided creation flows are active", () => {
-    const { unmount } = renderShell("/ajustes");
-    expect(screen.queryByRole("link", { name: "Acceso rápido: Nueva simulación" })).not.toBeInTheDocument();
-    unmount();
-    renderShell("/experimentos/nuevo/perfil");
-    expect(screen.queryByRole("link", { name: "Acceso rápido: Nueva simulación" })).not.toBeInTheDocument();
+  it("suppresses the global FAB on settings, guided creation, data, detail, and comparison routes", () => {
+    for (const path of ["/ajustes", "/experimentos/nuevo/perfil", "/datos", "/experimentos/resultado-1", "/experimentos/resultado-1/comparacion"]) {
+      const { unmount } = renderShell(path);
+      expect(screen.queryByRole("link", { name: "Acceso rápido: Nueva simulación" }), path).not.toBeInTheDocument();
+      unmount();
+    }
+    renderShell("/experimentos");
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
   });
 
   it("# F-SHELL-006 marks the current destination with the Material 3 active indicator", () => {
@@ -65,6 +67,16 @@ describe("Shell navigation", () => {
     const heading = screen.getByRole("heading", { name: "Prueba" });
     expect(heading.className).toMatch(/\bbreak-normal\b/);
     expect(heading.className).not.toMatch(/\bbreak-(?:all|words)\b/);
+  });
+
+  it("defaults to dark regardless of system preference and lets the user choose light", async () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false });
+    window.localStorage.removeItem("laboratorio-theme");
+    renderShell();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    const toggle = screen.getByRole("button", { name: /Cambiar tema/ });
+    await userEvent.setup().click(toggle);
+    expect(document.documentElement.dataset.theme).toBe("light");
   });
 
   it("falls back to a session-only theme when localStorage is unavailable", async () => {

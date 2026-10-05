@@ -43,7 +43,8 @@ describe("Material 3 design tokens", () => {
         "--md-sys-motion-easing-emphasized", "--md-sys-elevation-level2",
       ]) expect(tokensCss).toContain(name);
     }
-    expect(tokensCss).toContain("prefers-color-scheme: dark");
+    expect(tokensCss).not.toContain("prefers-color-scheme");
+    expect(tokensCss).toMatch(/:root:not\(\[data-theme="light"\]\)\s*\{[^}]*color-scheme:\s*dark/s);
     expect(tokensCss).toContain("font-variant-numeric: tabular-nums");
     expect(tokensCss).not.toMatch(/Georgia|Times New Roman|border-radius:\s*0(?:px|rem)?\b/i);
   });

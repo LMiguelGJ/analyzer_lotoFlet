@@ -92,11 +92,9 @@ describe("LW10 experiments list · states", () => {
     setup();
 
     expect(await screen.findByText(/Las simulaciones muestran cómo se comportan tus estrategias con datos históricos/)).toBeInTheDocument();
-    // The empty state owns the single primary action; the header does not repeat it.
-    const links = screen.getAllByRole("link", { name: "Nueva simulación" });
-    expect(links).toHaveLength(1);
-    expect(links[0]).toHaveAttribute("href", "/experimentos/nuevo");
-    expect(links[0]).toHaveClass("ledger-button-primary");
+    // The shared FAB is the single creation entry, including the first-run state.
+    expect(screen.getAllByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
     expect(screen.queryByRole("group", { name: "Filtros de simulaciones" })).not.toBeInTheDocument();
   });
 
@@ -137,11 +135,12 @@ describe("LW10 experiments list · states", () => {
     await user.type(screen.getByLabelText("Buscar por nombre"), "no-existe-esto");
     expect(await screen.findByText(/Sin coincidencias/)).toBeInTheDocument();
     expect(screen.queryByText(/Todavía no hay simulaciones/)).not.toBeInTheDocument();
-    // Teaches and offers exactly one next step, and the primary action stays the header's.
+    // The filtered empty state offers one recovery CTA; creation remains the shared FAB.
     const empty = screen.getByText("Sin coincidencias").closest("section")!;
-    expect(within(empty).getAllByRole("button")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Limpiar filtros" })).toHaveLength(1);
+    expect(within(empty).getAllByRole("button", { name: "Limpiar filtros" })).toHaveLength(1);
     expect(within(empty).queryByRole("link")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Nueva simulación" })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveLength(1);
   });
 
   it("clears the filters from the no-matches state and reloads the full ledger", async () => {
@@ -173,8 +172,9 @@ describe("LW10 experiments list · data and navigation", () => {
     };
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [cycling] });
     const { user } = setup();
-    const link = await screen.findByRole("link", { name: "Cycling" });
-    expect(link).toHaveAttribute("href", "/experimentos/cycling");
+    const row = (await screen.findByText("Cycling")).closest("tr")!;
+    expect(within(row).queryByRole("link", { name: "Cycling" })).not.toBeInTheDocument();
+    expect(within(row).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/experimentos/cycling");
     expect(screen.getByText(/Perfil test · 1 posiciones/)).toBeInTheDocument();
     expect(screen.getByText(/Capital USD 100.00/)).toBeInTheDocument();
     expect(screen.getByText(/Escalera cíclica Q80/)).toBeInTheDocument();
@@ -191,8 +191,9 @@ describe("LW10 experiments list · data and navigation", () => {
     };
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [recovery] });
     setup();
-    const row = (await screen.findByRole("link", { name: "Recovery" })).closest("tr");
+    const row = (await screen.findByText("Recovery")).closest("tr");
     expect(row).toHaveTextContent(/Perfil test · 1 posiciones.*Escalera de recuperación/);
+    expect(within(row!).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/experimentos/recovery");
     expect(screen.getByRole("columnheader", { name: "Corridas" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Estrategias" })).not.toBeInTheDocument();
   });
@@ -203,7 +204,9 @@ describe("LW10 experiments list · data and navigation", () => {
     setup();
 
     const cards = await screen.findByRole("list", { name: "Resultados de simulaciones" });
-    const card = within(cards).getByRole("link", { name: "Fríos K1" }).closest("li")!;
+    const card = within(cards).getByText("Fríos K1").closest("li")!;
+    expect(within(card).queryByRole("link", { name: "Fríos K1" })).not.toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/experimentos/exp-completed-1");
     expect(within(card).getByText("Meta alcanzada")).toBeInTheDocument();
     expect(within(card).getByText(/\+.*837/)).toBeInTheDocument();
     expect(within(card).getByText(/2026/)).toBeInTheDocument();
@@ -239,10 +242,12 @@ describe("LW10 experiments list · data and navigation", () => {
     const longName = "Experimento con nombre deliberadamente muy largo para probar el límite visual";
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ ...fixture, items: [{ ...fixture.items[0], request: { ...fixture.items[0].request, name: longName } }] });
     setup();
-    const link = await screen.findByRole("link", { name: longName });
-    expect(link.closest("td")).toHaveClass("table-name");
-    expect(link).toHaveAttribute("href", `/experimentos/${fixture.items[0].id}`);
+    const name = await screen.findByText(longName);
+    expect(name).toHaveClass("table-name-text");
+    expect(name.closest("td")).toHaveClass("table-name");
+    expect(within(name.closest("tr")!).getByRole("link", { name: `Abrir resultado de ${longName}` })).toHaveAttribute("href", `/experimentos/${fixture.items[0].id}`);
     expect(screen.getByRole("region", { name: "Simulaciones" })).toHaveClass("overflow-x-auto");
+    expect(screen.getByRole("region", { name: "Simulaciones" }).parentElement).toHaveClass("experiment-wide-table");
   });
 
   it("shows status chips: a financial outcome only when every run closed with it, execution state otherwise", async () => {
@@ -329,22 +334,20 @@ describe("LW10 experiments list · data and navigation", () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     const { container } = setup();
     await screen.findByText("Fríos K1");
-    expect(container.querySelectorAll(".ledger-button-primary")).toHaveLength(1);
+    expect(container.querySelectorAll(".m3-extended-fab")).toHaveLength(1);
+    expect(container.querySelectorAll(".ledger-button-primary")).toHaveLength(0);
   });
 
-  it("links the primary action to the wizard and each row name to its stable detail URL", async () => {
+  it("keeps creation on the FAB and exposes one detail affordance per desktop row", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     setup();
 
-    expect(screen.getByRole("link", { name: "Nueva simulación" })).toHaveAttribute(
-      "href",
-      "/experimentos/nuevo",
-    );
+    expect(screen.queryByRole("link", { name: "Nueva simulación" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
     await screen.findByText("Fríos K1");
-    expect(screen.getByRole("link", { name: "Fríos K1" })).toHaveAttribute(
-      "href",
-      "/experimentos/exp-completed-1",
-    );
+    const row = screen.getByText("Fríos K1").closest("tr")!;
+    expect(within(row).queryByRole("link", { name: "Fríos K1" })).not.toBeInTheDocument();
+    expect(within(row).getAllByRole("link", { name: /Abrir resultado de/ })).toHaveLength(1);
   });
 
   it("paginates forward and back using the real offset/limit/total from the server", async () => {
@@ -443,10 +446,9 @@ describe("profile batch v5 experiment list compatibility", () => {
     vi.mocked(apiClient.deleteExperiment).mockResolvedValueOnce(undefined);
     const { user } = setup();
     const name = profileBatchV5.display.name;
-    const links = await screen.findAllByRole("link", { name });
-    expect(links).toHaveLength(2);
-    expect(links[0]).toHaveAttribute("href", "/experimentos/batch-v5");
-    expect(links[1]).toHaveAttribute("href", "/experimentos/batch-v5");
+    const open = await screen.findByRole("link", { name: `Abrir resultado de ${name}` });
+    expect(open).toHaveAttribute("href", "/experimentos/batch-v5");
+    expect(screen.getAllByText(name)).toHaveLength(2);
     const trigger = screen.getByRole("button", { name: `Acciones de ${name}` });
     await user.click(trigger);
     expect(screen.getByRole("menu", { name: `Acciones de ${name}` })).toBeInTheDocument();
@@ -464,7 +466,7 @@ describe("profile experiment list", () => {
     const row = { ...profileItem, status, runs: [{ ...profileItem.runs[0], status: status === "held" ? "pending" as const : status }] };
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [row] });
     const { user } = setup();
-    await screen.findByRole("link", { name: "Perfil de prueba" });
+    await screen.findByText("Perfil de prueba");
     const table = screen.getByRole("table", { name: "Simulaciones" });
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("1");
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Capital USD 100.00 · Meta USD 200.00");

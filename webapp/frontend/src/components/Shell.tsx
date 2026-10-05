@@ -16,18 +16,14 @@ interface ShellProps {
   children: ReactNode;
 }
 
-function preferredTheme(): "light" | "dark" {
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 export function Shell({ title, children }: ShellProps) {
   const [queueOpen, setQueueOpen] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark" | null>(() => {
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
       const stored = window.localStorage.getItem("laboratorio-theme");
-      return stored === "light" || stored === "dark" ? stored : null;
+      return stored === "light" || stored === "dark" ? stored : "dark";
     } catch {
-      return null;
+      return "dark";
     }
   });
   const { status, error } = useQueue();
@@ -35,10 +31,6 @@ export function Shell({ title, children }: ShellProps) {
   const queueRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (theme === null) {
-      document.documentElement.removeAttribute("data-theme");
-      return;
-    }
     document.documentElement.dataset.theme = theme;
     try { window.localStorage.setItem("laboratorio-theme", theme); } catch { /* Theme remains active in memory for this session. */ }
   }, [theme]);
@@ -49,7 +41,7 @@ export function Shell({ title, children }: ShellProps) {
   }
 
   function toggleTheme() {
-    setTheme(theme === null ? (preferredTheme() === "dark" ? "light" : "dark") : theme === "dark" ? "light" : "dark");
+    setTheme(theme === "dark" ? "light" : "dark");
   }
 
   const queueStatus = error
@@ -72,7 +64,7 @@ export function Shell({ title, children }: ShellProps) {
             <button
               type="button"
               className="m3-icon-button"
-              aria-label={`Cambiar tema. Tema actual: ${theme ?? "automático"}`}
+              aria-label={`Cambiar tema. Tema actual: ${theme}`}
               title="Cambiar tema"
               onClick={toggleTheme}
             >
@@ -111,7 +103,7 @@ export function Shell({ title, children }: ShellProps) {
           <div className="shell-page-content">{children}</div>
         </main>
 
-        {!location.pathname.startsWith("/ajustes") && !location.pathname.startsWith("/experimentos/nuevo") && <Link className="m3-extended-fab" aria-label="Acceso rápido: Nueva simulación" to="/experimentos/nuevo">
+        {!location.pathname.startsWith("/ajustes") && !location.pathname.startsWith("/datos") && !location.pathname.startsWith("/experimentos/nuevo") && !/^\/experimentos\/[^/]+(?:\/comparacion)?$/.test(location.pathname) && <Link className="m3-extended-fab" aria-label="Acceso rápido: Nueva simulación" to="/experimentos/nuevo">
           <span aria-hidden="true">＋</span>
           <span>Nueva simulación</span>
         </Link>}

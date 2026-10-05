@@ -226,7 +226,7 @@ export function ExperimentsPage() {
     return { key: sort, header, headerClassName: `table-${sort === "created_at" ? "date" : sort}`, cellClassName: `table-${sort === "created_at" ? "date" : sort}`,
       sort: query.sort === sort ? query.order === "asc" ? "ascending" : "descending" : "none",
       onSort: () => update({ sort, order: query.sort === sort && query.order === "asc" ? "desc" : "asc", page: 1 }),
-      render: (row) => sort === "name" ? <><Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="link">{isProfileExperiment(row) ? row.display.name : row.request.name}</Link>{isProfileExperiment(row) && <span className="block text-sm text-text-secondary">Perfil {row.profile.profile_id} · {row.profile.positions} posiciones · Capital {profileMoney(row, row.display.capital)} · Meta {profileMoney(row, row.display.goal)} · {row.display.staking_label}</span>}</>
+      render: (row) => sort === "name" ? <><span className="table-name-text font-semibold">{isProfileExperiment(row) ? row.display.name : row.request.name}</span>{isProfileExperiment(row) && <span className="block text-sm text-text-secondary">Perfil {row.profile.profile_id} · {row.profile.positions} posiciones · Capital {profileMoney(row, row.display.capital)} · Meta {profileMoney(row, row.display.goal)} · {row.display.staking_label}</span>}</>
         : sort === "status" ? <StatusChip row={row} /> : <span title={row.created_at ?? "Fecha no registrada"}>{createdAt(row.created_at)}</span> };
   }
   const columns: DataTableColumn<ExperimentSummary>[] = [
@@ -241,9 +241,9 @@ export function ExperimentsPage() {
     </div> },
   ];
   const hasFilters = !!(query.name || query.status);
-  const firstRun = state === "ready" && total === 0 && !hasFilters;
   const goalCount = items.filter((item) => statusChip(item).value === "goal").length;
   const runningCount = items.filter((item) => item.status === "running").length;
+  const activeQueueItem = items.find((item) => item.id === queue?.active_id);
   const shown = `de las ${items.length} mostradas`;
   const clearFilters = () => update({ name: "", status: undefined, page: 1 });
   return <div>
@@ -253,16 +253,15 @@ export function ExperimentsPage() {
         <Stat label="Con meta alcanzada" value={goalCount} variant={goalCount > 0 ? "positive" : "neutral"} delta={shown} />
         <Stat label="En curso" value={runningCount} delta={shown} />
       </div> : <span />}
-      {!firstRun && <Link to="/experimentos/nuevo" className="ledger-button ledger-button-primary">Nueva simulación</Link>}
     </header>
-    {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">En curso{queueError ? " (puede haber cambiado)" : ""}: <Link className="link" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{items.find((item) => item.id === queue.active_id) ? experimentName(items.find((item) => item.id === queue.active_id)!) : queue.active_id}</Link></p>}
+    {queue?.active_id && <p className="mb-4 text-sm text-text-secondary">En curso{queueError ? " (puede haber cambiado)" : ""}: {activeQueueItem ? <strong>{experimentName(activeQueueItem)}</strong> : <Link className="link" to={`/experimentos/${encodeURIComponent(queue.active_id)}`}>{queue.active_id}</Link>}</p>}
     {notice && <p ref={noticeRef} tabIndex={-1} role="status" className="mb-4 border border-border-control p-3 text-sm text-accent focus:outline-none">{notice}</p>}
     {rowError && <p role="alert" className="mb-4 border border-border-control p-3 text-sm text-text">{rowError}</p>}
     {(total > 0 || hasFilters) && <div className="mb-5" role="group" aria-label="Filtros de simulaciones">
       <div className="flex flex-wrap items-end gap-4">
         <Field id="experiment-name" label="Buscar por nombre" type="search" maxLength={80} className="min-w-[220px] flex-1 sm:max-w-sm" value={text} onChange={(event) => setText(event.target.value)} />
         <div className="ledger-field min-w-[180px]"><label htmlFor="experiment-status" className="ledger-label">Estado</label><select id="experiment-status" className="ledger-control" value={query.status ?? ""} onChange={(event) => update({ status: statuses.find((value) => value === event.target.value), page: 1 })}><option value="">Todos</option>{statuses.map((status) => <option key={status} value={status}>{statusNames[status]}</option>)}</select></div>
-        {hasFilters && <Button variant="ghost" onClick={clearFilters}>Limpiar filtros</Button>}
+        {hasFilters && total > 0 && <Button variant="ghost" onClick={clearFilters}>Limpiar filtros</Button>}
       </div>
       <Disclosure summary="Filtros" defaultOpen={query.sort !== "created_at" || query.order !== "desc"}>
         <div className="flex flex-wrap items-end gap-4 pb-2">
@@ -277,7 +276,7 @@ export function ExperimentsPage() {
     {state === "server-error" && <ErrorBanner cause="No se pudo cargar el listado de simulaciones." recovery="El servidor respondió con un error. Reintentá en unos segundos; si persiste, reiniciá el laboratorio desde el lanzador." preserved actionLabel="Reintentar" onAction={() => load(query, offset)} />}
     {state === "ready" && total === 0 && (hasFilters
       ? <section className="ledger-empty" aria-labelledby="empty-title"><h2 id="empty-title">Sin coincidencias</h2><p>Ninguna simulación cumple la búsqueda o el estado elegidos.</p><Button className="mt-3" onClick={clearFilters}>Limpiar filtros</Button></section>
-      : <section className="ledger-empty" aria-labelledby="empty-title"><h2 id="empty-title">Todavía no hay simulaciones</h2><p>Las simulaciones muestran cómo se comportan tus estrategias con datos históricos.</p><Link to="/experimentos/nuevo" className="ledger-button ledger-button-primary mt-3">Nueva simulación</Link></section>)}
+      : <section className="ledger-empty" aria-labelledby="empty-title"><h2 id="empty-title">Todavía no hay simulaciones</h2><p>Las simulaciones muestran cómo se comportan tus estrategias con datos históricos.</p></section>)}
     {state === "ready" && total > 0 && <>
       {mobileLayout ? <ul className="experiment-card-list" aria-label="Resultados de simulaciones">
         {items.map((row) => {
@@ -289,7 +288,7 @@ export function ExperimentsPage() {
               : row.request.strategies.length === 1 ? row.request.strategies[0]?.name ?? "Estrategia sin nombre" : `${row.request.strategies.length} estrategias`;
           return <li key={row.id} className="experiment-card">
             <div className="experiment-card-heading">
-              <Link to={`/experimentos/${encodeURIComponent(row.id)}`} className="experiment-card-title">{name}</Link>
+              <span className="experiment-card-title">{name}</span>
               <StatusChip row={row} />
             </div>
             <p className="experiment-card-meta">{createdAt(row.created_at)} · {strategy}</p>
