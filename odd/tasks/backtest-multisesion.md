@@ -55,7 +55,7 @@ mismos resultados; las divergencias son bugs a corregir.
 
 ## Tasks
 
-- [ ] T1. Dominio: replay multi-sesión con semántica de referencia (sesiones
+- [x] T1. Dominio: replay multi-sesión con semántica de referencia (sesiones
   encadenadas, quiebre, reinicio en siguiente sorteo con ranking, huecos/folds
   sin reinicio, censura de la cola incompleta, agregados del reporte) + reglas de
   juego por corrida (100/5/80-8-4-2-1 configurables). Tests-first con valores
@@ -74,6 +74,12 @@ mismos resultados; las divergencias son bugs a corregir.
   decimal como el MD). Evidencia en webapp/reports/verification/.
 - [ ] T5. QA: suite completa frontend+backend, build, revisión nativa, push.
 
+## Seguimientos de revisión (no bloqueantes)
+
+- R3-bold-minimum (domain/backtest.py:81-83): borde del mínimo de apuesta en bold.
+- R3-config-integer-validation (domain/backtest.py:23-30): validar enteros de la
+  configuración del backtest.
+
 ## Verification
 
 Backend: pytest focales + suite completa. Frontend: vitest + tsc + build.
@@ -81,7 +87,11 @@ Aceptación: los 14 escenarios reproducen exactamente la tabla del MD.
 
 ## Evidencia (commits)
 
-- T1: pendiente
+- T1: d902aa3 (2 archivos, +346) · revisión nativa review-b98ba3f362fbdb1a
+  aprobada y quemada; LOS DOS ESCENARIOS DORADOS COINCIDEN EXACTOS CON EL MD
+  (fila 1: 681/963, 70,7%, 282, +10,3 · fila 14: 13/91, 14,3%, 78, −1.572,8);
+  suite backend 863/863; ruff limpio. Hallazgos informativos: R3-bold-minimum
+  (domain/backtest.py:81-83), R3-config-integer-validation (domain/backtest.py:23-30)
 - T2: pendiente
 - T3: pendiente
 - T4: pendiente
