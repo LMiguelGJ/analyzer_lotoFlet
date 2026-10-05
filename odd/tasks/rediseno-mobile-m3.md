@@ -29,7 +29,7 @@ base de datos son de solo lectura: no se cambian endpoints ni payloads.
   compartidos M3 y Shell mobile-first (Navigation Bar inferior + FAB + top app bar).
   Superficies: webapp/frontend/src/styles/**, webapp/frontend/src/components/**
   (Shell, ui compartidos), tests colocados.
-- [ ] T2. Asistente de configuración: Ajustes como guía paso a paso (reglas del
+- [x] T2. Asistente de configuración: Ajustes como guía paso a paso (reglas del
   juego, cuota, avanzado plegado). Superficies: webapp/frontend/src/pages/settings/**
   y componentes compartidos que use, tests colocados.
 - [ ] T3. Asistente de creación de simulaciones: flujo guiado por pasos
@@ -59,13 +59,23 @@ Aceptación manual del usuario: navegador en ancho de teléfono real + zoom.
 
 - T1: 65f0af0 (8 archivos) · revisión nativa review-67641f41fa08db8d
   aprobada y quemada; 3 hallazgos informativos R3 (ver seguimientos)
-- T2: pendiente
+- T2: 875e221 (3 archivos) · revisión nativa review-4fc2fc999cd38525
+  aprobada y quemada; hallazgos informativos R3: R3-hidden-save-results
+  (settings/index.tsx:412-413), R3-readonly-review-quota (settings/index.tsx:398),
+  R3-rules-failure-blocks-settings (settings/index.tsx)
 - T3: pendiente
 - T4: pendiente
 - T5: pendiente
 - T6: pendiente
 
 ## Seguimientos de revisión (no bloqueantes)
+
+- R3-hidden-save-results (pages/settings/index.tsx:412-413): el resultado del
+  guardado queda poco visible tras la acción final.
+- R3-readonly-review-quota (pages/settings/index.tsx:398): el resumen de cuota del
+  paso final es de solo lectura.
+- R3-rules-failure-blocks-settings (pages/settings/index.tsx): un fallo de reglas
+  bloquea el resto de la configuración.
 
 - R3-dark-token-coverage (src/lib/tokens.test.ts:10): ampliar cobertura de tokens
   del esquema oscuro.
