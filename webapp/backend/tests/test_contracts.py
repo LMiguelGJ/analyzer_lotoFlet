@@ -10,6 +10,8 @@ from laboratorio.domain import contracts
 from laboratorio.domain.contracts import (
     COVERAGES,
     GAME,
+    MAX_GAME_NUMBERS,
+    MAX_GAME_POSITIONS,
     MAX_MONEY,
     MAX_PROFILE_POSITIONS,
     MAX_PROFILE_SCALE,
@@ -103,6 +105,22 @@ def test_make_game_builds_a_three_position_game():
 def test_make_game_rejects_inconsistent_rules(args):
     with pytest.raises(ValueError):
         make_game(*args)
+
+
+def test_make_game_rejects_game_sizes_above_the_ceilings():
+    """The active game must stay bounded so the catalog and the rules editor cannot explode."""
+    with pytest.raises(ValueError, match="numbers must be at most"):
+        make_game("G", MAX_GAME_NUMBERS + 1, 3, (1, 1, 1), True)
+    with pytest.raises(ValueError, match="positions must be at most"):
+        make_game("G", 100, MAX_GAME_POSITIONS + 1, (1,) * (MAX_GAME_POSITIONS + 1), True)
+
+
+def test_game_ceilings_keep_the_supported_games_valid():
+    """The Q80 default and the brief's 3-position game must remain valid after bounding."""
+    assert make_game("Quiniela 80", 100, 5, (80, 8, 4, 2, 1), True).numbers == 100
+    brief = make_game("Tres", 100, 3, (60, 10, 5), True)
+    assert brief.positions == 3
+    assert brief.prizes == (60, 10, 5)
 
 
 def test_configure_game_replaces_the_visible_game(restore_game):

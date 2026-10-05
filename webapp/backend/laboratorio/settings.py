@@ -6,7 +6,7 @@ overrides it (tests always use a temporary directory).
 """
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from laboratorio.domain.contracts import Game, configure_game, make_game
@@ -71,6 +71,20 @@ def _bool_from(name: str, value: str | None, default: bool) -> bool:
     raise ValueError(f"{name} must be one of 1, 0, true or false: {value!r}")
 
 
+GAME_ENV_VARS = (
+    "LABORATORIO_GAME_NAME",
+    "LABORATORIO_GAME_NUMBERS",
+    "LABORATORIO_GAME_POSITIONS",
+    "LABORATORIO_GAME_PRIZES",
+    "LABORATORIO_GAME_REPEATS",
+    "LABORATORIO_GAME_MINIMUM_STAKE",
+)
+
+
+def game_source_from(environ) -> str:
+    return "environment" if any(environ.get(name) for name in GAME_ENV_VARS) else "default"
+
+
 def _default_data_dir():
     base = os.environ.get("LOCALAPPDATA")
     if base:
@@ -107,6 +121,28 @@ class Settings:
             self.game_allows_repeats,
             self.game_minimum_stake,
         )
+
+    @property
+    def game_source(self) -> str:
+        """Where the active rules come from absent a stored value: environment or default."""
+        return game_source_from(os.environ)
+
+    def with_game(self, game: Game) -> "Settings":
+        """Copy of these settings whose rules are ``game`` (e.g. the stored rules)."""
+        return replace(
+            self,
+            game_name=game.name,
+            game_numbers=game.numbers,
+            game_positions=game.positions,
+            game_prizes=game.prizes,
+            game_allows_repeats=game.allows_repeats,
+            game_minimum_stake=game.minimum_stake,
+        )
+
+    @classmethod
+    def from_stored_game(cls, base: "Settings", stored: Game | None) -> "Settings":
+        """Resolution order: stored rules > LABORATORIO_GAME_* (already in base) > default."""
+        return base if stored is None else base.with_game(stored)
 
     def __post_init__(self):
         validate_quota_bytes(self.quota_bytes)

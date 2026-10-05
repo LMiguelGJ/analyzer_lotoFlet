@@ -47,8 +47,12 @@ def make_game(
     prizes = tuple(prizes)
     if numbers < 2:
         raise ValueError("numbers must be at least 2")
+    if numbers > MAX_GAME_NUMBERS:
+        raise ValueError(f"numbers must be at most {MAX_GAME_NUMBERS}")
     if positions < 1:
         raise ValueError("positions must be at least 1")
+    if positions > MAX_GAME_POSITIONS:
+        raise ValueError(f"positions must be at most {MAX_GAME_POSITIONS}")
     if not allows_repeats and positions > numbers:
         raise ValueError("positions exceed numbers when repeats are not allowed")
     if len(prizes) != positions:
@@ -80,6 +84,12 @@ def configure_game(game: Game) -> None:
 # execution still needs draw-count, work, memory and data-compatibility admission.
 MAX_PROFILE_UNIVERSE = 1_000
 MAX_PROFILE_POSITIONS = 16
+
+# Ceilings for the ACTIVE game rules (the editable ones). They mirror the profile
+# admission ceilings on purpose: a configured game must stay bounded so the
+# catalog payload and the rules editor never explode (e.g. 5000 prize inputs).
+MAX_GAME_NUMBERS = 1_000
+MAX_GAME_POSITIONS = 16
 MAX_PROFILE_SCALE = 6  # integer micro-units are the finest accepted money unit
 MAX_PROFILE_REVISION = 1_000_000
 LEGACY_PROFILE_ID = "legacy-quiniela-80"

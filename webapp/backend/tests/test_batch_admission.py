@@ -455,7 +455,7 @@ def test_migration_11_preserves_populated_v10_rows_and_foreign_keys(tmp_path):
         db.execute("INSERT INTO runs VALUES ('old', 0, NULL, 'completed', '{}', 'legacy', 1)")
     initialize_database(path)
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 11
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 12
         assert db.execute(
             "SELECT id, status, request_schema_version FROM experiments"
         ).fetchone() == (

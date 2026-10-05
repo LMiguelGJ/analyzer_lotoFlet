@@ -5,12 +5,12 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { SettingsView } from "../../api/types";
+import type { GameSettings, SettingsView } from "../../api/types";
 import fixture from "../../api/__fixtures__/settings.json";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getSettings: vi.fn(), updateSettings: vi.fn(), getAgentCredential: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getSettings: vi.fn(), updateSettings: vi.fn(), getAgentCredential: vi.fn(), getGameSettings: vi.fn(), saveGameSettings: vi.fn() } };
 });
 const agentApi = apiClient as typeof apiClient & {
   getAgentCredential: () => Promise<{ token: string }>;
@@ -27,6 +27,10 @@ const base: SettingsView = {
   },
   quota: { ...fixture.quota, source: "default" },
 };
+const storedGame: GameSettings = {
+  name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1],
+  allows_repeats: true, minimum_stake: 1, source: "default",
+};
 function setup() {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/ajustes"] });
   return { user: userEvent.setup(), router, ...render(<RouterProvider router={router} />) };
@@ -39,6 +43,8 @@ beforeEach(() => {
   vi.mocked(apiClient.getSettings).mockReset().mockResolvedValue(base);
   vi.mocked(apiClient.updateSettings).mockReset().mockResolvedValue(base);
   vi.mocked(agentApi.getAgentCredential).mockReset();
+  vi.mocked(apiClient.getGameSettings).mockReset().mockResolvedValue(storedGame);
+  vi.mocked(apiClient.saveGameSettings).mockReset().mockResolvedValue({ ...storedGame, source: "stored" });
   originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
 });
 afterEach(() => {
@@ -401,4 +407,91 @@ it("has no axe violations in loaded settings", async () => {
   const { container } = setup();
   await screen.findByRole("heading", { name: "Capacidad" });
   expect(await axe(container)).toHaveNoViolations();
+});
+
+async function openRules(user: ReturnType<typeof userEvent.setup>) {
+  await screen.findByRole("heading", { name: "Capacidad" });
+  await user.click(screen.getByText("Avanzado"));
+  return screen.findByRole("form", { hidden: false }).catch(() => screen.findByLabelText("Nombre"));
+}
+
+it("renders the game rules form with stored values inside the Avanzado disclosure", async () => {
+  vi.mocked(apiClient.getGameSettings).mockResolvedValue({
+    name: "Tres", numbers: 50, positions: 3, prizes: [30, 6, 2], allows_repeats: false, minimum_stake: 5000, source: "stored",
+  });
+  const { user } = setup();
+  await openRules(user);
+  const advanced = screen.getByText("Avanzado").closest("details")!;
+  expect(advanced).toContainElement(screen.getByRole("heading", { name: "Reglas del juego" }));
+  expect(screen.getByLabelText("Nombre")).toHaveValue("Tres");
+  expect(screen.getByLabelText("Números posibles")).toHaveValue("50");
+  expect(screen.getByLabelText("Posiciones por sorteo")).toHaveValue("3");
+  expect(screen.getByLabelText("Posición 1")).toHaveValue("30");
+  expect(screen.getByLabelText("Posición 3")).toHaveValue("2");
+  expect(screen.queryByLabelText("Posición 4")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Repeticiones permitidas")).not.toBeChecked();
+  expect(screen.getByLabelText("Apuesta mínima por número")).toHaveValue("5000");
+  expect(screen.getByText("Mínimo actual: RD$5.000.")).toBeInTheDocument();
+  expect(screen.getByText("Cambiar las reglas del juego afecta las simulaciones futuras; las guardadas conservan las suyas.")).toBeInTheDocument();
+  expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
+  // Where the rules come from is a technical detail, not part of the open area.
+  expect(within(advanced).queryByText(/LABORATORIO_GAME/)).not.toBeInTheDocument();
+  expect(screen.getByText("Guardadas desde la web")).toBeInTheDocument();
+});
+
+it("adds and removes prize inputs as positions change", async () => {
+  const { user } = setup();
+  await openRules(user);
+  const positions = screen.getByLabelText("Posiciones por sorteo");
+  await user.clear(positions); await user.type(positions, "7");
+  expect(screen.getByLabelText("Posición 7")).toHaveValue("1");
+  await user.clear(positions); await user.type(positions, "2");
+  expect(screen.queryByLabelText("Posición 3")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Posición 2")).toHaveValue("8");
+});
+
+it("validates the rules live with inline errors and blocks saving", async () => {
+  const { user } = setup();
+  await openRules(user);
+  const save = screen.getByRole("button", { name: "Guardar reglas" });
+  const numbers = screen.getByLabelText("Números posibles");
+  await user.clear(numbers); await user.type(numbers, "1");
+  expect(screen.getByText("Tiene que haber al menos 2 números posibles.")).toBeInTheDocument();
+  expect(save).toBeDisabled();
+  await user.clear(numbers); await user.type(numbers, "3");
+  await user.click(screen.getByLabelText("Repeticiones permitidas"));
+  expect(screen.getByText(/Sin repeticiones, las posiciones no pueden superar/)).toBeInTheDocument();
+  await user.click(screen.getByLabelText("Repeticiones permitidas"));
+  expect(screen.queryByText(/Sin repeticiones/)).not.toBeInTheDocument();
+  const prize = screen.getByLabelText("Posición 2");
+  await user.clear(prize); await user.type(prize, "0");
+  expect(screen.getByText("Mínimo 1.")).toBeInTheDocument();
+  await user.clear(prize); await user.type(prize, "8");
+  const stake = screen.getByLabelText("Apuesta mínima por número");
+  await user.clear(stake); await user.type(stake, "0");
+  expect(screen.getByText("La apuesta mínima es de al menos RD$1.")).toBeInTheDocument();
+  await user.clear(screen.getByLabelText("Nombre"));
+  expect(screen.getByText("Escribí un nombre de hasta 80 caracteres.")).toBeInTheDocument();
+  expect(apiClient.saveGameSettings).not.toHaveBeenCalled();
+});
+
+it("saves valid rules and confirms", async () => {
+  const { user } = setup();
+  await openRules(user);
+  const stake = screen.getByLabelText("Apuesta mínima por número");
+  await user.clear(stake); await user.type(stake, "10");
+  await user.click(screen.getByRole("button", { name: "Guardar reglas" }));
+  await waitFor(() => expect(apiClient.saveGameSettings).toHaveBeenCalledWith({
+    name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true, minimum_stake: 10,
+  }));
+  expect(await screen.findByText(/Reglas guardadas/)).toBeInTheDocument();
+});
+
+it("shows the server reason when the rules are rejected with 422", async () => {
+  vi.mocked(apiClient.saveGameSettings).mockRejectedValue(new ApiError(422, "every prize must be at least 1"));
+  const { user } = setup();
+  await openRules(user);
+  await user.click(screen.getByRole("button", { name: "Guardar reglas" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("every prize must be at least 1");
+  expect(screen.getByLabelText("Nombre")).toHaveValue("Quiniela 80");
 });

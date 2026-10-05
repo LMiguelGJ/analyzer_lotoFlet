@@ -29,6 +29,8 @@ import type {
   QueueStatus,
   ReplayPage,
   Trajectory,
+  GameSettings,
+  GameSettingsInput,
   SettingsView,
   StartingDrawAvailability,
   Strategy,
@@ -324,6 +326,13 @@ export const apiClient = {
   getAgentCredential: () => request<AgentCredentialResponse>("/settings/agent-credential", {
     method: "POST",
     body: JSON.stringify({}),
+  }),
+
+  getGameSettings: () => request<GameSettings>("/settings/game"),
+
+  saveGameSettings: (payload: GameSettingsInput) => request<GameSettings>("/settings/game", {
+    method: "PUT",
+    body: JSON.stringify(payload),
   }),
 
   updateSettings: (quotaBytes: string) => request<SettingsView>("/settings", {

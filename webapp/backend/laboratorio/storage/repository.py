@@ -18,6 +18,7 @@ from laboratorio.domain.contracts import (
     RunStatus,
     Strategy,
     legacy_quiniela_80_profile,
+    make_game,
 )
 from laboratorio.domain.execution_policy import EDITABLE_FIELDS, ExecutionPolicy
 from laboratorio.domain.profile_request import (
@@ -1047,6 +1048,41 @@ class Repository:
     def get_quota_preference(self) -> int | None:
         with connection(self.path) as db:
             return _persisted_quota(db)
+
+    def get_game_settings(self):
+        """Stored game rules as a validated Game, or None when never edited."""
+        with connection(self.path) as db:
+            row = db.execute(
+                "SELECT name, numbers, positions, prizes, allows_repeats, minimum_stake "
+                "FROM settings_game WHERE id = 1"
+            ).fetchone()
+        if row is None:
+            return None
+        name, numbers, positions, prizes, repeats, stake = row
+        return make_game(
+            name, numbers, positions, [int(p) for p in prizes.split(",")], bool(repeats), stake
+        )
+
+    def save_game_settings(self, game) -> None:
+        """Persist the rules; existing experiments keep the rules they were created with."""
+        with _transaction(self.path) as db:
+            db.execute(
+                "INSERT INTO settings_game "
+                "(id, name, numbers, positions, prizes, allows_repeats, minimum_stake) "
+                "VALUES (1, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET "
+                "name = excluded.name, numbers = excluded.numbers, "
+                "positions = excluded.positions, prizes = excluded.prizes, "
+                "allows_repeats = excluded.allows_repeats, "
+                "minimum_stake = excluded.minimum_stake",
+                (
+                    game.name,
+                    game.numbers,
+                    game.positions,
+                    ",".join(str(p) for p in game.prizes),
+                    int(game.allows_repeats),
+                    game.minimum_stake,
+                ),
+            )
 
     def set_quota_preference(self, quota_bytes: int, *, quota_explicit: bool = False) -> int:
         validate_quota_bytes(quota_bytes)
