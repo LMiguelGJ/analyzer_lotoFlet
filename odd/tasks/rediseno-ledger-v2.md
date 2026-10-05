@@ -218,3 +218,24 @@ Estado: dos writers en paralelo, superficies disjuntas (backend vs frontend).
 - Pendiente conocido (previo, ajeno a este cambio): 8 tests de backend fallan en
   dataset/settings/profile_batch_queue/profile_storage/storage - ya fallaban en
   la base limpia; documentados, no corregidos aquí.
+
+## Spec: reglas configurables en UI + reescritura segura de pruebas
+
+Plan: `.pi/plans/reglas-configurables-y-reescritura-tests.md` (asunciones A1-A7
+de la elicitation spec-assistant, ciclo de 4 preguntas cerrado). Tareas en
+`odd/tasks/` rearmadas al TODO de 10 ítems.
+
+Lanes en vuelo:
+- Lane A/B (extracción de contrato backend y frontend): los exploradores son de
+  solo lectura y no pueden crear `docs/contrato-comportamiento-*.md`. Ajuste
+  acordado: devuelven el contrato en su handoff y el orquestador lo persiste.
+  La extracción es PRERREQUISITO de [A2] (no se borra ninguna prueba antes de
+  tener el contrato escrito).
+- Lane C (editor de reglas end-to-end): worktree `wt-editor`, rama `wt/editor`,
+  node_modules por junction. API `GET/PUT /api/v1/settings/game`, persistencia
+  en tabla `settings_game` con el patrón de `settings_quota` (fila id=1),
+  resolución stored > env > default Q80, y regla [A7]: solo afecta simulaciones
+  futuras.
+
+Pendiente de aceptación manual ([A4]): zoom nativo del navegador y prueba del
+lanzador `iniciar-laboratorio.bat` en Windows real.
