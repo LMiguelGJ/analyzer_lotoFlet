@@ -103,3 +103,26 @@ Contrato y sistema: `DESIGN.md` (raíz). Verdad de producto: `PRODUCT.md` (raíz
   `Signature.tsx:6/19` Verdict solo dinero y h1 duplicado, `new-experiment/index.tsx:459`
   regex muerta, `DetailPage.tsx:227/359`, `BalanceChart.tsx:16`, entre otros.
 - Pendiente: S8 pulido guiado por barrido de navegador, S9 QA final, push.
+
+## S8 pulido y QA mecánica (evidencia real)
+
+- S8a `deffb8b`: advisories de revisión aplicados (Verdict h2 + cifras de conteo,
+  un solo caveat vía prop de OrderSummary, ErrorBanner con `preserved` explícito,
+  estado de la cola vía aria-describedby sin cambiar el nombre accesible, regex
+  muerta fuera). 554/554.
+- S8b `c21100b`: Resumen de la orden como grilla etiqueta/valor sin desbordes,
+  enlace «Volver a simulaciones» en el creador, «Cancelar» de la cola pasa a
+  secundario, volver de la comparación en ghost. 555/555.
+- `93b85f1`: título del cajón «Cola de cálculo» (glosario). 555/555.
+- Detector Impeccable `detect.mjs --json webapp/frontend/src`: `[]` (exit 0).
+  Build de producción: ok. Typecheck: limpio.
+- Barrido etapa 1 (API simulada, 18 capturas en `webapp/reports/verification/
+  rediseno-v2/barrido/`): 0 `border-radius` distinto de 0, 0 `box-shadow`, 0
+  jerga fuera de plegables, 1 acción primaria por ruta (3 en cajón de cola antes
+  de S8b). Lectura visual de capturas encontró defectos que ningún detector ve
+  (resumen de la orden pegado, tres primarias en la cola) y se corrigieron.
+- Pendiente: barrido etapa 2 (320px, zoom 200%, teclado, vacío/error,
+  reduced-motion), retoque menor de chips repetidos en pestañas de resultado,
+  revisión nativa de S8 y push.
+- Incidentes de proceso: caída de Pi y de un writer sin reporte (S8b); el estado
+  se recuperó verificando el árbol (typecheck + suite) antes de commitear.
