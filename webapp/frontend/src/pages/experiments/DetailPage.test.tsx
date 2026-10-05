@@ -451,13 +451,30 @@ describe("LW11 detail", () => {
     expect(screen.queryByText("flat")).not.toBeInTheDocument();
     expect(screen.queryByText("all")).not.toBeInTheDocument();
   });
+  it("keeps one accessible execution status chip per run in the run selector", async () => {
+    const { user } = setup();
+    const selector = await screen.findByRole("group", { name: "Elegir ejecución" });
+    const runButtons = within(selector).getAllByRole("button");
+    expect(runButtons).toHaveLength(2);
+    expect(runButtons.map((button) => button.textContent)).toEqual(expect.arrayContaining([expect.stringContaining("Primera"), expect.stringContaining("Segunda")]));
+    expect(within(runButtons[0]).getByText("Ejecución completada")).toHaveAttribute("data-status-kind", "execution");
+    expect(within(runButtons[1]).getByText("En curso")).toHaveAttribute("data-status-kind", "execution");
+    for (const button of runButtons) expect(button.querySelectorAll("[data-status-kind='execution']")).toHaveLength(1);
+    const runSection = await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(runSection.querySelectorAll("[data-status-kind='execution']")).toHaveLength(0);
+    expect(runButtons[0]).toHaveAccessibleName(/1\. Primera.*Ejecución completada/);
+    await user.click(runButtons[1]);
+    expect(await screen.findByRole("region", { name: "Ejecución 2" })).toBeInTheDocument();
+  });
+
   it("keeps the stable URL, separates execution from outcome, and never assigns an outcome to a null run", async () => {
     const { router, user } = setup();
     expect(await screen.findByText("Prueba")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/experimentos/exp");
     expect(document.querySelector("[data-status-kind='outcome'][data-status-value='goal']")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Segunda/ }));
-    expect(within(screen.getByRole("region", { name: "Ejecución 2" })).getByText("En curso")).toHaveAttribute("data-status-kind", "execution");
+    const runSelector = screen.getByRole("group", { name: "Elegir ejecución" });
+    expect(within(runSelector).getByRole("button", { name: /2\. Segunda.*En curso/ }).querySelector("[data-status-kind='execution']")).toHaveAttribute("data-status-value", "running");
     expect(screen.queryByText("Meta alcanzada")).not.toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
     expect(apiClient.getReplay).not.toHaveBeenCalledWith("exp", 1, 0, 20);

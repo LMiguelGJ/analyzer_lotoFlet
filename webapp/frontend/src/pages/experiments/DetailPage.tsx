@@ -297,7 +297,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
         <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help"><Figure value={money(delta!)} variant={deltaVariant} align="right" /><span id="detail-delta-help" className="field-help block text-right">{FIELD_HELP_DELTA}</span></dd>
       </dl>
     </>}
-    <div className="flex flex-wrap items-center gap-4"><h2 className="font-heading text-xl">{runName}</h2><StatusLabel kind="execution" value={run.status} /></div>
+    <div className="flex flex-wrap items-center gap-4"><h2 className="font-heading text-xl">{runName}</h2>{data.runs.length === 1 && <StatusLabel kind="execution" value={run.status} />}</div>
     <div role="tablist" aria-label="Secciones del detalle" className="mt-6 flex flex-wrap gap-2 border-b border-border">
       {tabs.map((name, index) => <button key={name} ref={(node) => { tabRefs.current[index] = node; }} type="button" role="tab" id={`detail-tab-${index}`} aria-controls={`detail-panel-${index}`} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => selectTab(name)} onKeyDown={(event) => onTabKey(event, index)} className={`min-h-control px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${tab === name ? "border-b-2 border-accent text-text" : "text-text-secondary hover:text-text"}`}>{name}</button>)}
     </div>
