@@ -3,7 +3,7 @@ import { buildRequest, buildStrategy, draftFromRequest, draftFromStrategy, initi
 import type { Catalog } from "../../api/types";
 import nameCases from "../../../../backend/tests/fixtures/strategy_name_cases.json";
 
-const catalog: Catalog = { game: { name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true }, systems: { transition: "Transición", cold: "Fríos" }, selectors: ["system", "blend", "random", "parity"], coverages: [1, 5, 10, 20, 25, 30, 40, 50], parity_coverage: 50, starting_draws: ["2025-09-02 05:10"], starting_draws_total: 1, sources: { history_sha256: "", rankings_sha256: "", history_id: "", rankings_id: "", code_version: "" } };
+const catalog: Catalog = { game: { name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true, minimum_stake: 1 }, systems: { transition: "Transición", cold: "Fríos" }, selectors: ["system", "blend", "random", "parity"], coverages: [1, 5, 10, 20, 25, 30, 40, 50], parity_coverage: 50, starting_draws: ["2025-09-02 05:10"], starting_draws_total: 1, sources: { history_sha256: "", rankings_sha256: "", history_id: "", rankings_id: "", code_version: "" } };
 const valid = { ...initialConditions, name: "Ejemplo", start_draw: "2025-09-02 05:10", capital: "2000", goal: "2800", seed: "0" };
 const draws = [valid.start_draw];
 

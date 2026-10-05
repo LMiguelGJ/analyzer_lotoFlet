@@ -12,7 +12,7 @@ vi.mock("../../api/client", async (importOriginal) => {
 });
 
 const catalog = {
-  game: { name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true },
+  game: { name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true, minimum_stake: 1 },
   systems: { transition: "Transición", cold: "Fríos", freq_hist: "Frecuencia histórica" },
   selectors: ["system", "blend", "random", "parity"], coverages: [1, 5, 10, 20, 25, 30, 40, 50], parity_coverage: 50,
   starting_draws: ["2025-09-02 05:10"], starting_draws_total: 2, sources: {},
@@ -69,6 +69,14 @@ beforeEach(() => {
 });
 
 describe("S2 simple creation form", () => {
+  it.each([[5, "RD$5"], [2800, "RD$2.800"]])("renders the catalog minimum stake %i as %s instead of a hardcoded literal", async (minimumStake, expected) => {
+    vi.mocked(apiClient.getCatalog).mockResolvedValue({ ...catalog, game: { ...catalog.game, minimum_stake: minimumStake } } as never);
+    setup();
+    await screen.findByRole("option", { name: /2025-09-02 05:10/ });
+    const rules = screen.getByRole("group", { name: "Reglas del sorteo" });
+    expect(within(rules).getByText("Apuesta mínima por número").nextElementSibling).toHaveTextContent(expected);
+  });
+
   it("shows three numbered groups, truthful rules, prefilled choices, live order summary and one primary action", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
@@ -85,6 +93,7 @@ describe("S2 simple creation form", () => {
     expect(rules).toHaveTextContent("5");
     expect(rules).toHaveTextContent("1: 80 · 2: 8 · 3: 4 · 4: 2 · 5: 1");
     expect(rules).toHaveTextContent("RD$1");
+    expect(within(rules).getByText("Apuesta mínima por número").nextElementSibling).toHaveTextContent("RD$1");
     expect(screen.getByRole("link", { name: "Editar reglas" })).toHaveAttribute("href", "/datos#perfiles");
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeInTheDocument();

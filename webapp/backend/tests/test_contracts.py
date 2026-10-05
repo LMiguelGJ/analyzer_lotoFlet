@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from laboratorio.domain import contracts
 from laboratorio.domain.contracts import (
     COVERAGES,
     GAME,
@@ -17,9 +18,12 @@ from laboratorio.domain.contracts import (
     SYSTEMS,
     Conditions,
     ExperimentRequest,
+    Game,
     GameProfile,
     Strategy,
+    configure_game,
     legacy_quiniela_80_profile,
+    make_game,
     normalize_strategy_name,
 )
 
@@ -54,13 +58,61 @@ def conditions(**overrides):
     return base
 
 
-def test_game_is_the_fixed_quiniela_80_profile():
+def test_default_game_is_quiniela_80():
     assert GAME.numbers == 100
     assert GAME.positions == 5
     assert GAME.prizes == (80, 8, 4, 2, 1)
+    assert GAME.allows_repeats is True
+    assert GAME.minimum_stake == 1
     assert COVERAGES == (1, 5, 10, 20, 25, 30, 40, 50)
     assert len(SYSTEMS) == 13
     assert "transition" in SYSTEMS and "logistic" not in SYSTEMS
+
+
+@pytest.fixture
+def restore_game():
+    saved = Game(
+        GAME.name,
+        GAME.numbers,
+        GAME.positions,
+        GAME.prizes,
+        GAME.allows_repeats,
+        GAME.minimum_stake,
+    )
+    yield
+    configure_game(saved)
+
+
+def test_make_game_builds_a_three_position_game():
+    game = make_game("Tres", 100, 3, [60, 10, 5], True, 2)
+    assert game == Game("Tres", 100, 3, (60, 10, 5), True, 2)
+    assert make_game("Q", 10, 1, (9,), False).minimum_stake == 1
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("G", 100, 3, (60, 10), True, 1),
+        ("G", 3, 4, (4, 3, 2, 1), False, 1),
+        ("G", 1, 1, (5,), True, 1),
+        ("G", 10, 0, (), True, 1),
+        ("G", 10, 2, (5, 0), True, 1),
+        ("G", 10, 2, (5, 1), True, 0),
+    ],
+)
+def test_make_game_rejects_inconsistent_rules(args):
+    with pytest.raises(ValueError):
+        make_game(*args)
+
+
+def test_configure_game_replaces_the_visible_game(restore_game):
+    configure_game(make_game("Tres", 100, 3, [60, 10, 5], True, 5))
+    assert contracts.GAME.positions == 3
+    assert contracts.GAME.prizes == (60, 10, 5)
+    assert contracts.GAME.minimum_stake == 5
+    # modules that imported GAME by name see the change too
+    assert GAME is contracts.GAME
+    assert GAME.name == "Tres"
 
 
 def profile(**overrides):

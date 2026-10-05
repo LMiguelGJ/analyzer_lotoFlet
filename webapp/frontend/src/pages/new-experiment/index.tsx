@@ -10,6 +10,7 @@ import { Block, Button, OrderSummary, SectionHeader } from "../../components/ui"
 import { buildRequest, buildStrategy, diffStrategyKey, draftFromRequest, draftFromStrategy, errorDetail, errorMessage, initialConditions, initialStrategy, newStrategy, trimName, validateConditions, validateStrategies } from "./model";
 import type { ConditionsDraft, Errors, StrategyDraft } from "./model";
 import { FIELD_LABEL_SEED, FIELD_LABEL_SETTLEMENT, SELECTOR_LABELS, SETTLEMENT_LABELS } from "../../lib/ui-labels";
+import { formatDOP } from "../../lib/format";
 
 const control = "control";
 const secondary = "btn btn-secondary";
@@ -496,7 +497,7 @@ export function NewExperimentPage() {
             <dt>Posiciones por sorteo</dt><dd>{catalog.game.positions}</dd>
             <dt>Repeticiones</dt><dd>{catalog.game.allows_repeats ? "Permitidas" : "No permitidas"}</dd>
             <dt>Premios por posición</dt><dd>{catalog.game.prizes.map((prize, index) => `${index + 1}: ${prize}`).join(" · ")}</dd>
-            <dt>Apuesta mínima por número</dt><dd>RD$1</dd>
+            <dt>Apuesta mínima por número</dt><dd>{formatDOP(catalog.game.minimum_stake)}</dd>
           </dl>}
           <Link to="/datos#perfiles" className="btn btn-tertiary">Editar reglas</Link>
         </fieldset>

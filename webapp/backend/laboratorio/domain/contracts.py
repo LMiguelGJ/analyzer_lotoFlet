@@ -7,7 +7,8 @@ the engine adapter and ``domain.session`` respectively.
 
 import re
 import unicodedata
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, fields
 from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Literal, Self
@@ -29,11 +30,49 @@ class Game:
     name: str
     numbers: int
     positions: int
-    prizes: tuple[int, int, int, int, int]
+    prizes: tuple[int, ...]
     allows_repeats: bool
+    minimum_stake: int = 1
+
+
+def make_game(
+    name: str,
+    numbers: int,
+    positions: int,
+    prizes: Sequence[int],
+    allows_repeats: bool,
+    minimum_stake: int = 1,
+) -> Game:
+    """Build a validated Game; raises ValueError on an inconsistent rule set."""
+    prizes = tuple(prizes)
+    if numbers < 2:
+        raise ValueError("numbers must be at least 2")
+    if positions < 1:
+        raise ValueError("positions must be at least 1")
+    if not allows_repeats and positions > numbers:
+        raise ValueError("positions exceed numbers when repeats are not allowed")
+    if len(prizes) != positions:
+        raise ValueError("exactly one prize is required per position")
+    if any(prize < 1 for prize in prizes):
+        raise ValueError("every prize must be at least 1")
+    if minimum_stake < 1:
+        raise ValueError("minimum_stake must be at least 1")
+    return Game(name, numbers, positions, prizes, allows_repeats, minimum_stake)
 
 
 GAME = Game("Quiniela 80", 100, 5, (80, 8, 4, 2, 1), True)
+
+
+def configure_game(game: Game) -> None:
+    """Replace the active game rules (the value held by ``GAME``).
+
+    Modules that did ``from ... import GAME`` keep a reference to the same object, so
+    the rules are swapped in place (the frozen dataclass is rebound field by field)
+    instead of rebinding the module attribute, which those importers would never see.
+    """
+    for field in fields(Game):
+        object.__setattr__(GAME, field.name, getattr(game, field.name))
+
 
 # Admission ceilings for inert profile documents, NOT execution budgets. The old
 # game has 100 numbers, 5 positions and up to 50 selected numbers. Ten times its

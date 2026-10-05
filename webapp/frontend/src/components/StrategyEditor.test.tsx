@@ -4,7 +4,7 @@ import { StrategyEditor } from "./StrategyEditor";
 import { newStrategy } from "../pages/new-experiment/model";
 import type { Catalog } from "../api/types";
 
-const catalog: Catalog = { game: { name: "Q80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true }, systems: { cold: "Fríos", transition: "Transición" }, selectors: ["system", "blend", "random", "parity"], coverages: [1, 10, 50], parity_coverage: 50, starting_draws: [], starting_draws_total: 0, sources: { history_sha256: "", rankings_sha256: "", history_id: "", rankings_id: "", code_version: "" } };
+const catalog: Catalog = { game: { name: "Q80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true, minimum_stake: 1 }, systems: { cold: "Fríos", transition: "Transición" }, selectors: ["system", "blend", "random", "parity"], coverages: [1, 10, 50], parity_coverage: 50, starting_draws: [], starting_draws_total: 0, sources: { history_sha256: "", rankings_sha256: "", history_id: "", rankings_id: "", code_version: "" } };
 
 describe("shared strategy vocabulary", () => {
   it("shows mapped selector and staking labels while keeping the saved enum values", () => {

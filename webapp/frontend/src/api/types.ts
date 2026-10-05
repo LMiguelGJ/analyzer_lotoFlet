@@ -76,6 +76,7 @@ export interface Game {
   positions: number;
   prizes: number[];
   allows_repeats: boolean;
+  minimum_stake: number;
 }
 
 /** Exact integer rational payout, never a floating-point multiplier. */

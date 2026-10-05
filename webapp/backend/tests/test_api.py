@@ -101,7 +101,9 @@ def test_profile_catalog_is_bounded_inert_and_keeps_legacy_catalog_shape(setup, 
         app.state.repo, "list_game_profiles", lambda: pytest.fail("unbounded profile read")
     )
     catalog = client.get("/api/v1/catalog").json()
-    assert set(catalog["game"]) == {"name", "numbers", "positions", "prizes", "allows_repeats"}
+    assert set(catalog["game"]) == {
+        "name", "numbers", "positions", "prizes", "allows_repeats", "minimum_stake",
+    }
     assert "profiles" not in catalog
     first = client.get("/api/v1/catalog/profiles", params={"limit": 1}).json()
     assert (first["total"], first["offset"], first["limit"]) == (3, 0, 1)
