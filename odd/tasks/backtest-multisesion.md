@@ -65,7 +65,7 @@ mismos resultados; las divergencias son bugs a corregir.
   estrategia configurable (6 sistemas × coberturas × 3 apuestas), pin de hashes,
   validación de payloads. Superficies: webapp/backend/laboratorio/api/**,
   storage/** si hace falta, tests.
-- [ ] T3. Frontend: crear «corrida histórica» desde la configuración de
+- [x] T3. Frontend: crear «corrida histórica» desde la configuración de
   estrategias (lenguaje claro) y ver la tabla de resultados estilo MD
   (llegaron/completas, meta %, quiebres, neto medio). Superficies:
   webapp/frontend/src/pages/**, components/**, styles/**, tests.
@@ -98,6 +98,10 @@ Aceptación: los 14 escenarios reproducen exactamente la tabla del MD.
   866/866; ruff limpio. Informativos: R3-snapshot-validation
   (storage/repository.py:2780-2787), R3-system-selection-assertions
   (api/backtests.py:67-83)
-- T3: pendiente
+- T3: 0e7390e (14 archivos, +660) · revisión nativa review-f38c87a865f0db2c
+  aprobada y quemada; vista «Corridas históricas» dentro de Experimentos
+  (segmented control, FAB adaptado), formulario guiado, informe con columnas del
+  MD; suite frontend 579/579. Informativos: R3-early-submit
+  (pages/backtests/index.tsx:126-129), R3-stale-detail (pages/backtests/index.tsx:208)
 - T4: pendiente
 - T5: pendiente
