@@ -28,8 +28,9 @@ descartado y sirve solo como anti-referencia.
   (verdad financiera). Terciario: ámbar cálido (hue ≈ 45) para cifras de dinero,
   números del juego y momentos de resultado (evita el cliché violeta/oro de las
   apps de lotería).
-- Esquema claro por defecto + esquema oscuro completo, siguiendo
-  `prefers-color-scheme` con toggle manual (comportamiento nativo M3).
+- Esquema OSCURO por defecto (decisión del usuario, 2026-10-05), con esquema
+  claro completo disponible por toggle manual. El oscuro pedido es el esquema
+  M3 oscuro tokenizado (superficies tonales frías), no el mundo «Pi» descartado.
 - Estrategia: Restrained sobre la gramática M3 (neutrales + primary + accent de
   resultado); superficies tonales M3 (surface, surface-container), nunca gris puro.
 - Los roles M3 se nombran con el vocabulario oficial (`--md-sys-color-primary`,
