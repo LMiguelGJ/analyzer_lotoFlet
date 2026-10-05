@@ -377,6 +377,22 @@ describe("apiClient error mapping", () => {
     ]);
   });
 
+  it("# F-API-025 creates, lists and reads backtests with the backend paths and typed payload", async () => {
+    const body = { name: "Prueba", strategy: { name: "Transición", selector: "system" as const, system: "transition" as const, coverage: 1, staking: "bold" as const },
+      game: { numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], min_stake: 1 }, conditions: { capital: 2000, goal: 2800 },
+      inputs: { history_sha256: "a".repeat(64), rankings_sha256: "b".repeat(64) } };
+    const created = { id: "run/1", status: "completed" as const, report: { id: "run/1" } };
+    const page = { total: 1, offset: 0, limit: 20, items: [{ id: "run/1" }] };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(201, created)).mockResolvedValueOnce(jsonResponse(200, page)).mockResolvedValueOnce(jsonResponse(200, page.items[0]));
+    await expect(apiClient.createBacktest(body)).resolves.toEqual(created);
+    await expect(apiClient.listBacktests(0, 20)).resolves.toEqual(page);
+    await expect(apiClient.getBacktest("run/1")).resolves.toEqual(page.items[0]);
+    expect(vi.mocked(globalThis.fetch).mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/backtests", "/api/v1/backtests?offset=0&limit=20", "/api/v1/backtests/run%2F1",
+    ]);
+    expect(vi.mocked(globalThis.fetch).mock.calls[0][1]).toMatchObject({ method: "POST", body: JSON.stringify(body) });
+  });
+
   it("# F-API-024 retrieves the actual agent credential by same-origin POST with an empty JSON body", async () => {
     const credential = { token: "test-only-agent-token" };
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, credential));

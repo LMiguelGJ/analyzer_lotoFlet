@@ -1,5 +1,8 @@
 import type {
   AgentCredentialResponse,
+  BacktestCreated,
+  BacktestReport,
+  CreateBacktestBody,
   Catalog,
   CompareResult,
   ConfigurationSummary,
@@ -262,6 +265,14 @@ export const apiClient = {
 
   getProfileBatchByClientRequestId: (clientRequestId: string) =>
     request<ProfileBatchResponse>(`/profile-batches/by-client-request/${encodeURIComponent(clientRequestId)}`),
+
+  createBacktest: (body: CreateBacktestBody) => request<BacktestCreated>("/backtests", {
+    method: "POST", body: JSON.stringify(body),
+  }),
+
+  listBacktests: (offset = 0, limit = 20) => request<Page<BacktestReport>>(`/backtests${query({ offset, limit })}`),
+
+  getBacktest: (identifier: string) => request<BacktestReport>(`/backtests/${encodeURIComponent(identifier)}`),
 
   listExperiments: ({ offset = 0, limit = 20, name_contains, status, sort, order }: ExperimentListParams = {}) => {
     const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });

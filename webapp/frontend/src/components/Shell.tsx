@@ -110,9 +110,9 @@ export function Shell({ title, children }: ShellProps) {
           <div className="shell-page-content">{children}</div>
         </main>
 
-        {!location.pathname.startsWith("/ajustes") && !location.pathname.startsWith("/datos") && !location.pathname.startsWith("/experimentos/nuevo") && !/^\/experimentos\/[^/]+(?:\/comparacion)?$/.test(location.pathname) && <Link className="m3-extended-fab" aria-label="Acceso rápido: Nueva simulación" to="/experimentos/nuevo">
+        {!location.pathname.startsWith("/ajustes") && !location.pathname.startsWith("/datos") && !location.pathname.startsWith("/experimentos/nuevo") && !location.pathname.startsWith("/experimentos/nueva-historica") && !location.pathname.startsWith("/experimentos/historicas/") && (!/^\/experimentos\/[^/]+(?:\/comparacion)?$/.test(location.pathname) || location.pathname === "/experimentos/historicas") && <Link className="m3-extended-fab" aria-label={`Acceso rápido: ${location.pathname === "/experimentos/historicas" ? "Nueva corrida histórica" : "Nueva simulación"}`} to={location.pathname === "/experimentos/historicas" ? "/experimentos/nueva-historica" : "/experimentos/nuevo"}>
           <span aria-hidden="true">＋</span>
-          <span>Nueva simulación</span>
+          <span>{location.pathname === "/experimentos/historicas" ? "Nueva corrida histórica" : "Nueva simulación"}</span>
         </Link>}
       </div>
       <QueueDrawer open={queueOpen} onClose={() => setQueueOpen(false)} trigger={queueRef} />

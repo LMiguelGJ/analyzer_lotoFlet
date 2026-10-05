@@ -64,6 +64,39 @@ export interface Page<T> {
   items: T[];
 }
 
+export interface BacktestStrategy {
+  name: string;
+  selector: "system" | "parity";
+  system?: "transition" | "cold" | "select_interpretable" | "mix" | "ensemble" | null;
+  coverage: number;
+  staking: StakingStyle;
+}
+export interface BacktestGame { numbers: number; positions: number; prizes: number[]; min_stake: number }
+export interface BacktestConditions { capital: number; goal: number }
+export interface BacktestInputs { history_sha256: string; rankings_sha256: string }
+export interface CreateBacktestBody {
+  name: string;
+  strategy: BacktestStrategy;
+  game: BacktestGame;
+  conditions: BacktestConditions;
+  inputs: BacktestInputs;
+}
+export interface BacktestWindow { bets: number; wagered: number; paid: number; sessions: number; incomplete: number }
+export interface BacktestReport {
+  id: string;
+  name: string;
+  created_at: string;
+  reached_goal: number | null;
+  completed: number | null;
+  goal_rate: number | null;
+  quiebres: number | null;
+  neto_medio: number | null;
+  incomplete: number | null;
+  window: BacktestWindow;
+  config: CreateBacktestBody;
+}
+export interface BacktestCreated { id: string; status: "completed"; report: BacktestReport }
+
 export interface StartingDrawAvailability {
   date: string;
   history_total: number;

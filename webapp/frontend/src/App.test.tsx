@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
@@ -20,6 +20,9 @@ describe("routing", () => {
   it.each([
     ["/experimentos", "Simulaciones"],
     ["/experimentos/nuevo", "Crear simulación"],
+    ["/experimentos/historicas", "Corridas históricas"],
+    ["/experimentos/nueva-historica", "Nueva corrida histórica"],
+    ["/experimentos/historicas/ejemplo", "Resultado de corrida histórica"],
     ["/experimentos/nuevo/sesion", "Crear varias simulaciones"],
     ["/experimentos/nuevo/perfil", "Crear simulación con perfil de juego"],
     ["/experimentos/ejemplo", "Resultado de la simulación"],
@@ -29,7 +32,7 @@ describe("routing", () => {
     ["/ajustes", "Ajustes"],
   ])("# F-SHELL-002 shows the canonical title for %s", (path, title) => {
     renderAt(path);
-    expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: title, level: 1 })).toBeInTheDocument();
   });
 
   it("# F-SHELL-003 keeps route paths and canonical destinations stable", () => {
@@ -40,7 +43,7 @@ describe("routing", () => {
     renderAt("/ajustes");
     expect(screen.getByRole("link", { name: "Ajustes" })).toHaveAttribute("href", "/ajustes");
     renderAt("/experimentos");
-    expect(screen.getByRole("link", { name: "Simulaciones" })).toHaveAttribute("href", "/experimentos");
+    expect(within(document.getElementById("primary-navigation")!).getByRole("link", { name: "Simulaciones" })).toHaveAttribute("href", "/experimentos");
   });
 
   it("# F-SHELL-005 renders an honest not-found state for unknown paths", () => {
@@ -57,6 +60,12 @@ describe("routing", () => {
 });
 
 describe("skip link", () => {
+  it("# F-SHELL-010 adapts the Experimentos FAB to the historical view without adding a destination", () => {
+    renderAt("/experimentos/historicas");
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva corrida histórica" })).toHaveAttribute("href", "/experimentos/nueva-historica");
+    expect(screen.getAllByRole("link").filter((link) => link.getAttribute("href") === "/ajustes")).toHaveLength(1);
+  });
+
   it("# F-SHELL-007 is the first focusable element and moves focus to main content", async () => {
     const user = userEvent.setup();
     renderAt("/experimentos");
@@ -81,7 +90,7 @@ describe("keyboard access", () => {
     expect(queue).toHaveFocus();
     for (const name of ["Simulaciones", "Estrategias", "Datos", "Ajustes"]) {
       await user.tab();
-      expect(screen.getByRole("link", { name })).toHaveFocus();
+      expect(within(document.getElementById("primary-navigation")!).getByRole("link", { name })).toHaveFocus();
     }
     expect(queue).toBeEnabled();
   });

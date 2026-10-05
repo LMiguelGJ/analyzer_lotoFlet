@@ -13,6 +13,7 @@ import { Button, Disclosure, ErrorBanner, Field, Figure, Loading, Stat } from ".
 import type { ChipVariant, FigureVariant } from "../../components/ui";
 import { formatDOP } from "../../lib/format";
 import { profileMoney } from "../../lib/profile-display";
+import { ExperimentTabs } from "../backtests";
 
 const PAGE_SIZE = 20;
 const statuses: ExperimentStatus[] = ["pending", "held", "running", "completed", "cancelled", "interrupted", "failed"];
@@ -244,6 +245,7 @@ export function ExperimentsPage() {
   const shown = `de las ${items.length} mostradas`;
   const clearFilters = () => update({ name: "", status: undefined, page: 1 });
   return <div>
+    <ExperimentTabs active="simulations" />
     <header className="mb-6 flex flex-wrap items-end justify-between gap-6 border-b border-border pb-5">
       {state === "ready" && total > 0 ? <div className="grid grid-cols-3 gap-6" aria-label="Resumen de simulaciones" role="group">
         <Stat label="Simulaciones" value={total} />

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Shell } from "./components/Shell";
 import { QueueProvider } from "./components/QueueProvider";
 import { ExperimentsPage } from "./pages/experiments";
+import { BacktestCreatePage, BacktestDetailPage, BacktestsPage } from "./pages/backtests";
 import { DetailPage } from "./pages/experiments/DetailPage";
 import { ComparisonPage } from "./pages/experiments/ComparisonPage";
 import { NewExperimentPage } from "./pages/new-experiment";
@@ -20,6 +21,30 @@ export function App() {
         element={
           <Shell key="experiments" title="Simulaciones">
             <ExperimentsPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/experimentos/historicas"
+        element={
+          <Shell key="backtests" title="Corridas históricas">
+            <BacktestsPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/experimentos/historicas/:id"
+        element={
+          <Shell key="backtest-detail" title="Resultado de corrida histórica">
+            <BacktestDetailPage />
+          </Shell>
+        }
+      />
+      <Route
+        path="/experimentos/nueva-historica"
+        element={
+          <Shell key="new-backtest" title="Nueva corrida histórica">
+            <BacktestCreatePage />
           </Shell>
         }
       />
