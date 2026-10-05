@@ -2738,3 +2738,74 @@ class Repository:
             ).rowcount
             if not changed:
                 raise ValueError("experiment missing or not in expected state")
+
+    def create_backtest(self, name: str, config: dict, result):
+        identifier = str(uuid4())
+        created_at = _now_iso()
+        result_payload = {
+            "reached_goal": result.reached_goal,
+            "quiebres": result.quiebre,
+            "completed": result.completed,
+            "goal_rate": result.goal_rate,
+            "neto_medio": result.neto_medio,
+            "incomplete": result.incomplete,
+            "window": {
+                "bets": result.window.bets,
+                "wagered": result.window.wagered,
+                "paid": result.window.paid,
+                "sessions": len(result.sessions),
+                "incomplete": result.incomplete,
+            },
+        }
+        config_json = json.dumps(
+            config, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+        )
+        result_json = json.dumps(
+            result_payload, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+        with _transaction(self.path) as db:
+            db.execute(
+                "INSERT INTO backtests (id, name, config_json, result_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (identifier, name, config_json, result_json, created_at),
+            )
+        return identifier, created_at
+
+    @staticmethod
+    def _backtest_row(row):
+        identifier, name, config_json, result_json, created_at = row
+        try:
+            config = json.loads(config_json)
+            result = json.loads(result_json)
+            if type(config) is not dict or type(result) is not dict:
+                raise ValueError("saved backtest fields must be objects")
+            return {
+                "id": identifier,
+                "name": name,
+                "created_at": created_at,
+                **result,
+                "config": config,
+            }
+        except (ValueError, KeyError, TypeError) as exc:
+            raise ValueError("stored backtest snapshot is corrupt") from exc
+
+    def get_backtest(self, identifier: str):
+        with connection(self.path) as db:
+            row = db.execute(
+                "SELECT id, name, config_json, result_json, created_at FROM backtests WHERE id = ?",
+                (identifier,),
+            ).fetchone()
+        return None if row is None else self._backtest_row(row)
+
+    def search_backtests(self, offset: int, limit: int):
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("offset and limit out of range")
+        with connection(self.path) as db:
+            db.execute("BEGIN")
+            total = db.execute("SELECT count(*) FROM backtests").fetchone()[0]
+            rows = db.execute(
+                "SELECT id, name, config_json, result_json, created_at FROM backtests "
+                "ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?",
+                (limit, offset),
+            ).fetchall()
+        return total, [self._backtest_row(row) for row in rows]

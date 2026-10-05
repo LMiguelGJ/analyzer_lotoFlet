@@ -1068,10 +1068,7 @@ def test_migration_v7_to_v9_preserves_bytes_and_rolls_back_atomically(tmp_path, 
     def v7_database(path):
         with sqlite3.connect(path) as db:
             db.executescript(
-                "\n".join(
-                    database._MIGRATIONS[v].read_text(encoding="utf-8")
-                    for v in range(1, 8)
-                )
+                "\n".join(database._MIGRATIONS[v].read_text(encoding="utf-8") for v in range(1, 8))
             )
             db.execute("PRAGMA user_version = 7")
             profile = legacy_quiniela_80_profile()
@@ -1105,7 +1102,7 @@ def test_migration_v7_to_v9_preserves_bytes_and_rolls_back_atomically(tmp_path, 
     initialize_database(path)
     with sqlite3.connect(path) as db:
         # Initialization upgrades through the current schema, not the historical v9 target.
-        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 12
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 13
         assert db.execute("PRAGMA foreign_key_check").fetchall() == []
         assert (
             db.execute("SELECT request_json FROM experiments WHERE id='legacy'").fetchone()[0]
@@ -1116,8 +1113,9 @@ def test_migration_v7_to_v9_preserves_bytes_and_rolls_back_atomically(tmp_path, 
             == result_bytes
         )
         assert (
-            db.execute("SELECT profile_json FROM experiment_profiles WHERE experiment_id='legacy'")
-            .fetchone()[0]
+            db.execute(
+                "SELECT profile_json FROM experiment_profiles WHERE experiment_id='legacy'"
+            ).fetchone()[0]
             == snapshot
         )
         assert (
@@ -1200,8 +1198,10 @@ def test_migration_11_preserves_populated_v10_rows_and_foreign_keys(tmp_path):
         db.execute(
             "INSERT INTO runs (experiment_id, ordinal, status, result_json, result_kind, "
             "result_schema_version) VALUES ('v10', 0, 'completed', ?, 'legacy', 1)",
-            ('{"outcome":"goal","bets_count":0,"wagered":0,"paid":0,'
-             '"final_balance":100,"bets":[]}',),
+            (
+                '{"outcome":"goal","bets_count":0,"wagered":0,"paid":0,'
+                '"final_balance":100,"bets":[]}',
+            ),
         )
     initialize_database(path)
     with sqlite3.connect(path) as db:
@@ -1286,7 +1286,8 @@ def test_strategy_utf8_artifact_bytes_and_failed_write_rollback(repo):
     initialize_database(other_path)
     other = Repository(other_path)
     limit = next(
-        value for value in range(expected + 1, expected * 2 + 100)
+        value
+        for value in range(expected + 1, expected * 2 + 100)
         if value - min(LOGICAL_MARGIN_BYTES, max(1, value // 20)) == expected
     )
     with pytest.raises(QuotaExceeded):
@@ -1295,8 +1296,10 @@ def test_strategy_utf8_artifact_bytes_and_failed_write_rollback(repo):
         )
     assert other.strategy_artifact_bytes() == 0
     with sqlite3.connect(other.path) as db:
-        db.execute("CREATE TRIGGER reject_strategy BEFORE INSERT ON strategies "
-                   "BEGIN SELECT RAISE(ABORT, 'reject'); END")
+        db.execute(
+            "CREATE TRIGGER reject_strategy BEFORE INSERT ON strategies "
+            "BEGIN SELECT RAISE(ABORT, 'reject'); END"
+        )
     with pytest.raises(sqlite3.IntegrityError, match="reject"):
         other.create_strategy(StrategyDefinition.static_numbers("Valid", (1,)))
     assert other.strategy_artifact_bytes() == 0
@@ -1312,8 +1315,14 @@ def test_replace_cannot_mutate_strategy_heads(repo):
             with pytest.raises(sqlite3.IntegrityError, match="immutable"):
                 db.execute(
                     "INSERT OR REPLACE INTO strategies VALUES (?, ?, ?, ?, ?, ?)",
-                    (saved["id"], "forged", saved["created_at"], int(saved["protected"]),
-                     saved["preset_explanation"], saved["latest_revision"]),
+                    (
+                        saved["id"],
+                        "forged",
+                        saved["created_at"],
+                        int(saved["protected"]),
+                        saved["preset_explanation"],
+                        saved["latest_revision"],
+                    ),
                 )
     assert repo.get_strategy(preset["id"])["protected"] is True
 
@@ -1334,10 +1343,15 @@ def test_unknown_or_forged_protected_strategy_is_rejected(repo):
         forged, digest = definition_snapshot(
             replace(preset["definition"], coverage=preset["definition"].coverage + 1)
         )
-        db.execute("UPDATE strategy_revisions SET definition_json=?, definition_sha256=? "
-                   "WHERE strategy_id=?", (forged, digest, preset["id"]))
-    for getter in (lambda: repo.get_strategy(preset["id"]),
-                   lambda: repo.get_strategy_revision(preset["id"], 1),
-                   lambda: repo.page_strategies(0, 10)):
+        db.execute(
+            "UPDATE strategy_revisions SET definition_json=?, definition_sha256=? "
+            "WHERE strategy_id=?",
+            (forged, digest, preset["id"]),
+        )
+    for getter in (
+        lambda: repo.get_strategy(preset["id"]),
+        lambda: repo.get_strategy_revision(preset["id"], 1),
+        lambda: repo.page_strategies(0, 10),
+    ):
         with pytest.raises(ValueError, match="protected preset"):
             getter()

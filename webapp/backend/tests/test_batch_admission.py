@@ -270,6 +270,7 @@ def test_quota_failure_does_not_reserve_a_batch_identity(tmp_path):
 
 def test_batch_quota_matches_measured_sqlite_delta_at_exact_boundary(tmp_path):
     """B-DOM-060: quota estimate matches SQLite delta at the exact boundary."""
+
     def seeded_repo(path):
         repo = _new_repo(path)
         _saved_inputs(repo)
@@ -468,7 +469,7 @@ def test_migration_11_preserves_populated_v10_rows_and_foreign_keys(tmp_path):
         db.execute("INSERT INTO runs VALUES ('old', 0, NULL, 'completed', '{}', 'legacy', 1)")
     initialize_database(path)
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 12
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 13
         assert db.execute(
             "SELECT id, status, request_schema_version FROM experiments"
         ).fetchone() == (

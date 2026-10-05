@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import field_validator
 
 from laboratorio.api import StrictBody, repo
+from laboratorio.api.backtests import router as backtests_router
 from laboratorio.domain import contracts
 from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256, game_source_from
 from laboratorio.storage.repository import QuotaBelowUsage, QuotaReadOnly
@@ -147,3 +148,6 @@ def update_game_settings(body: GameSettingsBody, request: Request):
     # Future simulations only: stored experiments keep the rules they were created with.
     contracts.configure_game(game)
     return _game_payload(game, "stored")
+
+
+router.include_router(backtests_router, prefix="/backtests")
