@@ -273,16 +273,24 @@ describe("LW13 library templates", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/nombre.*único/i);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   }, 15000); // Sequential library, routing, and wizard integration exceeds 5s under full-suite contention.
-  it("allows a dirty creator to navigate through the equivalent legacy alias", async () => {
+  it("guards dirty navigation through the legacy alias, keeps the live draft on stay, and permits explicit leave", async () => {
     const { user, router } = setup("/simulaciones/nueva");
-    const name = await screen.findByRole("textbox", { name: "Nombre de la simulación" });
-    await user.type(name, "Borrador");
+    await screen.findByRole("textbox", { name: "Nombre de la simulación" });
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
 
     await act(async () => { await router.navigate("/experimentos/nuevo"); });
 
+    let dialog = await screen.findByRole("alertdialog");
+    expect(router.state.location.pathname).toBe("/simulaciones/nueva");
+    await user.click(within(dialog).getByRole("button", { name: "Seguir editando" }));
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Borrador");
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+
+    await act(async () => { await router.navigate("/experimentos/nuevo"); });
+    dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones/nueva"));
-    expect(name).toHaveValue("Borrador");
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("");
   });
 
   it("# F-CREATE-012 F-CREATE-013 guards semantic configuration changes and removal, stays or leaves; rejects base/configuration conflict", async () => {

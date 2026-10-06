@@ -128,12 +128,11 @@ export function NewExperimentPage() {
   const submitted = useRef(false);
   const errorRef = useRef<HTMLDivElement>(null);
   const [pendingFocus, setPendingFocus] = useState<string | null>(null);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    const creatorPath = (pathname: string) => pathname === "/experimentos/nuevo" ? "/simulaciones/nueva" : pathname;
-    return dirty && !submitted.current && (creatorPath(currentLocation.pathname) !== creatorPath(nextLocation.pathname) ||
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    dirty && !submitted.current && (currentLocation.pathname !== nextLocation.pathname ||
       (new URLSearchParams(currentLocation.search).get("base") || null) !== (new URLSearchParams(nextLocation.search).get("base") || null) ||
-      (new URLSearchParams(currentLocation.search).get("configuration") || null) !== (new URLSearchParams(nextLocation.search).get("configuration") || null));
-  });
+      (new URLSearchParams(currentLocation.search).get("configuration") || null) !== (new URLSearchParams(nextLocation.search).get("configuration") || null))
+  );
 
   // A query-only navigation keeps this component mounted. Clear the previous
   // clean source before loading another; dirty source changes are blocked above.

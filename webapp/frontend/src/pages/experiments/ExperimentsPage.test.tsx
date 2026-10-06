@@ -360,12 +360,12 @@ describe("LW10 experiments list · data and navigation", () => {
     setup();
 
     expect(screen.queryByRole("link", { name: "Nueva simulación" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/simulaciones/nueva");
     await screen.findByText("Fríos K1");
     const row = screen.getByText("Fríos K1").closest("tr")!;
     expect(within(row).queryByRole("link", { name: "Fríos K1" })).not.toBeInTheDocument();
     expect(within(row).getAllByRole("button")).toHaveLength(1);
-    expect(within(row).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/experimentos/exp-completed-1");
+    expect(within(row).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/simulaciones/exp-completed-1");
   });
 
   it("paginates forward and back using the real offset/limit/total from the server", async () => {

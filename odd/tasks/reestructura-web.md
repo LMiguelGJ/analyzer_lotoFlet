@@ -29,13 +29,16 @@ redirecciones desde `/experimentos/...` para no romper enlaces guardados.
 - No se pierde capacidad: todo flujo actual sigue existiendo, aunque entre por otra
   puerta.
 - Cambios de datos persistidos (F3) llevan migración y prueba de migración.
-- Una unidad de trabajo = un commit + revisión nativa.
+- Una unidad de trabajo = un commit + verificaciones funcionales. La revisión
+  nativa se ejecuta solo cuando RDD está activo; el usuario lo desactivó
+  explícitamente para este clon. Con RDD apagado se aplica evaluación de riesgo
+  y verificación independiente cuando corresponda.
 
 ## Tasks
 
 ### F1 — Bugs y nombres
 
-- [ ] T1. Título móvil (S1), enlace «Editar reglas» (C6), nombre único
+- [x] T1. Título móvil (S1), enlace «Editar reglas» (C6), nombre único
   «Simulaciones» en menú, aria-label, títulos y rutas con redirecciones (C2), acción
   primaria declarada por ruta en vez de regex en el Shell (C4).
 
@@ -78,7 +81,49 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
 
 ## Execution status
 
-- T1 is in progress with partial source changes; it is not accepted or committed.
+### Current resumed checkpoint (supersedes historical blockers below)
+
+- User explicitly disabled RDD for this clone; global RDD remains enabled.
+  Pending native review `review-2a7f14113ecdbd71` is neither approved nor deleted.
+  Its capture failure no longer pauses ordinary implementation under RDD-off policy.
+- User-requested backup `21faa78` was pushed to `origin/stage`; it preserves
+  partial T1, not a completed task. Resumed work starts from a clean worktree.
+- Observed checkpoint checks: frontend 581 passed / 2 failed (stale navigation
+  expectations in BacktestsPage and ExperimentsPage); typecheck and build passed
+  with a 550.65 kB chunk warning; backend 880 passed and Ruff passed; all 14
+  golden scenarios passed. Visual checks at 390 px / 1440 px remain pending.
+- T1 correction writer `muw4dqwn-4-yo6e` completed: dirty raw-path changes
+  now trigger the leave guard; the regression re-queries the live textbox and
+  proves stay preserves the draft while explicit leave clears it. Two stale
+  navigation assertions now use canonical labels/routes. Source/test delta:
+  19 insertions and 12 deletions across four frontend files.
+- Observed RED: creator tests 47 passed / 1 failed before the fix. GREEN:
+  focused five-file suite 117 passed; full frontend suite 583 passed in 40 files;
+  typecheck/build passed (550.56 kB chunk warning); 14 golden scenarios passed.
+  Full-suite JSDOM logs include the bogus-status negative case; their origin
+  remains under focused verification, not assumed harmless.
+- Native read-only ASSESS: medium risk, large runtime writer, RDD off; writer
+  self-verification stands and no separate verifier is required by the plan.
+  Verifier `muw4xvoe-5-ji07` completed an independent focused spot check:
+  78 tests passed across creator/App/Shell. Actual browser QA at 390 px and
+  1440 px passed with GET-only mock API data: eight screenshots inspected,
+  no horizontal overflow, readable titles, correct primary destinations,
+  rules deep link, legacy query/hash preservation and dirty draft stay/leave.
+  Zero page errors; owned server/browser processes stopped; Git status unchanged.
+  Artifacts: OS temp `t1qa-results.json`, `t1qa-browser.log`, and
+  `t1qa-{390,1440}-{simulaciones,historicas,nueva,nueva-historica}.png`.
+  The bogus-status throw is an intentional fixture at StatusLabel.test.tsx:102-104;
+  the full console log was unavailable, so not every console entry is certified.
+  Real-data submissions/settings saves, populated result/comparison screenshots
+  and native unload-dialog checks were not exercised; full-feature QA remains T10.
+- T1 functional acceptance is complete under RDD-off policy; its work-unit commit
+  is recorded below. The historical native review remains unapproved.
+- T2 is next: consolidate the simulations list and preserve exact repeat inputs.
+  T3-T10 remain pending; the backup commit alone accepted no implementation task.
+
+### Historical execution evidence
+
+- T1 was in progress with partial source changes; it was not accepted or committed.
 - Initial writer and explorer attempts ended without final reports. The parent
   confirmed a clean worktree at `0dc29d6`; neither attempt is accepted as completed.
 - Resumed writer `muvr6h6e-q-9a1z` returned partial after the parent requested a

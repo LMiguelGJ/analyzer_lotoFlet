@@ -74,6 +74,6 @@ describe("historical backtest pages", () => {
     expect(await screen.findByText("Prueba")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Abrir corrida histórica de Prueba" })).toHaveAttribute("href", "/simulaciones/historicas/backtest-1");
     expect(screen.getByRole("link", { name: "Simulaciones" })).toHaveAttribute("href", "/simulaciones");
-    expect(within(screen.getByRole("navigation", { name: "Experimentos" })).getByRole("link", { name: "Corridas históricas" })).toHaveAttribute("aria-current", "page");
+    expect(within(screen.getByRole("navigation", { name: "Simulaciones" })).getByRole("link", { name: "Corridas históricas" })).toHaveAttribute("aria-current", "page");
   });
 });
