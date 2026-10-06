@@ -162,8 +162,16 @@ export interface SimulationListParams extends ExperimentListParams {
   scope?: SimulationScope;
 }
 
+export interface ExpectedSources {
+  history_id: string;
+  history_sha256: string;
+  rankings_id: string;
+  rankings_sha256: string;
+}
+
 export interface CreateExperimentBody {
   request: ExperimentRequest;
+  expected_sources?: ExpectedSources;
   configuration_ids?: (string | null)[] | null;
 }
 

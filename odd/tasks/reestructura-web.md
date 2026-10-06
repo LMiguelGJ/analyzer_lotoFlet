@@ -278,7 +278,10 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
 - T2 historical repeat: `b4ddadc` — `feat(web): repeat historical runs from saved snapshots`.
   598 frontend tests, typecheck/build and 36 normal Chrome checks at390/1440;
   inherited premature-submit hazard corrected, no live writes or push.
-- T2 classic/profile repeat and T3-T10: pending.
+- T2 classic expected-source backend guard: `b100f43` —
+  `feat(api): guard classic creation with expected sources`; 57 API tests,
+  906 full backend tests, Ruff and byte-stable independent verification.
+- T2 classic frontend/profile repeat and T3-T10: pending.
 
 ## Next active unit
 
@@ -549,5 +552,87 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   Before/after hashes stable: production326
   `a7aaf8ea24cdd8401ffebd2ace321200f7590015967593dd3dd4b40d21e6988e`;
   test1517 `1a0cacb412b1656e99d17a2f6d50fa5eb2c80b4b358a052b78282bc266034ec8`.
-  Parent accepts this backend-only unit; work-unit commit follows. Frontend
-  classic binding and profile repeat parity remain pending; no live DB or push.
+  Parent accepts this backend-only unit; committed as
+  `b100f431125ca3c8921fa264b37424f55009c34d`
+  (`feat(api): guard classic creation with expected sources`), stage, not pushed.
+  Frontend classic binding and profile repeat parity remain pending. Next: map
+  existing classic creator hydration/source typing/tests read-only, then derive
+  a separate bounded frontend guard-integration unit; no live DB or push.
+  Scout `muwx6spx-k-ssbl` mapped `client.ts`, classic creator and existing tests:
+  base submissions must validate/pin four saved source fields, fresh must omit
+  the guard, and exact stale-source 409 needs distinct copy from queue 409.
+  Scoped challenge `muwxazdc-l-7y9n` clarified the parity premise:
+  drafts retain saved coverage but serialization uses current catalog for parity.
+  The hypothetical17→29 substitution is source reasoning, NOT an executed valid
+  classic request: backend contracts require parity coverage50. Other supported
+  saved conditions/strategy fields round-trip; unavailable current catalog/draws
+  may reject safely. Classic request contains no game-rules snapshot, so neither
+  the four-source guard nor this unit promises historical global-rules replay.
+  Next unit is three frontend surfaces only: `api/client.ts`,
+  `pages/new-experiment/index.tsx`, and `NewExperimentPage.test.tsx`.
+  Test-first: exact saved guard on base POST, omitted fresh guard, fail-closed
+  invalid/missing source fields, stale-source409 distinct from queue409, explicit
+  retry retains guard and edits, base async/reset protections retained.
+  Worker `muwxfziw-m-tyy4` completed the three-file guard (90 additions/5 deletions):
+  runtime fail-closed saved fields, active-base pinning, base-only snapshot POST,
+  fresh body unchanged, and exact stale-source409 versus generic queue409.
+  Observed RED: intended base-payload assertion lacked `expected_sources`.
+  Writer GREEN: 57 creator tests, 66 App/client/model tests, 607 full tests/40files,
+  types/build; existing555.69KB bundle warning and intentional JSDOM bogus-status
+  logs. Detector `[]`, whitespace pass; financial goldens NOT rerun (untouched).
+  Parent ASSESS medium/large/RDD-off: self-checks stand; functional QA still due.
+  Parent corrected one error-copy literal: mismatch may predate opening, so say
+  current sources differ from saved sources without inventing when they changed.
+  No meaningful new RED for this literal-only clarification; current-byte reruns
+  and normal Chrome QA assigned to verifier `muwy60gq-n-166s` before acceptance.
+  Freeze: client377 `e99c43a4b8681ae5c38271bd4d88dbd1485136bf7e3206b2a498fe92a9dafc76`;
+  creator664 `ee80aa505839623ae8cc8f18d0b368457e8cbbebc54573d9bf831a3fdd2b1b56`;
+  tests1159 `e7ff81a27382495a043487c2f9dba4a771a74aff76e086fa8b4dab04a4855f08`.
+  Current-byte verifier observed creator FAIL: 56 passed/1 failed at test897;
+  parent copy edit left the old `/fuentes.*cambiaron|nueva simulación/i` assertion
+  unmatched by the clarified current-versus-saved message. Parent-caused assertion
+  mismatch, not original writer GREEN or newly invented feature RED.
+  Preserve the three-source freeze while verifier completes remaining commands
+  and functional QA; retain failure logs. After completion, correct that one
+  test to assert actual stale-source semantics and rerun affected checks.
+  Initial browser harness failed after deliberate synthetic POST: its blend
+  fixture included unsupported `system:null` (serializer correctly omits it),
+  and detail replay/trajectory GET mocks were missing and safely blocked.
+  No backend traffic or source changes. Preserve initial artifacts separately;
+  verifier corrects only temp fixtures/mocks in a distinct subfolder. Neither
+  this harness-only failure nor future browser PASS erases the test897 failure.
+  Verifier `muwy60gq-n-166s` completed PARTIAL: full606 passed/1 failed of607,
+  creator56/57 (same test897 only); typecheck/build/whitespace PASS,555.69KB warning.
+  Normal Chrome PASS: 48 main +14 viewport/focus/touch checks at390/1440,
+  native pointer/Enter/Space and explicit Create safe, immutable original,
+  pinned four-field guards, supported unchanged/edited requests, manual409retry,
+  invalid bases, delayedA→B→fresh, queue409/422/507/network, no tested overflow.
+  Main289GET/19syntheticPOST, supplement100GET/8syntheticPOST; zero unmapped
+  APIs/other mutations/page errors/unexpected console errors. Planned failures
+  counted separately. Four fullPage and six viewport PNGs inspected by verifier;
+  ordinary viewport evidence resolves fixed-header/nav composite ambiguity.
+  Three baseline hashes stable, owned PID2892 stopped; no live API/DB.
+  Artifacts: `C:/Users/luism/AppData/Local/Temp/t2-classic-repeat-qa-N08zOr/`
+  (`final-contracts`, `viewport-final`); all initial/intermediate fixture/control/
+  syntax/desktop-threshold incidents preserved separately, not application defects.
+  Limits: list entry not exercised; bounded async case, fallback fonts, not
+  financial reproduction or wholeT2. Final step focus falls to body but Create
+  is Tab-reachable and touch-safe; no new focus fix mixed into this unit.
+  Parent now changed ONLY test897 to assert the exact current-versus-saved
+  stale-source sentence (not a weakened OR). Production remains browser-verified.
+  Fresh ASSESS medium/large/RDD-off self-check plan unchanged. Read-only continuation
+  `muwypfp9-o-wofg` completed PASS: 57/57 creator, 607/607 full (40/40files),
+  types and whitespace. In-memory assertion replacement reconstructs prior test
+  hash, proving exactly one semantic assertion correction, no skips/suppression.
+  Production hashes match final normal-browser baseline; test final hash
+  `1d1db70034cd865847758e6c1587f99ecd93e0ee74ee94584ad791aeb55b7265`.
+  Prior production build555.69KB and browser48+14checks retained, NOT rerun;
+  production unchanged. All earlier test/harness failures remain preserved.
+  Parent accepts this scoped frontend guard unit; work-unit commit follows.
+  Next separate unit: classic list/detail 'Repetir con cambios' entry actions
+  with inert encoded base links and existing routes/tests; T2 remains open.
+  Acceptance/commit blocked pending that correction plus mocked normal390/1440
+  payload/error/async/reset/pointer/Enter/Space/fresh checks; no live API/DB. Auxiliary ast-grep silent
+  diagnostic is incomplete, not a clean claim. No T2-wide acceptance.
+  Defensive parity mapper work and classic list/detail repeat actions remain
+  separate follow-ups; no T3/profile/financial-engine or snapshot-schema expansion.

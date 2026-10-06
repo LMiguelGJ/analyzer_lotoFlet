@@ -879,6 +879,64 @@ describe("LW09 single-form creation", () => {
     expect(apiClient.createExperiment).toHaveBeenCalledTimes(1);
   });
 
+  it("pins a base source snapshot into creation and distinguishes a stale-source conflict", async () => {
+    const originalRequest = structuredClone(detail.request);
+    const originalSources = structuredClone(detail.sources);
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(detail as never);
+    const { user } = setup(`/simulaciones/nueva?base=${detail.id}`);
+    await screen.findByDisplayValue("Trial");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " editado");
+    await goToWizardStep(user, 3);
+    vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(409, "source snapshot is stale"));
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    const expectedSources = {
+      history_id: "history", history_sha256: "a".repeat(64),
+      rankings_id: "rankings", rankings_sha256: "b".repeat(64),
+    };
+    expect(apiClient.createExperiment).toHaveBeenCalledWith(expect.objectContaining({ expected_sources: expectedSources }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Las fuentes actuales no coinciden con las guardadas en esta simulación.");
+    const firstBody = vi.mocked(apiClient.createExperiment).mock.calls[0][0];
+    expect(firstBody.expected_sources).toEqual(expectedSources);
+    expect(firstBody.expected_sources).not.toHaveProperty("code_version");
+    await goToWizardStep(user, 0);
+    expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Trial editado");
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " otra vez");
+    await goToWizardStep(user, 3);
+    vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(409, "source snapshot is stale"));
+    await user.click(screen.getByRole("button", { name: "Crear simulación" }));
+    expect(apiClient.createExperiment).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(apiClient.createExperiment).mock.calls[1][0].expected_sources).toEqual(expectedSources);
+    expect(vi.mocked(apiClient.createExperiment).mock.calls[1][0].request.name).toBe("Trial editado otra vez");
+    expect(detail.request).toEqual(originalRequest);
+    expect(detail.sources).toEqual(originalSources);
+  });
+
+  it("keeps a non-stale 409 on the existing queue-unavailable path", async () => {
+    const { user } = setup();
+    await conditions(user);
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la estrategia 1" }), "Una");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sistema de ranking" }), "transition");
+    vi.mocked(apiClient.createExperiment).mockRejectedValueOnce(new ApiError(409, "queue unavailable"));
+    await launchFromReview(user);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/cola no está disponible/i);
+    expect(screen.getByRole("alert")).not.toHaveTextContent(/fuentes históricas cambiaron/i);
+  });
+
+  it.each([
+    ["missing source object", undefined], ["null source object", null],
+    ["partial source", { history_id: "history", history_sha256: "a".repeat(64) }],
+    ["empty source id", { ...detail.sources, history_id: "" }],
+    ["non-string source id", { ...detail.sources, rankings_id: 2 }],
+    ["hash with newline", { ...detail.sources, history_sha256: `${"a".repeat(64)}\n` }],
+    ["uppercase hash", { ...detail.sources, rankings_sha256: "B".repeat(64) }],
+  ])("rejects %s on a saved base without exposing the form or posting", async (_label, sources) => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...detail, sources } as never);
+    setup(`/simulaciones/nueva?base=${detail.id}`);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/no es compatible/i);
+    expect(screen.queryByRole("textbox", { name: "Nombre de la simulación" })).not.toBeInTheDocument();
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+  });
+
   it("# F-CREATE-029 builds accepted 60/40 mix K10 max12 and posts exact body once, then stable detail path", async () => {
     let resolve!: (value: { id: string; status: string }) => void;
     vi.mocked(apiClient.createExperiment).mockReturnValue(new Promise((r) => { resolve = r; }));

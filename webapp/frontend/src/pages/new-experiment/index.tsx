@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useBlocker, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
-import type { ApiFieldError } from "../../api/client";
+import type { ApiFieldError, ExpectedSources } from "../../api/client";
 import { isProfileExperiment } from "../../api/types";
 import type { Catalog, ConfigurationSummary, Page, StartingDrawAvailability } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -67,6 +67,16 @@ function firstFocusTarget(mapped: Errors): string | null {
   }
   return null;
 }
+function savedExpectedSources(value: unknown): ExpectedSources | null {
+  if (!value || typeof value !== "object") return null;
+  const sources = value as Record<string, unknown>;
+  const { history_id, history_sha256, rankings_id, rankings_sha256 } = sources;
+  if (typeof history_id !== "string" || history_id.length < 1 ||
+      typeof rankings_id !== "string" || rankings_id.length < 1 ||
+      typeof history_sha256 !== "string" || !/^[0-9a-f]{64}$/.test(history_sha256) ||
+      typeof rankings_sha256 !== "string" || !/^[0-9a-f]{64}$/.test(rankings_sha256)) return null;
+  return { history_id, history_sha256, rankings_id, rankings_sha256 };
+}
 function strategyPlainText(strategy: StrategyDraft, catalog: Catalog): string {
   const selection = strategy.selector === "blend"
     ? strategy.components.map(({ system, weight }) => `${catalog.systems[system] ?? "Sistema"} ${weight}%`).join(" + ")
@@ -97,6 +107,7 @@ export function NewExperimentPage() {
   const [libraryName, setLibraryName] = useState("");
   const [libraryNameError, setLibraryNameError] = useState<Errors["libraryName"]>();
   const [baseState, setBaseState] = useState<"loading" | "ready" | "missing" | "network" | "invalid" | "error">(baseId ? "loading" : "ready");
+  const [baseSources, setBaseSources] = useState<{ baseId: string; sources: ExpectedSources } | null>(null);
   const [baseRetry, setBaseRetry] = useState(0);
   const [conditions, setConditions] = useState<ConditionsDraft>(() => ({ ...initialConditions, seed: generatedSeed() }));
   const [strategies, setStrategies] = useState<StrategyDraft[]>([initialStrategy(1)]);
@@ -142,7 +153,7 @@ export function NewExperimentPage() {
       setDrawDate(""); setDrawRetry((value) => value + 1);
       setKnownDraw(""); setVerifiedDraw(""); setDraws([]); setTotal(0); setAvailability(null);
       setConditions({ ...initialConditions, seed: generatedSeed() }); setStrategies([initialStrategy(1)]); nextId.current = 2;
-      setDirty(false); setBaseState(baseId ? "loading" : "ready");
+      setDirty(false); setBaseState(baseId ? "loading" : "ready"); setBaseSources(null);
       setConfigurationState(configurationId ? "loading" : "ready");
       setActive(0); setWizardStep(0); setErrors({}); setNotice(""); setLibraryOpen(false); setAdvancedOpen(false); setStrategyAdvancedOpen(false); setSeedEditing(false);
     }
@@ -261,6 +272,8 @@ export function NewExperimentPage() {
         const saved = await apiClient.getExperiment(baseId!);
         if (!alive) return;
         if (isProfileExperiment(saved)) { setBaseState("invalid"); return; }
+        const sources = savedExpectedSources(saved.sources);
+        if (!sources) { setBaseState("invalid"); return; }
         const draft = draftFromRequest(saved.request);
         // Search only the saved draw's day, not all earlier ranked history.
         // A day can exceed one page; an exact match is required before prefill.
@@ -284,7 +297,7 @@ export function NewExperimentPage() {
         drawGeneration.current += 1;
         setDrawDate(savedDate); setKnownDraw(savedDraw);
         setConditions(draft.conditions); setStrategies(draft.strategies); nextId.current = draft.strategies.length + 1;
-        setDirty(false); setBaseState("ready"); setActive(0);
+        setDirty(false); setBaseSources({ baseId: baseId!, sources }); setBaseState("ready"); setActive(0);
         setErrors({}); setNotice("");
       } catch (error) {
         if (alive) setBaseState(error instanceof ApiError && error.status === 404 ? "missing" : error instanceof NetworkError ? "network" : "error");
@@ -432,11 +445,16 @@ export function NewExperimentPage() {
     return field(key, label, <input {...attrs(key, !!help)} className={control} value={conditions[key]} inputMode={key === "name" ? "text" : "numeric"} onChange={(event) => editCondition(key, event.target.value)} />, help);
   }
   async function submit() {
-    if (wizardStep !== 3 || postingRef.current || !catalog || baseId && configurationId || baseId && baseState !== "ready" || configurationId && configurationState !== "ready" || catalogError) return;
+    if (wizardStep !== 3 || postingRef.current || !catalog || baseId && configurationId ||
+        baseId && (baseState !== "ready" || baseSources?.baseId !== baseId) ||
+        previousSource.current !== sourceKey || configurationId && configurationState !== "ready" || catalogError) return;
     if (!validateAll()) return;
     postingRef.current = true; setPosting(true);
     try {
-      const created = await apiClient.createExperiment({ request: buildRequest(conditions, strategies, catalog) });
+      const request = buildRequest(conditions, strategies, catalog);
+      const created = await apiClient.createExperiment(baseId
+        ? { request, expected_sources: baseSources!.sources }
+        : { request });
       submitted.current = true; setDirty(false);
       navigate(`/simulaciones/${encodeURIComponent(created.id)}`, { replace: true });
     } catch (error) {
@@ -454,6 +472,7 @@ export function NewExperimentPage() {
         setNotice("Revisá los campos señalados.");
         setPendingFocus(target);
       } else if (error instanceof ApiError && error.status === 507) setNotice("No hay espacio para crear el experimento. Liberá espacio en Ajustes; tus datos siguen aquí.");
+      else if (error instanceof ApiError && error.status === 409 && error.detail === "source snapshot is stale") setNotice("Las fuentes actuales no coinciden con las guardadas en esta simulación. Revisá los datos antes de crear una nueva; no se actualizaron automáticamente.");
       else if (error instanceof ApiError && error.status === 409) setNotice("La cola no está disponible. Reintentá más tarde; tus datos siguen aquí.");
       else if (error instanceof NetworkError) setNotice("Sin respuesta del servidor. Puede que el experimento se haya creado: revisá Simulaciones antes de reintentar.");
       else if (error instanceof ApiError && error.status >= 500) {
