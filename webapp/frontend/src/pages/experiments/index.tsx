@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { ExperimentListParams } from "../../api/client";
+import type { SimulationListParams } from "../../api/client";
 import { isProfileBatchExperiment, isProfileExperiment } from "../../api/types";
-import type { ExperimentStatus, ExperimentSummary } from "../../api/types";
+import type { ExperimentStatus, ExperimentSummary, SimulationListing, SimulationScope } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { DataTable } from "../../components/DataTable";
 import { useQueue } from "../../components/QueueProvider";
@@ -32,19 +32,28 @@ function parseQuery(params: URLSearchParams) {
   const order: Order = params.get("order") === "asc" ? "asc" : "desc";
   const rawPage = params.get("page") ?? "1";
   const page = /^[1-9]\d{0,6}$/.test(rawPage) ? Number(rawPage) : 1;
-  return { name, status, sort, order, page };
+  const rawScope = params.get("scope");
+  const scope: SimulationScope | undefined = rawScope === "classic" || rawScope === "profile" || rawScope === "historical" ? rawScope : undefined;
+  return { name, status, sort, order, page, scope };
 }
 type Query = ReturnType<typeof parseQuery>;
 function queryParams(query: Query) {
   const params = new URLSearchParams();
   if (query.name) params.set("name", query.name);
+  if (query.scope) params.set("scope", query.scope);
   if (query.status) params.set("status", query.status);
   if (query.sort !== "created_at") params.set("sort", query.sort);
   if (query.order !== "desc") params.set("order", query.order);
   if (query.page > 1) params.set("page", String(query.page));
   return params;
 }
-function experimentName(row: ExperimentSummary): string {
+function experimentDetail(row: SimulationListing): ExperimentSummary | null {
+  return row.source_kind === "experiment" ? row.detail : null;
+}
+function experimentName(row: SimulationListing): string {
+  return row.name;
+}
+function detailName(row: ExperimentSummary): string {
   return isProfileBatchExperiment(row) ? row.display.name : row.request.name;
 }
 
@@ -70,58 +79,64 @@ const EXECUTION_CHIPS: Record<ExperimentStatus, StatusChipData> = {
  * A completed simulation only claims a financial outcome when every run
  * closed with the same one; mixed or unknown results stay a plain execution state.
  */
-function statusChip(row: ExperimentSummary): StatusChipData {
-  if (row.status === "completed") {
-    const outcomes = row.runs.map((run) => run.result?.outcome);
+function statusChip(row: SimulationListing): StatusChipData {
+  const detail = experimentDetail(row);
+  if (!detail) return { label: "Corrida histórica", variant: "neutral", kind: "execution", value: "completed" };
+  if (detail.status === "completed") {
+    const outcomes = detail.runs.map((run) => run.result?.outcome);
     if (outcomes.length > 0 && outcomes.every((outcome) => outcome === "goal")) return { label: "Meta alcanzada", variant: "success", kind: "outcome", value: "goal" };
     if (outcomes.length > 0 && outcomes.every((outcome) => outcome === "ruin")) return { label: "Se agotó el capital", variant: "danger", kind: "outcome", value: "ruin" };
   }
-  return EXECUTION_CHIPS[row.status];
+  return EXECUTION_CHIPS[detail.status];
 }
 
-function StatusChip({ row }: { row: ExperimentSummary }) {
+function StatusChip({ row }: { row: SimulationListing }) {
   const chip = statusChip(row);
   return <span className={`ledger-chip ledger-chip-${chip.variant}`} data-status-kind={chip.kind} data-status-value={chip.value}>{chip.label}</span>;
 }
 
 /** Net result of a single completed run; multi-run comparisons have no single figure to show. */
-function netResult(row: ExperimentSummary): { text: string; variant: FigureVariant } | null {
-  if (row.runs.length !== 1) return null;
-  const result = row.runs[0].result;
+function netResult(row: SimulationListing): { text: string; variant: FigureVariant } | null {
+  const detail = experimentDetail(row);
+  if (!detail || detail.runs.length !== 1) return null;
+  const result = detail.runs[0].result;
   if (!result) return null;
   const delta = result.delta;
-  const money = isProfileExperiment(row) ? profileMoney(row, Math.abs(delta)) : formatDOP(Math.abs(delta));
+  const money = isProfileExperiment(detail) ? profileMoney(detail, Math.abs(delta)) : formatDOP(Math.abs(delta));
   if (delta === 0) return { text: money, variant: "neutral" };
   return { text: `${delta > 0 ? "+" : "−"}${money}`, variant: delta > 0 ? "positive" : "negative" };
 }
 
-function RowActions({ row, onDelete }: { row: ExperimentSummary; onDelete: () => void }) {
+function RowActions({ row, onDelete }: { row: SimulationListing; onDelete: () => void }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
+  const detail = experimentDetail(row);
   const trigger = useRef<HTMLButtonElement>(null);
   const first = useRef<HTMLAnchorElement>(null);
   const firstProfile = useRef<HTMLButtonElement>(null);
+  const menuId = `actions-${row.source_kind}-${encodeURIComponent(row.id)}`;
   useEffect(() => {
-    if (!open) return;
-    (isProfileExperiment(row) ? firstProfile.current : first.current)?.focus();
+    if (!open || !detail) return;
+    (isProfileExperiment(detail) ? firstProfile.current : first.current)?.focus();
     function dismiss(event: KeyboardEvent) {
       if (event.key === "Escape") { setOpen(false); trigger.current?.focus(); }
     }
     function outside(event: PointerEvent) {
-      if (event.target instanceof Node && !trigger.current?.contains(event.target) && !document.getElementById(`actions-${row.id}`)?.contains(event.target)) setOpen(false);
+      if (event.target instanceof Node && !trigger.current?.contains(event.target) && !document.getElementById(menuId)?.contains(event.target)) setOpen(false);
     }
     document.addEventListener("keydown", dismiss);
     document.addEventListener("pointerdown", outside);
     return () => { document.removeEventListener("keydown", dismiss); document.removeEventListener("pointerdown", outside); };
-  }, [open, row.id]);
+  }, [open, row.id, detail, menuId]);
+  if (!detail) return null;
   return <>
-    <button ref={trigger} type="button" className="ledger-button ledger-button-ghost" aria-label={`Acciones de ${experimentName(row)}`} aria-expanded={open} aria-controls={`actions-${row.id}`} onClick={() => {
+    <button ref={trigger} type="button" className="ledger-button ledger-button-ghost" aria-label={`Acciones de ${experimentName(row)}`} aria-expanded={open} aria-controls={menuId} onClick={() => {
       if (!open) { const rect = trigger.current!.getBoundingClientRect(); setPosition({ top: Math.min(rect.bottom, window.innerHeight - 100), left: Math.max(0, rect.right - 180) }); }
       setOpen(!open);
     }}>Acciones</button>
-    {open && createPortal(<div id={`actions-${row.id}`} role="menu" aria-label={`Acciones de ${experimentName(row)}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
-      {!isProfileExperiment(row) && <Link ref={first} role="menuitem" className="ledger-button ledger-button-ghost w-full justify-start" to={`/simulaciones/nueva?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
-      {isProfileExperiment(row) && <span className="block px-3 py-2 text-text-secondary">No disponible como base</span>}
+    {open && createPortal(<div id={menuId} role="menu" aria-label={`Acciones de ${experimentName(row)}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
+      {!isProfileExperiment(detail) && <Link ref={first} role="menuitem" className="ledger-button ledger-button-ghost w-full justify-start" to={`/simulaciones/nueva?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
+      {isProfileExperiment(detail) && <span className="block px-3 py-2 text-text-secondary">No disponible como base</span>}
       <button ref={firstProfile} role="menuitem" type="button" className="ledger-button ledger-button-ghost w-full justify-start" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
     </div>, document.body)}
   </>;
@@ -131,12 +146,12 @@ export function ExperimentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = parseQuery(searchParams);
   const [text, setText] = useState(query.name);
-  const [items, setItems] = useState<ExperimentSummary[]>([]);
+  const [items, setItems] = useState<SimulationListing[]>([]);
   const [total, setTotal] = useState(0);
   const [mobileLayout, setMobileLayout] = useState(() => window.innerWidth < 900);
   const [state, setState] = useState<ListState>("loading");
   const { status: queue, error: queueError } = useQueue();
-  const [deleteTarget, setDeleteTarget] = useState<ExperimentSummary | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Extract<SimulationListing, { source_kind: "experiment" }> | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [rowError, setRowError] = useState("");
   const [notice, setNotice] = useState("");
@@ -169,11 +184,11 @@ export function ExperimentsPage() {
   const load = useCallback(async (criteria: Query, current: number) => {
     const ticket = ++sequence.current;
     setState("loading");
-    const params: ExperimentListParams = { offset: current, limit: PAGE_SIZE, sort: criteria.sort, order: criteria.order };
+    const params: SimulationListParams = { offset: current, limit: PAGE_SIZE, sort: criteria.sort, order: criteria.order, scope: criteria.scope };
     if (criteria.name) params.name_contains = criteria.name;
     if (criteria.status) params.status = criteria.status;
     try {
-      const page = await apiClient.listExperiments(params);
+      const page = await apiClient.listSimulations(params);
       if (!alive.current || ticket !== sequence.current) return;
       if (page.items.length === 0 && current > 0) {
         const lastPage = Math.max(1, Math.ceil(page.total / PAGE_SIZE));
@@ -211,7 +226,7 @@ export function ExperimentsPage() {
       await apiClient.deleteExperiment(target.id, target.id);
       setDeleteTarget(null);
       await load(queryRef.current, (queryRef.current.page - 1) * PAGE_SIZE);
-      setNotice(`Se eliminó "${experimentName(target)}".`);
+      setNotice(`Se eliminó "${detailName(target.detail)}".`);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) setRowError("No se puede eliminar una simulación activa o en cola.");
       else if (error instanceof ApiError && error.status === 404) {
@@ -223,27 +238,28 @@ export function ExperimentsPage() {
     } finally { setDeleting(false); }
   }
 
-  function sortable(sort: Sort, header: string): DataTableColumn<ExperimentSummary> {
+  function sortable(sort: Sort, header: string): DataTableColumn<SimulationListing> {
     return { key: sort, header, headerClassName: `table-${sort === "created_at" ? "date" : sort}`, cellClassName: `table-${sort === "created_at" ? "date" : sort}`,
       sort: query.sort === sort ? query.order === "asc" ? "ascending" : "descending" : "none",
       onSort: () => update({ sort, order: query.sort === sort && query.order === "asc" ? "desc" : "asc", page: 1 }),
-      render: (row) => sort === "name" ? <><span className="table-name-text font-semibold">{isProfileExperiment(row) ? row.display.name : row.request.name}</span>{isProfileExperiment(row) && <span className="block text-sm text-text-secondary">Perfil {row.profile.profile_id} · {row.profile.positions} posiciones · Capital {profileMoney(row, row.display.capital)} · Meta {profileMoney(row, row.display.goal)} · {row.display.staking_label}</span>}</>
-        : sort === "status" ? <StatusChip row={row} /> : <span title={row.created_at ?? "Fecha no registrada"}>{createdAt(row.created_at)}</span> };
+      render: (row) => { const detail = experimentDetail(row); return sort === "name" ? <><span className="table-name-text font-semibold">{row.name}</span>{detail && isProfileExperiment(detail) && <span className="block text-sm text-text-secondary">Perfil {detail.profile.profile_id} · {detail.profile.positions} posiciones · Capital {profileMoney(detail, detail.display.capital)} · Meta {profileMoney(detail, detail.display.goal)} · {detail.display.staking_label}</span>}</>
+        : sort === "status" ? <StatusChip row={row} /> : <span title={row.created_at ?? "Fecha no registrada"}>{createdAt(row.created_at)}</span>; } };
   }
-  const columns: DataTableColumn<ExperimentSummary>[] = [
+  const columns: DataTableColumn<SimulationListing>[] = [
     sortable("name", "Nombre"),
-    { key: "count", header: "Corridas", headerClassName: "table-numeric", cellClassName: "table-numeric", render: (row) => row.runs.length },
+    { key: "count", header: "Corridas", headerClassName: "table-numeric", cellClassName: "table-numeric", render: (row) => experimentDetail(row)?.runs.length ?? "—" },
     sortable("created_at", "Creado"),
     sortable("status", "Estado"),
     { key: "net", header: "Resultado neto", headerClassName: "table-numeric", cellClassName: "table-numeric", render: (row) => { const net = netResult(row); return net ? <Figure value={net.text} variant={net.variant} /> : "—"; } },
-    { key: "actions", header: "Acciones", headerClassName: "table-actions", cellClassName: "table-actions", render: (row) => <div className="flex items-center gap-2"><Link to={`/simulaciones/${encodeURIComponent(row.id)}`} className="ledger-button ledger-button-primary" aria-label={`Abrir resultado de ${experimentName(row)}`}>Abrir resultado</Link><RowActions row={row} onDelete={() => { setRowError(""); setDeleteTarget(row); }} /></div> },
+    { key: "actions", header: "Acciones", headerClassName: "table-actions", cellClassName: "table-actions", render: (row) => <div className="flex items-center gap-2"><Link to={row.source_kind === "backtest" ? `/simulaciones/historicas/${encodeURIComponent(row.id)}` : `/simulaciones/${encodeURIComponent(row.id)}`} className="ledger-button ledger-button-primary" aria-label={`Abrir resultado de ${experimentName(row)}`}>Abrir resultado</Link><RowActions row={row} onDelete={() => { setRowError(""); if (row.source_kind === "experiment") setDeleteTarget(row); }} /></div> },
   ];
-  const hasFilters = !!(query.name || query.status);
+  const hasFilters = !!(query.name || query.status || query.scope);
   const goalCount = items.filter((item) => statusChip(item).value === "goal").length;
-  const runningCount = items.filter((item) => item.status === "running").length;
-  const activeQueueItem = items.find((item) => item.id === queue?.active_id);
-  const shown = `de las ${items.length} mostradas`;
-  const clearFilters = () => update({ name: "", status: undefined, page: 1 });
+  const runningCount = items.filter((item) => item.source_kind === "experiment" && item.status === "running").length;
+  const experimentCount = items.filter((item) => item.source_kind === "experiment").length;
+  const activeQueueItem = items.find((item) => item.source_kind === "experiment" && item.id === queue?.active_id);
+  const shown = `de los ${experimentCount} experimentos mostrados`;
+  const clearFilters = () => update({ name: "", status: undefined, scope: undefined, page: 1 });
   return <div>
     <ExperimentTabs active="simulations" />
     <header className="mb-6 flex flex-wrap items-end justify-between gap-6 border-b border-border pb-5">
@@ -259,6 +275,7 @@ export function ExperimentsPage() {
     {(total > 0 || hasFilters) && <div className="mb-5" role="group" aria-label="Filtros de simulaciones">
       <div className="flex flex-wrap items-end gap-4">
         <Field id="experiment-name" label="Buscar por nombre" type="search" maxLength={80} className="min-w-[220px] flex-1 sm:max-w-sm" value={text} onChange={(event) => setText(event.target.value)} />
+        <div className="ledger-field min-w-[180px]"><label htmlFor="simulation-scope" className="ledger-label">Tipo de simulación</label><select id="simulation-scope" className="ledger-control" value={query.scope ?? ""} onChange={(event) => update({ scope: (event.target.value || undefined) as SimulationScope | undefined, page: 1 })}><option value="">Todas</option><option value="classic">Clásicas</option><option value="profile">Por perfil</option><option value="historical">Históricas</option></select></div>
         <div className="ledger-field min-w-[180px]"><label htmlFor="experiment-status" className="ledger-label">Estado</label><select id="experiment-status" className="ledger-control" value={query.status ?? ""} onChange={(event) => update({ status: statuses.find((value) => value === event.target.value), page: 1 })}><option value="">Todos</option>{statuses.map((status) => <option key={status} value={status}>{statusNames[status]}</option>)}</select></div>
         {hasFilters && total > 0 && <Button variant="ghost" onClick={clearFilters}>Limpiar filtros</Button>}
       </div>
@@ -279,29 +296,31 @@ export function ExperimentsPage() {
     {state === "ready" && total > 0 && <>
       {mobileLayout ? <ul className="experiment-card-list" aria-label="Resultados de simulaciones">
         {items.map((row) => {
+          const detail = experimentDetail(row);
           const result = netResult(row);
           const name = experimentName(row);
-          const strategy = isProfileBatchExperiment(row)
-            ? `${row.runs.length} estrategias`
-            : isProfileExperiment(row) ? row.display.staking_label
-              : row.request.strategies.length === 1 ? "Estrategia guardada" : `${row.request.strategies.length} estrategias`;
-          return <li key={row.id} className="experiment-card">
+          const strategy = !detail ? "Informe histórico guardado" : isProfileBatchExperiment(detail)
+            ? `${detail.runs.length} estrategias`
+            : isProfileExperiment(detail) ? detail.display.staking_label
+              : detail.request.strategies.length === 1 ? "Estrategia guardada" : `${detail.request.strategies.length} estrategias`;
+          const href = row.source_kind === "backtest" ? `/simulaciones/historicas/${encodeURIComponent(row.id)}` : `/simulaciones/${encodeURIComponent(row.id)}`;
+          return <li key={`${row.source_kind}:${row.id}`} className="experiment-card">
             <div className="experiment-card-heading">
               <span className="experiment-card-title">{name}</span>
               <StatusChip row={row} />
             </div>
             <p className="experiment-card-meta">{createdAt(row.created_at)} · {strategy}</p>
-            <p className="experiment-card-outcome">
-              <span>{row.runs.length === 1 && row.runs[0].result ? "Cambio respecto del inicio" : "Resultado financiero"}</span>
-              {result ? <Figure value={result.text} variant={result.variant} /> : <strong>{row.runs.length === 1 ? "Sin resultado guardado" : "Varias ejecuciones · abrí para revisar"}</strong>}
-            </p>
+            {detail && <p className="experiment-card-outcome">
+              <span>{detail.runs.length === 1 && detail.runs[0].result ? "Cambio respecto del inicio" : "Resultado financiero"}</span>
+              {result ? <Figure value={result.text} variant={result.variant} /> : <strong>{detail.runs.length === 1 ? "Sin resultado guardado" : "Varias ejecuciones · abrí para revisar"}</strong>}
+            </p>}
             <div className="experiment-card-actions">
-              <Link to={`/simulaciones/${encodeURIComponent(row.id)}`} className="btn btn-secondary" aria-label={`Abrir resultado de ${name}`}>Abrir resultado</Link>
-              <RowActions row={row} onDelete={() => { setRowError(""); setDeleteTarget(row); }} />
+              <Link to={href} className="btn btn-secondary" aria-label={`Abrir resultado de ${name}`}>Abrir resultado</Link>
+              <RowActions row={row} onDelete={() => { setRowError(""); if (row.source_kind === "experiment") setDeleteTarget(row); }} />
             </div>
           </li>;
         })}
-      </ul> : <div className="experiment-wide-table"><DataTable caption="Simulaciones" columns={columns} rows={items} getRowKey={(row) => row.id} /></div>}
+      </ul> : <div className="experiment-wide-table"><DataTable caption="Simulaciones" columns={columns} rows={items} getRowKey={(row) => `${row.source_kind}:${row.id}`} /></div>}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
         <p className="text-text-secondary">Mostrando {offset + 1}–{offset + items.length} de {total}</p>
         <div className="flex gap-3"><Button disabled={offset === 0} onClick={() => update({ page: query.page - 1 })}>Anterior</Button><Button disabled={offset + PAGE_SIZE >= total} onClick={() => update({ page: query.page + 1 })}>Siguiente</Button></div>

@@ -268,7 +268,10 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
 - T1: `776e345` — `fix(web): preserve simulation drafts across legacy navigation`.
   Accepted with the functional evidence above; native review skipped because the
   user disabled RDD for this clone, not because the old review was approved.
-- T2-T10: pending.
+- T2 backend: `5fec388` — `feat(api): unify validated simulation listing`.
+  Independent 37 focused / 896 complete backend tests, Ruff and whitespace pass;
+  no push. This closes only the backend unit, not the T2 checkbox.
+- T2 unified UI / repeat and T3-T10: pending.
 
 ## Next active unit
 
@@ -373,8 +376,11 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   `C:/Users/luism/AppData/Local/Temp/t2-independent-corrected-20260720-pytest.log`.
   Two dependency deprecation warnings remain (`websockets.legacy`,
   `WebSocketServerProtocol`); RDD is off, not approved or acknowledged.
-  Record the backend work-unit commit before starting the frontend writer.
-  T2 remains unchecked until unified UI and saved-snapshot repeat are verified.
+  Backend work-unit commit: `5fec388fe8bb668320aca82db23d8921569196fb`
+  (`feat(api): unify validated simulation listing`), on `stage`, not pushed.
+  Proceed to the five-surface frontend unit below with one writer and observed
+  RED/GREEN; preserve compatibility routes, classic base/delete actions and
+  historical workflows. T2 remains unchecked until unified UI and repeat pass.
 - While independent backend acceptance is pending, read-only scout
   `muwsu192-6-h0ns` is refining the next frontend unit against the actual new
   contract: discriminated mixed-source items, server-backed scope/URL state,
@@ -391,6 +397,48 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   provenance is checked without rereading current external histories/rankings;
   archived v5 binding checks external sources without promising a file snapshot.
   No migrations, index/certificate redesign, real-database writes or engine edits.
-- UI and repeat units remain unimplemented; T2 stays unchecked until all three
-  units have checks and commit evidence. T3 wizard and T4 common result remain
-  separate, not part of this first unit.
+- Frontend writer `muwtp3yq-9-7m0i` returned partial with the five-surface
+  mixed list implemented (+183/-57): tagged types/client, scope URL state,
+  source-qualified row/menu IDs, historical detail links, whole-error retry.
+  Writer checks: 76 focused + 24 compatibility tests; full 588 tests / 40 files,
+  typecheck/build and whitespace pass. Build chunk warning: 552.24 kB.
+  TDD: client RED observed (`listSimulations` missing); mixed-render RED was
+  invalid due to an undefined fixture. Record this deviation; do not backfill or
+  claim that behavior had observed test-first RED. Parent confirmed five hashes.
+- Native frontend assessment: medium risk, large writer, RDD off; writer checks
+  satisfy the selected verification plan. Functional browser verification is
+  still required. Read-only verifier `muwu881g-a-l9xz` is checking actual UI
+  at 390/1440 using GET-only API mocks, source-hash freeze and inspected images.
+  Verifier finished PASS: 23 browser checks, 111 API requests all GET,
+  zero unmapped API/mutation attempts/page errors, four console messages exactly
+  matched injected 409/503 failures. Actual 390/1440 document widths stayed
+  390/1440, including long v5 names; all five source hashes remained unchanged.
+  Parent accepts the frontend-list unit, not whole T2. Inspected screenshot
+  evidence and logs are under `C:/Users/luism/AppData/Local/Temp/t2qa/`.
+  No live-backend integration or real-data mutation is part of this browser QA.
+  Active LSP check: two auxiliary client warnings; four files inconclusive,
+  none confirmed clean. Typecheck passed; do not infer clean from silent LSP.
+- The initial browser overflow measurement was invalid: the temporary harness
+  started Vite from the repository root, so frontend-relative Tailwind content
+  globs omitted actual component rules (including title wrapping). Verifier
+  preserved that run under OS-temp `t2qa/incorrect-cwd-run` and restarted only
+  its owned Vite process with `webapp/frontend` cwd and an OS-temp cache.
+  No source/CSS change follows from this invalid measurement. Corrected browser
+  QA is rerunning with contract-correct replay/trajectory GET mocks; offline
+  empty Google Fonts CSS is an explicit font-fidelity limitation.
+- Read-only scout `muwuk3vx-b-fc4x` is mapping saved-snapshot repeat availability
+  across classic/historical/profile v1-v5, specifically the previously unproven
+  safe-prefill/new-submission capability. No repeat implementation, source edits
+  or expansion into the T3 wizard/T7 adapters is authorized by this mapping.
+- UI is accepted pending work-unit commit; repeat is unimplemented. Keep T2
+  unchecked until all three units have checks and commit evidence. The original
+  mixed-render RED gap and fallback-font-only QA remain explicit limitations,
+  not backfilled evidence. T3 wizard and T4 common result remain separate.
+- Repeat mapping found safe existing classic draft field mapping, but classic
+  submission adopts current catalog provenance rather than binding saved hashes.
+  Frontend display-only provenance does not satisfy snapshot-preserving repeat.
+  Profile v1-v4 and v5 require version-specific saved-request hydration; historical
+  exact prefill still needs evidence. Follow-up read-only scout `muwuq2ij-c-efz4`
+  is resolving classic additive source guards and historical saved-config fields
+  before a smallest bounded repeat writer is authorized. No large three-editor
+  rewrite or implicit expansion into T3/T7 is accepted by this mapping.

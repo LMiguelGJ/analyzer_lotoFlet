@@ -37,6 +37,8 @@ import type {
   SettingsView,
   StartingDrawAvailability,
   Strategy,
+  SimulationPage,
+  SimulationScope,
 } from "./types";
 
 /** A single FastAPI/pydantic validation error entry, as sent in a 422 `detail` array. */
@@ -156,6 +158,10 @@ export interface ExperimentListParams {
   order?: "asc" | "desc";
 }
 
+export interface SimulationListParams extends ExperimentListParams {
+  scope?: SimulationScope;
+}
+
 export interface CreateExperimentBody {
   request: ExperimentRequest;
   configuration_ids?: (string | null)[] | null;
@@ -273,6 +279,16 @@ export const apiClient = {
   listBacktests: (offset = 0, limit = 20) => request<Page<BacktestReport>>(`/backtests${query({ offset, limit })}`),
 
   getBacktest: (identifier: string) => request<BacktestReport>(`/backtests/${encodeURIComponent(identifier)}`),
+
+  listSimulations: ({ offset = 0, limit = 20, scope, name_contains, status, sort, order }: SimulationListParams = {}) => {
+    const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    if (scope) params.set("scope", scope);
+    if (name_contains) params.set("name_contains", name_contains);
+    if (status) params.set("status", status);
+    if (sort) params.set("sort", sort);
+    if (order) params.set("order", order);
+    return request<SimulationPage>(`/simulations?${params}`);
+  },
 
   listExperiments: ({ offset = 0, limit = 20, name_contains, status, sort, order }: ExperimentListParams = {}) => {
     const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });

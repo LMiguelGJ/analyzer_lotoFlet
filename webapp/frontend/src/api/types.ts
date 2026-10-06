@@ -97,6 +97,28 @@ export interface BacktestReport {
 }
 export interface BacktestCreated { id: string; status: "completed"; report: BacktestReport }
 
+export type SimulationScope = "classic" | "profile" | "historical";
+export interface ExperimentSimulationListing {
+  source_kind: "experiment";
+  scope: Exclude<SimulationScope, "historical">;
+  id: string;
+  name: string;
+  status: ExperimentStatus;
+  created_at: string | null;
+  detail: ExperimentSummary;
+}
+export interface HistoricalSimulationListing {
+  source_kind: "backtest";
+  scope: "historical";
+  id: string;
+  name: string;
+  status: "completed";
+  created_at: string;
+  report: BacktestReport;
+}
+export type SimulationListing = ExperimentSimulationListing | HistoricalSimulationListing;
+export type SimulationPage = Page<SimulationListing>;
+
 export interface StartingDrawAvailability {
   date: string;
   history_total: number;

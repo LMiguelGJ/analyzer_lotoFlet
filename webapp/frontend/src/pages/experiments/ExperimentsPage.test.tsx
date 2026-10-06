@@ -17,6 +17,7 @@ vi.mock("../../api/client", async (importOriginal) => {
     apiClient: {
       ...actual.apiClient,
       listExperiments: vi.fn(),
+      listSimulations: vi.fn(),
       deleteExperiment: vi.fn(),
       getQueue: vi.fn(),
     },
@@ -69,9 +70,68 @@ function setup(initialEntry = "/simulaciones") {
 beforeEach(() => {
   Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   vi.mocked(apiClient.listExperiments).mockReset();
+  vi.mocked(apiClient.listSimulations).mockReset();
+  vi.mocked(apiClient.listSimulations).mockImplementation(async (params) => {
+    const page = await apiClient.listExperiments(params);
+    return { ...page, items: page.items.map((detail) => ({ source_kind: "experiment" as const, scope: detail.request_kind === "profile" ? "profile" as const : "classic" as const, id: detail.id, name: detail.request_kind === "profile" && "display" in detail ? detail.display.name : detail.request.name, status: detail.status, created_at: detail.created_at ?? null, detail })) };
+  });
   vi.mocked(apiClient.deleteExperiment).mockReset();
   vi.mocked(apiClient.getQueue).mockReset();
   vi.mocked(apiClient.getQueue).mockResolvedValue({ active_id: null, pending: { total: 0, offset: 0, limit: 20, count: 0, items: [] }, held: { total: 0, offset: 0, limit: 20, count: 0, items: [] }, last_failure: null });
+});
+
+describe("canonical mixed simulations list", () => {
+  it("renders mixed server order without sorting, keeps colliding ids distinct, and links each source to its own detail", async () => {
+    const classic = fixture.items[0];
+    const historical = { id: "same-id", name: "A histórica", created_at: "2026-10-01T00:00:00Z", reached_goal: null, completed: null, goal_rate: null, quiebres: null, neto_medio: null, incomplete: null, window: { bets: 0, wagered: 0, paid: 0, sessions: 0, incomplete: 0 }, config: {} };
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    vi.mocked(apiClient.listSimulations).mockResolvedValueOnce({ total: 3, offset: 0, limit: 20, items: [
+      { source_kind: "experiment", scope: "classic", id: "same-id", name: "Z clásica", status: "completed", created_at: classic.created_at, detail: { ...classic, id: "same-id", request: { ...classic.request, name: "Z clásica" } } },
+      { source_kind: "backtest", scope: "historical", id: "same-id", name: "A histórica", status: "completed", created_at: historical.created_at, report: historical },
+      { source_kind: "experiment", scope: "profile", id: "profile-mixed", name: "B perfil", status: "held", created_at: null, detail: profileItem },
+    ] } as never);
+    setup();
+
+    const cards = await screen.findByRole("list", { name: "Resultados de simulaciones" });
+    const names = [...cards.querySelectorAll(".experiment-card-title")].map((node) => node.textContent);
+    expect(names).toEqual(["Z clásica", "A histórica", "B perfil"]);
+    expect(within(cards).getByRole("link", { name: "Abrir resultado de Z clásica" })).toHaveAttribute("href", "/simulaciones/same-id");
+    expect(within(cards).getByRole("link", { name: "Abrir resultado de A histórica" })).toHaveAttribute("href", "/simulaciones/historicas/same-id");
+    const historicalCard = within(cards).getByText("A histórica").closest("li")!;
+    expect(within(historicalCard).queryByRole("button")).not.toBeInTheDocument();
+    expect(within(historicalCard).queryByText(/Resultado financiero|Cambio respecto del inicio/)).not.toBeInTheDocument();
+    expect(within(cards).getByRole("link", { name: "Abrir resultado de B perfil" })).toHaveAttribute("href", "/simulaciones/profile-mixed");
+    expect(screen.getByLabelText("Tipo de simulación")).toHaveValue("");
+    expect(screen.queryByText(/Capital.*Meta/)).not.toBeInTheDocument();
+    expect(apiClient.listSimulations).toHaveBeenCalledWith({ offset: 0, limit: 20, sort: "created_at", order: "desc" });
+  });
+
+  it.each([409, 503])("treats canonical list HTTP %i as a whole-list failure and retries only on explicit action", async (status) => {
+    vi.mocked(apiClient.listSimulations).mockRejectedValueOnce(new ApiError(status, "source unavailable"))
+      .mockResolvedValueOnce({ total: 0, offset: 0, limit: 20, items: [] });
+    const { user } = setup();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("No se pudo cargar el listado de simulaciones");
+    expect(apiClient.listSimulations).toHaveBeenCalledTimes(1);
+    await user.click(within(alert).getByRole("button", { name: "Reintentar" }));
+    expect(await screen.findByText("Todavía no hay simulaciones")).toBeInTheDocument();
+    expect(apiClient.listSimulations).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps scope, sort and page URL-backed through filter changes and browser history", async () => {
+    vi.mocked(apiClient.listSimulations).mockResolvedValue({ total: 25, offset: 0, limit: 20, items: [
+      { source_kind: "experiment", scope: "classic", id: "classic-1", name: "Clásica", status: "completed", created_at: null, detail: fixture.items[0] },
+    ] } as never);
+    const { user, router } = setup("/simulaciones?scope=classic&sort=name&order=asc&page=2");
+    await screen.findByText("Clásica");
+    expect(apiClient.listSimulations).toHaveBeenCalledWith({ offset: 20, limit: 20, scope: "classic", sort: "name", order: "asc" });
+    expect(screen.getByLabelText("Tipo de simulación")).toHaveValue("classic");
+    await user.selectOptions(screen.getByLabelText("Tipo de simulación"), "historical");
+    await waitFor(() => expect(router.state.location.search).toContain("scope=historical"));
+    expect(router.state.location.search).not.toContain("page=2");
+    await router.navigate(-1);
+    await waitFor(() => expect(screen.getByLabelText("Tipo de simulación")).toHaveValue("classic"));
+  });
 });
 
 describe("LW10 experiments list · states", () => {
@@ -174,9 +234,9 @@ describe("LW10 experiments list · data and navigation", () => {
     const { user } = setup();
     const row = (await screen.findByText("Cycling")).closest("tr")!;
     expect(within(row).queryByRole("link", { name: "Cycling" })).not.toBeInTheDocument();
-    expect(within(row).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/simulaciones/cycling");
-    await user.click(within(row).getByRole("button", { name: "Acciones de Perfil de prueba" }));
-    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Perfil de prueba" })).not.toBeInTheDocument();
+    expect(within(row).getByRole("link", { name: "Abrir resultado de Cycling" })).toHaveAttribute("href", "/simulaciones/cycling");
+    await user.click(within(row).getByRole("button", { name: "Acciones de Cycling" }));
+    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Cycling" })).not.toBeInTheDocument();
     expect(screen.getByText(/Perfil test · 1 posiciones/)).toBeInTheDocument();
     expect(screen.getByText(/Capital USD 100.00/)).toBeInTheDocument();
     expect(screen.getByText(/Escalera cíclica Q80/)).toBeInTheDocument();
@@ -194,9 +254,9 @@ describe("LW10 experiments list · data and navigation", () => {
     const { user } = setup();
     const row = (await screen.findByText("Recovery")).closest("tr");
     expect(row).toHaveTextContent(/Perfil test · 1 posiciones.*Escalera de recuperación/);
-    expect(within(row!).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/simulaciones/recovery");
-    await user.click(within(row!).getByRole("button", { name: "Acciones de Perfil de prueba" }));
-    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Perfil de prueba" })).not.toBeInTheDocument();
+    expect(within(row!).getByRole("link", { name: "Abrir resultado de Recovery" })).toHaveAttribute("href", "/simulaciones/recovery");
+    await user.click(within(row!).getByRole("button", { name: "Acciones de Recovery" }));
+    expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Recovery" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Corridas" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Estrategias" })).not.toBeInTheDocument();
   });
@@ -311,7 +371,7 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(stat("Simulaciones")).toHaveTextContent("2");
     expect(stat("Con meta alcanzada")).toHaveTextContent("1");
     expect(stat("En curso")).toHaveTextContent("1");
-    expect(stat("En curso")).toHaveTextContent("de las 2 mostradas");
+    expect(stat("En curso")).toHaveTextContent("de los 2 experimentos mostrados");
   });
 
   it("offers one primary result link and a separate row actions menu", async () => {

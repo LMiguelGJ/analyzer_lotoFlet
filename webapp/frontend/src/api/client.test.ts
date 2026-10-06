@@ -156,6 +156,15 @@ describe("apiClient error mapping", () => {
     expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => init?.method === undefined)).toBe(true);
   });
 
+  it("# F-API-026 encodes canonical simulation scope and server-side filters, ordering and offset", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, { total: 0, offset: 20, limit: 20, items: [] }));
+    await apiClient.listSimulations({ scope: "historical", offset: 20, limit: 20, name_contains: "Fríos & 50%", status: "completed", sort: "name", order: "asc" });
+    expect(vi.mocked(globalThis.fetch).mock.calls[0][0]).toBe(
+      "/api/v1/simulations?offset=20&limit=20&scope=historical&name_contains=Fr%C3%ADos+%26+50%25&status=completed&sort=name&order=asc",
+    );
+    expect(vi.mocked(globalThis.fetch).mock.calls[0][1]?.method).toBeUndefined();
+  });
+
   it("# F-API-013 encodes server-side experiment filters, ordering and bounded offset without interpreting Unicode", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, { total: 0, offset: 20, limit: 20, items: [] }));
     await apiClient.listExperiments({ offset: 20, limit: 20, name_contains: "Fríos & 50%", status: "running", sort: "name", order: "asc" });
