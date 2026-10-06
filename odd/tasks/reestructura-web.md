@@ -275,7 +275,10 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   588 frontend tests, typecheck/build and 23 mocked-browser checks at 390/1440
   passed; documented mixed-render RED gap, font, bundle and LSP limitations.
   Not pushed; whole T2 remains open for repeat.
-- T2 repeat and T3-T10: pending.
+- T2 historical repeat: `b4ddadc` — `feat(web): repeat historical runs from saved snapshots`.
+  598 frontend tests, typecheck/build and 36 normal Chrome checks at390/1440;
+  inherited premature-submit hazard corrected, no live writes or push.
+- T2 classic/profile repeat and T3-T10: pending.
 
 ## Next active unit
 
@@ -507,7 +510,9 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   255 intercepted API requests (237 GET / 18 synthetic backtest POST), zero
   unmapped requests, live writes, page errors or unexpected console errors.
   Planned console messages correspond to injected failures. Four hashes stable.
-  Parent accepts the historical repeat unit; record its work-unit commit next.
+  Parent accepts the historical repeat unit; commit
+  `b4ddadc74f063449bde94ae8c6b4cc976d7a3c23`
+  (`feat(web): repeat historical runs from saved snapshots`), stage, not pushed.
   Corrected normal artifacts: `C:/Users/luism/AppData/Local/Temp/t2-historical-repeat-qa/normal-corrected/`.
   Mocked API/fallback fonts do not prove financial reproduction or live integration.
   Read-only scout `muwvbovp-f-e43q` is deriving the next classic source-guard
@@ -523,4 +528,26 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   and `settings.*_path.name`. Capture these once for both check and submit;
   do not substitute a blindly assumed history constant. Existing tmp-DB/API
   fixture and classic create/draw/stake/auth/quota test grouping are confirmed.
-  No classic source writer starts before the current historical unit is accepted.
+  Historical unit is now accepted/committed, enabling the next classic guard
+  work unit within those two backend surfaces only. Test-first: each mismatching
+  ID/hash returns 409 before submit/insert, matching snapshots persist exact
+  sources once, malformed/partial snapshots reject, old omitted guards preserve
+  create/draw/stake/auth/quota behavior. Frontend source seeding follows in a
+  separate unit; no profile/wizard/engine or database migration expansion.
+  Worker `muww89i5-i-u6g6` completed the two-file guard: strict complete
+  `expected_sources`, explicit-null 422, sanitized stale 409 before preflight,
+  admission identities captured once and reused for submission. Observed RED:
+  five guard cases returned 422 instead of expected 409/201 before implementation.
+  Reported GREEN: 57 API tests, 906 full backend tests, Ruff; two existing
+  dependency deprecations. Parent ASSESS: medium/large/RDD-off, self-checks stand.
+  Incident resolved by read-only verifier `muwwxgmo-j-wv75`: in-memory restoration
+  of the six-line catalog set to its original one-line spelling exactly produces
+  worker SHA256 `959afbbd7e176ea2d2a78e58609932bffe412e6ec6b0fb61630e085d4aa0ee84`.
+  Sole byte delta proven formatting-only; actor/tool origin remains unknown.
+  Independent current-byte GREEN: 57 API tests, 906 full backend tests, Ruff,
+  whitespace check. Two existing websocket dependency deprecations remain.
+  Before/after hashes stable: production326
+  `a7aaf8ea24cdd8401ffebd2ace321200f7590015967593dd3dd4b40d21e6988e`;
+  test1517 `1a0cacb412b1656e99d17a2f6d50fa5eb2c80b4b358a052b78282bc266034ec8`.
+  Parent accepts this backend-only unit; work-unit commit follows. Frontend
+  classic binding and profile repeat parity remain pending; no live DB or push.

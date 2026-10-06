@@ -2,9 +2,10 @@
 
 import json
 from dataclasses import asdict
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import Field, model_validator
 from starlette.concurrency import run_in_threadpool
 
 from laboratorio.api import StrictBody, experiment, jobs, missing, repo
@@ -41,9 +42,23 @@ async def bounded_profile_body(request: Request) -> str:
         raise HTTPException(422, "invalid profile JSON") from exc
 
 
+class ExpectedSources(StrictBody):
+    history_id: Annotated[str, Field(strict=True, min_length=1)]
+    history_sha256: Annotated[str, Field(strict=True, pattern=r"^[0-9a-f]{64}$")]
+    rankings_id: Annotated[str, Field(strict=True, min_length=1)]
+    rankings_sha256: Annotated[str, Field(strict=True, pattern=r"^[0-9a-f]{64}$")]
+
+
 class CreateExperiment(StrictBody):
     request: ExperimentRequest
     configuration_ids: tuple[str | None, ...] | None = None
+    expected_sources: ExpectedSources | None = None
+
+    @model_validator(mode="after")
+    def reject_explicit_null_sources(self):
+        if "expected_sources" in self.model_fields_set and self.expected_sources is None:
+            raise ValueError("expected_sources must be an object")
+        return self
 
 
 class ConfirmDelete(StrictBody):
@@ -53,6 +68,15 @@ class ConfirmDelete(StrictBody):
 @router.post("", status_code=201)
 def create(body: CreateExperiment, request: Request):
     data = request.app.state.data
+    settings = request.app.state.settings
+    sources = {
+        "history_id": settings.history_path.name,
+        "history_sha256": data.history.sha256,
+        "rankings_id": settings.rankings_path.name,
+        "rankings_sha256": RANKINGS_SHA256,
+    }
+    if body.expected_sources is not None and body.expected_sources.model_dump() != sources:
+        raise HTTPException(409, "source snapshot is stale")
     if body.request.conditions.start_draw not in {
         data.history.labels[int(index)] for index in data.rankings.row_ids
     }:
@@ -62,14 +86,10 @@ def create(body: CreateExperiment, request: Request):
             preflight_initial_stake(body.request.conditions, strategy)
         except ValueError as exc:
             raise HTTPException(400, f"strategy {index} ({strategy.name}): {exc}") from exc
-    settings = request.app.state.settings
     try:
         identifier = jobs(request).submit(
             body.request,
-            history_id=settings.history_path.name,
-            history_sha256=data.history.sha256,
-            rankings_id=settings.rankings_path.name,
-            rankings_sha256=RANKINGS_SHA256,
+            **sources,
             code_version=request.app.version,
             configuration_ids=body.configuration_ids,
         )

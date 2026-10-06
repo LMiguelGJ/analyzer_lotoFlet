@@ -63,7 +63,7 @@ from laboratorio.domain.contracts import (
 )
 from laboratorio.domain.session import Bet, SessionResult
 from laboratorio.jobs.queue import JobQueue, QueueFailure
-from laboratorio.settings import Settings
+from laboratorio.settings import RANKINGS_SHA256, Settings
 from laboratorio.storage.quota import QuotaExceeded
 
 
@@ -143,7 +143,12 @@ def test_profile_catalog_is_bounded_inert_and_keeps_legacy_catalog_shape(setup, 
     )
     catalog = client.get("/api/v1/catalog").json()
     assert set(catalog["game"]) == {
-        "name", "numbers", "positions", "prizes", "allows_repeats", "minimum_stake",
+        "name",
+        "numbers",
+        "positions",
+        "prizes",
+        "allows_repeats",
+        "minimum_stake",
     }
     assert "profiles" not in catalog
     first = client.get("/api/v1/catalog/profiles", params={"limit": 1}).json()
@@ -598,6 +603,106 @@ def test_create_rejects_later_unaffordable_strategy_without_persisting_batch(set
     )
     assert app.state.repo.list_experiments() == []
     assert client.get("/api/v1/experiments").json()["total"] == 0
+
+
+def _admission_sources(app, settings):
+    return {
+        "history_id": settings.history_path.name,
+        "history_sha256": app.state.data.history.sha256,
+        "rankings_id": settings.rankings_path.name,
+        "rankings_sha256": RANKINGS_SHA256,
+    }
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("history_id", "other-history"),
+        ("history_sha256", "b" * 64),
+        ("rankings_id", "other-rankings"),
+        ("rankings_sha256", "b" * 64),
+    ],
+)
+def test_create_rejects_stale_expected_sources_before_submit_or_insert(
+    setup, monkeypatch, field, replacement
+):
+    client, app, settings = setup
+    expected = _admission_sources(app, settings)
+    expected[field] = replacement
+    monkeypatch.setattr(app.state.jobs, "submit", lambda *a, **kw: pytest.fail("submitted"))
+
+    response = post(
+        client,
+        "/api/v1/experiments",
+        {"request": payload(), "expected_sources": expected},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "source snapshot is stale"
+    with sqlite3.connect(app.state.repo.path) as db:
+        assert db.execute("SELECT COUNT(*) FROM experiments").fetchone()[0] == 0
+        assert db.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 0
+
+
+def test_create_accepts_matching_expected_sources_and_persists_exact_snapshot(setup, monkeypatch):
+    client, app, settings = setup
+    expected = _admission_sources(app, settings)
+    original_submit = app.state.jobs.submit
+    submitted = []
+
+    def submit(*args, **kwargs):
+        submitted.append(kwargs.copy())
+        return original_submit(*args, **kwargs)
+
+    monkeypatch.setattr(app.state.jobs, "submit", submit)
+    response = post(
+        client,
+        "/api/v1/experiments",
+        {"request": payload(), "expected_sources": expected},
+    )
+
+    assert response.status_code == 201
+    assert len(submitted) == 1
+    assert {key: submitted[0][key] for key in expected} == expected
+    assert client.get(f"/api/v1/experiments/{response.json()['id']}").json()["sources"] == {
+        **expected,
+        "code_version": app.version,
+    }
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        (None, None),
+        ("missing", None),
+        ("history_id", 4),
+        ("history_sha256", "A" * 64),
+        ("extra", True),
+    ],
+)
+def test_create_rejects_malformed_expected_sources_without_submit_or_insert(
+    setup, monkeypatch, field, value
+):
+    client, app, settings = setup
+    expected = _admission_sources(app, settings)
+    if field is None:
+        expected = None
+    elif field == "missing":
+        expected.pop("history_id")
+    else:
+        expected[field] = value
+    monkeypatch.setattr(app.state.jobs, "submit", lambda *a, **kw: pytest.fail("submitted"))
+
+    response = post(
+        client,
+        "/api/v1/experiments",
+        {"request": payload(), "expected_sources": expected},
+    )
+
+    assert response.status_code == 422
+    with sqlite3.connect(app.state.repo.path) as db:
+        assert db.execute("SELECT COUNT(*) FROM experiments").fetchone()[0] == 0
+        assert db.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 0
 
 
 @pytest.mark.parametrize("staking", ("flat", "ladder", "bold"))
