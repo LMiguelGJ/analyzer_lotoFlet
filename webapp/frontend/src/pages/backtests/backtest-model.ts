@@ -2,14 +2,38 @@ import type { BacktestInputs, BacktestReport, CreateBacktestBody, GameSettings, 
 
 export type BacktestSystem = "transition" | "cold" | "select_interpretable" | "mix" | "ensemble";
 export interface BacktestDraft {
-  name: string; system: BacktestSystem; parity: boolean; coverage: string; staking: StakingStyle;
+  name: string; system: BacktestSystem; parity: boolean; coverage: string; staking: StakingStyle; strategyName?: string; savedName?: string;
   numbers: string; positions: string; prizes: string[]; minStake: string; capital: string; goal: string;
+  inputs?: BacktestInputs;
 }
 
 const systemNames: Record<BacktestSystem, string> = {
   transition: "Transición", cold: "Fríos", select_interpretable: "Selector automático", mix: "Mezclas", ensemble: "Ensemble",
 };
 const whole = (value: string) => /^(0|[1-9]\d*)$/.test(value) ? Number(value) : NaN;
+const systems = Object.keys(systemNames) as BacktestSystem[];
+
+export function hydrateBacktestDraft(config: CreateBacktestBody): BacktestDraft | null {
+  const strategy = config?.strategy;
+  if (typeof config?.name !== "string" || !config.name || !strategy || typeof strategy.name !== "string"
+    || !config.game || !config.conditions || !config.inputs
+    || typeof config.inputs.history_sha256 !== "string" || !config.inputs.history_sha256
+    || typeof config.inputs.rankings_sha256 !== "string" || !config.inputs.rankings_sha256
+    || !Number.isSafeInteger(strategy.coverage) || !["flat", "ladder", "bold"].includes(strategy.staking)
+    || (strategy.selector !== "parity" && (strategy.selector !== "system" || !systems.includes(strategy.system as BacktestSystem)))) return null;
+  const { game, conditions } = config;
+  if (!Number.isSafeInteger(game.numbers) || !Number.isSafeInteger(game.positions) || !Array.isArray(game.prizes)
+    || game.prizes.length !== game.positions || !game.prizes.every(Number.isSafeInteger) || !Number.isSafeInteger(game.min_stake)
+    || !Number.isSafeInteger(conditions.capital) || !Number.isSafeInteger(conditions.goal)) return null;
+  return {
+    name: config.name, savedName: config.name,
+    system: (strategy.system && systems.includes(strategy.system as BacktestSystem) ? strategy.system : "transition") as BacktestSystem,
+    parity: strategy.selector === "parity", coverage: String(strategy.coverage), staking: strategy.staking, strategyName: strategy.name,
+    numbers: String(game.numbers), positions: String(game.positions), prizes: game.prizes.map(String),
+    minStake: String(game.min_stake), capital: String(conditions.capital), goal: String(conditions.goal),
+    inputs: { ...config.inputs },
+  };
+}
 
 export function validateBacktestDraft(draft: BacktestDraft, game?: GameSettings): string[] {
   const errors: string[] = [];
@@ -37,9 +61,9 @@ export function validateBacktestDraft(draft: BacktestDraft, game?: GameSettings)
 export function buildBacktestBody(draft: BacktestDraft, _game: GameSettings, inputs: BacktestInputs): CreateBacktestBody {
   const systemName = draft.parity ? "Tu par/impar" : systemNames[draft.system];
   return {
-    name: draft.name.trim(),
+    name: draft.name === draft.savedName ? draft.name : draft.name.trim(),
     strategy: {
-      name: systemName, selector: draft.parity ? "parity" : "system",
+      name: draft.strategyName ?? systemName, selector: draft.parity ? "parity" : "system",
       system: draft.parity ? null : draft.system,
       coverage: Number(draft.coverage), staking: draft.staking,
     },

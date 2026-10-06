@@ -271,7 +271,11 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
 - T2 backend: `5fec388` — `feat(api): unify validated simulation listing`.
   Independent 37 focused / 896 complete backend tests, Ruff and whitespace pass;
   no push. This closes only the backend unit, not the T2 checkbox.
-- T2 unified UI / repeat and T3-T10: pending.
+- T2 unified UI: `94c9f9d` — `feat(web): show unified simulation pages by scope`.
+  588 frontend tests, typecheck/build and 23 mocked-browser checks at 390/1440
+  passed; documented mixed-render RED gap, font, bundle and LSP limitations.
+  Not pushed; whole T2 remains open for repeat.
+- T2 repeat and T3-T10: pending.
 
 ## Next active unit
 
@@ -430,7 +434,9 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   across classic/historical/profile v1-v5, specifically the previously unproven
   safe-prefill/new-submission capability. No repeat implementation, source edits
   or expansion into the T3 wizard/T7 adapters is authorized by this mapping.
-- UI is accepted pending work-unit commit; repeat is unimplemented. Keep T2
+- UI work-unit commit: `94c9f9d8ee965433283c96bfcd29e7afc0f2cbe4`
+  (`feat(web): show unified simulation pages by scope`), on `stage`, not pushed.
+  Repeat is unimplemented. Keep T2
   unchecked until all three units have checks and commit evidence. The original
   mixed-render RED gap and fallback-font-only QA remain explicit limitations,
   not backfilled evidence. T3 wizard and T4 common result remain separate.
@@ -438,7 +444,83 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   submission adopts current catalog provenance rather than binding saved hashes.
   Frontend display-only provenance does not satisfy snapshot-preserving repeat.
   Profile v1-v4 and v5 require version-specific saved-request hydration; historical
-  exact prefill still needs evidence. Follow-up read-only scout `muwuq2ij-c-efz4`
-  is resolving classic additive source guards and historical saved-config fields
-  before a smallest bounded repeat writer is authorized. No large three-editor
-  rewrite or implicit expansion into T3/T7 is accepted by this mapping.
+  exact prefill was resolved by follow-up scout `muwuq2ij-c-efz4`: historical
+  detail GET returns the complete saved create config, and POST already rejects
+  stale history/rankings hashes with 409. Current creator instead uses mutable
+  game settings and catalog hashes; preserve saved game/config/hashes on repeat.
+- Next authorized repeat work unit is historical-only: detail action to existing
+  creator, saved-config draft mapping and exact submission/stale-409 regressions.
+  Candidate surfaces: `pages/backtests/index.tsx`, `backtest-model.ts`,
+  `BacktestsPage.test.tsx`, and targeted model tests if applicable. No backend,
+  route-table, strategy/profile wizard, database or financial-engine changes.
+  No automatic rebind to current hashes; explicit rebind UI is outside this unit.
+  Writer `muwuwfdo-d-k71o` completed within four historical frontend surfaces:
+  detail/list repeat links, saved-config draft mapping with explicitly pinned
+  inputs, stale-load protection, actionable load/source-409 errors.
+  Observed RED: 5 of 7 page tests failed on required behavior before implementation.
+  GREEN: 12 historical/model tests, 57 App/client, full 595 tests / 40 files,
+  typecheck/build passed. Chunk warning: 554.81 kB; expected bogus-state fixture
+  remains recorded. A first npm command from repo root failed; correct-cwd retry
+  and all final commands passed. Increment +182/-29, tests +119/-4.
+  Parent assessment: medium risk / large writer / RDD off, self-checks sufficient.
+  Read-only functional verifier `muwvaok4-e-cbuh` is checking 390/1440 actual App
+  repeat/edit flows with all API calls intercepted; only synthetic backtest POST
+  responses are permitted, no live backend/database writes. Four source hashes
+  pinned; parent progress-document writes do not count as source drift.
+  LSP probe: one auxiliary ESM import warning, three files inconclusive, none
+  confirmed clean. Historical unit is not accepted/committed before browser QA.
+  Browser QA found an Enter hazard: pressing Enter on step-3 Siguiente can
+  advance and trigger a synthetic create POST before explicit confirmation.
+  Source hashes still match. Space also reproduced unintended submission;
+  the earlier Space workaround is withdrawn. Explicit harness cancellation of
+  Siguiente default action may isolate remaining data checks, but is not an
+  application fix or normal Enter/Space/click workflow PASS. Preserve both
+  incidents and compare baseline `94c9f9d` before claiming causality; finish the
+  remaining payload/error checks and end hashes before a minimal correction.
+  Verifier final FAIL: Enter, Space and pointer click each sent one premature
+  POST from step-3 Siguiente; baseline `94c9f9d` has the same button hazard.
+  This is inherited, but still blocks the current repeat flow's functional
+  acceptance. Four source end hashes match. Instrumented 390/1440 checks
+  confirm saved config/pinned c/d hashes, explicit edited-field preservation,
+  immutable original, 409/no-rebind, invalid-base blocking and fresh defaults;
+  those checks do not establish a safe ordinary creation workflow.
+  Failure artifacts: `C:/Users/luism/AppData/Local/Temp/t2-historical-repeat-qa/`.
+  Next bounded correction: only historical `index.tsx` and `BacktestsPage.test.tsx`
+  to prevent next-button native submission, add a regression sensitive to the
+  actual DOM/default-action hazard, then rerun ordinary click/Enter/Space browser
+  progression and explicit create without harness cancellation. No commit yet.
+  Correction worker `muwvq2i8-g-y4fq` completed +24/-1: distinct next/create
+  keys prevent DOM type morph, with focus restored to the new step action.
+  RED: all three DOM-identity cases failed; JSDOM did not reproduce native POST.
+  GREEN: 15 historical/model, 57 App/client, full 598 tests / 40 files, types
+  and build passed; chunk warning 554.84 kB. Parent confirmed corrected hashes:
+  index `226bd630ffa8084118e5e37e02ef3a61dce6e0df967c0ee7be765257adf6ff8d`,
+  page test `8a9213d95e810e1b09d0ff60d9362978e47a40c53725ea8e6a0f5545d4d5f8f5`;
+  both model hashes unchanged. Medium-risk assessment again admits self-checks;
+  read-only verifier `muwvzmeo-h-9n30` must prove normal Chrome click/Enter/Space
+  have zero premature POST and one after separate Create, with NO cancellation
+  instrumentation. All prior failure artifacts remain preserved.
+  Verifier `muwvzmeo-h-9n30` finished PASS: 36 normal-browser checks at390/1440;
+  pointer/Enter/Space each produced zero premature POST and exactly one after
+  separate Create, distinct DOM nodes and correct focus. Saved c/d config,
+  edited fields, 409/no-rebind, invalid bases, stale loads and fresh e/f all pass.
+  255 intercepted API requests (237 GET / 18 synthetic backtest POST), zero
+  unmapped requests, live writes, page errors or unexpected console errors.
+  Planned console messages correspond to injected failures. Four hashes stable.
+  Parent accepts the historical repeat unit; record its work-unit commit next.
+  Corrected normal artifacts: `C:/Users/luism/AppData/Local/Temp/t2-historical-repeat-qa/normal-corrected/`.
+  Mocked API/fallback fonts do not prove financial reproduction or live integration.
+  Read-only scout `muwvbovp-f-e43q` is deriving the next classic source-guard
+  envelope/test scope; it does not authorize a broad mixed creator rewrite.
+  Classic repeat requires a separate additive expected-source guard; v1-v5
+  hydration remains separate. Do not bundle three editors or expand into T3/T7.
+- Classic guard preparation is complete: backend-only next unit derives optional
+  `expected_sources` with four saved fields (history/rankings IDs and SHA-256s).
+  Compare before queue/write, return 409 on mismatch; absent guard preserves old
+  clients. Planned edit surfaces are `laboratorio/api/experiments.py` and
+  `tests/test_api.py`; frontend body/seed integration follows separately.
+  Parent confirmed actual create uses `data.history.sha256`, `RANKINGS_SHA256`
+  and `settings.*_path.name`. Capture these once for both check and submit;
+  do not substitute a blindly assumed history constant. Existing tmp-DB/API
+  fixture and classic create/draw/stake/auth/quota test grouping are confirmed.
+  No classic source writer starts before the current historical unit is accepted.

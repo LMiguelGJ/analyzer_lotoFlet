@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
 import type { BacktestReport as BacktestReportData, Catalog, GameSettings } from "../../api/types";
 import { BacktestReport } from "../../components/BacktestReport";
 import { ErrorBanner, Loading } from "../../components/ui";
-import { backtestScenarioName, buildBacktestBody, stakingDescriptions, validateBacktestDraft, type BacktestDraft } from "./backtest-model";
+import { backtestScenarioName, buildBacktestBody, hydrateBacktestDraft, stakingDescriptions, validateBacktestDraft, type BacktestDraft } from "./backtest-model";
 
 const PAGE_SIZE = 20;
 const SYSTEMS = [
@@ -29,7 +29,7 @@ export function ExperimentTabs({ active }: { active: "simulations" | "backtests"
 
 function errorMessage(error: unknown, action: string) {
   if (error instanceof NetworkError) return `No se pudo contactar al servidor para ${action}. Iniciá el laboratorio y reintentá.`;
-  if (error instanceof ApiError && error.status === 409) return "Cambió el historial o los rankings disponibles. Actualizá la página antes de crear otra corrida.";
+  if (error instanceof ApiError && error.status === 409) return "Cambió el historial o los rankings disponibles. Revisá las fuentes en Datos antes de crear otra corrida.";
   if (error instanceof ApiError && error.status === 422) return `El servidor no aceptó la configuración: ${error.detail}`;
   return `No se pudo ${action}. Tus campos siguen disponibles; reintentá.`;
 }
@@ -75,7 +75,7 @@ export function BacktestsPage() {
       <ul className="backtest-run-list" aria-label="Corridas históricas guardadas">{items.map((item) => <li key={item.id}>
         <div><h3>{item.name || backtestScenarioName(item)}</h3><p>{backtestScenarioName(item)} · {item.config?.strategy?.coverage ?? "Sin dato"} números · {item.config?.strategy?.staking ?? "Sin dato"}</p>
           <p className="field-help">Meta {item.goal_rate == null ? "Sin dato" : `${new Intl.NumberFormat("es-DO", { maximumFractionDigits: 1 }).format(item.goal_rate)}%`} · Llegaron {item.reached_goal ?? "Sin dato"} / {item.completed ?? "Sin dato"}</p></div>
-        <Link className="btn btn-secondary" aria-label={`Abrir corrida histórica de ${item.name}`} to={`/simulaciones/historicas/${encodeURIComponent(item.id)}`}>Ver resultados</Link>
+        <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" aria-label={`Abrir corrida histórica de ${item.name}`} to={`/simulaciones/historicas/${encodeURIComponent(item.id)}`}>Ver resultados</Link><Link className="btn btn-secondary" aria-label={`Repetir con cambios: ${item.name}`} to={`/simulaciones/nueva-historica?base=${encodeURIComponent(item.id)}`}>Repetir con cambios</Link></div>
       </li>)}</ul>
       <div className="flex flex-wrap items-center justify-between gap-3"><p>Mostrando {offset + 1}–{Math.min(offset + items.length, total)} de {total}</p><div className="flex gap-2"><button className="btn btn-secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>Anterior</button><button className="btn btn-secondary" disabled={offset + PAGE_SIZE >= total} onClick={() => setOffset(offset + PAGE_SIZE)}>Siguiente</button></div></div>
     </>}
@@ -84,34 +84,48 @@ export function BacktestsPage() {
 
 export function BacktestCreatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const baseId = searchParams.get("base");
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
   const [draft, setDraft] = useState<BacktestDraft>(INITIAL_DRAFT);
   const [step, setStep] = useState(0);
+  const stepAction = useRef<HTMLButtonElement>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const mounted = useRef(true);
+  const loadSequence = useRef(0);
   const inFlight = useRef(false);
   const errors = useMemo(() => validateBacktestDraft(draft), [draft]);
-  const inputs = sourceInputs(catalog);
+  const inputs = draft.inputs ?? sourceInputs(catalog);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
-  const loadSettings = async () => {
+  const loadSettings = async (ticket: number) => {
     setLoading(true); setLoadError("");
     try {
-      const [catalogResult, gameResult] = await Promise.all([apiClient.getCatalog(), apiClient.getGameSettings()]);
-      if (!mounted.current) return;
+      const [catalogResult, gameResult, baseReport] = await Promise.all([
+        apiClient.getCatalog(), apiClient.getGameSettings(), baseId ? apiClient.getBacktest(baseId) : Promise.resolve(null),
+      ]);
+      if (!mounted.current || ticket !== loadSequence.current) return;
+      const repeatedDraft = baseReport && hydrateBacktestDraft(baseReport.config);
+      if (baseId && !repeatedDraft) throw new Error("La corrida guardada no contiene una configuración completa y válida.");
       setCatalog(catalogResult); setGameSettings(gameResult);
-      setDraft((current) => ({ ...current, numbers: String(gameResult.numbers), positions: String(gameResult.positions), prizes: gameResult.prizes.map(String), minStake: String(gameResult.minimum_stake) }));
+      setDraft(repeatedDraft ?? { ...INITIAL_DRAFT, numbers: String(gameResult.numbers), positions: String(gameResult.positions), prizes: gameResult.prizes.map(String), minStake: String(gameResult.minimum_stake) });
     } catch (cause) {
-      if (mounted.current) setLoadError(errorMessage(cause, "cargar las reglas y los datos históricos"));
-    } finally { if (mounted.current) setLoading(false); }
+      if (mounted.current && ticket === loadSequence.current) setLoadError(baseId ? `No se pudo cargar la configuración guardada para repetir. ${errorMessage(cause, "cargar la corrida histórica")}` : errorMessage(cause, "cargar las reglas y los datos históricos"));
+    } finally { if (mounted.current && ticket === loadSequence.current) setLoading(false); }
   };
-  useEffect(() => { void loadSettings(); }, []);
+  useEffect(() => {
+    const ticket = ++loadSequence.current;
+    void loadSettings(ticket);
+    return () => { loadSequence.current++; };
+  }, [baseId, retry]);
+  useEffect(() => { if (step > 0) stepAction.current?.focus(); }, [step]);
   function changeRules(key: "numbers" | "positions" | "minStake", value: string) {
     setDraft((current) => {
       if (key === "positions") {
@@ -132,29 +146,31 @@ export function BacktestCreatePage() {
       const result = await apiClient.createBacktest(body);
       if (mounted.current) navigate(`/simulaciones/historicas/${encodeURIComponent(result.id)}`);
     } catch (cause) {
-      if (mounted.current) setError(errorMessage(cause, "crear la corrida histórica"));
+      if (mounted.current) setError(baseId && cause instanceof ApiError && cause.status === 409
+        ? "Las huellas guardadas del historial o los rankings ya no están disponibles. Revisá las fuentes en Datos; no se cambian automáticamente en esta repetición."
+        : errorMessage(cause, "crear la corrida histórica"));
     } finally { inFlight.current = false; if (mounted.current) setSubmitting(false); }
   }
   const sections = ["Método", "Cobertura y apuesta", "Reglas del juego", "Capital y resumen"];
   return <div className="backtests-page max-w-3xl space-y-5">
     <ExperimentTabs active="backtests" />
-    <header><h2>Nueva corrida histórica</h2><p>Configurá una decisión por paso. Podés cambiar las reglas antes de iniciar.</p></header>
+    <header><h2>Nueva corrida histórica</h2><p>{baseId ? "Se crea una corrida nueva a partir de esta configuración; la original no se modifica." : "Configurá una decisión por paso. Podés cambiar las reglas antes de iniciar."}</p></header>
     <p className="backtest-caveat">{CAVEAT}</p>
     <dl className="backtest-financial-summary" aria-label="Condiciones financieras de esta corrida">
       <div><dt>Capital inicial</dt><dd>RD${draft.capital || "Sin dato"}</dd></div>
       <div><dt>Meta de saldo</dt><dd>RD${draft.goal || "Sin dato"}</dd></div>
       <div><dt>Duración</dt><dd>Hasta meta o quiebre; sin límite temporal</dd></div>
     </dl>
-    {loadError && <div role="alert" className="space-y-2"><p>{loadError}</p><button className="btn btn-secondary" type="button" onClick={() => void loadSettings()}>Reintentar carga</button></div>}
-    {loading && <Loading rows={3} label="Cargando reglas guardadas y datos históricos…" />}
-    {!loading && <form onSubmit={(event) => void submit(event)} noValidate className="backtest-form">
+    {loadError && <div role="alert" className="space-y-2"><p>{loadError}</p><button className="btn btn-secondary" type="button" onClick={() => setRetry((value) => value + 1)}>Reintentar carga</button>{baseId && <Link className="btn btn-tertiary" to="/simulaciones/historicas">Volver a corridas históricas</Link>}</div>}
+    {loading && <Loading rows={3} label={baseId ? "Cargando la configuración guardada…" : "Cargando reglas guardadas y datos históricos…"} />}
+    {!loading && !loadError && <form onSubmit={(event) => void submit(event)} noValidate className="backtest-form">
       <nav className="backtest-stepper" aria-label="Pasos de la corrida histórica">{sections.map((name, index) => <span key={name} aria-current={index === step ? "step" : undefined}>{index + 1}. {name}</span>)}</nav>
       {step === 0 && <section aria-labelledby="backtest-strategy-heading" className="backtest-step">
         <h3 id="backtest-strategy-heading">¿Cómo se eligen los números?</h3>
         <label className="field"><span className="field-label">Nombre de la corrida</span><input className="control" type="text" maxLength={80} value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} /></label>
-        <label className="field"><span className="field-label">Método de selección</span><select className="control" value={draft.parity ? "parity" : "system"} onChange={(event) => setDraft((current) => ({ ...current, parity: event.target.value === "parity" }))}><option value="system">Sistema de ranking</option><option value="parity">Tu par/impar</option></select></label>
+        <label className="field"><span className="field-label">Método de selección</span><select className="control" value={draft.parity ? "parity" : "system"} onChange={(event) => setDraft((current) => ({ ...current, parity: event.target.value === "parity", strategyName: undefined }))}><option value="system">Sistema de ranking</option><option value="parity">Tu par/impar</option></select></label>
         {draft.parity ? <p className="field-help">Paridad combina 27 votos par/impar calculados antes de cada sorteo; no usa un sistema de ranking.</p> : <>
-          <label className="field"><span className="field-label">Sistema</span><select className="control" value={draft.system} onChange={(event) => setDraft((current) => ({ ...current, system: event.target.value as BacktestDraft["system"] }))}>{SYSTEMS.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>
+          <label className="field"><span className="field-label">Sistema</span><select className="control" value={draft.system} onChange={(event) => setDraft((current) => ({ ...current, system: event.target.value as BacktestDraft["system"], strategyName: undefined }))}>{SYSTEMS.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>
           <ul className="backtest-method-help">{SYSTEMS.map(([key, name, description]) => <li key={key}><strong>{name}:</strong> {description}</li>)}</ul>
         </>}
       </section>}
@@ -166,13 +182,13 @@ export function BacktestCreatePage() {
       </section>}
       {step === 2 && <section aria-labelledby="backtest-game-heading" className="backtest-step">
         <h3 id="backtest-game-heading">Reglas del juego</h3>
-        <p className="field-help">Se precargaron desde los ajustes del sorteo. Cambiar aquí solo afecta esta corrida.</p>
+        <p className="field-help">{baseId ? "Reglas guardadas de la corrida original. Cambiar aquí solo afecta la nueva corrida." : "Se precargaron desde los ajustes del sorteo. Cambiar aquí solo afecta esta corrida."}</p>
         <label className="field"><span className="field-label">Números posibles</span><input aria-label="Números posibles" className="control" type="number" min="2" max="1000" step="1" value={draft.numbers} onChange={(event) => changeRules("numbers", event.target.value)} /></label>
         <label className="field"><span className="field-label">Posiciones</span><input aria-label="Posiciones" className="control" type="number" min="1" max="16" step="1" value={draft.positions} onChange={(event) => changeRules("positions", event.target.value)} /></label>
         <fieldset className="backtest-prizes"><legend className="field-label">Premios por posición (RD$ por peso apostado)</legend>{draft.prizes.map((prize, index) => <label className="field" key={index}><span className="field-label">Posición {index + 1}</span><input aria-label={`Premio de la posición ${index + 1}`} className="control" type="number" min="1" step="1" value={prize} onChange={(event) => setDraft((current) => ({ ...current, prizes: current.prizes.map((item, at) => at === index ? event.target.value : item) }))} /></label>)}</fieldset>
         <label className="field"><span className="field-label">Apuesta mínima (RD$)</span><input aria-label="Apuesta mínima (RD$)" className="control" type="number" min="1" step="1" value={draft.minStake} onChange={(event) => changeRules("minStake", event.target.value)} /></label>
         <Link to="/ajustes?paso=reglas" className="btn btn-tertiary">Editar reglas del sorteo</Link>
-        {gameSettings && <p className="field-help">Origen de estas reglas: {gameSettings.source === "stored" ? "ajustes guardados" : gameSettings.source === "environment" ? "configuración del sistema" : "valor inicial de la plataforma"} · {gameSettings.name}.</p>}
+        {!baseId && gameSettings && <p className="field-help">Origen de estas reglas: {gameSettings.source === "stored" ? "ajustes guardados" : gameSettings.source === "environment" ? "configuración del sistema" : "valor inicial de la plataforma"} · {gameSettings.name}.</p>}
       </section>}
       {step === 3 && <section aria-labelledby="backtest-conditions-heading" className="backtest-step">
         <h3 id="backtest-conditions-heading">Capital y meta</h3>
@@ -184,7 +200,7 @@ export function BacktestCreatePage() {
       {errors.length > 0 && <ul className="backtest-validation" aria-label="Qué revisar antes de crear" role="alert">{errors.map((message) => <li key={message}>{message}</li>)}</ul>}
       {!inputs && <p role="alert">El servidor no informó las huellas del historial y sus rankings; no se puede fijar esta corrida con seguridad.</p>}
       {error && <p role="alert" className="backtest-submit-error">{error}</p>}
-      <div className="backtest-step-actions"><button type="button" className="btn btn-secondary" disabled={step === 0 || submitting} onClick={() => setStep((value) => Math.max(0, value - 1))}>Anterior</button>{step < 3 ? <button type="button" className="btn btn-primary" onClick={() => setStep((value) => Math.min(3, value + 1))}>Siguiente</button> : <button className="btn btn-primary" type="submit" disabled={submitting || loading || errors.length > 0 || !inputs}>{submitting ? "Creando…" : "Crear corrida histórica"}</button>}</div>
+      <div className="backtest-step-actions"><button type="button" className="btn btn-secondary" disabled={step === 0 || submitting} onClick={() => setStep((value) => Math.max(0, value - 1))}>Anterior</button>{step < 3 ? <button key="next" ref={stepAction} type="button" className="btn btn-primary" onClick={() => setStep((value) => Math.min(3, value + 1))}>Siguiente</button> : <button key="create" ref={stepAction} className="btn btn-primary" type="submit" disabled={submitting || loading || errors.length > 0 || !inputs}>{submitting ? "Creando…" : "Crear corrida histórica"}</button>}</div>
     </form>}
   </div>;
 }
@@ -206,6 +222,6 @@ export function BacktestDetailPage() {
     <p><Link className="link" to="/simulaciones/historicas">Volver a corridas históricas</Link></p>
     {loading && <Loading rows={4} label="Cargando informe histórico…" />}
     {error && <ErrorBanner cause={error} recovery="La corrida guardada no se modificó. Podés volver a intentar." preserved actionLabel="Reintentar" onAction={() => setRetry((value) => value + 1)} />}
-    {!loading && report && <><header><h2>{report.name || backtestScenarioName(report)}</h2></header><BacktestReport report={report} /></>}
+    {!loading && report && <><header><h2>{report.name || backtestScenarioName(report)}</h2></header><BacktestReport report={report} />{hydrateBacktestDraft(report.config) && <Link className="btn btn-primary" to={`/simulaciones/nueva-historica?base=${encodeURIComponent(report.id)}`}>Repetir con cambios</Link>}</>}
   </div>;
 }

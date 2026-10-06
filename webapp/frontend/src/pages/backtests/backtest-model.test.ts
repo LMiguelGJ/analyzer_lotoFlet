@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GameSettings } from "../../api/types";
-import { buildBacktestBody, validateBacktestDraft, type BacktestDraft } from "./backtest-model";
+import { buildBacktestBody, hydrateBacktestDraft, validateBacktestDraft, type BacktestDraft } from "./backtest-model";
 
 const game: GameSettings = { name: "Reglas actuales", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true, minimum_stake: 1, source: "stored" };
 const draft: BacktestDraft = {
@@ -18,6 +18,32 @@ describe("historical backtest configuration", () => {
       conditions: { capital: 2000, goal: 2800 },
       inputs: { history_sha256: "a".repeat(64), rankings_sha256: "b".repeat(64) },
     });
+  });
+
+  it("round-trips every saved field and keeps a deep copy of source hashes", () => {
+    const config = {
+      name: "Guardada", strategy: { name: "Tu par/impar", selector: "parity" as const, system: null, coverage: 17, staking: "ladder" as const },
+      game: { numbers: 77, positions: 3, prizes: [91, 13, 5], min_stake: 7 },
+      conditions: { capital: 3400, goal: 9100 },
+      inputs: { history_sha256: "c".repeat(64), rankings_sha256: "d".repeat(64) },
+    };
+    const hydrated = hydrateBacktestDraft(config);
+    expect(hydrated).not.toBeNull();
+    expect(buildBacktestBody(hydrated!, game, hydrated!.inputs!)).toEqual(config);
+    expect(hydrated!.inputs).not.toBe(config.inputs);
+    expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, selector: "system", system: null } } as never)).toBeNull();
+  });
+
+  it("preserves the saved ranking selector and its exact strategy label", () => {
+    const config = {
+      name: "Guardada", strategy: { name: "Etiqueta original", selector: "system" as const, system: "mix" as const, coverage: 22, staking: "flat" as const },
+      game: { numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], min_stake: 1 },
+      conditions: { capital: 2000, goal: 2800 },
+      inputs: { history_sha256: "a".repeat(64), rankings_sha256: "b".repeat(64) },
+    };
+    const hydrated = hydrateBacktestDraft(config)!;
+    expect(hydrated.system).toBe("mix");
+    expect(buildBacktestBody(hydrated, game, hydrated.inputs!)).toEqual(config);
   });
 
   it("omits ranking system for parity and reports concrete consequences for invalid rules", () => {
