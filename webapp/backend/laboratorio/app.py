@@ -25,6 +25,7 @@ from laboratorio.api import (
     imports,
     profile_batches,
     queue,
+    simulations,
     strategies,
 )
 from laboratorio.api import settings as settings_api
@@ -226,6 +227,7 @@ def create_app(
         settings_api.router,
         strategies.router,
         profile_batches.router,
+        simulations.router,
         execution_policy.router,
     ):
         app.include_router(router, prefix="/api/v1")

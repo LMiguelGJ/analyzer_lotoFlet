@@ -272,7 +272,125 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
 
 ## Next active unit
 
-- T2 is in progress: map a bounded implementation of a single simulations list,
-  truthful filtering/order/pagination and repeat links preserving saved inputs.
-  Read-only mapping precedes deriving narrow writer surfaces; do not globally
-  sort only the first page of each source or equate different financial contracts.
+- T2 mapping `muw5aov3-6-fv3q` completed. Implement as three bounded work units:
+  1. Add a backend-only `/api/v1/simulations` read endpoint with bounded,
+     server-side global filtering/sorting/pagination across saved experiments
+     (including validated profile versions/batches) and historical backtests.
+     Query IDs/count/snapshots from one consistent SQLite read view. Keep old
+     endpoints and stored financial contracts unchanged. Fail the request on
+     unavailable/corrupt source data rather than returning a misleading complete
+     count or pretending a partial first-page merge has global ordering.
+  2. Move the current simulations list onto that contract, with scope filter,
+     URL state, stale-response guards and explicit retry/error states; retain
+     compatibility routes. No unbounded fetch-all or client first-page merge.
+  3. Add repeat actions from saved requests/config/profile revisions/datasets and
+     hashes; preserve stale historical-input 409 responses. Characterize older
+     profile variants before enabling actions; never silently use current inputs.
+- The first backend-only unit is active. Missing writer `muw5inqy-7-dz5q`
+  left a partial implementation without an accepted final report. Recovery
+  verifier `muwpcm29-1-hm0e` confirmed unchanged source hashes/status and ran:
+  empty-database endpoint test 1 passed; compatibility/storage/golden subset
+  135 passed after the initial 120-second attempt timed out; Ruff passed.
+  These checks do not prove populated behavior or the missing writer's TDD.
+- Four recovery findings must be closed with observed regressions: beyond-last
+  offset crashes instead of returning the true total and an empty page; v5 batch
+  query names differ from displayed strategy names; corruption/invalid eligible
+  profile structures can be hidden by filtering/page-local validation; dataset
+  validation opens another connection outside the promised SQLite read view.
+  Add populated cross-source pagination/filter/tie/escape/profile/failure tests;
+  do not claim source-wide semantic integrity from the empty-database test.
+- The correction continuation recovered populated regressions: 5 passed / 1
+  failed (global tie order), compatibility subset 135 passed, Ruff failed on
+  import order in the new test. No completed GREEN or accepted writer report.
+- Read-only integrity design confirmed that page-only hydration and SQL shape
+  checks cannot prove full-source domain semantics. An index certificate cannot
+  establish current integrity against unobserved external changes by itself.
+- User subsequently approved complete-source semantic validation on each LIST
+  request, with a paginated response, accepting cost proportional to eligible
+  source rows and their dependencies. This supersedes the separate-design pause.
+  Global source validation must run independently of requested filters/offset;
+  do not silently hide malformed eligible rows. Use the same SQLite read view
+  for all database reads, preserve existing financial validators and compatibility
+  routes, and describe external-file consistency limits truthfully.
+- Writer `muwrc4fn-3-jpy5` reported backend implementation complete within the
+  existing surfaces, with RED: three filtered-out semantic-corruption cases
+  returned 200 instead of 409, plus the initial tie-order failure. Final GREEN:
+  12 focused API tests, 135 compatibility/storage/golden tests, Ruff passed.
+  Four intermediate compatibility failures were corrected before the final run.
+  These are writer-reported checks, not independent acceptance or T2 closure.
+- Native risk assessment returned `unassessable` because intended new files were
+  not declared to native assessment. RDD stays off; follow the high-risk fallback
+  plan with independent verification rather than inventing a classification.
+- Read-only verifier `muwsn2hu-4-c4kx` is auditing the actual diff and running the
+  focused and complete backend suites plus Ruff. Review full-source validation,
+  backtest report assumptions, legacy read compatibility, profile replay and
+  dataset consistency. No other source writer is active; no commit yet.
+- Verification reconciled the current baseline independently: repository 3,164
+  lines (`c9f5c1c242ca385cfc6f1541b538900c6221ca2438211474174bbaf91253f150`),
+  API 79, tests 382, app 319. Earlier supplied counts were not current evidence.
+  The verifier withdrew its unsupported formatter-notice attribution; no direct
+  notice or concurrent writer was observed. Parent explicitly accepts these
+  bytes as a fresh verification baseline only, not as a completed candidate.
+  Focused run: 12 passed in 27.88s, subject to post-run hash confirmation.
+  Recheck all four source hashes after checks; any subsequent drift blocks
+  acceptance. Read-only incident diagnosis is isolated from implementation.
+  Incident scout `muwsqgaq-5-yjeh` found no independently verified formatter
+  configuration/logs or prior-byte comparison; the earlier count discrepancy
+  remains unexplained and is not evidence of formatting-only changes.
+- Independent complete backend run failed: 4 failed, 888 passed, 2 warnings
+  in 241.20s (exit 1). Focused 12 tests and Ruff pass, but are insufficient for
+  acceptance. The full log is `C:/Users/luism/AppData/Local/Temp/t2-independent-backend-pytest.log`.
+  Failures in `tests/test_profile_storage.py`: prepared typed read, mixed-kind
+  error precedence, corrupt-dataset/quota inspectability, and cycling quota.
+  The new unconditional dataset verification in the shared loader changes
+  existing `get_experiment` contracts. Isolate new listing integrity validation
+  without weakening the new endpoint or legacy read/inspection behavior.
+  Verifier final result: FAIL, no acceptance. All four pinned source hashes
+  matched; parent task-document bookkeeping is not source drift or a blocker.
+  Additional isolated temporary-DB cases returned 200 despite filtered-out
+  damaged backtests: goal equals capital; prize count differs from positions;
+  zero bets with nonzero wagered/paid. Existing API/domain producers forbid
+  these states (`api/backtests.py:create_backtest`, `BacktestConfig.__post_init__`,
+  `run_backtest`). Correct these proven invariants, not speculative restrictions.
+  Correction writer `muwt0k1v-7-g8kt` completed within repository/API-test scope.
+  Restored v1-v4 inspection/error precedence while retaining v5 checks; strict
+  profile dataset validation now belongs to the unified listing read view.
+  Backtest validation reuses producer `make_game`/`BacktestConfig` invariants
+  and rejects zero-bet stake/payout totals. Added three corruption regressions
+  and one legitimate zero-bet control; no legacy tests changed.
+  Observed writer RED: 7 failed / 29 passed; final GREEN: 37 focused,
+  896 complete backend tests with 2 deprecation warnings (195.23s), Ruff passed.
+  Parent confirmed corrected hashes: repository 3,205 lines
+  (`3fa8eb7b67f7baa625d141fb4edac9c2d8eeabbee26d0f116f1ff2730a63b962`),
+  API tests 480 lines (`6112511d2ecd0be0cf9fd5537816e3f5fb89897ef601692b389aa4fcc811b01a`);
+  API/app hashes unchanged. Native assessment remains unassessable; retain
+  high-risk independent verification, without enabling RDD or inferring approval.
+  Read-only verifier `muwterxc-8-94ob` completed PASS: 37 focused (4.50s),
+  896 complete backend tests (174.05s), Ruff and whitespace checks passed;
+  all four source hashes matched before/after. Prior seven blocking cases are
+  closed; valid zero-bet reports return 200 and damaged off-page cases return 409.
+  Parent accepts this backend unit only. Log:
+  `C:/Users/luism/AppData/Local/Temp/t2-independent-corrected-20260720-pytest.log`.
+  Two dependency deprecation warnings remain (`websockets.legacy`,
+  `WebSocketServerProtocol`); RDD is off, not approved or acknowledged.
+  Record the backend work-unit commit before starting the frontend writer.
+  T2 remains unchecked until unified UI and saved-snapshot repeat are verified.
+- While independent backend acceptance is pending, read-only scout
+  `muwsu192-6-h0ns` is refining the next frontend unit against the actual new
+  contract: discriminated mixed-source items, server-backed scope/URL state,
+  complete-error retry and compatibility links. No frontend writer is active;
+  repeats, wizard, result and destructive historical actions stay out of scope.
+  Scout handoff completed: later edit surfaces are frontend `api/types.ts`,
+  `api/client.ts`, `api/client.test.ts`, `pages/experiments/index.tsx`, and
+  `pages/experiments/ExperimentsPage.test.tsx`. Use tagged `source_kind + id`
+  keys, server-backed scope/URL filters and explicit whole-list 409/503 retry.
+  Keep `/simulaciones/historicas` independently reachable for compatibility;
+  no `App.tsx`, historical-page, shared fixture or detail/create edits planned.
+- Response pagination is bounded, validation/replay cost is not. SQLite guarantees
+  a database read view, not a filesystem-wide snapshot. Classic/backtest saved
+  provenance is checked without rereading current external histories/rankings;
+  archived v5 binding checks external sources without promising a file snapshot.
+  No migrations, index/certificate redesign, real-database writes or engine edits.
+- UI and repeat units remain unimplemented; T2 stays unchecked until all three
+  units have checks and commit evidence. T3 wizard and T4 common result remain
+  separate, not part of this first unit.

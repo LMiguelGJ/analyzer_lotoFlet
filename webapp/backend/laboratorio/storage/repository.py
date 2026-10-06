@@ -283,6 +283,15 @@ def _dataset_draws(dataset):
     )
 
 
+def _load_dataset_in_transaction(db, dataset_sha256: str):
+    row = db.execute(
+        "SELECT dataset_sha256, source_sha256, canonical_json, raw_bytes, created_at "
+        "FROM datasets WHERE dataset_sha256 = ?",
+        (dataset_sha256,),
+    ).fetchone()
+    return None if row is None else checked_dataset(row)
+
+
 def _load_experiment(db, identifier: str, dataset_loader=None) -> SavedExperiment | None:
     row = db.execute("SELECT * FROM experiments WHERE id = ?", (identifier,)).fetchone()
     if row is None:
@@ -317,6 +326,7 @@ def _load_experiment(db, identifier: str, dataset_loader=None) -> SavedExperimen
         request = load_profile_batch_v5(row[2])
     else:
         raise ValueError("unsupported stored request kind/version")
+    dataset = None
     if request_kind == "profile":
         if not isinstance(
             request,
@@ -335,6 +345,18 @@ def _load_experiment(db, identifier: str, dataset_loader=None) -> SavedExperimen
             or request.profile_sha256 != profile_sha256(profile)
         ):
             raise ValueError("profile request differs from experiment profile snapshot")
+        if request_version == 5:
+            dataset = dataset_loader(request.dataset_sha256) if dataset_loader is not None else None
+            if dataset is None:
+                raise ValueError("missing verified profile batch dataset")
+            try:
+                dataset_profile = GameProfile.model_validate(
+                    json.loads(dataset.canonical_json)["profile"]
+                )
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise ValueError("corrupt profile batch dataset profile") from exc
+            if dataset_profile != profile:
+                raise ValueError("profile dataset differs from experiment profile snapshot")
     runs = db.execute(
         "SELECT ordinal, configuration_id, status, result_json, result_kind, "
         "result_schema_version FROM runs "
@@ -521,7 +543,6 @@ def _load_experiment(db, identifier: str, dataset_loader=None) -> SavedExperimen
             or max_elapsed_draws is None
         ):
             raise ValueError("corrupt profile batch source or policy snapshot")
-        dataset = dataset_loader(request.dataset_sha256) if dataset_loader is not None else None
         if dataset is None:
             raise ValueError("missing verified profile batch dataset")
         try:
@@ -530,11 +551,13 @@ def _load_experiment(db, identifier: str, dataset_loader=None) -> SavedExperimen
             )
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise ValueError("corrupt profile batch dataset profile") from exc
+        canonical_sha256 = hashlib.sha256(dataset.canonical_json).hexdigest()
+        row_count = len(dataset.preview.records)
         if (
             dataset.dataset_sha256 != request.dataset_sha256
             or dataset.source_sha256 != source["source_sha256"]
-            or hashlib.sha256(dataset.canonical_json).hexdigest() != source["canonical_sha256"]
-            or len(dataset.preview.records) != source["row_count"]
+            or canonical_sha256 != source["canonical_sha256"]
+            or row_count != source["row_count"]
             or dataset_profile != profile
             or dataset_profile.profile_id != source["profile_id"]
             or dataset_profile.revision != source["profile_revision"]
@@ -2058,8 +2081,10 @@ class Repository:
 
     def get_experiment(self, identifier: str) -> SavedExperiment | None:
         with connection(self.path) as db:
-            db.execute("BEGIN")  # coherent parent and children, even under another writer
-            return _load_experiment(db, identifier, self.get_dataset)
+            db.execute("BEGIN")  # coherent parent, children and dataset dependencies
+            return _load_experiment(
+                db, identifier, lambda digest: _load_dataset_in_transaction(db, digest)
+            )
 
     def list_experiments(self) -> list[SavedExperiment]:
         with connection(self.path) as db:
@@ -2170,8 +2195,278 @@ class Repository:
                     ),
                 )
             ]
-            rows = [_load_experiment(db, identifier, self.get_dataset) for identifier in ids]
+            rows = [
+                _load_experiment(
+                    db, identifier, lambda digest: _load_dataset_in_transaction(db, digest)
+                )
+                for identifier in ids
+            ]
         return total, [row for row in rows if row is not None]
+
+    def search_simulations(
+        self,
+        offset: int,
+        limit: int,
+        *,
+        scope: str | None = None,
+        name_contains: str | None = None,
+        status: str | None = None,
+        sort: str = "created_at",
+        order: str = "desc",
+        validate_experiment=None,
+        settings=None,
+    ):
+        """Validate all public snapshots in one read view, then return one bounded page."""
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("offset and limit out of range")
+        if scope not in (None, "classic", "profile", "historical"):
+            raise ValueError("invalid simulation scope")
+        if name_contains is not None and not isinstance(name_contains, str):
+            raise ValueError("name_contains must be a string")
+        if status is not None and status not in {item.value for item in ExperimentStatus}:
+            raise ValueError("invalid simulation status")
+        if sort not in _SEARCH_SORTS or order not in _SEARCH_ORDERS:
+            raise ValueError("invalid simulation sort")
+        if validate_experiment is None:
+            raise ValueError("public experiment validator is required")
+        pattern = None if name_contains is None else f"%{_escape_like(name_contains.casefold())}%"
+        eligible = (
+            "(request_kind = 'legacy' AND request_schema_version = 1) OR "
+            "(request_kind = 'profile' AND request_schema_version BETWEEN 1 AND 5)"
+        )
+        eligible_e = (
+            "(e.request_kind = 'legacy' AND e.request_schema_version = 1) OR "
+            "(e.request_kind = 'profile' AND e.request_schema_version BETWEEN 1 AND 5)"
+        )
+        with connection(self.path) as db:
+            db.create_function("unicode_casefold", 1, str.casefold, deterministic=True)
+            db.execute("BEGIN")
+
+            cached_dataset_sha256 = None
+            cached_dataset = None
+            cached_draws_sha256 = None
+            cached_draws = None
+            cached_binding_sha256 = None
+            cached_binding = None
+
+            def load_dataset(dataset_sha256):
+                nonlocal cached_dataset_sha256, cached_dataset
+                if dataset_sha256 != cached_dataset_sha256:
+                    row = db.execute(
+                        "SELECT dataset_sha256, source_sha256, canonical_json, raw_bytes, "
+                        "created_at FROM datasets WHERE dataset_sha256 = ?",
+                        (dataset_sha256,),
+                    ).fetchone()
+                    cached_dataset = None if row is None else checked_dataset(row)
+                    cached_dataset_sha256 = dataset_sha256
+                return cached_dataset
+
+            # Discriminators define public eligibility. Validate sequentially before filters
+            # so neither page boundaries nor caller filters can hide damaged eligible rows.
+            experiment_ids = db.execute(
+                "SELECT id FROM experiments WHERE "
+                f"{eligible} ORDER BY CASE WHEN request_kind = 'profile' "
+                "AND json_valid(request_json) THEN 'profile:' || "
+                "json_extract(request_json, '$.dataset_sha256') ELSE 'other:' || id END, id"
+            )
+            for (identifier,) in experiment_ids:
+                try:
+                    saved = _load_experiment(db, identifier, load_dataset)
+                    if saved is None:
+                        raise ValueError("eligible experiment disappeared from its read snapshot")
+                    if not isinstance(saved.request, ExperimentRequest):
+                        dataset = load_dataset(saved.request.dataset_sha256)
+                        if dataset is None:
+                            raise ValueError("missing verified profile dataset")
+                        try:
+                            dataset_profile = GameProfile.model_validate(
+                                json.loads(dataset.canonical_json)["profile"]
+                            )
+                        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                            raise ValueError("corrupt profile dataset profile") from exc
+                        if dataset_profile != saved.profile:
+                            raise ValueError(
+                                "profile dataset differs from experiment profile snapshot"
+                            )
+                    validate_experiment(saved)
+                    if isinstance(saved.request, ExperimentRequest):
+                        for provenance in (saved.history_sha256, saved.rankings_sha256):
+                            if (
+                                type(provenance) is not str
+                                or len(provenance) != 64
+                                or any(char not in "0123456789abcdef" for char in provenance)
+                            ):
+                                raise ValueError("stored experiment provenance hash is invalid")
+                        if any(
+                            type(value) is not str or not value
+                            for value in (
+                                saved.history_id,
+                                saved.rankings_id,
+                                saved.code_version,
+                            )
+                        ):
+                            raise ValueError("stored experiment provenance is incomplete")
+                        for run in saved.runs:
+                            if run.result is not None:
+                                if run.ordinal >= len(saved.request.strategies):
+                                    raise ValueError("legacy result has no matching strategy")
+                                _validate_result(
+                                    run.result,
+                                    saved.request.conditions.capital,
+                                    saved.request.strategies[run.ordinal].coverage,
+                                )
+                    else:
+                        profile_request = saved.request
+                        if (
+                            saved.history_id != profile_request.dataset_sha256
+                            or saved.history_sha256 != profile_request.dataset_sha256
+                            or saved.rankings_id != ""
+                            or saved.rankings_sha256 != ""
+                            or saved.code_version != f"profile-v{saved.request_schema_version}"
+                        ):
+                            raise ValueError("stored profile provenance differs from request")
+                    if isinstance(saved.request, ProfileBatchRequestV5) and any(
+                        run.result is not None for run in saved.runs
+                    ):
+                        from laboratorio.domain.profile_archive import bind_archived_dataset
+                        from laboratorio.settings import Settings
+
+                        dataset_hash = saved.request.dataset_sha256
+                        dataset = load_dataset(dataset_hash)
+                        if dataset is None:
+                            raise ValueError("missing verified v5 dataset")
+                        archive_needed = any(
+                            strategy.selector.startswith("archived-")
+                            for strategy in saved.request.strategies
+                        )
+                        binding = None
+                        if archive_needed:
+                            if not isinstance(settings, Settings):
+                                raise ValueError(
+                                    "trusted Settings required for archived batch results"
+                                )
+                            if dataset_hash != cached_binding_sha256:
+                                cached_binding = bind_archived_dataset(dataset, settings)
+                                cached_binding_sha256 = dataset_hash
+                            if cached_binding is None:
+                                raise ValueError("archived source binding is unavailable")
+                            binding = cached_binding
+                        if saved.batch_admission is None:
+                            raise ValueError("missing v5 batch admission")
+                        identity = saved.batch_admission["source_identity"]
+                        if identity.get("archive_bound") != (binding is not None):
+                            raise ValueError("stored archive binding differs from admission")
+                        if binding is not None and (
+                            identity.get("archive_history_sha256") != binding.history.sha256
+                            or identity.get("archive_rank_row_ids") != list(binding.rank_row_ids)
+                        ):
+                            raise ValueError("stored archive source differs from admission")
+                        for run in saved.runs:
+                            if run.result is not None:
+                                if not isinstance(run.result, ProfileBatchResultV5):
+                                    raise ValueError("stored v5 result has the wrong result type")
+                                single = replace(
+                                    saved.request,
+                                    strategies=(saved.request.strategies[run.ordinal],),
+                                )
+                                validate_profile_batch_result_v5(
+                                    run.result,
+                                    single,
+                                    saved.profile,
+                                    dataset,
+                                    binding,
+                                    operation_budget=saved.request.max_draws,
+                                )
+                    elif isinstance(
+                        saved.request,
+                        (
+                            ProfileExperimentRequest,
+                            ProfileCyclingRequest,
+                            ProfileAudazRequest,
+                            ProfileRecoveryRequest,
+                        ),
+                    ) and any(run.result is not None for run in saved.runs):
+                        profile_request = saved.request
+                        dataset_hash = profile_request.dataset_sha256
+                        if dataset_hash != cached_draws_sha256:
+                            dataset = load_dataset(dataset_hash)
+                            if dataset is None:
+                                raise ValueError("missing verified profile result dataset")
+                            cached_draws = _dataset_draws(dataset)
+                            cached_draws_sha256 = dataset_hash
+                        validator = {
+                            1: validate_profile_result,
+                            2: validate_profile_cycling_result,
+                            3: validate_profile_audaz_result,
+                            4: validate_profile_recovery_result,
+                        }[saved.request_schema_version]
+                        for run in saved.runs:
+                            if run.result is not None:
+                                validator(run.result, profile_request, saved.profile, cached_draws)
+                except (KeyError, TypeError, IndexError) as exc:
+                    raise ValueError("stored experiment snapshot is corrupt") from exc
+            for row in db.execute(
+                "SELECT id, name, config_json, result_json, created_at FROM backtests ORDER BY id"
+            ):
+                self._validate_simulation_backtest(row)
+
+            rows = db.execute(
+                "WITH candidates AS ("
+                "SELECT 'experiment' AS source_kind, "
+                "CASE WHEN e.request_kind = 'legacy' THEN 'classic' ELSE 'profile' END AS scope, "
+                "e.id, e.created_at, CASE WHEN e.request_kind = 'profile' AND "
+                "e.request_schema_version = 5 THEN json_extract(e.request_json, "
+                "'$.strategies[0].name') ELSE json_extract(e.request_json, '$.name') END AS name, "
+                "e.status, e.id AS experiment_id, NULL AS backtest_config, NULL AS backtest_result "
+                f"FROM experiments e WHERE {eligible_e} "
+                "UNION ALL SELECT 'backtest', 'historical', b.id, b.created_at, b.name, "
+                "'completed', NULL, b.config_json, b.result_json FROM backtests b), "
+                "filtered AS (SELECT * FROM candidates WHERE (? IS NULL OR scope = ?) "
+                "AND (? IS NULL OR status = ?) AND (? IS NULL OR "
+                "unicode_casefold(name) LIKE ? ESCAPE '\\')), page AS ("
+                "SELECT * FROM filtered ORDER BY "
+                "CASE WHEN ? = 'created_at' AND ? = 'asc' THEN created_at END ASC, "
+                "CASE WHEN ? = 'created_at' AND ? = 'desc' THEN created_at END DESC, "
+                "CASE WHEN ? = 'name' AND ? = 'asc' THEN unicode_casefold(name) END ASC, "
+                "CASE WHEN ? = 'name' AND ? = 'desc' THEN unicode_casefold(name) END DESC, "
+                "CASE WHEN ? = 'status' AND ? = 'asc' THEN status END ASC, "
+                "CASE WHEN ? = 'status' AND ? = 'desc' THEN status END DESC, "
+                "source_kind ASC, id ASC LIMIT ? OFFSET ?) "
+                "SELECT (SELECT count(*) FROM filtered) AS total, page.* FROM page "
+                "UNION ALL SELECT (SELECT count(*) FROM filtered), NULL, NULL, NULL, NULL, "
+                "NULL, NULL, NULL, NULL, NULL WHERE NOT EXISTS (SELECT 1 FROM page)",
+                (
+                    scope,
+                    scope,
+                    status,
+                    status,
+                    pattern,
+                    pattern,
+                    *(sort, order) * 6,
+                    limit,
+                    offset,
+                ),
+            ).fetchall()
+            total = rows[0][0]
+            items = []
+            for row in rows:
+                if row[1] is None:
+                    continue
+                source_kind, item_scope, identifier = row[1:4]
+                if source_kind == "experiment":
+                    saved = _load_experiment(db, identifier, load_dataset)
+                    if saved is None:
+                        raise ValueError("stored experiment disappeared from its read snapshot")
+                    items.append((source_kind, item_scope, saved))
+                else:
+                    items.append(
+                        (
+                            source_kind,
+                            item_scope,
+                            self._backtest_row((identifier, row[5], row[8], row[9], row[4])),
+                        )
+                    )
+        return total, items
 
     def page_experiments(self, offset: int, limit: int):
         with connection(self.path) as db:
@@ -2788,6 +3083,105 @@ class Repository:
             }
         except (ValueError, KeyError, TypeError) as exc:
             raise ValueError("stored backtest snapshot is corrupt") from exc
+
+    @staticmethod
+    def _validate_simulation_backtest(row):
+        import math
+        from decimal import ROUND_HALF_UP, Decimal
+
+        from laboratorio.api.backtests import CreateBacktest
+        from laboratorio.domain.backtest import BacktestConfig
+        from laboratorio.domain.contracts import make_game
+
+        identifier, name, _, result_json, _ = row
+        saved = Repository._backtest_row(row)
+        try:
+            config = CreateBacktest.model_validate(saved["config"])
+            if config.name != name:
+                raise ValueError("backtest database and config names differ")
+            game = make_game(
+                "Backtest game",
+                config.game.numbers,
+                config.game.positions,
+                config.game.prizes,
+                True,
+                config.game.min_stake,
+            )
+            BacktestConfig(
+                config.conditions.capital,
+                config.conditions.goal,
+                game.numbers,
+                game.positions,
+                game.prizes,
+                game.minimum_stake,
+                config.strategy.coverage,
+                config.strategy.staking,
+            )
+            if config.strategy.selector == "parity" and config.strategy.coverage > 50:
+                raise ValueError("parity selection exceeds the producer coverage limit")
+            result = json.loads(result_json)
+            expected = {
+                "reached_goal",
+                "completed",
+                "goal_rate",
+                "quiebres",
+                "neto_medio",
+                "incomplete",
+                "window",
+            }
+            if type(result) is not dict or result.keys() != expected:
+                raise ValueError("saved backtest report has an invalid shape")
+            counts = (
+                result["reached_goal"],
+                result["completed"],
+                result["quiebres"],
+                result["incomplete"],
+            )
+            if any(type(value) is not int or value < 0 for value in counts):
+                raise ValueError("saved backtest counts are invalid")
+            if result["completed"] != result["reached_goal"] + result["quiebres"]:
+                raise ValueError("saved backtest completed count does not reconcile")
+            expected_rate = (
+                0.0
+                if result["completed"] == 0
+                else float(
+                    (Decimal(result["reached_goal"] * 100) / result["completed"]).quantize(
+                        Decimal("0.1"), rounding=ROUND_HALF_UP
+                    )
+                )
+            )
+            if result["goal_rate"] != expected_rate:
+                raise ValueError("saved backtest goal rate does not reconcile")
+            if (
+                type(result["goal_rate"]) not in (int, float)
+                or not math.isfinite(result["goal_rate"])
+                or not 0 <= result["goal_rate"] <= 100
+                or type(result["neto_medio"]) not in (int, float)
+                or not math.isfinite(result["neto_medio"])
+            ):
+                raise ValueError("saved backtest metrics are invalid")
+            window = result["window"]
+            if type(window) is not dict or window.keys() != {
+                "bets",
+                "wagered",
+                "paid",
+                "sessions",
+                "incomplete",
+            }:
+                raise ValueError("saved backtest window has an invalid shape")
+            if any(type(window[key]) is not int or window[key] < 0 for key in window):
+                raise ValueError("saved backtest window totals are invalid")
+            if (
+                window["sessions"] != result["completed"] + result["incomplete"]
+                or window["incomplete"] != result["incomplete"]
+            ):
+                raise ValueError("saved backtest window does not reconcile")
+            if window["bets"] == 0 and (window["wagered"] != 0 or window["paid"] != 0):
+                raise ValueError("empty backtest window has stake or payout totals")
+            if window["bets"] > 0 and window["wagered"] == 0:
+                raise ValueError("betting window has no wagered amount")
+        except (TypeError, ValueError, KeyError) as exc:
+            raise ValueError(f"stored backtest {identifier} is corrupt") from exc
 
     def get_backtest(self, identifier: str):
         with connection(self.path) as db:
