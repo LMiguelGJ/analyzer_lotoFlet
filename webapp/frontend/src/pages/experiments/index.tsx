@@ -135,7 +135,7 @@ function RowActions({ row, onDelete }: { row: SimulationListing; onDelete: () =>
       setOpen(!open);
     }}>Acciones</button>
     {open && createPortal(<div id={menuId} role="menu" aria-label={`Acciones de ${experimentName(row)}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
-      {!isProfileExperiment(detail) && <Link ref={first} role="menuitem" className="ledger-button ledger-button-ghost w-full justify-start" to={`/simulaciones/nueva?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Usar como base</Link>}
+      {!isProfileExperiment(detail) && <Link ref={first} role="menuitem" className="ledger-button ledger-button-ghost w-full justify-start" to={`/simulaciones/nueva?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Repetir con cambios</Link>}
       {isProfileExperiment(detail) && <span className="block px-3 py-2 text-text-secondary">No disponible como base</span>}
       <button ref={firstProfile} role="menuitem" type="button" className="ledger-button ledger-button-ghost w-full justify-start" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
     </div>, document.body)}

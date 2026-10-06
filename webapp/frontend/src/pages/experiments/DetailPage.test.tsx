@@ -11,7 +11,7 @@ import type { Bet, ExperimentSummary, Page, ProfileBatchExperimentSummary, Profi
 
 vi.mock("../../api/client", async (original) => {
   const actual = await original<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getExperiment: vi.fn(), getReplay: vi.fn(), getTrajectory: vi.fn(), createExperiment: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getExperiment: vi.fn(), getReplay: vi.fn(), getTrajectory: vi.fn(), createExperiment: vi.fn(), startHeld: vi.fn() } };
 });
 
 const bet: Bet = { label: "2026-01-02T10:05:00", numbers: [0, 7], per_number: 10, wagered: 20, results: [0, 3, 7, 8, 9], paid: 60, balance: 140 };
@@ -119,6 +119,7 @@ describe("profile detail READ", () => {
       runs: [{ ...cyclingSnapshot.runs[0], status: status === "held" ? "pending" : status, result: null, bets_count: 0 }] });
     const { user, unmount } = setup();
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
     expect(within(run).getByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
     expect(within(run).getByText("Capital inicial").nextElementSibling).toHaveTextContent("USD 100.00");
     expect(within(run).getByText("Meta de saldo").nextElementSibling).toHaveTextContent("USD 200.00");
@@ -289,6 +290,7 @@ describe("profile batch v5 detail", () => {
     expect(screen.getByRole("heading", { name: "Lote guardado · Snapshot cold" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Snapshot cold" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Comparar simulaciones" })).toHaveAttribute("href", "/simulaciones/exp/comparacion");
+    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
     expect(within(screen.getByRole("region", { name: "Veredicto" })).getByText(/Motivo de cierre:/)).toHaveTextContent("Límite configurado");
     const technical = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Versión de solicitud"));
@@ -388,6 +390,40 @@ describe("profile batch v5 detail", () => {
 });
 
 describe("LW11 detail", () => {
+  it("offers a classic-only secondary repeat link with the exact encoded base and preserves navigation", async () => {
+    const id = "classic&scope=profile?x=1";
+    vi.mocked(apiClient.getExperiment).mockReset().mockResolvedValue({ ...snapshot, id });
+    vi.mocked(apiClient.createExperiment).mockReset();
+    vi.mocked(apiClient.startHeld).mockReset();
+    const { user, router } = setup(`/simulaciones/${encodeURIComponent(id)}?from=comparison`);
+    await screen.findByText("Prueba");
+    const navigation = screen.getByRole("navigation", { name: "Navegación de la simulación" });
+    expect(within(navigation).getByRole("link", { name: "Volver a simulaciones" })).toHaveAttribute("href", "/simulaciones");
+    expect(within(navigation).getByRole("link", { name: "Volver a comparación" })).toHaveAttribute("href", `/simulaciones/${encodeURIComponent(id)}/comparacion`);
+    const repeat = within(navigation).getByRole("link", { name: "Repetir con cambios" });
+    expect(repeat).toHaveClass("btn", "btn-secondary");
+    expect(navigation).toHaveClass("flex-wrap");
+    expect(repeat).toHaveAttribute("href", `/simulaciones/nueva?base=${encodeURIComponent(id)}`);
+    await user.click(repeat);
+    await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones/nueva"));
+    expect(router.state.location.search).toBe(`?base=${encodeURIComponent(id)}`);
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+    expect(apiClient.startHeld).not.toHaveBeenCalled();
+  });
+
+  it("does not expose repeat actions while the detail is loading or missing", async () => {
+    vi.mocked(apiClient.getExperiment).mockReturnValueOnce(new Promise(() => {}));
+    const loading = setup();
+    expect(await screen.findByText(/Cargando el estado de la simulación/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
+    loading.unmount();
+
+    vi.mocked(apiClient.getExperiment).mockRejectedValueOnce(new ApiError(404, "missing"));
+    setup();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/no existe/i);
+    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
+  });
+
   it("jumps directly to an exact source bet beyond page 20 from a comparison link", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed", runs: [{ ...snapshot.runs[0], bets_count: 1001, result: { ...snapshot.runs[0].result!, bets_count: 1001 } }] });
     vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 1001, offset: 600, limit: 20, items: [bet] });

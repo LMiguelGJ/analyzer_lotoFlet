@@ -281,7 +281,10 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
 - T2 classic expected-source backend guard: `b100f43` —
   `feat(api): guard classic creation with expected sources`; 57 API tests,
   906 full backend tests, Ruff and byte-stable independent verification.
-- T2 classic frontend/profile repeat and T3-T10: pending.
+- T2 classic frontend snapshot guard: `b871153` —
+  `feat(web): pin classic repeat source snapshots`; 607 frontend tests, types,
+  unchanged-production build and 62 normal Chrome checks; no live writes/push.
+- T2 classic repeat actions/profile repeat and T3-T10: pending.
 
 ## Next active unit
 
@@ -628,9 +631,51 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   `1d1db70034cd865847758e6c1587f99ecd93e0ee74ee94584ad791aeb55b7265`.
   Prior production build555.69KB and browser48+14checks retained, NOT rerun;
   production unchanged. All earlier test/harness failures remain preserved.
-  Parent accepts this scoped frontend guard unit; work-unit commit follows.
-  Next separate unit: classic list/detail 'Repetir con cambios' entry actions
-  with inert encoded base links and existing routes/tests; T2 remains open.
+  Parent accepts this scoped frontend guard unit; committed as
+  `b871153a235244d26623498fe8a0d4b798300014`
+  (`feat(web): pin classic repeat source snapshots`), stage, not pushed.
+  Next separate unit: classic list/detail 'Repetir con cambios' entry actions.
+  Parent bounded mapping confirmed `ExperimentsPage.test.tsx` and
+  `DetailPage.test.tsx` exist. List `index.tsx` existing classic action keeps
+  the same encoded base URL/menu focus but replaces 'Usar como base' label.
+  `DetailPage.tsx` existing nav gets a legacy-only secondary repeat Link with
+  encoded id; profiles/loading/no valid detail do not expose this action.
+  Allowed surfaces: those two components and their two existing test files.
+  RED/GREEN: detail action absent first, list new label absent first, encoded
+  href/route, GET-only inert activation, classic-only/profile-negative coverage;
+  preserve comparison/back/delete/menus. Focused/full frontend, types/build,
+  detector and normal mobile/desktop entry QA before acceptance. No creator/
+  mapper/backend/profile or financial changes in this unit; T2 remains open.
+  Worker `muwz1cl1-p-38wy` completed four files (two production lines plus tests).
+  Observed RED4 intended missing label/detail-link failures,92 passed; GREEN96
+  focused/610 full frontend tests40files/types/build555.83KB; detector `[]`,
+  whitespace pass. Expected bogus-status logs; financial goldens NOT rerun.
+  Parent ASSESS medium/large/RDD-off: writer self-checks stand. Parent diff
+  confirms encoded href, legacy-only condition, preserved menu refs/navigation.
+  Worker40hex hashes are Git blob identities: all four match `git hash-object`,
+  not raw-file SHA1/SHA256; no drift inferred from algorithm differences.
+  Raw SHA256 freeze (list331/detail419/list-test659/detail-test682):
+  `75ec83f8440d5c4be73f7854babeb8e2f735a861c8bca5941c764a661186f928`;
+  `db1fd2669b5941f6c9337f5b1cc7f8cfc5c7f4018e452621eb4d5d1935cf640e`;
+  `4951d64634554033d677f8b0f99e946de5d080f65d433318b21291c3597f63c9`;
+  `313cb0af903dc9d0333f4175583f4075b0d5fa186254ba906db39eec73513f3a`.
+  Normal browser verifier `muwzh724-q-qe27` now checks390/1440 list/menu/detail
+  entries into the REAL guarded creator using GET-only intercepted APIs, encoded
+  query-sensitive IDs, keyboard/Escape/focus/touch bounds, profile exclusions.
+  No synthetic or live mutation allowed. Verifier `muwzh724-q-qe27` finished
+  PASS34 checks390/1440,186 API GETs, zero mutations/unmapped/prohibited/page
+  or unexpected console errors; six planned404 console messages. Encoded IDs
+  survive real list/detail creator hydration, no injected scope. Menu/native
+  pointer/Enter/Tab/Escape/focus/touch pass; profilev1/v5/load/404 exclusions
+  positively verified. Mobile detail target48px above nav; no tested overflow.
+  Four raw SHA256 hashes stable; six viewport PNGs read/inspected. Owned server
+  PID1260 stopped and ECONNREFUSED confirmed. Writer610tests/types/build retained,
+  NOT rerun. Parent accepts this scoped actions unit; work-unit commit follows.
+  Artifacts: `C:/Users/luism/AppData/Local/Temp/t2-classic-actions-qa-UhBv63/`.
+  Temp harness generation/quoting incidents happened before browser execution;
+  candidate browser passed its first execution. Fallback fonts/mocked GET only;
+  no full creator/financial/global-rules replay or wholeT2 claim.
+  Next: read-only version-specific profile repeat mapping before any writer.
   Acceptance/commit blocked pending that correction plus mocked normal390/1440
   payload/error/async/reset/pointer/Enter/Space/fresh checks; no live API/DB. Auxiliary ast-grep silent
   diagnostic is incomplete, not a clean claim. No T2-wide acceptance.

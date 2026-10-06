@@ -19,6 +19,8 @@ vi.mock("../../api/client", async (importOriginal) => {
       listExperiments: vi.fn(),
       listSimulations: vi.fn(),
       deleteExperiment: vi.fn(),
+      createExperiment: vi.fn(),
+      startHeld: vi.fn(),
       getQueue: vi.fn(),
     },
   };
@@ -240,7 +242,7 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(screen.getByText(/Perfil test · 1 posiciones/)).toBeInTheDocument();
     expect(screen.getByText(/Capital USD 100.00/)).toBeInTheDocument();
     expect(screen.getByText(/Escalera cíclica Q80/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Usar como base" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
     expect(screen.getByText(/No disponible como base/)).toBeInTheDocument();
   });
   it("labels a recovery run by its saved profile policy instead of calling it a strategy", async () => {
@@ -384,8 +386,31 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(trigger).toHaveClass("ledger-button-ghost");
     await user.click(trigger);
     expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Fríos K1" })).not.toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveAttribute("href", "/simulaciones/nueva?base=exp-completed-1");
+    expect(screen.getByRole("menuitem", { name: "Repetir con cambios" })).toHaveAttribute("href", "/simulaciones/nueva?base=exp-completed-1");
     expect(screen.getByRole("menuitem", { name: "Eliminar" })).toHaveClass("ledger-button-ghost");
+  });
+
+  it("repeats a classic row through the guarded creator link without submitting or deleting", async () => {
+    const id = "classic&scope=profile?x=1";
+    vi.mocked(apiClient.listSimulations).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [
+      { source_kind: "experiment", scope: "classic", id, name: "Clásica especial", status: "completed", created_at: null,
+        detail: { ...fixture.items[0], id, request: { ...fixture.items[0].request, name: "Clásica especial" } },
+      },
+    ] } as never);
+    vi.mocked(apiClient.createExperiment).mockReset();
+    vi.mocked(apiClient.deleteExperiment).mockReset();
+    vi.mocked(apiClient.startHeld).mockReset();
+    const { user, router } = setup();
+    const trigger = await screen.findByRole("button", { name: "Acciones de Clásica especial" });
+    await user.click(trigger);
+    const repeat = screen.getByRole("menuitem", { name: "Repetir con cambios" });
+    expect(repeat).toHaveAttribute("href", `/simulaciones/nueva?base=${encodeURIComponent(id)}`);
+    await user.click(repeat);
+    await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones/nueva"));
+    expect(router.state.location.search).toBe(`?base=${encodeURIComponent(id)}`);
+    expect(apiClient.createExperiment).not.toHaveBeenCalled();
+    expect(apiClient.deleteExperiment).not.toHaveBeenCalled();
+    expect(apiClient.startHeld).not.toHaveBeenCalled();
   });
 
   it("keeps compact filters (search, status, clear) visible and the sort controls inside the Filtros disclosure", async () => {
@@ -490,8 +515,8 @@ describe("LW10 experiments list · data and navigation", () => {
     const trigger = screen.getByRole("button", { name: "Acciones de Fríos K1" });
     trigger.focus();
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveFocus();
-    expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveAttribute("href", "/simulaciones/nueva?base=exp-completed-1");
+    expect(screen.getByRole("menuitem", { name: "Repetir con cambios" })).toHaveFocus();
+    expect(screen.getByRole("menuitem", { name: "Repetir con cambios" })).toHaveAttribute("href", "/simulaciones/nueva?base=exp-completed-1");
     await user.keyboard("{Escape}");
     expect(trigger).toHaveFocus();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -552,7 +577,7 @@ describe("profile experiment list", () => {
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("1");
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Capital USD 100.00 · Meta USD 200.00");
     await user.click(screen.getByRole("button", { name: "Acciones de Perfil de prueba" }));
-    expect(screen.queryByRole("menuitem", { name: "Usar como base" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Repetir con cambios" })).not.toBeInTheDocument();
     expect(screen.getByText(/No disponible como base/)).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Eliminar" })).toHaveFocus();
   });

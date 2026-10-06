@@ -412,6 +412,7 @@ export function DetailPage() {
       <nav aria-label="Navegación de la simulación" className="mt-6 flex flex-wrap gap-2 text-sm">
         <Link className="btn btn-tertiary" to="/simulaciones">Volver a simulaciones</Link>
         <Link className="btn btn-primary" to={`/simulaciones/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Comparar simulaciones"}</Link>
+        {!isProfileExperiment(data) && <Link className="btn btn-secondary" to={`/simulaciones/nueva?base=${encodeURIComponent(id)}`}>Repetir con cambios</Link>}
       </nav>
     </>}
   </div>;
