@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useBlocker } from "react-router-dom";
+import { Link, useBlocker, useSearchParams } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
 import type { GameSettings, GameSettingsSource, SettingsView } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -198,7 +198,16 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [gameSource, setGameSource] = useState<GameSettingsSource | null>(null);
-  const [step, setStep] = useState(0);
+  const [searchParams] = useSearchParams();
+  const [step, setStep] = useState(() => {
+    switch (searchParams.get("paso")) {
+      case "reglas": return 0;
+      case "cuota": return 1;
+      case "detalles": return 2;
+      case "revisar": return 3;
+      default: return 0;
+    }
+  });
   const [gameSummary, setGameSummary] = useState<GameDraft | null>(null);
   const [gameValid, setGameValid] = useState(false);
   const [gameRulesState, setGameRulesState] = useState<"loading" | "ready" | "error">("loading");
@@ -416,7 +425,7 @@ export function SettingsPage() {
   return <div className="max-w-5xl space-y-8">
     {loading && <Loading rows={3} label="Cargando ajustes…" className="border-y border-border py-5" />}
     {loadError && <ErrorBanner cause={loadError} recovery={view ? "Se muestra la última lectura; reintentá para actualizarla." : "Comprobá que el laboratorio siga abierto y reintentá."} preserved={!!view} actionLabel="Reintentar" onAction={() => setRefresh((previous) => previous + 1)} />}
-    {wizardOutcome && step === 3 && <div role={wizardOutcome.startsWith("No se") ? "alert" : "status"} className="m3-review mb-4"><p className="font-medium">{wizardOutcome}</p>{!wizardOutcome.startsWith("No se") && <Link className="btn btn-tertiary mt-3" to="/experimentos/nuevo">Crear una simulación</Link>}</div>}
+    {wizardOutcome && step === 3 && <div role={wizardOutcome.startsWith("No se") ? "alert" : "status"} className="m3-review mb-4"><p className="font-medium">{wizardOutcome}</p>{!wizardOutcome.startsWith("No se") && <Link className="btn btn-tertiary mt-3" to="/simulaciones/nueva">Crear una simulación</Link>}</div>}
     {view && <>
       <section className="m3-wizard" aria-label="Asistente de ajustes">
         <div className="m3-wizard-progress" data-step={step + 1} role="progressbar" aria-label={`Paso ${step + 1} de 4`} aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={4}>

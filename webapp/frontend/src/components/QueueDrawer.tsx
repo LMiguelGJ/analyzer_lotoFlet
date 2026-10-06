@@ -130,7 +130,7 @@ export function QueueDrawer({ open, onClose, trigger }: Props) {
     return <li key={`${kind}-${id}`} className="queue-row py-3" data-lane={lane}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <Link to={`/experimentos/${encodeURIComponent(id)}`} onClick={onClose} className="break-all font-mono text-xs text-text-secondary link" aria-label={`Inspeccionar ${id}`}>{id}</Link>
+          <Link to={`/simulaciones/${encodeURIComponent(id)}`} onClick={onClose} className="break-all font-mono text-xs text-text-secondary link" aria-label={`Inspeccionar ${id}`}>{id}</Link>
           <p className="mt-1 text-sm text-text-secondary">{statusCopy}</p>
         </div>
         <div className="flex flex-wrap gap-2">

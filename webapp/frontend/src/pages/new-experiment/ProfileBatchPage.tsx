@@ -368,7 +368,7 @@ export function ProfileBatchPage() {
       {validationSummary}
       <button type="button" className="btn btn-primary" disabled={loading || !currentValidation?.valid || !draft.pending && !policy} onClick={() => void submit()}>{loading ? "Procesando…" : "Crear simulaciones"}</button></section>}
     <div className="flex justify-between border-t border-border pt-4"><button type="button" className="btn btn-secondary" disabled={currentStep === 0} onClick={() => setStep(currentStep - 1)}>Atrás</button><button type="button" className={currentStep < 3 ? "btn btn-primary" : "btn btn-secondary"} disabled={currentStep >= 4} onClick={() => setStep(currentStep + 1)}>Continuar</button></div>
-    <p><Link className="btn btn-tertiary" to="/experimentos/nuevo">Ir al creador clásico</Link> <Link className="btn btn-tertiary" to="/experimentos/nuevo/perfil">Simulación con perfil</Link></p>
+    <p><Link className="btn btn-tertiary" to="/simulaciones/nueva">Ir al creador clásico</Link> <Link className="btn btn-tertiary" to="/simulaciones/nueva/perfil">Simulación con perfil</Link></p>
   </div>;
   return page;
 }

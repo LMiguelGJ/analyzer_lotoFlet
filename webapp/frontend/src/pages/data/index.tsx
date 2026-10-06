@@ -235,7 +235,7 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
         <p className="dataset-card-status" role="status">{item.profile_execution.ready ? "Reglas disponibles para usar este historial." : "No se puede usar todavía: faltan las reglas de juego guardadas."}</p>
         <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="break-all text-sm">Formato: {item.source_format} · revisión de fuente: {item.source_revision} · identificadores del perfil y la fuente: <code>{item.profile_id}@{item.profile_revision}</code> · huella del historial <code>{item.dataset_sha256}</code> · huella de la fuente <code>{item.source_sha256}</code></p></details>
         {item.profile_execution.ready
-          ? <Link className="btn btn-tertiary" to={`/experimentos/nuevo/sesion?dataset_sha256=${encodeURIComponent(item.dataset_sha256)}`}>Usar este historial</Link>
+          ? <Link className="btn btn-tertiary" to={`/simulaciones/nueva/sesion?dataset_sha256=${encodeURIComponent(item.dataset_sha256)}`}>Usar este historial</Link>
           : <p className="field-help">Las reglas de juego usadas ya no están guardadas; registralas de nuevo para continuar.</p>}
       </li>)}</ul>}
       {datasets && !libraryError && datasets.total > DATASET_PAGE_SIZE && <nav aria-label="Páginas de historiales" className="flex items-center gap-3">

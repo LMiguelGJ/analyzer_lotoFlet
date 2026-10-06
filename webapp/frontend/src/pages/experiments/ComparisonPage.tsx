@@ -96,7 +96,7 @@ export function ComparisonPage() {
   const money = profileContext ? (amount: number) => profileMoney(profileContext, amount) : formatDOP;
   const missingMetric = () => "Sin dato";
   const columns: DataTableColumn<AnyRunSummary>[] = [
-    { key: "strategy", header: "Estrategia", render: (run) => <Link className="btn btn-tertiary" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`} aria-label={`Detalle de ${names(run.ordinal)}`}>{names(run.ordinal)}</Link> },
+    { key: "strategy", header: "Estrategia", render: (run) => <Link className="btn btn-tertiary" to={`/simulaciones/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`} aria-label={`Detalle de ${names(run.ordinal)}`}>{names(run.ordinal)}</Link> },
     { key: "status", header: "Estado", render: (run) => <StatusLabel kind="execution" value={run.status} /> },
     { key: "balance", header: "Saldo final", render: (run) => run.result ? money(run.result.final_balance) : missingMetric() },
     { key: "delta", header: FIELD_LABEL_DELTA, render: (run) => run.result ? money(run.result.delta) : missingMetric() },
@@ -121,7 +121,7 @@ export function ComparisonPage() {
   const delta = leader?.result?.delta;
   const deltaVariant: FigureVariant = delta == null || delta === 0 ? "neutral" : delta > 0 ? "positive" : "negative";
   return <div className="min-w-0 space-y-7">
-    <Link to="/experimentos" className="btn btn-tertiary self-start">Volver a simulaciones</Link>
+    <Link to="/simulaciones" className="btn btn-tertiary self-start">Volver a simulaciones</Link>
     {!data && !error && <Loading rows={4} label="Cargando la comparación…" className="my-4" />}
     {error && <div role="alert" className="border-y border-border py-4"><p>{error}</p><p>La información guardada se conserva. Podés volver a cargar la comparación.</p><button type="button" className="btn btn-secondary mt-2" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></div>}
     {data && <>
@@ -136,7 +136,7 @@ export function ComparisonPage() {
         </div>
         <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
         <p className="text-sm">El saldo no equivale a ganancia o pérdida; el cambio se calcula frente al capital inicial.</p>
-        {leader && <p className="mt-3"><Link className="btn btn-primary" to={`/experimentos/${encodeURIComponent(id)}?run=${leader.ordinal}&from=comparison`}>Ver detalle de {names(leader.ordinal)}</Link></p>}
+        {leader && <p className="mt-3"><Link className="btn btn-primary" to={`/simulaciones/${encodeURIComponent(id)}?run=${leader.ordinal}&from=comparison`}>Ver detalle de {names(leader.ordinal)}</Link></p>}
       </section>
       <dl className="data-list border-b border-border py-3">
         <dt>Capital inicial</dt><dd className="data-list-numeric">{money(capital)}</dd>
@@ -150,7 +150,7 @@ export function ComparisonPage() {
       <details><summary className="disclosure-summary">Ver resultados de cada ejecución</summary><div className="space-y-3 pt-3">
         {mobileLayout ? <ul className="comparison-card-list" aria-label="Resultados de la comparación">
           {runs.map((run) => <li key={run.ordinal} className="comparison-card">
-            <div className="experiment-card-heading"><Link className="experiment-card-title" to={`/experimentos/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`}>{names(run.ordinal)}</Link><StatusLabel kind="execution" value={run.status} /></div>
+            <div className="experiment-card-heading"><Link className="experiment-card-title" to={`/simulaciones/${encodeURIComponent(id)}?run=${run.ordinal}&from=comparison`}>{names(run.ordinal)}</Link><StatusLabel kind="execution" value={run.status} /></div>
             <dl className="comparison-card-metrics">
               <div><dt>Saldo final</dt><dd>{run.result ? money(run.result.final_balance) : missingMetric()}</dd></div>
               <div><dt>Cambio respecto del inicio</dt><dd>{run.result ? money(run.result.delta) : missingMetric()}</dd></div>

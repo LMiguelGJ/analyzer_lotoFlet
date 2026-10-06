@@ -75,7 +75,7 @@ describe("canonical history import and saved library", () => {
     expect(screen.getByText(/Historial · 1 sorteos/).closest("li")).toHaveClass("dataset-card");
     expect(within(library()).getByRole("status")).toHaveTextContent("Reglas disponibles para usar este historial.");
     expect(within(library()).getByText(/Fuente: operador-local/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Usar este historial/i })).toHaveAttribute("href", `/experimentos/nuevo/sesion?dataset_sha256=${dataset.dataset_sha256}`);
+    expect(screen.getByRole("link", { name: /Usar este historial/i })).toHaveAttribute("href", `/simulaciones/nueva/sesion?dataset_sha256=${dataset.dataset_sha256}`);
   });
 
   it("pages through the saved dataset library without changing the selected profile", async () => {
@@ -88,7 +88,7 @@ describe("canonical history import and saved library", () => {
     await user.click(screen.getByRole("button", { name: "Siguiente" }));
     expect(await screen.findByText(/Historial · 1 sorteos/)).toBeInTheDocument();
     expect(apiClient.getDatasets).toHaveBeenLastCalledWith(20, 20);
-    expect(screen.getByRole("link", { name: /Usar este historial/ })).toHaveAttribute("href", `/experimentos/nuevo/sesion?dataset_sha256=${dataset.dataset_sha256}`);
+    expect(screen.getByRole("link", { name: /Usar este historial/ })).toHaveAttribute("href", `/simulaciones/nueva/sesion?dataset_sha256=${dataset.dataset_sha256}`);
   });
 
   it("keeps file metadata when the profile changes while FileReader is pending", async () => {

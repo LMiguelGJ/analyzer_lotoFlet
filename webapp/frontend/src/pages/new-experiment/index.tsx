@@ -128,10 +128,12 @@ export function NewExperimentPage() {
   const submitted = useRef(false);
   const errorRef = useRef<HTMLDivElement>(null);
   const [pendingFocus, setPendingFocus] = useState<string | null>(null);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
-    dirty && !submitted.current && (currentLocation.pathname !== nextLocation.pathname ||
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    const creatorPath = (pathname: string) => pathname === "/experimentos/nuevo" ? "/simulaciones/nueva" : pathname;
+    return dirty && !submitted.current && (creatorPath(currentLocation.pathname) !== creatorPath(nextLocation.pathname) ||
       (new URLSearchParams(currentLocation.search).get("base") || null) !== (new URLSearchParams(nextLocation.search).get("base") || null) ||
-      (new URLSearchParams(currentLocation.search).get("configuration") || null) !== (new URLSearchParams(nextLocation.search).get("configuration") || null)));
+      (new URLSearchParams(currentLocation.search).get("configuration") || null) !== (new URLSearchParams(nextLocation.search).get("configuration") || null));
+  });
 
   // A query-only navigation keeps this component mounted. Clear the previous
   // clean source before loading another; dirty source changes are blocked above.
@@ -437,7 +439,7 @@ export function NewExperimentPage() {
     try {
       const created = await apiClient.createExperiment({ request: buildRequest(conditions, strategies, catalog) });
       submitted.current = true; setDirty(false);
-      navigate(`/experimentos/${encodeURIComponent(created.id)}`, { replace: true });
+      navigate(`/simulaciones/${encodeURIComponent(created.id)}`, { replace: true });
     } catch (error) {
       if (error instanceof ApiError && error.status === 422 && error.fieldErrors?.length) {
         const mapped = serverErrors(error.fieldErrors); setErrors(mapped);
@@ -454,7 +456,7 @@ export function NewExperimentPage() {
         setPendingFocus(target);
       } else if (error instanceof ApiError && error.status === 507) setNotice("No hay espacio para crear el experimento. Liberá espacio en Ajustes; tus datos siguen aquí.");
       else if (error instanceof ApiError && error.status === 409) setNotice("La cola no está disponible. Reintentá más tarde; tus datos siguen aquí.");
-      else if (error instanceof NetworkError) setNotice("Sin respuesta del servidor. Puede que el experimento se haya creado: revisá Experimentos antes de reintentar.");
+      else if (error instanceof NetworkError) setNotice("Sin respuesta del servidor. Puede que el experimento se haya creado: revisá Simulaciones antes de reintentar.");
       else if (error instanceof ApiError && error.status >= 500) {
         setNotice("El servidor no confirmó la creación. Revisá Simulaciones antes de volver a intentarlo.");
         setErrors({ form: { message: "No se pudo confirmar la creación.", detail: error.detail } });
@@ -496,7 +498,7 @@ export function NewExperimentPage() {
     target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }
 
-  if (baseId && configurationId) return <div><Link to="/experimentos" className="link">Volver a simulaciones</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
+  if (baseId && configurationId) return <div><Link to="/simulaciones" className="link">Volver a simulaciones</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
 
   if (configurationId && (configurationState !== "ready" || catalogError)) return <div>
     <Link to="/configuraciones" className="link">Volver a estrategias guardadas</Link>
@@ -504,12 +506,12 @@ export function NewExperimentPage() {
   </div>;
 
   if (baseId && (baseState !== "ready" || catalogError)) return <div>
-    <Link to="/experimentos" className="link">Volver a simulaciones</Link>
+    <Link to="/simulaciones" className="link">Volver a simulaciones</Link>
     {catalogError ? <p role="alert" className="mt-4">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p> : baseState === "loading" ? <p role="status">Cargando experimento base…</p> : <p role="alert" className="mt-4 text-red-300">{baseState === "missing" ? "El experimento base ya no existe." : baseState === "network" ? "No se pudo contactar al servidor." : baseState === "invalid" ? "El experimento base no es compatible con este asistente." : "No se pudo cargar el experimento base."} <button type="button" className="btn btn-tertiary" onClick={() => setBaseRetry((value) => value + 1)}>Reintentar</button></p>}
   </div>;
 
   return <>
-    <Link to="/experimentos" className="mb-4 inline-block link">Volver a simulaciones</Link>
+    <Link to="/simulaciones" className="mb-4 inline-block link">Volver a simulaciones</Link>
     <form className="max-w-4xl" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         <section className="m3-wizard" aria-label="Asistente para crear una simulación">
           <div className="m3-wizard-progress" role="progressbar" aria-label={`Paso ${wizardStep + 1} de ${wizardSteps.length}`} aria-valuenow={wizardStep + 1} aria-valuemin={1} aria-valuemax={wizardSteps.length}>
@@ -561,7 +563,7 @@ export function NewExperimentPage() {
             <dt>Premios por posición</dt><dd>{catalog.game.prizes.map((prize, index) => `${index + 1}: ${prize}`).join(" · ")}</dd>
             <dt>Apuesta mínima por número</dt><dd>{formatDOP(catalog.game.minimum_stake)}</dd>
           </dl>}
-          <Link to="/datos#perfiles" className="btn btn-tertiary">Editar reglas</Link>
+          <Link to="/ajustes?paso=reglas" className="btn btn-tertiary">Editar reglas</Link>
         </fieldset>
         </section>}
 
@@ -631,10 +633,10 @@ export function NewExperimentPage() {
           <details className="mt-5 border-t border-border pt-4">
             <summary className="disclosure-summary">¿Necesitás algo más?</summary>
             <p className="mt-3 text-sm">Si trabajás con perfiles y datos importados, podés usar el flujo especializado.</p>
-            <Link to="/experimentos/nuevo/perfil" className="btn btn-tertiary mt-2">Crear simulación con perfil</Link>
+            <Link to="/simulaciones/nueva/perfil" className="btn btn-tertiary mt-2">Crear simulación con perfil</Link>
           </details>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
-            <Button variant="ghost" onClick={() => navigate("/experimentos")}>Salir</Button>
+            <Button variant="ghost" onClick={() => navigate("/simulaciones")}>Salir</Button>
             <Button variant="primary" type="submit" disabled={!catalog || loading || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable) || posting}>{posting ? "Creando…" : "Crear simulación"}</Button>
           </div>
         </section>}

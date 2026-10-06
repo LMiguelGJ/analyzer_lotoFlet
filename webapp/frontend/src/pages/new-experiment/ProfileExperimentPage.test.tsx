@@ -13,10 +13,10 @@ vi.mock("../../api/client", async (importOriginal) => {
     getDataset: vi.fn(), getDatasetDraws: vi.fn(), createProfileExperiment: vi.fn() } };
 });
 const id = "c".repeat(32);
-function setup(initialEntry = "/experimentos/nuevo/perfil") {
+function setup(initialEntry = "/simulaciones/nueva/perfil") {
   const router = createMemoryRouter([
-    { path: "/experimentos/nuevo/perfil", element: <ProfileExperimentPage /> },
-    { path: "/experimentos/:id", element: <p>Detalle creado</p> },
+    { path: "/simulaciones/nueva/perfil", element: <ProfileExperimentPage /> },
+    { path: "/simulaciones/:id", element: <p>Detalle creado</p> },
   ], { initialEntries: [initialEntry] });
   const view = render(<RouterProvider router={router} />);
   return { ...view, router, user: userEvent.setup() };
@@ -81,7 +81,7 @@ describe("profile session creator", () => {
 
   it("# F-CREATE-037 keeps a library dataset URL as a read-only identity hint without auto-selecting another profile or dataset", async () => {
     const selectedHash = "f".repeat(64);
-    setup(`/experimentos/nuevo/perfil?dataset_sha256=${selectedHash}`);
+    setup(`/simulaciones/nueva/perfil?dataset_sha256=${selectedHash}`);
     const status = await screen.findByRole("status");
     expect(status).toHaveTextContent("Historial elegido desde la biblioteca.");
     expect(status).toHaveTextContent(selectedHash);
@@ -195,7 +195,8 @@ describe("profile session creator", () => {
     const { user, router } = setup();
     await fill(user);
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe(`/experimentos/${id}`));
+    expect(await screen.findByText("Detalle creado")).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/simulaciones/${id}`));
     expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1);
     expect(vi.mocked(apiClient.createProfileExperiment).mock.calls[0][0]).toMatchObject({
       kind: "profile", dataset_sha256: datasetItem.dataset_sha256,
@@ -250,7 +251,7 @@ describe("profile session creator", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/Puede estar en la cola/);
     expect(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" })).toBeDisabled();
     expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("link", { name: "Revisá Simulaciones" })).toHaveAttribute("href", "/experimentos");
+    expect(screen.getByRole("link", { name: "Revisá Simulaciones" })).toHaveAttribute("href", "/simulaciones");
   });
   it("# F-CREATE-043 shows no false compatibility and keeps keyboard-labeled controls accessible", async () => {
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20,

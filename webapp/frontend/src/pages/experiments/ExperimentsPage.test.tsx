@@ -60,7 +60,7 @@ function emptyPage(offset = 0, limit = 20): Page<ExperimentSummary> {
   return { total: 0, offset, limit, items: [] };
 }
 
-function setup(initialEntry = "/experimentos") {
+function setup(initialEntry = "/simulaciones") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [initialEntry] });
   const view = render(<RouterProvider router={router} />);
   return { user: userEvent.setup(), router, ...view };
@@ -94,7 +94,7 @@ describe("LW10 experiments list · states", () => {
     expect(await screen.findByText(/Las simulaciones muestran cómo se comportan tus estrategias con datos históricos/)).toBeInTheDocument();
     // The shared FAB is the single creation entry, including the first-run state.
     expect(screen.getAllByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/simulaciones/nueva");
     expect(screen.queryByRole("group", { name: "Filtros de simulaciones" })).not.toBeInTheDocument();
   });
 
@@ -145,7 +145,7 @@ describe("LW10 experiments list · states", () => {
 
   it("clears the filters from the no-matches state and reloads the full ledger", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(emptyPage()).mockResolvedValueOnce(fixture);
-    const { user, router } = setup("/experimentos?name=nada&status=failed");
+    const { user, router } = setup("/simulaciones?name=nada&status=failed");
     await screen.findByText("Sin coincidencias");
     const empty = screen.getByText("Sin coincidencias").closest("section")!;
     await user.click(within(empty).getByRole("button", { name: "Limpiar filtros" }));
@@ -174,7 +174,7 @@ describe("LW10 experiments list · data and navigation", () => {
     const { user } = setup();
     const row = (await screen.findByText("Cycling")).closest("tr")!;
     expect(within(row).queryByRole("link", { name: "Cycling" })).not.toBeInTheDocument();
-    expect(within(row).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/experimentos/cycling");
+    expect(within(row).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/simulaciones/cycling");
     await user.click(within(row).getByRole("button", { name: "Acciones de Perfil de prueba" }));
     expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Perfil de prueba" })).not.toBeInTheDocument();
     expect(screen.getByText(/Perfil test · 1 posiciones/)).toBeInTheDocument();
@@ -194,7 +194,7 @@ describe("LW10 experiments list · data and navigation", () => {
     const { user } = setup();
     const row = (await screen.findByText("Recovery")).closest("tr");
     expect(row).toHaveTextContent(/Perfil test · 1 posiciones.*Escalera de recuperación/);
-    expect(within(row!).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/experimentos/recovery");
+    expect(within(row!).getByRole("link", { name: "Abrir resultado de Perfil de prueba" })).toHaveAttribute("href", "/simulaciones/recovery");
     await user.click(within(row!).getByRole("button", { name: "Acciones de Perfil de prueba" }));
     expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Perfil de prueba" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Corridas" })).toBeInTheDocument();
@@ -210,7 +210,7 @@ describe("LW10 experiments list · data and navigation", () => {
     const cards = await screen.findByRole("list", { name: "Resultados de simulaciones" });
     const card = within(cards).getByText("Fríos K1").closest("li")!;
     expect(within(card).queryByRole("link", { name: "Fríos K1" })).not.toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/experimentos/exp-completed-1");
+    expect(within(card).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/simulaciones/exp-completed-1");
     await userEvent.setup().click(within(card).getByRole("button", { name: "Acciones de Fríos K1" }));
     expect(within(card).getByRole("button", { name: "Acciones de Fríos K1" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Fríos K1" })).not.toBeInTheDocument();
@@ -255,7 +255,7 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(name).toHaveClass("table-name-text");
     expect(name.closest("td")).toHaveClass("table-name");
     const row = name.closest("tr")!;
-    expect(within(row).getByRole("link", { name: `Abrir resultado de ${longName}` })).toHaveAttribute("href", `/experimentos/${fixture.items[0].id}`);
+    expect(within(row).getByRole("link", { name: `Abrir resultado de ${longName}` })).toHaveAttribute("href", `/simulaciones/${fixture.items[0].id}`);
     await userEvent.setup().click(within(row).getByRole("button", { name: `Acciones de ${longName}` }));
     expect(screen.queryByRole("menuitem", { name: `Abrir resultado de ${longName}` })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Simulaciones" })).toHaveClass("overflow-x-auto");
@@ -319,18 +319,18 @@ describe("LW10 experiments list · data and navigation", () => {
     const { user } = setup();
     const row = (await screen.findByText("Fríos K1")).closest("tr")!;
     expect(within(row).getAllByRole("button")).toHaveLength(1);
-    expect(within(row).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/experimentos/exp-completed-1");
+    expect(within(row).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toHaveAttribute("href", "/simulaciones/exp-completed-1");
     const trigger = within(row).getByRole("button", { name: "Acciones de Fríos K1" });
     expect(trigger).toHaveClass("ledger-button-ghost");
     await user.click(trigger);
     expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Fríos K1" })).not.toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveAttribute("href", "/experimentos/nuevo?base=exp-completed-1");
+    expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveAttribute("href", "/simulaciones/nueva?base=exp-completed-1");
     expect(screen.getByRole("menuitem", { name: "Eliminar" })).toHaveClass("ledger-button-ghost");
   });
 
   it("keeps compact filters (search, status, clear) visible and the sort controls inside the Filtros disclosure", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValue(fixture);
-    const { user, router } = setup("/experimentos?name=Fr");
+    const { user, router } = setup("/simulaciones?name=Fr");
     await screen.findByText("Fríos K1");
     const group = screen.getByRole("group", { name: "Filtros de simulaciones" });
     const disclosure = group.querySelector("details")!;
@@ -390,7 +390,7 @@ describe("LW10 experiments list · data and navigation", () => {
 
   it("uses URL-backed filters and sort against the server, retaining controls on no matches and navigation", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValue(fixture);
-    const { user, router } = setup("/experimentos?name=Fr%C3%ADos&status=running&sort=name&order=asc&page=2");
+    const { user, router } = setup("/simulaciones?name=Fr%C3%ADos&status=running&sort=name&order=asc&page=2");
     await screen.findByText("Fríos K1");
     expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 20, limit: 20, name_contains: "Fríos", status: "running", sort: "name", order: "asc" });
     expect(screen.getByRole("columnheader", { name: /Nombre/ })).toHaveAttribute("aria-sort", "ascending");
@@ -402,11 +402,11 @@ describe("LW10 experiments list · data and navigation", () => {
   it("sanitizes malformed query values, shows missing timestamp as an em dash and active queue ID as a real link", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     vi.mocked(apiClient.getQueue).mockResolvedValueOnce({ active_id: "exp-running-2", pending: { total: 0, offset: 0, limit: 20, count: 0, items: [] }, held: { total: 0, offset: 0, limit: 20, count: 0, items: [] }, last_failure: null });
-    setup("/experimentos?sort=count&order=evil&page=-1&status=bogus&name=x");
+    setup("/simulaciones?sort=count&order=evil&page=-1&status=bogus&name=x");
     await screen.findByText("Fríos K1");
     expect(apiClient.listExperiments).toHaveBeenCalledWith({ offset: 0, limit: 20, name_contains: "x", sort: "created_at", order: "desc" });
     const activeRow = screen.getByRole("row", { name: /Comparación mezcla/ });
-    expect(within(activeRow).getByRole("link", { name: "Abrir resultado de Comparación mezcla" })).toHaveAttribute("href", "/experimentos/exp-running-2");
+    expect(within(activeRow).getByRole("link", { name: "Abrir resultado de Comparación mezcla" })).toHaveAttribute("href", "/simulaciones/exp-running-2");
     await userEvent.setup().click(within(activeRow).getByRole("button", { name: "Acciones de Comparación mezcla" }));
     expect(screen.queryByRole("menuitem", { name: "Abrir resultado de Comparación mezcla" })).not.toBeInTheDocument();
     expect(apiClient.getQueue).toHaveBeenCalledTimes(1);
@@ -417,7 +417,7 @@ describe("LW10 experiments list · data and navigation", () => {
     let resolveOld!: (page: Page<ExperimentSummary>) => void;
     vi.mocked(apiClient.listExperiments).mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve; })).mockResolvedValueOnce(fixture);
     const { router } = setup();
-    await router.navigate("/experimentos?sort=name");
+    await router.navigate("/simulaciones?sort=name");
     await screen.findByText("Fríos K1");
     resolveOld(emptyPage());
     await waitFor(() => expect(screen.getByText("Fríos K1")).toBeInTheDocument());
@@ -431,7 +431,7 @@ describe("LW10 experiments list · data and navigation", () => {
     trigger.focus();
     await user.keyboard("{Enter}");
     expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveFocus();
-    expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveAttribute("href", "/experimentos/nuevo?base=exp-completed-1");
+    expect(screen.getByRole("menuitem", { name: "Usar como base" })).toHaveAttribute("href", "/simulaciones/nueva?base=exp-completed-1");
     await user.keyboard("{Escape}");
     expect(trigger).toHaveFocus();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -441,7 +441,7 @@ describe("LW10 experiments list · data and navigation", () => {
     const later = { ...fixture, total: 21, offset: 20, items: [fixture.items[0]] };
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(later).mockResolvedValueOnce({ ...later, total: 20, items: [] }).mockResolvedValueOnce({ ...fixture, total: 20 });
     vi.mocked(apiClient.deleteExperiment).mockResolvedValueOnce(undefined);
-    const { user, router } = setup("/experimentos?page=2");
+    const { user, router } = setup("/simulaciones?page=2");
     await screen.findByText("Fríos K1");
     await user.click(screen.getByRole("button", { name: "Acciones de Fríos K1" }));
     await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
@@ -469,7 +469,7 @@ describe("profile batch v5 experiment list compatibility", () => {
     const name = profileBatchV5.display.name;
     const trigger = await screen.findByRole("button", { name: `Acciones de ${name}` });
     expect(screen.getAllByText(name)).toHaveLength(2);
-    expect(within(trigger.closest("tr")!).getByRole("link", { name: `Abrir resultado de ${name}` })).toHaveAttribute("href", "/experimentos/batch-v5");
+    expect(within(trigger.closest("tr")!).getByRole("link", { name: `Abrir resultado de ${name}` })).toHaveAttribute("href", "/simulaciones/batch-v5");
     await user.click(trigger);
     expect(screen.getByRole("menu", { name: `Acciones de ${name}` })).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: `Abrir resultado de ${name}` })).not.toBeInTheDocument();

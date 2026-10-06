@@ -17,7 +17,7 @@ const catalog = {
   selectors: ["system", "blend", "random", "parity"], coverages: [1, 5, 10, 20, 25, 30, 40, 50], parity_coverage: 50,
   starting_draws: ["2025-09-02 05:10"], starting_draws_total: 2, sources: {},
 };
-function setup(path = "/experimentos/nuevo") {
+function setup(path = "/simulaciones/nueva") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
   const view = render(<RouterProvider router={router} />);
   return { user: userEvent.setup(), router, ...view };
@@ -168,7 +168,7 @@ describe("S2 simple creation form", () => {
     expect(rules).toHaveTextContent("1: 80 · 2: 8 · 3: 4 · 4: 2 · 5: 1");
     expect(rules).toHaveTextContent("RD$1");
     expect(within(rules).getByText("Apuesta mínima por número").nextElementSibling).toHaveTextContent("RD$1");
-    expect(screen.getByRole("link", { name: "Editar reglas" })).toHaveAttribute("href", "/datos#perfiles");
+    expect(screen.getByRole("link", { name: "Editar reglas" })).toHaveAttribute("href", "/ajustes?paso=reglas");
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Sorteo inicial" })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Selección" })).not.toBeInTheDocument();
@@ -233,9 +233,9 @@ describe("profile creator discovery", () => {
     expect(extras).not.toHaveAttribute("open");
     await user.click(screen.getByText("¿Necesitás algo más?"));
     const link = within(extras).getByRole("link", { name: "Crear simulación con perfil" });
-    expect(link).toHaveAttribute("href", "/experimentos/nuevo/perfil");
+    expect(link).toHaveAttribute("href", "/simulaciones/nueva/perfil");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
-    expect(router.state.location.pathname).toBe("/experimentos/nuevo");
+    expect(router.state.location.pathname).toBe("/simulaciones/nueva");
   });
 });
 
@@ -243,7 +243,7 @@ describe("LW13 library templates", () => {
   const saved = { id: "cfg-1", name: "Biblioteca", strategy: { name: "Fríos", selector: "system" as const, system: "cold", coverage: 1, staking: "flat" as const } };
   it("# F-CREATE-010 prefills only one strategy from a configuration; conditions remain fresh and unsubmitted", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
-    const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
+    const { user, router } = setup("/simulaciones/nueva?configuration=cfg-1");
     expect(await screen.findByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("");
     expect(screen.getByLabelText("Límites financieros siempre visibles")).toHaveTextContent("RD$2.000");
     await openAdvanced(user);
@@ -253,7 +253,7 @@ describe("LW13 library templates", () => {
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
     await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones"));
   });
   it("# F-CREATE-011 appends one selected template without changing conditions or existing strategies, and rejects a normalized duplicate", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
@@ -273,29 +273,41 @@ describe("LW13 library templates", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/nombre.*único/i);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   }, 15000); // Sequential library, routing, and wizard integration exceeds 5s under full-suite contention.
+  it("allows a dirty creator to navigate through the equivalent legacy alias", async () => {
+    const { user, router } = setup("/simulaciones/nueva");
+    const name = await screen.findByRole("textbox", { name: "Nombre de la simulación" });
+    await user.type(name, "Borrador");
+
+    await act(async () => { await router.navigate("/experimentos/nuevo"); });
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones/nueva"));
+    expect(name).toHaveValue("Borrador");
+  });
+
   it("# F-CREATE-012 F-CREATE-013 guards semantic configuration changes and removal, stays or leaves; rejects base/configuration conflict", async () => {
     vi.mocked(apiClient.getConfiguration).mockResolvedValue(saved);
-    const { user, router } = setup("/experimentos/nuevo?configuration=cfg-1");
+    const { user, router } = setup("/simulaciones/nueva?configuration=cfg-1");
     await screen.findByRole("textbox", { name: "Nombre de la simulación" });
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
-    await act(async () => { await router.navigate("/experimentos/nuevo?configuration=other"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva?configuration=other"); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     expect(apiClient.getConfiguration).toHaveBeenCalledTimes(1);
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Seguir editando" }));
-    await act(async () => { await router.navigate("/experimentos/nuevo"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva"); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue(""));
-    await act(async () => { await router.navigate("/experimentos/nuevo?base=exp-1&configuration=cfg-1"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva?base=exp-1&configuration=cfg-1"); });
     expect(await screen.findByRole("alert")).toHaveTextContent(/dos orígenes/);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
   it("# F-CREATE-014 ignores a stale configuration response after a clean query change", async () => {
     let resolveOld!: (value: { id: string; name: string; strategy: { name: string; selector: "system"; system: string; coverage: number; staking: "flat" } }) => void;
     vi.mocked(apiClient.getConfiguration).mockImplementation((id) => id === "other" ? Promise.resolve({ ...saved, id, strategy: { ...saved.strategy, name: "Nueva" } }) : new Promise((resolve) => { resolveOld = resolve; }));
-    const { router, user } = setup("/experimentos/nuevo?configuration=cfg-1");
+    const { router, user } = setup("/simulaciones/nueva?configuration=cfg-1");
     await waitFor(() => expect(apiClient.getConfiguration).toHaveBeenCalledWith("cfg-1"));
-    await act(async () => { await router.navigate("/experimentos/nuevo?configuration=other"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva?configuration=other"); });
     await screen.findByRole("textbox", { name: "Nombre de la simulación" });
     await act(async () => { resolveOld(saved); });
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Nueva prueba");
@@ -352,15 +364,15 @@ describe("LW13 library templates", () => {
   });
   it("# F-CREATE-016 reports missing, network and catalog-invalid templates without posting", async () => {
     vi.mocked(apiClient.getConfiguration).mockRejectedValueOnce(new ApiError(404, "missing"));
-    const first = setup("/experimentos/nuevo?configuration=gone");
+    const first = setup("/simulaciones/nueva?configuration=gone");
     expect(await screen.findByRole("alert")).toHaveTextContent(/ya no existe/);
     first.unmount();
     vi.mocked(apiClient.getConfiguration).mockRejectedValueOnce(new NetworkError());
-    const second = setup("/experimentos/nuevo?configuration=offline");
+    const second = setup("/simulaciones/nueva?configuration=offline");
     expect(await screen.findByRole("alert")).toHaveTextContent(/contactar al servidor/);
     second.unmount();
     vi.mocked(apiClient.getConfiguration).mockResolvedValue({ ...saved, strategy: { ...saved.strategy, system: "unknown" } });
-    setup("/experimentos/nuevo?configuration=invalid");
+    setup("/simulaciones/nueva?configuration=invalid");
     expect(await screen.findByRole("alert")).toHaveTextContent(/Esta estrategia guardada ya no es válida/);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
@@ -379,7 +391,7 @@ describe("LW10 use as base", () => {
       items: date ? offset === 0 ? Array.from({ length: 100 }, (_, i) => `${date} ${String(Math.floor(i / 60)).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}`)
         : ["2025-09-03 05:10"] : ["2025-09-02 05:10"],
     }));
-    const { user, router } = setup("/experimentos/nuevo?base=exp-1");
+    const { user, router } = setup("/simulaciones/nueva?base=exp-1");
     expect(await screen.findByText(/Cargando experimento base/)).toBeInTheDocument();
     await waitFor(() => expect(apiClient.getExperiment).toHaveBeenCalledWith("exp-1"));
     await act(async () => { resolveBase(saved); });
@@ -403,19 +415,19 @@ describe("LW10 use as base", () => {
     expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent(/Mix: Transición 60% \+ Fríos 40%/);
     expect(screen.getByRole("region", { name: "Resumen de la orden" })).toHaveTextContent(/Par: Selección por paridad/);
     await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
-    await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones"));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("# F-CREATE-017 F-CREATE-034 keeps the prefilled draft guarded only after a change through the in-app back link", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(detail as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
-    const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
+    const { user, router } = setup(`/simulaciones/nueva?base=${detail.id}`);
     await screen.findByDisplayValue("Trial");
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " edited");
     await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/experimentos/nuevo");
+    expect(router.state.location.pathname).toBe("/simulaciones/nueva");
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
 
@@ -423,17 +435,17 @@ describe("LW10 use as base", () => {
     vi.mocked(apiClient.getExperiment).mockImplementation(async (id) => id === "other"
       ? { ...detail, request: { ...detail.request, name: "Next base" } } as never : detail as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
-    const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
+    const { user, router } = setup(`/simulaciones/nueva?base=${detail.id}`);
     await screen.findByDisplayValue("Trial");
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " edited");
-    await act(async () => { await router.navigate("/experimentos/nuevo?base=other"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva?base=other"); });
     const dialog = await screen.findByRole("alertdialog");
     expect(router.state.location.search).toBe(`?base=${detail.id}`);
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Trial edited");
     expect(apiClient.getExperiment).toHaveBeenCalledTimes(1);
     await user.click(within(dialog).getByRole("button", { name: "Seguir editando" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Trial edited");
-    await act(async () => { await router.navigate("/experimentos/nuevo?base=other"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva?base=other"); });
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Next base"));
     expect(router.state.location.search).toBe("?base=other");
@@ -444,10 +456,10 @@ describe("LW10 use as base", () => {
   it("# F-CREATE-012 guards base removal for an edited prefill, then clears the draft on leave", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue(detail as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
-    const { user, router } = setup(`/experimentos/nuevo?base=${detail.id}`);
+    const { user, router } = setup(`/simulaciones/nueva?base=${detail.id}`);
     await screen.findByDisplayValue("Trial");
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), " edited");
-    await act(async () => { await router.navigate("/experimentos/nuevo"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva"); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     expect(router.state.location.search).toBe(`?base=${detail.id}`);
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Trial edited");
@@ -461,12 +473,12 @@ describe("LW10 use as base", () => {
     vi.mocked(apiClient.getExperiment).mockImplementation(async (id) => id === "other"
       ? { ...detail, request: { ...detail.request, name: "Next base" } } as never : detail as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
-    const { router } = setup(`/experimentos/nuevo?base=${detail.id}`);
+    const { router } = setup(`/simulaciones/nueva?base=${detail.id}`);
     await screen.findByDisplayValue("Trial");
-    await act(async () => { await router.navigate("/experimentos/nuevo?base=other"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva?base=other"); });
     expect(await screen.findByDisplayValue("Next base")).toBeInTheDocument();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    await act(async () => { await router.navigate("/experimentos/nuevo"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva"); });
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue(""));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
@@ -477,10 +489,10 @@ describe("LW10 use as base", () => {
     const { user, router } = setup();
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
-    await act(async () => { await router.navigate("/experimentos/nuevo?view=compact"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva?view=compact"); });
     expect(router.state.location.search).toBe("?view=compact");
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    await act(async () => { await router.navigate(`/experimentos/nuevo?base=${detail.id}`); });
+    await act(async () => { await router.navigate(`/simulaciones/nueva?base=${detail.id}`); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Borrador");
     expect(apiClient.getExperiment).not.toHaveBeenCalled();
@@ -494,9 +506,9 @@ describe("LW10 use as base", () => {
       ? Promise.resolve({ ...detail, request: { ...detail.request, name: "Next base" } } as never)
       : new Promise<typeof detail>((resolve) => { resolveOld = resolve; }) as never);
     vi.mocked(apiClient.getStartingDraws).mockResolvedValueOnce({ total: 1, offset: 0, limit: 100, items: [detail.request.conditions.start_draw] });
-    const { router } = setup(`/experimentos/nuevo?base=${detail.id}`);
+    const { router } = setup(`/simulaciones/nueva?base=${detail.id}`);
     await waitFor(() => expect(apiClient.getExperiment).toHaveBeenCalledWith(detail.id));
-    await act(async () => { await router.navigate("/experimentos/nuevo?base=other"); });
+    await act(async () => { await router.navigate("/simulaciones/nueva?base=other"); });
     expect(await screen.findByDisplayValue("Next base")).toBeInTheDocument();
     await act(async () => { resolveOld(detail); });
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Next base");
@@ -505,11 +517,11 @@ describe("LW10 use as base", () => {
 
   it("# F-CREATE-016 distinguishes a missing base from a network error without posting", async () => {
     vi.mocked(apiClient.getExperiment).mockRejectedValueOnce(new ApiError(404, "not found"));
-    const first = setup("/experimentos/nuevo?base=gone");
+    const first = setup("/simulaciones/nueva?base=gone");
     expect(await screen.findByRole("alert")).toHaveTextContent(/ya no existe/);
     first.unmount();
     vi.mocked(apiClient.getExperiment).mockRejectedValueOnce(new NetworkError());
-    setup("/experimentos/nuevo?base=offline");
+    setup("/simulaciones/nueva?base=offline");
     expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo contactar al servidor/);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
@@ -539,7 +551,7 @@ describe("ODD03b dated starting draws", () => {
     expect(screen.queryByRole("option", { name: "2025-09-02 05:15" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("link", { name: "Volver a simulaciones" }));
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/experimentos/nuevo");
+    expect(router.state.location.pathname).toBe("/simulaciones/nueva");
   });
 
   it("# F-CREATE-019 distinguishes dates without history from dates with only unranked history", async () => {
@@ -721,7 +733,7 @@ describe("LW09 single-form creation", () => {
     // A fresh visit after a disconnection retains no fake draw.
     unmountFirst();
     vi.mocked(apiClient.getCatalog).mockRejectedValueOnce(new NetworkError());
-    const second = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/experimentos/nuevo"] });
+    const second = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/simulaciones/nueva"] });
     const { unmount } = render(<RouterProvider router={second} />);
     expect(await screen.findByText(/No se pudo contactar al servidor/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Reintentar" }));
@@ -881,7 +893,7 @@ describe("LW09 single-form creation", () => {
       strategies: [{ name: "Mi mezcla", selector: "blend", components: [{ system: "transition", weight: 60 }, { system: "cold", weight: 40 }], coverage: 10, staking: "flat" }],
     } });
     resolve({ id: "exp-1", status: "pending" });
-    await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos/exp-1"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones/exp-1"));
   });
 
   it("# F-CREATE-030 parity forces coverage 50 and duplicate strategy names block creation", async () => {
@@ -933,14 +945,14 @@ describe("LW09 single-form creation", () => {
   });
 
   it("# F-CREATE-034 blocks browser back while dirty, then proceeds when confirmed", async () => {
-    const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/ajustes", "/experimentos/nuevo"] });
+    const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/ajustes", "/simulaciones/nueva"] });
     const user = userEvent.setup();
     render(<RouterProvider router={router} />);
     await screen.findByRole("option", { name: /2025-09-02 05:10/ });
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
     await act(async () => { await router.navigate(-1); });
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/experimentos/nuevo");
+    expect(router.state.location.pathname).toBe("/simulaciones/nueva");
     await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/ajustes"));
   });
@@ -1070,7 +1082,7 @@ describe("LW09 single-form creation", () => {
     await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Borrador");
     await user.click(screen.getByRole("link", { name: "Ajustes" }));
     const dialog = screen.getByRole("alertdialog");
-    expect(router.state.location.pathname).toBe("/experimentos/nuevo");
+    expect(router.state.location.pathname).toBe("/simulaciones/nueva");
     await user.click(within(dialog).getByRole("button", { name: "Seguir editando" }));
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Borrador");
     await user.click(screen.getByRole("link", { name: "Ajustes" }));

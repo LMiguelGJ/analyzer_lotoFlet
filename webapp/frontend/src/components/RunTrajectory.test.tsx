@@ -55,7 +55,7 @@ describe("whole-run trajectories", () => {
     vi.mocked(apiClient.getTrajectory).mockResolvedValue({ ...long, total: 30, reduction_method: "none", points });
     render(<MemoryRouter><RunTrajectory {...props} chart={false} /></MemoryRouter>);
     expect(await screen.findByRole("region", { name: "Trayectoria de Perfil" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Apuesta 30/ })).toHaveAttribute("href", "/experimentos/exp?run=0&bet=29&from=comparison");
+    expect(screen.getByRole("link", { name: /Apuesta 30/ })).toHaveAttribute("href", "/simulaciones/exp?run=0&bet=29&from=comparison");
   });
   it("handles empty data and retries failed/malformed responses", async () => {
     vi.mocked(apiClient.getTrajectory).mockRejectedValueOnce(new Error("offline"));

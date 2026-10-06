@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 // Contract coverage: F-RESULT-001–F-RESULT-018 detail verdict, honest closure, backend values, dynamic stakes, absent results, profile currency/positions, status vocabularies and folded technical copy; F-RESULT-027 exact deep-link replay; F-RESULT-028 polling; F-RESULT-029 stale response rejection; F-RESULT-030 differentiated errors; F-RESULT-031 paginated/keyboard replay with immutable final metrics; F-RESULT-032 axe.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { verdictPhrase } from "./DetailPage";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
@@ -72,10 +72,14 @@ const batchV5Snapshot: ProfileBatchExperimentSummary = {
     result_schema_version: 5, strategy: { id: "strategy-old", revision: 2, definition_sha256: "c".repeat(64), name: "Snapshot cold" },
     result: { schema_version: 5, profile_id: "test", profile_revision: 1, outcome: "limit", collisions: ["max_bet_draws"], elapsed_draws: 1, bet_draws: 1, wagered: 250, paid: 0, final_balance: 9750, delta: -250, net: -250, return_per_wagered: 0, roi: -1, max_drawdown: 250, metric_scope: "saved_individual_run", ratio_rounding: "decimal-half-up-6", definition_name: "Snapshot cold", start_draw_index: 5, prior_cutoff: "2024-12-31 05:10", dataset_sha256: "a".repeat(64), source_count: 8, requested_conditions: { max_draws: 3 }, effective_conditions: { max_draws: 3 }, stop_category: "configured_limit", stop_reason: "max_bet_draws", complete: true } }],
 };
-function setup(path = "/experimentos/exp") {
+function setup(path = "/simulaciones/exp") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
   return { router, user: userEvent.setup(), ...render(<RouterProvider router={router} />) };
 }
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 beforeEach(() => {
   vi.mocked(apiClient.getExperiment).mockReset();
   vi.mocked(apiClient.getTrajectory).mockReset().mockImplementation(async (_id, ordinal) => {
@@ -284,7 +288,7 @@ describe("profile batch v5 detail", () => {
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
     expect(screen.getByRole("heading", { name: "Lote guardado · Snapshot cold" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Snapshot cold" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Comparar simulaciones" })).toHaveAttribute("href", "/experimentos/exp/comparacion");
+    expect(screen.getByRole("link", { name: "Comparar simulaciones" })).toHaveAttribute("href", "/simulaciones/exp/comparacion");
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
     expect(within(screen.getByRole("region", { name: "Veredicto" })).getByText(/Motivo de cierre:/)).toHaveTextContent("Límite configurado");
     const technical = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Versión de solicitud"));
@@ -387,7 +391,7 @@ describe("LW11 detail", () => {
   it("jumps directly to an exact source bet beyond page 20 from a comparison link", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed", runs: [{ ...snapshot.runs[0], bets_count: 1001, result: { ...snapshot.runs[0].result!, bets_count: 1001 } }] });
     vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 1001, offset: 600, limit: 20, items: [bet] });
-    setup("/experimentos/exp?run=0&bet=600&from=comparison");
+    setup("/simulaciones/exp?run=0&bet=600&from=comparison");
     expect(await screen.findByText(/Sorteo seleccionado 601:/)).toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 600, 20);
     expect(screen.getByRole("tab", { name: "Apuestas" })).toHaveAttribute("aria-selected", "true");
@@ -506,7 +510,7 @@ describe("LW11 detail", () => {
   it("keeps the stable URL, separates execution from outcome, and never assigns an outcome to a null run", async () => {
     const { router, user } = setup();
     expect(await screen.findByText("Prueba")).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/experimentos/exp");
+    expect(router.state.location.pathname).toBe("/simulaciones/exp");
     expect(document.querySelector("[data-status-kind='outcome'][data-status-value='goal']")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Segunda/ }));
     const runSelector = screen.getByRole("group", { name: "Elegir ejecución" });
@@ -532,7 +536,7 @@ describe("LW11 detail", () => {
     let finish!: (value: ExperimentSummary) => void;
     vi.mocked(apiClient.getExperiment).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; })).mockResolvedValueOnce({ ...snapshot, id: "other", request: { ...snapshot.request, name: "Otra" } });
     const { router } = setup();
-    await act(async () => { await router.navigate("/experimentos/other"); });
+    await act(async () => { await router.navigate("/simulaciones/other"); });
     expect(await screen.findByText("Otra")).toBeInTheDocument();
     await act(async () => { finish(snapshot); });
     await waitFor(() => expect(screen.queryByText("Prueba")).not.toBeInTheDocument());
@@ -560,7 +564,7 @@ describe("LW11 detail", () => {
     expect(screen.getByText("Prueba")).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
     expect(apiClient.getExperiment).toHaveBeenCalledTimes(2);
-    expect(router.state.location.pathname).toBe("/experimentos/exp");
+    expect(router.state.location.pathname).toBe("/simulaciones/exp");
     await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
     expect(apiClient.getExperiment).toHaveBeenCalledTimes(2);
     unmount();

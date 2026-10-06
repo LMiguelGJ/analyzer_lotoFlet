@@ -139,7 +139,7 @@ export function ProfileExperimentPage() {
         setError("No se pudo confirmar la simulación. Revisá Simulaciones antes de crear otra.");
         return;
       }
-      navigate(`/experimentos/${encodeURIComponent(created.id)}`, { replace: true });
+      navigate(`/simulaciones/${encodeURIComponent(created.id)}`, { replace: true });
     } catch (cause) {
       if (submitted && (cause instanceof NetworkError || cause instanceof ApiError && cause.status >= 200 && cause.status < 300)) {
         // No safe idempotency key exists for this POST: never automatically retry.
@@ -165,7 +165,7 @@ export function ProfileExperimentPage() {
   const compatible = datasets?.items.filter((item) => profileChoice && matchingDataset(profileChoice.item, item)) ?? [];
   const disabled = posting || uncertain || !profiles || !datasets || !draws || !!profileError || !!datasetError || !!drawError;
   return <div className="max-w-prose space-y-7">
-    <div><h2 className="text-2xl">Simulación con perfil</h2><div className="mt-2 flex flex-wrap gap-2"><Link to="/experimentos/nuevo/sesion" className="btn btn-tertiary">Lote de simulaciones</Link><Link to="/experimentos/nuevo" className="btn btn-tertiary">Volver al creador clásico</Link></div>
+    <div><h2 className="text-2xl">Simulación con perfil</h2><div className="mt-2 flex flex-wrap gap-2"><Link to="/simulaciones/nueva/sesion" className="btn btn-tertiary">Lote de simulaciones</Link><Link to="/simulaciones/nueva" className="btn btn-tertiary">Volver al creador clásico</Link></div>
       {requestedDatasetHash && <div role="status" className="field-help"><p>Historial elegido desde la biblioteca. Elegí el perfil y los datos que coincidan.</p><details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="break-all"><code>{requestedDatasetHash}</code></p></details></div>}
       {requestedDataset && !requestedDatasetHash && <p role="alert">El enlace del historial no es válido. Elegí los datos manualmente.</p>}</div>
     <form onSubmit={(event) => { void submit(event); }} noValidate className="space-y-8">
@@ -230,7 +230,7 @@ export function ProfileExperimentPage() {
         </div>
       </section>
       {error && <p ref={alertRef} tabIndex={-1} role="alert" className="border-y border-border py-3 text-red-300">{error}</p>}
-      {uncertain && <p role="status">Envío bloqueado para evitar duplicados. <Link className="btn btn-tertiary" to="/experimentos">Revisá Simulaciones</Link>.</p>}
+      {uncertain && <p role="status">Envío bloqueado para evitar duplicados. <Link className="btn btn-tertiary" to="/simulaciones">Revisá Simulaciones</Link>.</p>}
       <button type="submit" className="btn btn-primary" disabled={disabled}>{posting ? "Creando simulación…" : "Crear simulación y agregar a la cola"}</button>
     </form>
   </div>;

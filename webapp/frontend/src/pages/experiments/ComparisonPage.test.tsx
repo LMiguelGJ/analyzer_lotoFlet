@@ -61,7 +61,7 @@ async function openDetailedComparison() {
   await userEvent.setup().click(summary);
   await waitFor(() => expect(summary.closest("details")).toHaveAttribute("open", ""));
 }
-function setup(path = "/experimentos/exp/comparacion") {
+function setup(path = "/simulaciones/exp/comparacion") {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
   return { router, user: userEvent.setup(), ...render(<RouterProvider router={router} />) };
 }
@@ -372,7 +372,7 @@ describe("LW12 comparison", () => {
     expect(await screen.findByText(/No se pudo cargar la trayectoria de Segunda/)).toBeInTheDocument();
     expect(apiClient.getReplay).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: /Cargar más/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Apuesta 1001/ })).toHaveAttribute("href", "/experimentos/exp?run=0&bet=1000&from=comparison");
+    expect(screen.getByRole("link", { name: /Apuesta 1001/ })).toHaveAttribute("href", "/simulaciones/exp?run=0&bet=1000&from=comparison");
     vi.mocked(apiClient.getTrajectory).mockResolvedValue({ ...trajectory, total: 1, points: trajectory.points.slice(0, 1), reduction_method: "none" });
     await user.click(screen.getByRole("button", { name: /Reintentar trayectoria de Segunda/ }));
     expect(await screen.findByText(/Segunda: 1 de 1 apuestas/)).toBeInTheDocument();
@@ -391,7 +391,7 @@ describe("LW12 comparison", () => {
     vi.mocked(apiClient.compareExperiment).mockReturnValueOnce(new Promise((done) => { resolve = done; })).mockResolvedValueOnce({ ...comparison, id: "other" });
     vi.mocked(apiClient.getExperiment).mockResolvedValueOnce(detail).mockResolvedValueOnce({ ...detail, id: "other", request: { ...detail.request, name: "Otra" } });
     const { router } = setup();
-    await act(async () => { await router.navigate("/experimentos/other/comparacion"); });
+    await act(async () => { await router.navigate("/simulaciones/other/comparacion"); });
     expect(await screen.findByText("Otra")).toBeInTheDocument();
     await act(async () => { resolve(comparison); });
     expect(screen.queryByText("Ensayo")).not.toBeInTheDocument();
@@ -411,7 +411,7 @@ describe("LW12 comparison", () => {
     await user.click(screen.getByRole("link", { name: /Volver a comparación/ }));
     expect(await screen.findByText(/Primera: 101 de 101 apuestas/)).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /Mostrar Segunda/ })).not.toBeChecked();
-    await act(async () => { await router.navigate("/experimentos/exp?run=999&from=comparison"); });
+    await act(async () => { await router.navigate("/simulaciones/exp?run=999&from=comparison"); });
     expect(await screen.findByText(/Esa ejecución no existe/i)).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Ejecución 1" })).toBeInTheDocument();
   });
@@ -420,7 +420,7 @@ describe("LW12 comparison", () => {
     vi.mocked(apiClient.getTrajectory).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
     const { router } = setup();
     expect(await screen.findByText(/Cargando trayectoria de Primera/)).toBeInTheDocument();
-    await act(async () => { await router.navigate("/experimentos/exp?run=1&from=comparison"); });
+    await act(async () => { await router.navigate("/simulaciones/exp?run=1&from=comparison"); });
     await act(async () => { resolve({ initial_capital: 100, total: 0, max_points: 500, reduction_method: "none", points: [], minimum: { balance: 100, source_index: null }, maximum: { balance: 100, source_index: null } }); });
     expect(screen.queryByText(/Primera: 0 de 0 apuestas/)).not.toBeInTheDocument();
     expect(apiClient.createExperiment).not.toHaveBeenCalled();

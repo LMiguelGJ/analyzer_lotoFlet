@@ -1,14 +1,20 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Shell } from "./Shell";
 import { QueueProvider } from "./QueueProvider";
 
-function renderShell(path = "/experimentos") {
+const originalInnerWidth = window.innerWidth;
+afterEach(() => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: originalInnerWidth });
+  window.dispatchEvent(new Event("resize"));
+});
+
+function renderShell(path = "/simulaciones", options: { mobileTitle?: string; primaryAction?: { label: string; to: string } | null } = { primaryAction: { label: "Nueva simulación", to: "/simulaciones/nueva" } }) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <QueueProvider><Shell title="Prueba"><p>contenido</p></Shell></QueueProvider>
+      <QueueProvider><Shell title="Prueba" {...options}><p>contenido</p></Shell></QueueProvider>
     </MemoryRouter>,
   );
 }
@@ -18,7 +24,7 @@ describe("Shell navigation", () => {
     renderShell();
     const navigation = screen.getByRole("navigation", { name: "Navegación principal" });
     const destinations = [
-      ["Experimentos", "/experimentos"],
+      ["Simulaciones", "/simulaciones"],
       ["Estrategias", "/configuraciones"],
       ["Datos", "/datos"],
       ["Ajustes", "/ajustes"],
@@ -28,19 +34,19 @@ describe("Shell navigation", () => {
       const link = navigation.querySelector<HTMLAnchorElement>(`a[href="${href}"]`);
       expect(link).not.toBeNull();
       expect(link).toHaveTextContent(name);
-      if (name !== "Experimentos") expect(within(navigation).getByRole("link", { name })).toHaveAttribute("href", href);
+      expect(within(navigation).getByRole("link", { name })).toHaveAttribute("href", href);
     }
-    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/simulaciones/nueva");
   });
 
   it("suppresses the global FAB on settings, guided creation, data, detail, and comparison routes", () => {
-    for (const path of ["/ajustes", "/experimentos/nuevo/perfil", "/datos", "/experimentos/resultado-1", "/experimentos/resultado-1/comparacion"]) {
-      const { unmount } = renderShell(path);
+    for (const path of ["/ajustes", "/simulaciones/nueva/perfil", "/datos", "/simulaciones/resultado-1", "/simulaciones/resultado-1/comparacion"]) {
+      const { unmount } = renderShell(path, { primaryAction: null });
       expect(screen.queryByRole("link", { name: "Acceso rápido: Nueva simulación" }), path).not.toBeInTheDocument();
       unmount();
     }
-    renderShell("/experimentos");
-    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
+    renderShell("/simulaciones");
+    expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/simulaciones/nueva");
   });
 
   it("# F-SHELL-006 marks the current destination and keeps its icon and label inside the item", () => {
@@ -65,7 +71,18 @@ describe("Shell navigation", () => {
     expect(screen.getByRole("dialog", { name: "Cola de cálculo" })).toBeInTheDocument();
   });
 
-  it("# F-SHELL-011 does not break route titles mid-word", () => {
+  it("# F-SHELL-011 uses route-declared mobile titles without inferring from paths", () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    for (const [path, title] of [["/simulaciones/historicas", "Corridas históricas"], ["/simulaciones/nueva-historica", "Nueva corrida histórica"]]) {
+      const { unmount } = renderShell(path, { mobileTitle: title, primaryAction: null });
+      expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+      unmount();
+    }
+    renderShell("/simulaciones/run", { mobileTitle: "Resultado", primaryAction: null });
+    expect(screen.getByRole("heading", { name: "Resultado" })).toBeInTheDocument();
+  });
+
+  it("keeps route titles from breaking mid-word", () => {
     renderShell();
     const heading = screen.getByRole("heading", { name: "Prueba" });
     expect(heading.className).toMatch(/\bbreak-normal\b/);

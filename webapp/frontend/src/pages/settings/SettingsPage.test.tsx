@@ -32,8 +32,8 @@ const storedGame: GameSettings = {
   name: "Quiniela 80", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1],
   allows_repeats: true, minimum_stake: 1, source: "default",
 };
-function setup(_options: { stayOnRules?: boolean } = {}) {
-  const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/ajustes"] });
+function setup(_options: { stayOnRules?: boolean } = {}, initialEntry = "/ajustes") {
+  const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [initialEntry] });
   const user = userEvent.setup();
   const rendered = render(<RouterProvider router={router} />);
   return { user, router, ...rendered };
@@ -60,6 +60,14 @@ beforeEach(() => {
 afterEach(() => {
   if (originalClipboard) Object.defineProperty(navigator, "clipboard", originalClipboard);
   else Reflect.deleteProperty(navigator, "clipboard");
+});
+
+it("opens the game-rules step from its settings deep link", async () => {
+  setup({}, "/ajustes?paso=reglas");
+  expect(await screen.findByRole("heading", { name: "Reglas del sorteo" })).toBeInTheDocument();
+  expect(screen.getByRole("progressbar", { name: "Paso 1 de 4" })).toBeInTheDocument();
+  const name = await screen.findByRole("textbox", { name: "Nombre" });
+  expect(name).toHaveValue("Quiniela 80");
 });
 
 it("keeps quota and advanced settings reachable when game rules fail to load", async () => {
@@ -130,7 +138,7 @@ it("offers a quota edit path from review and keeps the save outcome visible", as
   await screen.findByRole("heading", { name: "Revisá tus ajustes" });
   await user.click(screen.getByRole("button", { name: "Guardar ajustes" }));
   expect(await screen.findByRole("status")).toHaveTextContent(/Ajustes guardados/);
-  expect(screen.getByRole("link", { name: "Crear una simulación" })).toHaveAttribute("href", "/experimentos/nuevo");
+  expect(screen.getByRole("link", { name: "Crear una simulación" })).toHaveAttribute("href", "/simulaciones/nueva");
 });
 
 it("distinguishes disconnected from generic errors and retries", async () => {
@@ -332,7 +340,7 @@ it("guards dirty navigation and unload while a refresh keeps the draft across se
   expect(input).toHaveValue("7000000000");
   await user.click(screen.getByRole("link", { name: "Simulaciones" }));
   await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Salir sin guardar" }));
-  await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones"));
   add.mockRestore();
 });
 
@@ -357,7 +365,7 @@ it("does not block clean navigation and explains 403 and a raced read-only 409 w
   await openQuota(user);
   const input = await screen.findByRole("textbox", { name: /Nuevo límite de almacenamiento/ });
   await user.click(screen.getByRole("link", { name: "Simulaciones" }));
-  await waitFor(() => expect(router.state.location.pathname).toBe("/experimentos"));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones"));
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   await user.click(screen.getByRole("link", { name: "Ajustes" }));
   await openQuota(user);

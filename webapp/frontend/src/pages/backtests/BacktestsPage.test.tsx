@@ -13,7 +13,7 @@ vi.mock("../../api/client", async (importOriginal) => {
 const game = { name: "Reglas guardadas", numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], allows_repeats: true, minimum_stake: 1, source: "stored" as const };
 const report = { id: "backtest-1", name: "Prueba", created_at: "2026-10-01T00:00:00Z", reached_goal: 10, completed: 20, goal_rate: 50, quiebres: 10, neto_medio: -12.5, incomplete: 1, window: { bets: 100, wagered: 500, paid: 550, sessions: 21, incomplete: 1 }, config: { name: "Prueba", strategy: { name: "Transición", selector: "system", system: "transition", coverage: 1, staking: "flat" }, game: { numbers: 100, positions: 5, prizes: [80, 8, 4, 2, 1], min_stake: 1 }, conditions: { capital: 2000, goal: 2800 }, inputs: { history_sha256: "a".repeat(64), rankings_sha256: "b".repeat(64) } } };
 const catalog = { sources: { history_sha256: "a".repeat(64), rankings_sha256: "b".repeat(64) } };
-function renderPage(element: React.ReactNode, path = "/experimentos/nueva-historica") {
+function renderPage(element: React.ReactNode, path = "/simulaciones/nueva-historica") {
   const router = createMemoryRouter([{ path: "*", element }], { initialEntries: [path] });
   return { router, ...render(<RouterProvider router={router} />) };
 }
@@ -70,10 +70,10 @@ describe("historical backtest pages", () => {
 
   it("lists saved runs and provides a separate historical view destination", async () => {
     vi.mocked(apiClient.listBacktests).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [report] } as never);
-    renderPage(<BacktestsPage />, "/experimentos/historicas");
+    renderPage(<BacktestsPage />, "/simulaciones/historicas");
     expect(await screen.findByText("Prueba")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Abrir corrida histórica de Prueba" })).toHaveAttribute("href", "/experimentos/historicas/backtest-1");
-    expect(screen.getByRole("link", { name: "Simulaciones" })).toHaveAttribute("href", "/experimentos");
+    expect(screen.getByRole("link", { name: "Abrir corrida histórica de Prueba" })).toHaveAttribute("href", "/simulaciones/historicas/backtest-1");
+    expect(screen.getByRole("link", { name: "Simulaciones" })).toHaveAttribute("href", "/simulaciones");
     expect(within(screen.getByRole("navigation", { name: "Experimentos" })).getByRole("link", { name: "Corridas históricas" })).toHaveAttribute("aria-current", "page");
   });
 });

@@ -50,7 +50,7 @@ beforeEach(() => {
   vi.mocked(apiClient.validateProfileBatch).mockResolvedValue(validation as never);
   vi.mocked(apiClient.createProfileBatch).mockReset();
 });
-function mount() { render(<MemoryRouter initialEntries={[`/experimentos/nuevo/sesion?dataset_sha256=${dataset.dataset_sha256}`]}><ProfileBatchPage /></MemoryRouter>); }
+function mount() { render(<MemoryRouter initialEntries={[`/simulaciones/nueva/sesion?dataset_sha256=${dataset.dataset_sha256}`]}><ProfileBatchPage /></MemoryRouter>); }
 
 const frozenBody: BatchSubmissionBody = {
   schema_version: 1, profile: { id: "local", revision: 2, sha256: "a".repeat(64) }, dataset_sha256: "b".repeat(64),

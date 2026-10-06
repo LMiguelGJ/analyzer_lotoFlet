@@ -1,22 +1,29 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { QueueDrawer } from "./QueueDrawer";
 import { useQueue } from "./QueueProvider";
 
 const NAV_ITEMS = [
-  { to: "/experimentos", label: "Experimentos", icon: "◫" },
+  { to: "/simulaciones", label: "Simulaciones", icon: "◫" },
   { to: "/configuraciones", label: "Estrategias", icon: "◇" },
   { to: "/datos", label: "Datos", icon: "▤" },
   { to: "/ajustes", label: "Ajustes", icon: "⚙" },
 ] as const;
 
+export interface PrimaryAction {
+  label: string;
+  to: string;
+}
+
 interface ShellProps {
   title: string;
+  mobileTitle?: string;
+  primaryAction?: PrimaryAction | null;
   children: ReactNode;
 }
 
-export function Shell({ title, children }: ShellProps) {
+export function Shell({ title, mobileTitle, primaryAction = null, children }: ShellProps) {
   const [queueOpen, setQueueOpen] = useState(false);
   const [mobileViewport, setMobileViewport] = useState(() => window.innerWidth < 900);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -28,7 +35,6 @@ export function Shell({ title, children }: ShellProps) {
     }
   });
   const { status, error } = useQueue();
-  const location = useLocation();
   const queueRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -60,59 +66,33 @@ export function Shell({ title, children }: ShellProps) {
       <a href="#main-content" className="skip-link" onClick={handleSkipLinkClick}>
         Saltar al contenido principal
       </a>
-
       <div data-testid="shell-layout" className="shell-layout">
         <header className="shell-app-bar">
           <div className="shell-app-bar-title">
             <span className="shell-brand">Laboratorio Quiniela 80</span>
-            <h1 className="break-normal">{mobileViewport && /^\/experimentos\/[^/]+$/.test(location.pathname) && location.pathname !== "/experimentos/nuevo" ? "Resultado" : title}</h1>
+            <h1 className="break-normal">{mobileViewport && mobileTitle ? mobileTitle : title}</h1>
           </div>
           <div className="shell-app-bar-actions">
-            <button
-              type="button"
-              className="m3-icon-button"
-              aria-label={`Cambiar tema. Tema actual: ${theme}`}
-              title="Cambiar tema"
-              onClick={toggleTheme}
-            >
+            <button type="button" className="m3-icon-button" aria-label={`Cambiar tema. Tema actual: ${theme}`} title="Cambiar tema" onClick={toggleTheme}>
               <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
             </button>
-            <button
-              ref={queueRef}
-              type="button"
-              aria-label="Abrir cola de cálculo"
-              aria-expanded={queueOpen}
-              aria-haspopup="dialog"
-              aria-describedby="queue-state"
+            <button ref={queueRef} type="button" aria-label="Abrir cola de cálculo" aria-expanded={queueOpen} aria-haspopup="dialog" aria-describedby="queue-state"
               title={error ? error === "network" ? "Cola de cálculo: sin conexión" : "Cola de cálculo: sin datos recientes" : status?.active_id ? "Cola de cálculo: en curso" : "Abrir cola de cálculo"}
-              className="m3-icon-button"
-              onClick={() => setQueueOpen(true)}
-            >
-              <span aria-hidden="true">☷</span>
-              <span id="queue-state" className="ledger-sr-only">{queueStatus}</span>
+              className="m3-icon-button" onClick={() => setQueueOpen(true)}>
+              <span aria-hidden="true">☷</span><span id="queue-state" className="ledger-sr-only">{queueStatus}</span>
             </button>
           </div>
         </header>
-
         <nav id="primary-navigation" aria-label="Navegación principal" className="shell-navigation">
-          <ul>
-            {NAV_ITEMS.map((item) => (
-              <li key={item.to}>
-                <NavLink to={item.to} aria-label={item.to === "/experimentos" ? "Simulaciones" : undefined} className={({ isActive }) => `shell-nav-link${isActive ? " is-active" : ""}`}>
-                  <span className="shell-nav-icon" aria-hidden="true">{item.icon}</span>
-                  <span>{item.label}</span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+          <ul>{NAV_ITEMS.map((item) => <li key={item.to}>
+            <NavLink to={item.to} className={({ isActive }) => `shell-nav-link${isActive ? " is-active" : ""}`}>
+              <span className="shell-nav-icon" aria-hidden="true">{item.icon}</span><span>{item.label}</span>
+            </NavLink>
+          </li>)}</ul>
         </nav>
-        <main id="main-content" tabIndex={-1} className="shell-main">
-          <div className="shell-page-content">{children}</div>
-        </main>
-
-        {!location.pathname.startsWith("/ajustes") && !location.pathname.startsWith("/datos") && !location.pathname.startsWith("/experimentos/nuevo") && !location.pathname.startsWith("/experimentos/nueva-historica") && !location.pathname.startsWith("/experimentos/historicas/") && (!/^\/experimentos\/[^/]+(?:\/comparacion)?$/.test(location.pathname) || location.pathname === "/experimentos/historicas") && <Link className="m3-extended-fab" aria-label={`Acceso rápido: ${location.pathname === "/experimentos/historicas" ? "Nueva corrida histórica" : "Nueva simulación"}`} to={location.pathname === "/experimentos/historicas" ? "/experimentos/nueva-historica" : "/experimentos/nuevo"}>
-          <span aria-hidden="true">＋</span>
-          <span>{location.pathname === "/experimentos/historicas" ? "Nueva corrida histórica" : "Nueva simulación"}</span>
+        <main id="main-content" tabIndex={-1} className="shell-main"><div className="shell-page-content">{children}</div></main>
+        {primaryAction && <Link className="m3-extended-fab" aria-label={`Acceso rápido: ${primaryAction.label}`} to={primaryAction.to}>
+          <span aria-hidden="true">＋</span><span>{primaryAction.label}</span>
         </Link>}
       </div>
       <QueueDrawer open={queueOpen} onClose={() => setQueueOpen(false)} trigger={queueRef} />

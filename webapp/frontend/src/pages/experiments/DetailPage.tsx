@@ -409,9 +409,9 @@ export function DetailPage() {
       {data.runs.length > 1 && <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Elegir ejecución">
         {data.runs.map((run) => <button key={run.ordinal} type="button" aria-pressed={selected?.ordinal === run.ordinal} className={`${button} ${selected?.ordinal === run.ordinal ? "border-accent text-accent" : ""}`} onClick={() => setOrdinal(run.ordinal)}>{run.ordinal + 1}. {isProfileBatchRun(run) ? run.strategy.name ?? `Estrategia ${run.ordinal + 1}` : isProfileExperiment(data) ? data.display.name : data.request.strategies[run.ordinal]?.name ?? "Estrategia"} <StatusLabel kind="execution" value={run.status} className="ledger-chip-compact ml-2" /></button>)}
       </div>}
-      <nav aria-label="Navegación del experimento" className="mt-6 flex flex-wrap gap-2 text-sm">
-        <Link className="btn btn-tertiary" to="/experimentos">Volver a simulaciones</Link>
-        <Link className="btn btn-primary" to={`/experimentos/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Comparar simulaciones"}</Link>
+      <nav aria-label="Navegación de la simulación" className="mt-6 flex flex-wrap gap-2 text-sm">
+        <Link className="btn btn-tertiary" to="/simulaciones">Volver a simulaciones</Link>
+        <Link className="btn btn-primary" to={`/simulaciones/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Comparar simulaciones"}</Link>
       </nav>
     </>}
   </div>;

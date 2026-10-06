@@ -110,7 +110,7 @@ it("lists a bounded page, offers use and edit, and preserves distinct library an
   const { user } = setup();
   expect(await screen.findByText("Mi plantilla")).toBeInTheDocument();
   expect(apiClient.listConfigurations).toHaveBeenCalledWith(0, 20);
-  expect(screen.getByRole("link", { name: /Usar/ })).toHaveAttribute("href", "/experimentos/nuevo?configuration=cfg-1");
+  expect(screen.getByRole("link", { name: /Usar/ })).toHaveAttribute("href", "/simulaciones/nueva?configuration=cfg-1");
   expect(screen.getByText("Un sistema de selección")).toBeInTheDocument();
   expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
   expect(screen.getByText("Plana")).toBeInTheDocument();
