@@ -264,4 +264,15 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
 
 ## Evidencia (commits)
 
-- T1-T10: pendiente
+- Backup (not acceptance): `21faa78`, pushed to `origin/stage` by explicit request.
+- T1: `776e345` — `fix(web): preserve simulation drafts across legacy navigation`.
+  Accepted with the functional evidence above; native review skipped because the
+  user disabled RDD for this clone, not because the old review was approved.
+- T2-T10: pending.
+
+## Next active unit
+
+- T2 is in progress: map a bounded implementation of a single simulations list,
+  truthful filtering/order/pagination and repeat links preserving saved inputs.
+  Read-only mapping precedes deriving narrow writer surfaces; do not globally
+  sort only the first page of each source or equate different financial contracts.
