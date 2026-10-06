@@ -284,7 +284,10 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
 - T2 classic frontend snapshot guard: `b871153` —
   `feat(web): pin classic repeat source snapshots`; 607 frontend tests, types,
   unchanged-production build and 62 normal Chrome checks; no live writes/push.
-- T2 classic repeat actions/profile repeat and T3-T10: pending.
+- T2 classic repeat entries: `b39f2d1` —
+  `feat(web): expose classic repeat entry actions`; 610 frontend tests/types/build,
+  34 normal GET-only Chrome checks (186requests,zero mutations), not pushed.
+- T2 profile repeat and T3-T10: pending.
 
 ## Next active unit
 
@@ -670,12 +673,61 @@ Backend: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q` (incluye 
   positively verified. Mobile detail target48px above nav; no tested overflow.
   Four raw SHA256 hashes stable; six viewport PNGs read/inspected. Owned server
   PID1260 stopped and ECONNREFUSED confirmed. Writer610tests/types/build retained,
-  NOT rerun. Parent accepts this scoped actions unit; work-unit commit follows.
+  NOT rerun. Parent accepts this scoped actions unit; committed as
+  `b39f2d1c121fecde8d119e3ae222272ee648ba68`
+  (`feat(web): expose classic repeat entry actions`), stage, not pushed.
   Artifacts: `C:/Users/luism/AppData/Local/Temp/t2-classic-actions-qa-UhBv63/`.
   Temp harness generation/quoting incidents happened before browser execution;
   candidate browser passed its first execution. Fallback fonts/mocked GET only;
   no full creator/financial/global-rules replay or wholeT2 claim.
   Next: read-only version-specific profile repeat mapping before any writer.
+  Map v1–v5 saved-request completeness, immutable dataset/revision/reference/
+  policy/provenance fields, existing creators and backend admission validation.
+  Recommend the smallest first version-specific unit and exact edit candidates;
+  no all-version parity assumption, upgrades, T3/T7 adapters, router mirror,
+  migrations, engine writes or snapshot schema changes during exploration.
+  Scout `muwzqimd-r-i5do` confirms saved original requests forv1–v5:
+  v1–v4 bind profileID/revision/SHA and datasetSHA with version-specific staking;
+  profile rules are a stored response snapshot, not embedded request fields.
+  v5 is a distinct batch with immutable strategy/admission/policy/source metadata;
+  private sessionStorage restoration is not saved-record repeat.
+  Conditional proposal: smallest v1-only frontend slice, not all-version wizard.
+  But exact historical profile/dataset retrieval and admission-time identity
+  validation are not yet proven; worker-time checks alone do not establish
+  rejection before enqueue/insert. One scoped read-only challenge
+  `muwzvofl-s-dmwn` completed: profile registry pages ALL stored ID/revision
+  rows via `getProfiles(offset,limit)` (no single revision GET); exact dataset
+  GET by savedSHA verifies artifact with missing404/corrupt409. Registered
+  profile revision/SHA and dataset binding are validated before insertion/queue,
+  with transaction rechecks. No backend guard prerequisite is needed forv1.
+  Missing exact registry profile/dataset blocks repeat; embedded display snapshot
+  is never registered or used as a substitute. No schema upgrades/current fallback.
+  Parent single mapper spot-check confirmed fresh `buildProfileRequest` hardcodes
+  entry policy/time nulls and requires fresh elapsed bounds. Avoid naive rebuild:
+  preserve a valid original v1 wire request and overlay ONLY explicit user edits.
+  Split first implementation to TWO model surfaces: `profile-model.ts` and
+  existing `profile-model.test.ts`. Pure helpers hydrate saved fields and build
+  exact v1 repeats against verified matching artifacts; tests use backend-valid
+  wire fixtures including supported time bounds/static/seeded selectors.
+  RED/GREEN: full unedited roundtrip, edited-field-only overlay, frozen schema/
+  bindings/time constraints, malformed/mismatched artifacts fail-closed, immutable
+  originals; fresh v1–v4 builder behavior unchanged. No UI/API/backend writes.
+  Then separate creator/retrieval hydration unit, then list/detail entry actions
+  with their tests. No oversized combined six-file vertical slice or fullT2 claim.
+  Mapper writer `mux04gkg-t-bbd9` finished: 129 added lines, two files only.
+  RED: missing helper assertion failed,15 existing tests passed. GREEN17 model,
+  52 page/model,614 full40files/types/build555.83KB/whitespace. One prior unrelated
+  ConfigurationsPage 'Usar' transient failed then passed full rerun; retained.
+  Parent hashes match; ASSESS medium/large/RDD-off self-checks stand.
+  Narrow read-only `mux138oo-u-4fdw` PASS: actual backend MAX_SESSION_ROWS10000,
+  MAX_MONEY1e12, MAX_SEED2^53−1, end/duration1e9 and exact key shapes match.
+  Both source hashes stable; no valid-request bound mismatch found. No suites
+  repeated. Parent accepts model-only checkpoint; work-unit commit follows.
+  Unchanged-draw verification is a future UI loading requirement, not proven by
+  pure helpers. No UI/retrieval/financial validation yet. Per user's pace concern,
+  close and report this checkpoint before starting another implementation front.
+  For eventualv5 repeat preserve original requested constraints, not silently
+  policy-clamped effective values; new run identity, not prior idempotent retry.
   Acceptance/commit blocked pending that correction plus mocked normal390/1440
   payload/error/async/reset/pointer/Enter/Space/fresh checks; no live API/DB. Auxiliary ast-grep silent
   diagnostic is incomplete, not a clean claim. No T2-wide acceptance.

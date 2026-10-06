@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DatasetListing, ProfileListing } from "../../api/types";
+import * as profileModel from "./profile-model";
 import { buildProfileRequest, initialProfileDraft, matchingDataset } from "./profile-model";
 
 export const profileItem = {
@@ -55,6 +56,35 @@ export const recoveryDataset = { ...datasetItem, profile_id: "rational-recovery"
   profile_execution: recoveryProfile.profile_execution } as DatasetListing;
 
 describe("profile request v1 builder", () => {
+  it("hydrates saved v1 requests for repeat without losing time conditions", () => {
+    const request = buildProfileRequest(validDraft, profileItem, datasetItem, validDraft.start_draw);
+    request.conditions.end_minute = Math.floor(Date.parse(`${request.conditions.start_draw.replace(" ", "T")}:00Z`) / 60_000) + 30;
+    request.conditions.duration_minutes = 45;
+    request.conditions.max_elapsed_draws = null;
+    expect(typeof profileModel.draftFromProfileRequest).toBe("function");
+    const draft = profileModel.draftFromProfileRequest(request, profileItem, datasetItem);
+    expect(profileModel.buildProfileRepeatRequest(draft, request, profileItem, datasetItem, validDraft.start_draw)).toEqual(request);
+    const before = structuredClone(request);
+    const edited = profileModel.buildProfileRepeatRequest({ ...draft, name: "Nuevo", capital: "2100.00", coverage: "3",
+      numbers: "0, 1, 2", per_number_stake: "1.50" }, request, profileItem, datasetItem, validDraft.start_draw);
+    expect(edited).toMatchObject({ name: "Nuevo", conditions: { capital: 210000, end_minute: request.conditions.end_minute, duration_minutes: 45, max_elapsed_draws: null },
+      selector: { coverage: 3, numbers: [0, 1, 2] }, staking: { per_number_stake: 150 } });
+    expect(request).toEqual(before);
+    expect(draft.name).toBe(request.name);
+    expect(() => profileModel.draftFromProfileRequest({ ...request, schema_version: 2 }, profileItem, datasetItem)).toThrow();
+    expect(() => profileModel.draftFromProfileRequest(request, profileItem, { ...datasetItem, dataset_sha256: "c".repeat(64) })).toThrow();
+  });
+  it("preserves nullable seeded selector fields and rejects edits that do not match verified draw", () => {
+    const request = buildProfileRequest({ ...validDraft, selector: "random", seed: "0" }, profileItem, datasetItem, validDraft.start_draw);
+    const draft = profileModel.draftFromProfileRequest(request, profileItem, datasetItem);
+    expect(profileModel.buildProfileRepeatRequest(draft, request, profileItem, datasetItem, "different draw")).toEqual(request);
+    expect(() => profileModel.buildProfileRepeatRequest({ ...draft, start_draw: "2025-01-02 05:10" }, request,
+      profileItem, datasetItem, validDraft.start_draw)).toThrow(/Sorteo/);
+    expect(profileModel.buildProfileRepeatRequest({ ...draft, start_draw: "2025-01-02 05:10" }, request,
+      profileItem, datasetItem, "2025-01-02 05:10").conditions.start_draw).toBe("2025-01-02 05:10");
+    expect(profileModel.buildProfileRepeatRequest({ ...draft, seed: "7" }, request, profileItem, datasetItem,
+      validDraft.start_draw).selector).toEqual({ ...request.selector, seed: 7 });
+  });
   it("# F-UTIL-020 builds explicit Q80 cycling without a fixed stake and rejects absent capability", () => {
     const draft = { ...validDraft, capital: "2000", goal: "2800", per_number_stake: "" };
     const request = buildProfileRequest(draft, cyclingProfile, datasetItem, draft.start_draw, "cycling");
