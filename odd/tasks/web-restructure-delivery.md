@@ -31,8 +31,11 @@ No force push, destructive reset, live-data mutation or dependency installation.
   prior changes; inspect staged/untracked files for unintended data, credentials
   and generated artifacts before committing. Include source, regressions and
   relevant task records; retain documented prior checks and limits.
-- [ ] D3 — Commit and non-force push to the configured upstream.
-  Status: in progress. Refresh remote state without merging/rebasing automatically;
+- [x] D3 — Commit and non-force push to the configured upstream.
+  Status: implementation published. Commit
+  `8b413c539977084cc3c35675d4102e79e9f57ff9` pushed without force to `origin/stage`
+  (`21faa78..8b413c5`). This documentation closure is a follow-up commit.
+  Refresh remote state without merging/rebasing automatically;
   stop if divergence or destination ambiguity appears. Use Conventional Commit
   messages, record exact commit identities and verify push result. No PR requested.
 
