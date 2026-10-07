@@ -104,6 +104,13 @@ from laboratorio.importing.records import (
     parse_records,
 )
 from laboratorio.settings import DEFAULT_QUOTA_BYTES
+from laboratorio.storage.backtest_trace import (
+    bet_projection,
+    build_trace,
+    session_summary,
+    trace_metadata,
+    validate_trace,
+)
 from laboratorio.storage.database import connection, require_database
 from laboratorio.storage.quota import PendingRunsExceeded, measure, validate_quota_bytes
 
@@ -3034,7 +3041,7 @@ class Repository:
             if not changed:
                 raise ValueError("experiment missing or not in expected state")
 
-    def create_backtest(self, name: str, config: dict, result):
+    def create_backtest(self, name: str, config: dict, result, rows=None):
         identifier = str(uuid4())
         created_at = _now_iso()
         result_payload = {
@@ -3052,12 +3059,18 @@ class Repository:
                 "incomplete": result.incomplete,
             },
         }
+        result_payload["trace"] = build_trace(result, config, result_payload, rows)
         config_json = json.dumps(
             config, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
         )
         result_json = json.dumps(
-            result_payload, sort_keys=True, separators=(",", ":"), allow_nan=False
+            result_payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
         )
+        self._validate_simulation_backtest((identifier, name, config_json, result_json, created_at))
         with _transaction(self.path) as db:
             db.execute(
                 "INSERT INTO backtests (id, name, config_json, result_json, created_at) "
@@ -3068,35 +3081,30 @@ class Repository:
 
     @staticmethod
     def _backtest_row(row):
-        identifier, name, config_json, result_json, created_at = row
-        try:
-            config = json.loads(config_json)
-            result = json.loads(result_json)
-            if type(config) is not dict or type(result) is not dict:
-                raise ValueError("saved backtest fields must be objects")
-            return {
-                "id": identifier,
-                "name": name,
-                "created_at": created_at,
-                **result,
-                "config": config,
-            }
-        except (ValueError, KeyError, TypeError) as exc:
-            raise ValueError("stored backtest snapshot is corrupt") from exc
+        identifier, name, _, _, created_at = row
+        config, result = Repository._validate_simulation_backtest(row)
+        return {
+            "id": identifier,
+            "name": name,
+            "created_at": created_at,
+            **{key: value for key, value in result.items() if key != "trace"},
+            "trace": trace_metadata(result.get("trace")),
+            "config": config,
+        }
 
     @staticmethod
     def _validate_simulation_backtest(row):
         import math
-        from decimal import ROUND_HALF_UP, Decimal
+        from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
         from laboratorio.api.backtests import CreateBacktest
         from laboratorio.domain.backtest import BacktestConfig
         from laboratorio.domain.contracts import make_game
 
-        identifier, name, _, result_json, _ = row
-        saved = Repository._backtest_row(row)
+        identifier, name, config_json, result_json, _ = row
         try:
-            config = CreateBacktest.model_validate(saved["config"])
+            config_payload = json.loads(config_json)
+            config = CreateBacktest.model_validate(config_payload)
             if config.name != name:
                 raise ValueError("backtest database and config names differ")
             game = make_game(
@@ -3129,7 +3137,7 @@ class Repository:
                 "incomplete",
                 "window",
             }
-            if type(result) is not dict or result.keys() != expected:
+            if type(result) is not dict or result.keys() not in (expected, expected | {"trace"}):
                 raise ValueError("saved backtest report has an invalid shape")
             counts = (
                 result["reached_goal"],
@@ -3180,7 +3188,21 @@ class Repository:
                 raise ValueError("empty backtest window has stake or payout totals")
             if window["bets"] > 0 and window["wagered"] == 0:
                 raise ValueError("betting window has no wagered amount")
-        except (TypeError, ValueError, KeyError) as exc:
+            if "trace" in result:
+                validate_trace(
+                    result["trace"],
+                    config_payload,
+                    {key: value for key, value in result.items() if key != "trace"},
+                )
+            return config_payload, result
+        except (
+            TypeError,
+            ValueError,
+            KeyError,
+            OverflowError,
+            RecursionError,
+            InvalidOperation,
+        ) as exc:
             raise ValueError(f"stored backtest {identifier} is corrupt") from exc
 
     def get_backtest(self, identifier: str):
@@ -3190,6 +3212,48 @@ class Repository:
                 (identifier,),
             ).fetchone()
         return None if row is None else self._backtest_row(row)
+
+    def page_backtest_trace(self, identifier: str, offset: int, limit: int, ordinal=None):
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("offset and limit out of range")
+        if ordinal is not None and (type(ordinal) is not int or ordinal < 0):
+            raise ValueError("session ordinal out of range")
+        with connection(self.path) as db:
+            row = db.execute(
+                "SELECT id, name, config_json, result_json, created_at FROM backtests WHERE id = ?",
+                (identifier,),
+            ).fetchone()
+        if row is None:
+            return None
+        _, result = self._validate_simulation_backtest(row)
+        trace = result.get("trace")
+        metadata = trace_metadata(trace)
+        if ordinal is None:
+            sessions = trace["sessions"] if trace is not None else []
+            return {
+                "id": identifier,
+                "trace": metadata,
+                "total": len(sessions),
+                "offset": offset,
+                "limit": limit,
+                "items": [session_summary(item) for item in sessions[offset : offset + limit]],
+            }
+        # An existing but uncaptured original ordinal is unavailable, not missing.
+        if ordinal >= result["window"]["sessions"]:
+            return None
+        if trace is None or ordinal >= trace["stored_sessions"]:
+            raise ValueError("session detail was not stored")
+        session = trace["sessions"][ordinal]
+        return {
+            "id": identifier,
+            "ordinal": ordinal,
+            "trace": metadata,
+            "session": session_summary(session),
+            "total": len(session["bets"]),
+            "offset": offset,
+            "limit": limit,
+            "items": [bet_projection(bet) for bet in session["bets"][offset : offset + limit]],
+        }
 
     def search_backtests(self, offset: int, limit: int):
         if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:

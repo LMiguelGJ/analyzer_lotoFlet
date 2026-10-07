@@ -2,7 +2,7 @@
 
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from laboratorio.api import (
     catalog,
@@ -45,27 +45,13 @@ def _require_bearer(request: Request):
 
 router = APIRouter(prefix="/agent/v1", dependencies=[Depends(_require_bearer)])
 
-
-@router.get("/catalog")
-def read_catalog(request: Request):
-    return catalog.read_catalog(request)
-
-
-@router.get("/starting-draws")
-def starting_draws(
-    request: Request,
-    offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    date: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
-):
-    return catalog.starting_draws(request, offset, limit, date)
-
-
-@router.get("/profiles")
-def list_profiles(
-    request: Request, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)
-):
-    return catalog.profiles(request, offset, limit)
+# Register only signature-compatible native callables, never entire native routers.
+# Explicit names retain the facade's OpenAPI summaries and operation identifiers.
+router.add_api_route("/catalog", catalog.read_catalog, methods=["GET"], name="read_catalog")
+router.add_api_route(
+    "/starting-draws", catalog.starting_draws, methods=["GET"], name="starting_draws"
+)
+router.add_api_route("/profiles", catalog.profiles, methods=["GET"], name="list_profiles")
 
 
 @router.get("/profiles/{identifier}/revisions/{revision}")
@@ -81,60 +67,26 @@ def profile_detail(identifier: str, revision: int, request: Request):
     return catalog._profile_item(profile)
 
 
-@router.get("/datasets")
-def list_datasets(
-    request: Request, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)
-):
-    return datasets.datasets(request, offset, limit)
-
-
-@router.get("/datasets/{sha256}")
-def dataset_detail(request: Request, sha256: str = Path(pattern=r"^[0-9a-f]{64}$")):
-    return datasets.dataset_detail(request, sha256)
-
-
-@router.get("/datasets/{sha256}/draws")
-def dataset_draws(
-    request: Request,
-    sha256: str = Path(pattern=r"^[0-9a-f]{64}$"),
-    offset: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
-    date: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
-):
-    return datasets.dataset_draws(request, sha256, offset, limit, date)
-
-
-@router.get("/strategies")
-def list_strategies(
-    request: Request, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)
-):
-    return strategies.list_all(request, offset, limit)
-
-
-@router.post("/strategies", status_code=201)
-def create_strategy(body: strategies.StrategyBody, request: Request):
-    return strategies.create(body, request)
-
-
-@router.get("/strategies/{identifier}")
-def strategy_detail(
-    identifier: str,
-    request: Request,
-    profile_id: str | None = None,
-    profile_revision: int | None = Query(None, ge=1),
-    profile_sha256: str | None = None,
-):
-    return strategies.detail(identifier, request, profile_id, profile_revision, profile_sha256)
-
-
-@router.get("/strategies/{identifier}/revisions")
-def strategy_revisions(
-    identifier: str,
-    request: Request,
-    offset: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-):
-    return strategies.revisions(identifier, request, offset, limit)
+router.add_api_route("/datasets", datasets.datasets, methods=["GET"], name="list_datasets")
+router.add_api_route(
+    "/datasets/{sha256}", datasets.dataset_detail, methods=["GET"], name="dataset_detail"
+)
+router.add_api_route(
+    "/datasets/{sha256}/draws", datasets.dataset_draws, methods=["GET"], name="dataset_draws"
+)
+router.add_api_route("/strategies", strategies.list_all, methods=["GET"], name="list_strategies")
+router.add_api_route(
+    "/strategies", strategies.create, methods=["POST"], status_code=201, name="create_strategy"
+)
+router.add_api_route(
+    "/strategies/{identifier}", strategies.detail, methods=["GET"], name="strategy_detail"
+)
+router.add_api_route(
+    "/strategies/{identifier}/revisions",
+    strategies.revisions,
+    methods=["GET"],
+    name="strategy_revisions",
+)
 
 
 @router.get("/strategies/{identifier}/revisions/{revision}")
@@ -154,82 +106,71 @@ def strategy_revision(identifier: str, revision: int, request: Request):
 def list_experiments(
     request: Request, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)
 ):
-    return experiments.list_all(request, offset, limit)
+    # Native search also accepts filters/sorting; the agent exposes pagination only.
+    return experiments.list_all(request, offset, limit, name_contains=None)
 
 
-@router.get("/experiments/{identifier}")
-def experiment_detail(identifier: str, request: Request):
-    return experiments.detail(identifier, request)
+router.add_api_route(
+    "/experiments/{identifier}", experiments.detail, methods=["GET"], name="experiment_detail"
+)
+router.add_api_route(
+    "/experiments/{identifier}/compare",
+    experiments.compare,
+    methods=["GET"],
+    name="experiment_compare",
+)
+router.add_api_route(
+    "/experiments/{identifier}/runs/{ordinal}/replay",
+    experiments.replay,
+    methods=["GET"],
+    name="experiment_replay",
+)
+router.add_api_route(
+    "/experiments/{identifier}/runs/{ordinal}/trajectory",
+    experiments.trajectory,
+    methods=["GET"],
+    name="experiment_trajectory",
+)
+router.add_api_route(
+    "/experiments/{identifier}/cancel", queue.cancel, methods=["POST"], name="cancel_experiment"
+)
+router.add_api_route(
+    "/profile-batches/validate", profile_batches.validate, methods=["POST"], name="validate_batch"
+)
 
 
-@router.get("/experiments/{identifier}/compare")
-def experiment_compare(identifier: str, request: Request):
-    return experiments.compare(identifier, request)
-
-
-@router.get("/experiments/{identifier}/runs/{ordinal}/replay")
-def experiment_replay(
-    identifier: str,
-    ordinal: int,
-    request: Request,
-    offset: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-):
-    return experiments.replay(identifier, ordinal, request, offset, limit)
-
-
-@router.get("/experiments/{identifier}/runs/{ordinal}/trajectory")
-def experiment_trajectory(
-    identifier: str, ordinal: int, request: Request, max_points: int = Query(500, ge=4, le=2000)
-):
-    return experiments.trajectory(identifier, ordinal, request, max_points)
-
-
-@router.post("/experiments/{identifier}/cancel")
-def cancel_experiment(identifier: str, request: Request):
-    return queue.cancel(identifier, request)
-
-
-@router.post("/profile-batches/validate")
-async def validate_batch(request: Request):
-    return await profile_batches.validate(request)
+def _agent_batch_links(result):
+    """Project facade URLs without changing native responses or stored snapshots."""
+    links = result.get("links") if isinstance(result, dict) else None
+    if not links:
+        return result
+    base = f"/api/agent/v1/experiments/{result['id']}"
+    projected = {**links, "self": base, "compare": f"{base}/compare"}
+    if "runs" in links:
+        projected["runs"] = [
+            {
+                **item,
+                "replay": f"{base}/runs/{item['ordinal']}/replay",
+                "trajectory": f"{base}/runs/{item['ordinal']}/trajectory",
+            }
+            for item in links["runs"]
+        ]
+    return {**result, "links": projected}
 
 
 @router.post("/profile-batches", status_code=201)
 async def create_batch(request: Request, response: Response):
-    result = await profile_batches.create(request, response)
-    links = result.get("links") if isinstance(result, dict) else None
-    if links:
-        base = f"/api/agent/v1/experiments/{result['id']}"
-        links["self"] = base
-        links["compare"] = f"{base}/compare"
-        for item in links.get("runs", []):
-            ordinal = item["ordinal"]
-            item["replay"] = f"{base}/runs/{ordinal}/replay"
-            item["trajectory"] = f"{base}/runs/{ordinal}/trajectory"
-    return result
+    return _agent_batch_links(await profile_batches.create(request, response))
 
 
 @router.get("/profile-batches/by-client-request/{client_request_id:path}")
 def batch_by_client_request(client_request_id: str, request: Request):
-    result = profile_batches.by_client_request(client_request_id, request)
-    links = result.get("links") if isinstance(result, dict) else None
-    if links:
-        base = f"/api/agent/v1/experiments/{result['id']}"
-        links["self"] = base
-        links["compare"] = f"{base}/compare"
-        for item in links.get("runs", []):
-            ordinal = item["ordinal"]
-            item["replay"] = f"{base}/runs/{ordinal}/replay"
-            item["trajectory"] = f"{base}/runs/{ordinal}/trajectory"
-    return result
+    return _agent_batch_links(profile_batches.by_client_request(client_request_id, request))
 
 
-@router.post("/history/preview")
-async def preview_history(request: Request):
-    return await imports.history_preview(request)
-
-
-@router.post("/history/promote")
-async def promote_history(request: Request):
-    return await imports.history_promote(request)
+router.add_api_route(
+    "/history/preview", imports.history_preview, methods=["POST"], name="preview_history"
+)
+router.add_api_route(
+    "/history/promote", imports.history_promote, methods=["POST"], name="promote_history"
+)

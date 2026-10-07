@@ -242,8 +242,7 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(screen.getByText(/Perfil test · 1 posiciones/)).toBeInTheDocument();
     expect(screen.getByText(/Capital USD 100.00/)).toBeInTheDocument();
     expect(screen.getByText(/Escalera cíclica Q80/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
-    expect(screen.getByText(/No disponible como base/)).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Repetir con cambios" })).toHaveAttribute("href", "/simulaciones/nueva/perfil?base=cycling");
   });
   it("labels a recovery run by its saved profile policy instead of calling it a strategy", async () => {
     const recovery: ProfileExperimentSummary = {
@@ -545,6 +544,13 @@ describe("LW10 experiments list · data and navigation", () => {
 });
 
 describe("profile batch v5 experiment list compatibility", () => {
+  it("offers the session creator for a saved batch with an encoded base ID", async () => {
+    const id = "batch&scope=profile?x=1";
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [{ ...profileBatchV5, id }] });
+    const { user } = setup();
+    await user.click(await screen.findByRole("button", { name: `Acciones de ${profileBatchV5.display.name}` }));
+    expect(screen.getByRole("menuitem", { name: "Repetir con cambios" })).toHaveAttribute("href", `/simulaciones/nueva/sesion?base=${encodeURIComponent(id)}`);
+  });
   it("uses the saved display name for queue identity, accessible actions, delete dialog, and success notice", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [profileBatchV5] })
       .mockResolvedValueOnce(emptyPage());
@@ -568,6 +574,22 @@ describe("profile batch v5 experiment list compatibility", () => {
 });
 
 describe("profile experiment list", () => {
+  it.each([1, 2, 3, 4] as const)("routes saved profile schema v%i to its profile creator with an encoded base", async (version) => {
+    const id = `profile&version=${version}`;
+    const saved = { ...profileItem, id, request: { ...profileItem.request, schema_version: version } } as ProfileExperimentSummary;
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [saved] });
+    const { user } = setup();
+    await user.click(await screen.findByRole("button", { name: "Acciones de Perfil de prueba" }));
+    expect(screen.getByRole("menuitem", { name: "Repetir con cambios" })).toHaveAttribute("href", `/simulaciones/nueva/perfil?base=${encodeURIComponent(id)}`);
+  });
+  it("keeps unsupported profile versions fail-safe", async () => {
+    const unsupported = { ...profileItem, request: { ...profileItem.request, schema_version: 99 } } as unknown as ProfileExperimentSummary;
+    vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [unsupported] });
+    const { user } = setup();
+    await user.click(await screen.findByRole("button", { name: "Acciones de Perfil de prueba" }));
+    expect(screen.queryByRole("menuitem", { name: "Repetir con cambios" })).not.toBeInTheDocument();
+    expect(screen.getByText(/No disponible como base/)).toBeInTheDocument();
+  });
   it.each(["held", "failed", "completed"] as const)("shows %s profile with one run and no legacy base action", async (status) => {
     const row = { ...profileItem, status, runs: [{ ...profileItem.runs[0], status: status === "held" ? "pending" as const : status }] };
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [row] });
@@ -577,9 +599,8 @@ describe("profile experiment list", () => {
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("1");
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("Capital USD 100.00 · Meta USD 200.00");
     await user.click(screen.getByRole("button", { name: "Acciones de Perfil de prueba" }));
-    expect(screen.queryByRole("menuitem", { name: "Repetir con cambios" })).not.toBeInTheDocument();
-    expect(screen.getByText(/No disponible como base/)).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Eliminar" })).toHaveFocus();
+    expect(screen.getByRole("menuitem", { name: "Repetir con cambios" })).toHaveAttribute("href", "/simulaciones/nueva/perfil?base=profile-held");
+    expect(screen.getByRole("menuitem", { name: "Repetir con cambios" })).toHaveFocus();
   });
 });
 

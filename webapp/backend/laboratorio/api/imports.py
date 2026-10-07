@@ -59,6 +59,17 @@ class PromoteBody(ImportBody):
     expected_dataset_sha256: Hash
 
 
+def import_mode(request: Request, *, native_mode: Literal["history"] | None = None):
+    """One strict discriminator for admission and dispatch; absence is legacy-compatible."""
+    values = request.headers.getlist("x-import-mode")
+    if len(values) > 1 or (values and values[0] not in ("history", "records")):
+        raise HTTPException(422, "invalid import mode")
+    mode = values[0] if values else native_mode or "records"
+    if native_mode is not None and mode != native_mode:
+        raise HTTPException(422, "import mode conflicts with native history route")
+    return mode
+
+
 def _object(pairs):
     result = {}
     for key, value in pairs:
@@ -159,6 +170,7 @@ def _history_preview(result, profile):
 
 @router.post("/history/preview")
 async def history_preview(request: Request):
+    import_mode(request, native_mode="history")
     raw = await request.body()
     profile, _context = _history_context(request, raw)
     return _history_preview(parse_history(raw, profile), profile)
@@ -166,6 +178,7 @@ async def history_preview(request: Request):
 
 @router.post("/history/promote")
 async def history_promote(request: Request):
+    import_mode(request, native_mode="history")
     raw = await request.body()
     profile, context = _history_context(request, raw)
     result = parse_history(raw, profile)
@@ -203,12 +216,16 @@ async def history_promote(request: Request):
 
 @router.post("/preview")
 async def preview(request: Request):
+    if import_mode(request) == "history":
+        return await history_preview(request)
     body, raw = await _input(request, ImportBody)
     return _preview(parse_records(raw, **_options(body)))
 
 
 @router.post("/promote")
 async def promote(request: Request):
+    if import_mode(request) == "history":
+        return await history_promote(request)
     body, raw = await _input(request, PromoteBody)
     options = _options(body)
     result = parse_records(raw, **options)

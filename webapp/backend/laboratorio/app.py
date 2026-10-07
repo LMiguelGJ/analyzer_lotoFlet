@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Protocol
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from laboratorio.agent_credentials import load_or_create_token
@@ -172,8 +172,14 @@ def create_app(
         if request.method == "POST" and (
             request.url.path in _IMPORT_PATHS or request.url.path in _HISTORY_PATHS
         ):
-            history = request.url.path in _HISTORY_PATHS
-            byte_limit = MAX_HISTORY_BYTES if history else _IMPORT_ENVELOPE_BYTES
+            try:
+                mode = imports.import_mode(
+                    request,
+                    native_mode="history" if request.url.path in _HISTORY_PATHS else None,
+                )
+            except HTTPException as exc:
+                return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+            byte_limit = MAX_HISTORY_BYTES if mode == "history" else _IMPORT_ENVELOPE_BYTES
             lengths = request.headers.getlist("content-length")
             if any(value.isdecimal() and int(value) > byte_limit for value in lengths):
                 return JSONResponse({"detail": "import body exceeds size limit"}, status_code=413)

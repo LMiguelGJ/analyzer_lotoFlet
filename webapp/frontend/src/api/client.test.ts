@@ -268,11 +268,11 @@ describe("apiClient error mapping", () => {
     await apiClient.previewHistoryImport(file, profile, "operator", "America/Santo_Domingo");
     await apiClient.promoteHistoryImport(file, profile, "operator", "America/Santo_Domingo", "a".repeat(64));
     const calls = vi.mocked(globalThis.fetch).mock.calls;
-    expect(calls.map(([url]) => url)).toEqual(["/api/v1/imports/history/preview", "/api/v1/imports/history/promote"]);
+    expect(calls.map(([url]) => url)).toEqual(["/api/v1/imports/preview", "/api/v1/imports/promote"]);
     for (const [, init] of calls) {
       expect(init?.body).toBe(file);
       expect(init?.body).not.toBe(JSON.stringify(file));
-      expect(init?.headers).toMatchObject({ "X-Profile-Id": "saved", "X-Profile-Revision": "3",
+      expect(init?.headers).toMatchObject({ "X-Import-Mode": "history", "X-Profile-Id": "saved", "X-Profile-Revision": "3",
         "X-Profile-Sha256": "b".repeat(64), "X-Confirm-Source": "operator",
         "X-Confirm-Timezone": "America/Santo_Domingo" });
     }
@@ -295,6 +295,7 @@ describe("apiClient error mapping", () => {
     expect(calls.map(([, init]) => init?.method)).toEqual(["POST", "POST"]);
     expect(JSON.parse(String(calls[0][1]?.body))).toEqual(body);
     expect(JSON.parse(String(calls[1][1]?.body))).toEqual({ ...body, expected_dataset_sha256: "a".repeat(64) });
+    for (const [, init] of calls) expect(init?.headers).toMatchObject({ "X-Import-Mode": "records" });
   });
 
   it("# F-API-020 posts an exact profile request document without the legacy request envelope", async () => {
@@ -400,6 +401,26 @@ describe("apiClient error mapping", () => {
       "/api/v1/backtests", "/api/v1/backtests?offset=0&limit=20", "/api/v1/backtests/run%2F1",
     ]);
     expect(vi.mocked(globalThis.fetch).mock.calls[0][1]).toMatchObject({ method: "POST", body: JSON.stringify(body) });
+  });
+
+  it("R2 encodes historical trace IDs and requests only bounded sessions and bets pages", async () => {
+    const page = { id: "a/b c", trace: { status: "not_stored", reason: "legacy" },
+      total: 0, offset: 0, limit: 20, items: [] };
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(200, page))
+      .mockResolvedValueOnce(jsonResponse(200, { ...page, ordinal: 17, offset: 40, limit: 100 }));
+    await expect(apiClient.getBacktestSessions("a/b c")).resolves.toEqual(page);
+    await expect(apiClient.getBacktestSessionBets("a/b c", 17, 40, 100)).resolves.toMatchObject({ ordinal: 17 });
+    expect(vi.mocked(globalThis.fetch).mock.calls.map(([url]) => url)).toEqual([
+      "/api/v1/backtests/a%2Fb%20c/sessions?offset=0&limit=20",
+      "/api/v1/backtests/a%2Fb%20c/sessions/17/bets?offset=40&limit=100",
+    ]);
+    expect(vi.mocked(globalThis.fetch).mock.calls.every(([, init]) => init?.method === undefined)).toBe(true);
+  });
+
+  it.each([404, 409])("R2 preserves trace HTTP %s without converting it to an empty page", async (status) => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(status, { detail: "unavailable" }));
+    await expect(apiClient.getBacktestSessionBets("saved", 0)).rejects.toMatchObject({ status });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("# F-API-024 retrieves the actual agent credential by same-origin POST with an empty JSON body", async () => {

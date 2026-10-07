@@ -1,15 +1,16 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { Link, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
+import type { ProfileBatchExperimentSummary } from "../../api/types";
 import { ProfileBatchPage } from "./ProfileBatchPage";
 import { BATCH_DRAFT_STORAGE_KEY, createBatchDraft, parseBatchDraft, serializeBatchDraft, type BatchSubmissionBody } from "./batch-model";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getProfiles: vi.fn(), getDatasets: vi.fn(), getDataset: vi.fn(), getDatasetDraws: vi.fn(),
-    listProfileBatchStrategies: vi.fn(), getProfileBatchExecutionPolicy: vi.fn(), getProfileBatchStrategy: vi.fn(),
+  return { ...actual, apiClient: { ...actual.apiClient, getProfiles: vi.fn(), getDatasets: vi.fn(), getDataset: vi.fn(), getDatasetDraws: vi.fn(), getExperiment: vi.fn(),
+    listProfileBatchStrategies: vi.fn(), getProfileBatchStrategyRevisions: vi.fn(), getProfileBatchExecutionPolicy: vi.fn(), getProfileBatchStrategy: vi.fn(),
     validateProfileBatch: vi.fn(), createProfileBatch: vi.fn(), getProfileBatchByClientRequestId: vi.fn(),
     createProfileBatchStrategy: vi.fn(), reviseProfileBatchStrategy: vi.fn() } };
 });
@@ -43,6 +44,8 @@ beforeEach(() => {
   vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [profile], templates: [] });
   vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [dataset] });
   vi.mocked(apiClient.getDataset).mockResolvedValue(dataset);
+  vi.mocked(apiClient.getExperiment).mockRejectedValue(new ApiError(404, "resource not found"));
+  vi.mocked(apiClient.getProfileBatchStrategyRevisions).mockResolvedValue({ total: 1, offset: 0, limit: 100, items: [strategy] });
   vi.mocked(apiClient.getDatasetDraws).mockResolvedValue({ total: 1, offset: 0, limit: 100, items: ["2025-01-01 08:30"] });
   vi.mocked(apiClient.listProfileBatchStrategies).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [strategy] });
   vi.mocked(apiClient.getProfileBatchExecutionPolicy).mockResolvedValue(policy as never);
@@ -50,7 +53,16 @@ beforeEach(() => {
   vi.mocked(apiClient.validateProfileBatch).mockResolvedValue(validation as never);
   vi.mocked(apiClient.createProfileBatch).mockReset();
 });
-function mount() { render(<MemoryRouter initialEntries={[`/simulaciones/nueva/sesion?dataset_sha256=${dataset.dataset_sha256}`]}><ProfileBatchPage /></MemoryRouter>); }
+function mount(path = `/simulaciones/nueva/sesion?dataset_sha256=${dataset.dataset_sha256}`) { render(<MemoryRouter initialEntries={[path]}><ProfileBatchPage /></MemoryRouter>); }
+
+const savedBatch = { request_kind: "profile", request_schema_version: 5, id: "saved-base", status: "completed", created_at: null,
+  request: { schema_version: 5, kind: "profile_batch", profile_id: "local", profile_revision: 2, profile_sha256: "a".repeat(64), dataset_sha256: dataset.dataset_sha256,
+    conditions: { schema_version: 1, start_draw: "2025-01-01 08:30", capital: 100, goal: 200, settlement: "best", max_elapsed_draws: 50, max_bet_draws: 20, end_minute: null, duration_minutes: null },
+    strategies: [definition], max_draws: 40, source_version: "canonical-history/v1" }, profile: profile.profile, display: {}, sources: {}, runs: [],
+  batch_admission: { strategy_refs: [{ id: "custom", revision: 1, definition_sha256: "d".repeat(64) }],
+    source_identity: { dataset_sha256: dataset.dataset_sha256, source_sha256: dataset.source_sha256, canonical_sha256: "e".repeat(64), row_count: 1,
+      profile_id: "local", profile_revision: 2, profile_sha256: "a".repeat(64), archive_bound: false, archive_history_sha256: null, archive_rank_row_ids: null },
+    requested_constraints: { max_draws: 40, max_elapsed_draws: 50, max_bet_draws: 20 }, effective_constraints: { max_draws: 10 }, policy_revision: 1, policy: { max_draws: 10 } } } as unknown as ProfileBatchExperimentSummary;
 
 const frozenBody: BatchSubmissionBody = {
   schema_version: 1, profile: { id: "local", revision: 2, sha256: "a".repeat(64) }, dataset_sha256: "b".repeat(64),
@@ -66,6 +78,188 @@ function storePendingDraft() {
 }
 
 describe("guided v5 profile batch", () => {
+  it.each([false, true])("keeps pending Review and its exact recovery context across same-mounted dataset hints for repeat=%s", async (repeat) => {
+    const saved = createBatchDraft(dataset.dataset_sha256);
+    saved.profile = frozenBody.profile;
+    saved.strategyRefs = frozenBody.strategies;
+    saved.selectedDraw = { datasetSha256: dataset.dataset_sha256, index: 0, draw: frozenBody.conditions.start_draw };
+    saved.conditions = { start_draw: frozenBody.conditions.start_draw, capital: "100", goal: "200", settlement: "all", max_elapsed_draws: "50", max_bet_draws: "", max_draws: "50" };
+    saved.pending = { clientRequestId: frozenBody.client_request_id, frozenBody };
+    const storageKey = repeat ? `${BATCH_DRAFT_STORAGE_KEY}:repeat:saved-base` : BATCH_DRAFT_STORAGE_KEY;
+    sessionStorage.setItem(storageKey, serializeBatchDraft(saved));
+    if (repeat) vi.mocked(apiClient.getExperiment).mockResolvedValue(savedBatch);
+    const baseQuery = repeat ? "base=saved-base&" : "";
+    render(<MemoryRouter initialEntries={[`/simulaciones/nueva/sesion?${baseQuery}dataset_sha256=${dataset.dataset_sha256}`]}>
+      <Link to={`?${baseQuery}dataset_sha256=${"f".repeat(64)}`}>Cambiar pista de historial</Link>
+      <Link to={repeat ? "?base=saved-base" : "/simulaciones/nueva/sesion"}>Quitar pista de historial</Link>
+      <ProfileBatchPage />
+    </MemoryRouter>);
+    expect(await screen.findByRole("button", { name: /recuperar creación pendiente/i })).toBeEnabled();
+    const baseLoads = vi.mocked(apiClient.getExperiment).mock.calls.length;
+    const user = userEvent.setup();
+    for (const name of ["Cambiar pista de historial", "Quitar pista de historial"]) {
+      await user.click(screen.getByRole("link", { name }));
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "5");
+      expect(screen.getByRole("button", { name: /recuperar creación pendiente/i })).toBeEnabled();
+      const restored = parseBatchDraft(sessionStorage.getItem(storageKey));
+      expect(restored?.pending).toEqual({ clientRequestId: frozenBody.client_request_id, frozenBody });
+      expect(restored?.step).toBe(3);
+      expect(restored?.strategyRefs).toEqual(frozenBody.strategies);
+    }
+    expect(apiClient.getExperiment).toHaveBeenCalledTimes(baseLoads);
+    expect(apiClient.createProfileBatch).not.toHaveBeenCalled();
+  });
+  it.each([[0, 3], [1, 1], [2, 4], [3, 5]])("rehydrates native stage %s at UI step %s when only the fresh dataset query changes", async (stage, uiStep) => {
+    const saved = createBatchDraft(dataset.dataset_sha256);
+    saved.step = stage;
+    sessionStorage.setItem(BATCH_DRAFT_STORAGE_KEY, serializeBatchDraft(saved));
+    render(<MemoryRouter initialEntries={["/simulaciones/nueva/sesion"]}>
+      <Link to={`?dataset_sha256=${"f".repeat(64)}`}>Cambiar pista de historial</Link><ProfileBatchPage />
+    </MemoryRouter>);
+    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(uiStep)));
+    await userEvent.setup().click(screen.getByRole("link", { name: "Cambiar pista de historial" }));
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(uiStep));
+    expect(parseBatchDraft(sessionStorage.getItem(BATCH_DRAFT_STORAGE_KEY))?.step).toBe(stage);
+    expect(apiClient.createProfileBatch).not.toHaveBeenCalled();
+  });
+  it.each([false, true])("persists five-step navigation using native stages for repeat=%s and returns to Strategy after a dataset change", async (repeat) => {
+    const saved = createBatchDraft(dataset.dataset_sha256);
+    saved.step = 2;
+    saved.profile = { id: "local", revision: 2, sha256: profile.profile_sha256 };
+    saved.strategyRefs = frozenBody.strategies;
+    saved.selectedDraw = { datasetSha256: dataset.dataset_sha256, index: 0, draw: "2025-01-01 08:30" };
+    saved.conditions = { start_draw: "2025-01-01 08:30", capital: "100", goal: "200", settlement: "all", max_elapsed_draws: "50", max_bet_draws: "", max_draws: "50" };
+    const storageKey = repeat ? `${BATCH_DRAFT_STORAGE_KEY}:repeat:saved-base` : BATCH_DRAFT_STORAGE_KEY;
+    sessionStorage.setItem(storageKey, serializeBatchDraft(saved));
+    if (repeat) vi.mocked(apiClient.getExperiment).mockResolvedValue(savedBatch);
+    mount(repeat ? "/simulaciones/nueva/sesion?base=saved-base" : "/simulaciones/nueva/sesion");
+    const user = userEvent.setup();
+    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "4"));
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "5");
+    expect(parseBatchDraft(sessionStorage.getItem(storageKey))?.step).toBe(3);
+    await user.click(screen.getByRole("button", { name: "Atrás" }));
+    expect(parseBatchDraft(sessionStorage.getItem(storageKey))?.step).toBe(2);
+    await user.click(screen.getByRole("button", { name: "Atrás" }));
+    expect(parseBatchDraft(sessionStorage.getItem(storageKey))?.step).toBe(0);
+    await user.selectOptions(screen.getByLabelText("Historial"), dataset.dataset_sha256);
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+    expect(screen.getByRole("alert")).toHaveTextContent(/historial cambió.*retiraron las estrategias/i);
+    expect(parseBatchDraft(sessionStorage.getItem(storageKey))?.strategyRefs).toEqual([]);
+    expect(parseBatchDraft(sessionStorage.getItem(storageKey))?.step).toBe(1);
+    expect(apiClient.createProfileBatch).not.toHaveBeenCalled();
+  });
+  it("restores pending recovery at Review and does not POST after the lookup outlives a source change", async () => {
+    storePendingDraft();
+    let rejectLookup!: (reason: unknown) => void;
+    vi.mocked(apiClient.getProfileBatchByClientRequestId).mockReturnValueOnce(new Promise((_resolve, reject) => { rejectLookup = reject; }));
+    render(<MemoryRouter initialEntries={["/simulaciones/nueva/sesion"]}><Link to="?base=missing">Cambiar referencia</Link><ProfileBatchPage /></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /recuperar creación pendiente/i }));
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "5");
+    await waitFor(() => expect(apiClient.getProfileBatchByClientRequestId).toHaveBeenCalledWith("frozen-request"));
+    await user.click(screen.getByRole("link", { name: "Cambiar referencia" }));
+    rejectLookup(new ApiError(404, "resource not found"));
+    await screen.findByText(/No se puede repetir esta simulación guardada/);
+    expect(apiClient.createProfileBatch).not.toHaveBeenCalled();
+    expect(parseBatchDraft(sessionStorage.getItem(BATCH_DRAFT_STORAGE_KEY))?.pending?.frozenBody).toEqual(frozenBody);
+  });
+  it("restores a fresh pending request after visiting and leaving a saved repeat base on the same mount", async () => {
+    storePendingDraft();
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(savedBatch);
+    render(<MemoryRouter initialEntries={[`/simulaciones/nueva/sesion?dataset_sha256=${dataset.dataset_sha256}`]}>
+      <Link to="?base=saved-base">Repeat saved</Link><Link to={`?dataset_sha256=${dataset.dataset_sha256}`}>Fresh creator</Link><ProfileBatchPage />
+    </MemoryRouter>);
+    expect(await screen.findByRole("button", { name: /recuperar creación pendiente/i })).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("link", { name: "Repeat saved" }));
+    await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
+    await user.click(screen.getByRole("link", { name: "Fresh creator" }));
+    expect(await screen.findByRole("button", { name: /recuperar creación pendiente/i })).toBeInTheDocument();
+    expect(parseBatchDraft(sessionStorage.getItem(BATCH_DRAFT_STORAGE_KEY))?.pending?.clientRequestId).toBe("frozen-request");
+  });
+  it("keeps the verified base profile selected when the normal profile catalog resolves without that old revision", async () => {
+    let resolveCatalog!: (page: Awaited<ReturnType<typeof apiClient.getProfiles>>) => void;
+    vi.mocked(apiClient.getProfiles).mockImplementation((_offset, limit) => limit === 20
+      ? new Promise((resolve) => { resolveCatalog = resolve; })
+      : Promise.resolve({ total: 1, offset: 0, limit: 100, items: [profile], templates: [] }));
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(savedBatch);
+    mount(`/simulaciones/nueva/sesion?base=saved-base`);
+    await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
+    resolveCatalog({ total: 25, offset: 0, limit: 20, items: [], templates: [] });
+    await waitFor(() => expect(apiClient.getProfiles).toHaveBeenCalledWith(0, 20));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Condiciones" }));
+    expect(screen.getByLabelText("Perfil de juego")).toHaveValue("local@2");
+    expect(screen.getByLabelText("Apuesta por número (DOP)")).toBeInTheDocument();
+  });
+  it("hydrates a verified saved v5 batch into a separate editable repeat draft", async () => {
+    const priorDraft = createBatchDraft(dataset.dataset_sha256);
+    priorDraft.pending = { clientRequestId: "prior-request", frozenBody };
+    const priorSerialized = serializeBatchDraft(priorDraft);
+    sessionStorage.setItem(BATCH_DRAFT_STORAGE_KEY, priorSerialized);
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(savedBatch);
+    const user = userEvent.setup();
+    mount(`/simulaciones/nueva/sesion?base=saved-base`);
+    await waitFor(() => expect(apiClient.getExperiment).toHaveBeenCalledWith("saved-base"));
+    await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Condiciones" }));
+    expect(screen.getByLabelText("Capital inicial (DOP)")).toHaveValue("100");
+    expect(screen.getByLabelText("Meta de saldo (DOP)")).toHaveValue("200");
+    expect(screen.getByLabelText("Máximo sorteos transcurridos")).toHaveValue("50");
+    expect(screen.getByLabelText("Máximo sorteos apostados (opcional)")).toHaveValue("20");
+    const maxDraws = screen.getByLabelText("Límite operativo solicitado");
+    expect(maxDraws).toHaveValue("40");
+    expect(screen.getByLabelText("Cómo contar los premios")).toHaveValue("best");
+    await user.clear(maxDraws); await user.type(maxDraws, "41");
+    expect(sessionStorage.getItem(BATCH_DRAFT_STORAGE_KEY)).toBe(priorSerialized);
+    await user.click(screen.getByRole("button", { name: "Validación" }));
+    await user.click(screen.getByRole("button", { name: "Validar simulación" }));
+    await screen.findByText("Validación aceptada");
+    expect(apiClient.validateProfileBatch).toHaveBeenCalledWith(expect.objectContaining({ max_draws: 41,
+      strategies: savedBatch.batch_admission.strategy_refs, client_request_id: expect.not.stringMatching(/^saved-base$/) }));
+    expect(sessionStorage.getItem(`${BATCH_DRAFT_STORAGE_KEY}:repeat:saved-base`)).not.toBeNull();
+  });
+  it("invalidates a pending validation when switching between bases with the same request body", async () => {
+    let resolveValidation!: (value: typeof validation) => void;
+    vi.mocked(apiClient.getExperiment).mockImplementation(async (id) => ({ ...savedBatch, id }));
+    vi.mocked(apiClient.validateProfileBatch).mockReturnValueOnce(new Promise((resolve) => { resolveValidation = (value) => resolve(value as never); }));
+    render(<MemoryRouter initialEntries={["/simulaciones/nueva/sesion?base=base-one"]}>
+      <Link to="?base=base-two">Switch base</Link><ProfileBatchPage />
+    </MemoryRouter>);
+    await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Validación" }));
+    await user.click(screen.getByRole("button", { name: "Validar simulación" }));
+    await waitFor(() => expect(apiClient.validateProfileBatch).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole("link", { name: "Switch base" }));
+    await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
+    resolveValidation(validation);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Historial y perfil" })).toHaveAttribute("aria-current", "step"));
+    expect(screen.queryByText("Validación aceptada")).not.toBeInTheDocument();
+  });
+  it("keeps hydration from a previous base from overwriting the active base", async () => {
+    let resolveFirst!: (value: typeof savedBatch) => void;
+    const second = { ...savedBatch, id: "base-two", request: { ...savedBatch.request,
+      conditions: { ...savedBatch.request.conditions, capital: 120 } } };
+    vi.mocked(apiClient.getExperiment).mockImplementation((id) => id === "base-one"
+      ? new Promise((resolve) => { resolveFirst = resolve; }) : Promise.resolve(second));
+    render(<MemoryRouter initialEntries={["/simulaciones/nueva/sesion?base=base-one"]}>
+      <Link to="?base=base-two">Cambiar referencia</Link><ProfileBatchPage />
+    </MemoryRouter>);
+    await userEvent.setup().click(screen.getByRole("link", { name: "Cambiar referencia" }));
+    await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
+    await userEvent.setup().click(screen.getByRole("button", { name: "Condiciones" }));
+    expect(screen.getByLabelText("Capital inicial (DOP)")).toHaveValue("120");
+    resolveFirst(savedBatch);
+    await waitFor(() => expect(screen.getByLabelText("Capital inicial (DOP)")).toHaveValue("120"));
+  });
+  it("blocks a saved base when retrieved source identity differs", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(savedBatch);
+    vi.mocked(apiClient.getDataset).mockResolvedValue({ ...dataset, source_sha256: "f".repeat(64) });
+    mount(`/simulaciones/nueva/sesion?base=saved-base`);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/identidad de origen/);
+    expect(apiClient.validateProfileBatch).not.toHaveBeenCalled();
+  });
   it("# F-CREATE-044 presents the renamed artifact and keeps strategy internals closed by default", async () => {
     mount();
     expect(screen.getByRole("heading", { name: "Lote de simulaciones" })).toBeInTheDocument();

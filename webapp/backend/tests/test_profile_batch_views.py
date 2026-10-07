@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 from test_api import CatalogStub
 from test_batch_admission import _saved_inputs
 
-from laboratorio.api.profile_views import _stop, v5_run_summary
+from laboratorio.api.profile_views import BatchRunContext, _stop, run_summary, v5_run_summary
 from laboratorio.app import create_app
 from laboratorio.domain.batch_admission import admit_profile_batch
 from laboratorio.domain.contracts import RunStatus
@@ -58,13 +58,32 @@ def _completed_v5(client, *, name="Read V5", max_draws=2):
     return app, identifier, submission
 
 
-def test_completed_v5_detail_list_and_replay_project_saved_session(tmp_path):
+def test_completed_v5_detail_list_and_replay_project_saved_session(tmp_path, monkeypatch):
     settings = Settings(
         tmp_path / "data", tmp_path / "history.json", tmp_path / "rankings.npz", tmp_path
     )
     app = create_app(settings, catalog_loader=lambda _: CatalogStub())
     with TestClient(app, base_url="http://localhost:8765") as client:
         _, identifier, request = _completed_v5(client)
+        monkeypatch.setattr(
+            "laboratorio.domain.profile_session_v5.run_profile_batch_v5",
+            lambda *args, **kwargs: pytest.fail("recalculated during read projection"),
+        )
+        saved = app.state.repo.get_experiment(identifier)
+        assert saved is not None
+        native_result = saved.runs[0].result
+        admission = saved.batch_admission
+        assert admission is not None
+        projected = run_summary(
+            saved.runs[0],
+            saved.request.conditions.capital,
+            batch_context=BatchRunContext(
+                admission["source_identity"]["row_count"],
+                admission["requested_constraints"],
+                admission["effective_constraints"],
+                admission["strategy_refs"][0],
+            ),
+        )
         path = f"/api/v1/experiments/{identifier}"
         detail = client.get(path)
         assert detail.status_code == 200
@@ -72,6 +91,11 @@ def test_completed_v5_detail_list_and_replay_project_saved_session(tmp_path):
         assert body["request_schema_version"] == 5
         assert body["runs"][0]["result"]["schema_version"] == 5
         run = body["runs"][0]
+        assert json.loads(json.dumps(projected)) == run
+        assert saved.runs[0].result is native_result
+        assert body["display"]["currency"] == saved.profile.currency
+        assert body["display"]["scale"] == saved.profile.scale
+        assert run["bets_count"] == len(native_result.results[0].session.bets)
         assert run["result"]["definition_name"] == "Static low risk"
         assert run["result"]["metric_scope"] == "saved_individual_run"
         assert run["result"]["start_draw_index"] == 1
@@ -137,6 +161,45 @@ def test_v5_resultless_runs_have_no_financial_claims(status, category):
     assert summary["stop_category"] == category
     assert summary["complete"] is False
     assert "roi" not in summary
+    context = BatchRunContext(
+        40,
+        {"max_draws": 10},
+        {"max_draws": 10},
+        {"id": "strategy-id", "revision": 2, "definition_sha256": "a" * 64},
+    )
+    assert run_summary(run, 100, batch_context=context) == summary
+    assert list(summary) == [
+        "ordinal",
+        "configuration_id",
+        "status",
+        "result_kind",
+        "result_schema_version",
+        "strategy",
+        "result",
+        "bets_count",
+        "complete",
+        "completion",
+        "stop_category",
+        "stop_reason",
+        "stop_code",
+        "error",
+    ]
+    assert summary == {
+        "ordinal": 2,
+        "configuration_id": None,
+        "status": status.value,
+        "result_kind": "profile",
+        "result_schema_version": None,
+        "strategy": {**context.strategy_ref, "name": None},
+        "result": None,
+        "bets_count": 0,
+        "complete": False,
+        "completion": "unavailable",
+        "stop_category": category,
+        "stop_reason": status.value,
+        "stop_code": "unknown",
+        "error": None,
+    }
 
 
 @pytest.mark.parametrize(

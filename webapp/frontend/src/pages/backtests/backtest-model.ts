@@ -20,7 +20,9 @@ export function hydrateBacktestDraft(config: CreateBacktestBody): BacktestDraft 
     || typeof config.inputs.history_sha256 !== "string" || !config.inputs.history_sha256
     || typeof config.inputs.rankings_sha256 !== "string" || !config.inputs.rankings_sha256
     || !Number.isSafeInteger(strategy.coverage) || !["flat", "ladder", "bold"].includes(strategy.staking)
-    || (strategy.selector !== "parity" && (strategy.selector !== "system" || !systems.includes(strategy.system as BacktestSystem)))) return null;
+    || (strategy.selector === "parity" && (strategy.coverage < 1 || strategy.coverage > 50 || strategy.coverage > config.game.numbers || strategy.system != null || (strategy as typeof strategy & { components?: unknown }).components != null))
+    || (strategy.selector === "system" && (!systems.includes(strategy.system as BacktestSystem) || (strategy as typeof strategy & { components?: unknown }).components != null))
+    || (strategy.selector !== "parity" && strategy.selector !== "system")) return null;
   const { game, conditions } = config;
   if (!Number.isSafeInteger(game.numbers) || !Number.isSafeInteger(game.positions) || !Array.isArray(game.prizes)
     || game.prizes.length !== game.positions || !game.prizes.every(Number.isSafeInteger) || !Number.isSafeInteger(game.min_stake)
@@ -44,8 +46,10 @@ export function validateBacktestDraft(draft: BacktestDraft, game?: GameSettings)
   const capital = whole(draft.capital);
   const goal = whole(draft.goal);
   const minimum = whole(draft.minStake);
-  const maxNumbers = game?.numbers ?? numbers;
+  const maxNumbers = Math.min(game?.numbers ?? numbers, numbers);
   if (!draft.name.trim() || draft.name.trim().length > 80) errors.push("Escribí un nombre de hasta 80 caracteres para reconocer la corrida.");
+  const strategyName = draft.strategyName ?? (draft.parity ? "Tu par/impar" : systemNames[draft.system]);
+  if (!strategyName.trim()) errors.push("Ingresá un nombre para la estrategia.");
   if (!Number.isSafeInteger(numbers) || numbers < 2 || numbers > 1000) errors.push("Ingresá entre 2 y 1.000 números posibles; la regla debe coincidir con el sorteo.");
   if (!Number.isSafeInteger(positions) || positions < 1 || positions > 16) errors.push("Ingresá entre 1 y 16 posiciones de premio.");
   if (!Number.isSafeInteger(coverage) || coverage < 1) errors.push("La cobertura debe ser un número entero desde 1.");

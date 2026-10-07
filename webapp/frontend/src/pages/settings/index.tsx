@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useBlocker, useSearchParams } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
-import type { GameSettings, GameSettingsSource, SettingsView } from "../../api/types";
+import type { GameSettings, GameSettingsSource, ProfileCatalog, ProfileListing, SettingsView } from "../../api/types";
+import { GameRulesSummary } from "../../components/GameRulesSummary";
+import { classicRulesView, profileRulesView } from "../../lib/game-rules";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ErrorBanner, Loading } from "../../components/ui";
 import { formatDOP } from "../../lib/format";
@@ -186,6 +188,59 @@ function GameRulesSection({ onSource, onSummary, onValidity, onLoadState, onRetr
   </section>;
 }
 
+const profileRulesKey = (item: ProfileListing) => JSON.stringify([item.profile.profile_id, item.profile.revision, item.profile_sha256]);
+
+function ProfileRulesDiscovery() {
+  const [catalog, setCatalog] = useState<ProfileCatalog | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [retry, setRetry] = useState(0);
+  const [error, setError] = useState("");
+  const [choice, setChoice] = useState<{ listing: ProfileListing; offset: number } | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    setCatalog(null); setError("");
+    apiClient.getProfiles(offset, 20).then((page) => {
+      if (!live) return;
+      setCatalog(page);
+      // The catalog embeds the full revision; there is no invented detail endpoint.
+      setChoice((current) => {
+        if (!current || current.offset !== offset) return current;
+        const fresh = page.items.find((item) => profileRulesKey(item) === profileRulesKey(current.listing));
+        return fresh ? { listing: fresh, offset } : null;
+      });
+    }).catch(() => { if (live) setError("No se pudieron cargar los perfiles. Las reglas clásicas y su borrador no se modificaron."); });
+    return () => { live = false; };
+  }, [offset, retry]);
+
+  return <section id="settings-profile-rules" aria-labelledby="settings-profile-rules-heading" className="mt-6 space-y-4 border-t border-border pt-5">
+    <h3 id="settings-profile-rules-heading" className="section-header">Reglas de perfiles · solo lectura</h3>
+    <p className="field-help">Elegí una revisión del catálogo para consultar sus reglas nativas. Guardar ajustes no modifica perfiles. Migración de datos: PENDIENTE; esta vista no reescribe datos.</p>
+    {!catalog && !error && <p role="status">Cargando catálogo de perfiles…</p>}
+    {error && <div role="alert"><p>{error}</p><button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar catálogo de perfiles</button></div>}
+    {catalog && <>
+      <div className="field"><label htmlFor="settings-profile-choice" className="field-label">Revisión del perfil a consultar</label>
+        <select id="settings-profile-choice" className="control" value={choice?.offset === offset ? profileRulesKey(choice.listing) : ""} onChange={(event) => {
+          const listing = catalog.items.find((item) => profileRulesKey(item) === event.target.value);
+          setChoice(listing ? { listing, offset } : null);
+        }}><option value="">Elegí explícitamente una revisión</option>{catalog.items.map((item) => <option key={profileRulesKey(item)} value={profileRulesKey(item)}>{item.profile.profile_id} · revisión {item.profile.revision} · {item.profile.currency} · escala {item.profile.scale}</option>)}</select>
+      </div>
+      {catalog.total === 0 && <p role="status">No hay perfiles registrados. Las reglas clásicas siguen disponibles arriba.</p>}
+      {catalog.total > 0 && !catalog.items.length && <p role="status">No hay perfiles en esta página. Volvé a la anterior.</p>}
+      <nav aria-label="Páginas del catálogo de reglas de perfiles" className="flex flex-wrap items-center gap-3">
+        <button type="button" className="btn btn-secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 20))}>Perfiles anteriores</button>
+        <span>{catalog.items.length ? `${offset + 1}–${offset + catalog.items.length}` : "0"} de {catalog.total}</span>
+        <button type="button" className="btn btn-secondary" disabled={offset + 20 >= catalog.total} onClick={() => setOffset(offset + 20)}>Perfiles siguientes</button>
+      </nav>
+      {catalog.templates.length > 0 && <details><summary className="disclosure-summary">Referencias incompletas; no son perfiles registrados</summary><ul className="space-y-3 pt-3">{catalog.templates.map((template, index) => <li key={index}><p>{template.name} · {template.provenance}</p><p className="field-help">Faltan: {template.missing_fields.join(", ")}. No disponible para ejecución.</p><pre className="overflow-x-auto whitespace-pre-wrap break-all text-sm">{JSON.stringify(template.known_fields, null, 2)}</pre></li>)}</ul></details>}
+    </>}
+    {choice && <>
+      {(error || !catalog || choice.offset !== offset) && <p className="field-help">Se conserva la revisión consultada en la página {Math.floor(choice.offset / 20) + 1}; no se sustituyó por otra.</p>}
+      <GameRulesSummary view={profileRulesView(choice.listing, "Catálogo nativo /catalog/profiles · revisión elegida explícitamente para consulta")} />
+    </>}
+  </section>;
+}
+
 export function SettingsPage() {
   const [view, setView] = useState<SettingsView | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
@@ -198,6 +253,7 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [gameSource, setGameSource] = useState<GameSettingsSource | null>(null);
+  const [profileRulesOpen, setProfileRulesOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(() => {
     switch (searchParams.get("paso")) {
@@ -445,6 +501,11 @@ export function SettingsPage() {
       </section>
       <div hidden={step !== 0}>
         <GameRulesSection onSource={setGameSource} onSummary={(summary) => { setGameSummary(summary); setWizardOutcome(""); }} onValidity={setGameValid} onLoadState={setGameRulesState} onRetry={() => setGameRulesRetry((value) => value + 1)} onOutcome={setWizardOutcome} retry={gameRulesRetry} />
+        {gameSummary && <section aria-labelledby="classic-rules-summary-heading" className="mt-6 space-y-3"><h3 id="classic-rules-summary-heading" className="section-header">Resumen del borrador clásico</h3>
+          <GameRulesSummary view={classicRulesView({ name: gameSummary.name, numbers: gameSummary.numbers, positions: gameSummary.positions, prizes: gameSummary.prizes, allows_repeats: gameSummary.repeats, minimum_stake: gameSummary.stake }, "Ajustes clásicos /settings/game · vista del formulario editable", { source: gameSource ?? undefined, draft: true })} />
+        </section>}
+        <button type="button" className="btn btn-tertiary mt-5" aria-expanded={profileRulesOpen} aria-controls={profileRulesOpen ? "settings-profile-rules" : undefined} onClick={() => setProfileRulesOpen((value) => !value)}>{profileRulesOpen ? "Cerrar consulta de perfiles" : "Consultar reglas de perfiles (solo lectura)"}</button>
+        {profileRulesOpen && <ProfileRulesDiscovery />}
       </div>
       <div hidden={step !== 1}>
       <div className="flex justify-end">

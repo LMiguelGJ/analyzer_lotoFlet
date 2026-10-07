@@ -113,13 +113,172 @@ describe("verdict phrase facts", () => {
   });
 });
 
+describe("R1 execution traceability", () => {
+  it("shows the requested start separately from the first recorded classic bet and walks recorded choices", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed",
+      request: { ...snapshot.request, conditions: { ...snapshot.request.conditions, start_draw: "2026-01-02T09:55:00" } },
+      runs: [{ ...snapshot.runs[0], bets_count: 2, result: { ...snapshot.runs[0].result!, bets_count: 2 } }],
+    });
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 2, offset: 0, limit: 20, items: [bet,
+      { ...bet, label: "2026-01-02T10:15:00", numbers: [9], per_number: 30, wagered: 30, paid: 0, balance: 110 },
+    ] });
+    const { user } = setup();
+    const start = await screen.findByRole("region", { name: "Inicio de la ejecución" });
+    expect(within(start).getByText("Inicio solicitado").nextElementSibling).toHaveTextContent("2026-01-02 09:55:00");
+    expect(within(start).queryByText(/10:05|índice/i)).not.toBeInTheDocument();
+    const step = await screen.findByRole("region", { name: "Detalle de la apuesta mostrada" });
+    expect(within(step).getByText("Fecha del sorteo").nextElementSibling).toHaveTextContent("2026-01-02 10:05:00");
+    expect(within(step).getByText("Números elegidos").nextElementSibling).toHaveTextContent("00, 07");
+    expect(within(step).getByText("Apuesta por número").nextElementSibling).toHaveTextContent("RD$10");
+    expect(within(step).getByText("Gasto de esta apuesta").nextElementSibling).toHaveTextContent("RD$20");
+    expect(within(step).getByText("Resultados registrados (5 posiciones)").nextElementSibling).toHaveTextContent("00, 03, 07, 08, 09");
+    expect(within(step).getByText("Cobro de esta apuesta").nextElementSibling).toHaveTextContent("RD$60");
+    expect(within(step).getByText("Saldo tras esta apuesta").nextElementSibling).toHaveTextContent("RD$140");
+    expect(within(step).getByText(/no incluye el motivo de selección/)).toBeInTheDocument();
+    expect(screen.getByText(/no todos los sorteos transcurridos/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Siguiente apuesta" }));
+    expect(within(step).getByText("Números elegidos").nextElementSibling).toHaveTextContent("09");
+    expect(within(step).getByText("Apuesta por número").nextElementSibling).toHaveTextContent("RD$30");
+    expect(within(step).getByText("Saldo tras esta apuesta").nextElementSibling).toHaveTextContent("RD$110");
+    expect(screen.getByText(/Apuesta mostrada: 2 de 2/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver apuestas registradas" }));
+    expect(screen.getByRole("tab", { name: "Apuestas" })).toHaveFocus();
+    expect(screen.getByRole("table", { name: "Apuestas del experimento" })).toBeInTheDocument();
+    expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 0, 20);
+  });
+
+  it.each([
+    ["perfil v1", profileSnapshot], ["cíclica v2", cyclingSnapshot], ["audaz v3", audazSnapshot], ["lote v5", batchV5Snapshot],
+  ] as const)("shows native recorded variable stakes and results for %s without inventing draw identity", async (_name, saved) => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(saved);
+    const recorded = { label: "2025-01-01 05:20", stakes: [[7, 125], [8, 250]] as [number, number][], results: [8, 7, 9], wagered: 375, paid: 500, balance: 10125 };
+    const version = saved.request.schema_version;
+    const replay: ReplayPage = version === 5
+      ? { result_kind: "profile", schema_version: 5, total: 1, offset: 0, limit: 20, items: [{ ...recorded, source_index: 7, bet_index: 0 }] }
+      : version === 1 ? { ...profilePage, items: [recorded] } : { ...profilePage, schema_version: version, items: [recorded] };
+    vi.mocked(apiClient.getReplay).mockResolvedValue(replay);
+    const { user } = setup();
+    const start = await screen.findByRole("region", { name: "Inicio de la ejecución" });
+    expect(within(start).getByText("Inicio solicitado").nextElementSibling).toHaveTextContent("2025-01-01 05:10");
+    const step = await screen.findByRole("region", { name: "Detalle de la apuesta mostrada" });
+    expect(within(step).getByText("Apuestas por número").nextElementSibling).toHaveTextContent("7: USD 1.25, 8: USD 2.50");
+    expect(within(step).getByText("Gasto de esta apuesta").nextElementSibling).toHaveTextContent("USD 3.75");
+    expect(within(step).getByText("Resultados registrados (3 posiciones)").nextElementSibling).toHaveTextContent("8, 7, 9");
+    expect(within(step).getByText("Cobro de esta apuesta").nextElementSibling).toHaveTextContent("USD 5.00");
+    expect(within(step).getByText("Saldo tras esta apuesta").nextElementSibling).toHaveTextContent("USD 101.25");
+    expect(screen.getByText(/Apuesta mostrada: 1 de 1/)).toBeInTheDocument();
+    expect(within(step).queryByText(/ID oficial/)).not.toBeInTheDocument();
+    if (version === 5) {
+      expect(within(step).getByText("Índice del sorteo en la fuente").nextElementSibling).toHaveTextContent("7");
+      expect(within(start).getByText("Índice de inicio en la fuente").nextElementSibling).toHaveTextContent("5");
+      expect(screen.getByText("Cierre registrado").nextElementSibling).toHaveTextContent("max_bet_draws");
+      await user.click(screen.getByRole("tab", { name: "Apuestas" }));
+      expect(screen.getByRole("columnheader", { name: "Índice en la fuente" })).toBeInTheDocument();
+    } else {
+      expect(within(start).queryByText("Índice de inicio en la fuente")).not.toBeInTheDocument();
+      expect(within(step).queryByText("Índice del sorteo en la fuente")).not.toBeInTheDocument();
+    }
+    expect(apiClient.getReplay).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves the native profile currency and scale in the selected step", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot,
+      profile: { ...profileSnapshot.profile, currency: "EUR", scale: 3 },
+      display: { ...profileSnapshot.display, currency: "EUR", scale: 3 },
+    });
+    vi.mocked(apiClient.getReplay).mockResolvedValue(profilePage);
+    setup();
+    const step = await screen.findByRole("region", { name: "Detalle de la apuesta mostrada" });
+    expect(within(step).getByText("Apuestas por número").nextElementSibling).toHaveTextContent("7: EUR 0.125, 8: EUR 0.125");
+    expect(within(step).getByText("Gasto de esta apuesta").nextElementSibling).toHaveTextContent("EUR 0.250");
+    expect(within(step).getByText("Saldo tras esta apuesta").nextElementSibling).toHaveTextContent("EUR 9.750");
+  });
+
+  it("opens a native v5 trajectory point by bet ordinal rather than source index", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(batchV5Snapshot);
+    vi.mocked(apiClient.getReplay).mockResolvedValue({ result_kind: "profile", schema_version: 5, total: 1, offset: 0, limit: 20,
+      items: [{ label: "2025-01-01 05:10", stakes: [[7, 125], [8, 125]], results: [7, 8, 9], wagered: 250, paid: 0, balance: 9750, source_index: 5, bet_index: 0 }] });
+    const { user } = setup();
+    const trajectory = await screen.findByRole("region", { name: "Trayectoria de Snapshot cold" });
+    await user.click(within(trajectory).getByText("Consultar detalle técnico de un punto"));
+    await user.click(within(trajectory).getByRole("button", { name: /Apuesta 1 · sorteo n.º 5/ }));
+    expect(screen.getByRole("tab", { name: "Apuestas" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText(/Apuesta seleccionada 1:/)).toBeInTheDocument();
+    const step = screen.getByRole("region", { name: "Detalle de la apuesta mostrada" });
+    expect(within(step).getByText("Índice del sorteo en la fuente").nextElementSibling).toHaveTextContent("5");
+    expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 0, 20);
+  });
+
+  it("clears the selected step while the next page loads or fails, then uses the retried page", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed",
+      runs: [{ ...snapshot.runs[0], bets_count: 21, result: { ...snapshot.runs[0].result!, bets_count: 21 } }],
+    });
+    let fail!: (cause: unknown) => void;
+    vi.mocked(apiClient.getReplay).mockResolvedValueOnce({ total: 21, offset: 0, limit: 20,
+      items: Array.from({ length: 20 }, (_, index) => ({ ...bet, label: `2026-01-02T10:${String(index + 5).padStart(2, "0")}:00` })),
+    })
+      .mockReturnValueOnce(new Promise((_resolve, reject) => { fail = reject; }))
+      .mockResolvedValueOnce({ total: 21, offset: 20, limit: 20, items: [{ ...bet, label: "2026-01-02T11:00:00", balance: 80 }] });
+    const { user } = setup();
+    await screen.findByRole("region", { name: "Detalle de la apuesta mostrada" });
+    await user.click(screen.getByRole("tab", { name: "Apuestas" }));
+    await user.click(screen.getByRole("button", { name: "Página siguiente" }));
+    await user.click(screen.getByRole("tab", { name: "Resultado" }));
+    expect(screen.getByText("Cargando apuestas…")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Detalle de la apuesta mostrada" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/no incluye el motivo de selección|No hay apuestas/)).not.toBeInTheDocument();
+    await act(async () => { fail(new NetworkError()); });
+    expect(screen.getByRole("alert")).toHaveTextContent("No se pudo contactar al servidor");
+    expect(screen.queryByRole("region", { name: "Detalle de la apuesta mostrada" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/no incluye el motivo de selección|No hay apuestas/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reintentar página" }));
+    const next = await screen.findByRole("region", { name: "Detalle de la apuesta mostrada" });
+    expect(within(next).getByText("Fecha del sorteo").nextElementSibling).toHaveTextContent("2026-01-02 11:00:00");
+    expect(within(next).getByText("Saldo tras esta apuesta").nextElementSibling).toHaveTextContent("RD$80");
+    expect(screen.getByText(/Apuesta mostrada: 21 de 21/)).toBeInTheDocument();
+    expect(apiClient.getReplay).toHaveBeenNthCalledWith(2, "exp", 0, 20, 20);
+    expect(apiClient.getReplay).toHaveBeenNthCalledWith(3, "exp", 0, 20, 20);
+  });
+
+  it("removes loaded step details when switching to a run without a result", async () => {
+    const { user } = setup();
+    await screen.findByRole("region", { name: "Detalle de la apuesta mostrada" });
+    await user.click(screen.getByRole("button", { name: /2\. Segunda/ }));
+    expect(screen.queryByRole("region", { name: "Detalle de la apuesta mostrada" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/no incluye el motivo de selección/)).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Inicio de la ejecución" })).toBeVisible();
+    expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 0, 20);
+  });
+
+  it("keeps a zero-bet v5 run's start and closure visible without inventing steps or fetching replay", async () => {
+    const run = batchV5Snapshot.runs[0];
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, runs: [{ ...run, bets_count: 0,
+      result: { ...run.result!, bet_draws: 0, elapsed_draws: 3, wagered: 0, paid: 0, final_balance: 10000, delta: 0 },
+    }] });
+    const { user } = setup();
+    const start = await screen.findByRole("region", { name: "Inicio de la ejecución" });
+    expect(within(start).getByText("Inicio solicitado").nextElementSibling).toHaveTextContent("2025-01-01 05:10");
+    expect(within(start).getByText("Índice de inicio en la fuente").nextElementSibling).toHaveTextContent("5");
+    expect(screen.getByText("Cierre registrado").nextElementSibling).toHaveTextContent("max_bet_draws");
+    expect(screen.getByText("No hay apuestas registradas en este resultado.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Siguiente apuesta" })).toBeDisabled();
+    expect(screen.queryByRole("region", { name: "Detalle de la apuesta mostrada" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver apuestas registradas" }));
+    expect(screen.getByText("No hay apuestas registradas en este resultado.")).toBeVisible();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(apiClient.getReplay).not.toHaveBeenCalled();
+  });
+});
+
 describe("profile detail READ", () => {
   it.each(["pending", "running", "held", "failed"] as const)("shows Q80 %s without a fabricated result or replay", async (status) => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...cyclingSnapshot, status,
       runs: [{ ...cyclingSnapshot.runs[0], status: status === "held" ? "pending" : status, result: null, bets_count: 0 }] });
     const { user, unmount } = setup();
     const run = await screen.findByRole("region", { name: "Ejecución 1" });
-    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Repetir con cambios" })).toHaveAttribute("href", "/simulaciones/nueva/perfil?base=exp");
+    expect(run).toHaveAttribute("data-result-family", "profile-v2");
+    expect(within(run).getByText(`Dataset: ${"a".repeat(64)}`)).toBeInTheDocument();
     expect(within(run).getByText(/no tiene un resultado guardado/i)).toBeInTheDocument();
     expect(within(run).getByText("Capital inicial").nextElementSibling).toHaveTextContent("USD 100.00");
     expect(within(run).getByText("Meta de saldo").nextElementSibling).toHaveTextContent("USD 200.00");
@@ -140,7 +299,7 @@ describe("profile detail READ", () => {
     expect(screen.getByText("Escalera cíclica Q80 · apuesta dinámica por sorteo")).toBeInTheDocument();
     expect(screen.queryByText(/undefined por número/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
-    expect(await screen.findByText("7: USD 1.25, 8: USD 1.25")).toBeInTheDocument();
+    expect(within(await screen.findByRole("table", { name: "Apuestas del experimento" })).getByText("7: USD 1.25, 8: USD 1.25")).toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
     expect(apiClient.createExperiment).not.toHaveBeenCalled();
   });
@@ -166,7 +325,7 @@ describe("profile detail READ", () => {
     expect(screen.getByText("Audaz · apuesta dinámica por sorteo")).toBeInTheDocument();
     expect(screen.queryByText(/por número/)).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
-    expect(await screen.findByText("7: USD 1.25, 8: USD 1.25")).toBeInTheDocument();
+    expect(within(await screen.findByRole("table", { name: "Apuestas del experimento" })).getByText("7: USD 1.25, 8: USD 1.25")).toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
   });
   it.each([["cycle", "Reiniciar la escalera"], ["stop", "Detener la sesión"]] as const)("shows schema-4 recovery request, saved result version, and %s details", async (end_mode, ending) => {
@@ -190,7 +349,7 @@ describe("profile detail READ", () => {
     expect(screen.getByText("Rondas de recuperación").nextElementSibling).toHaveTextContent("3");
     expect(screen.getByText(ending)).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
-    expect(await screen.findByText("7: USD 1.25")).toBeInTheDocument();
+    expect(within(await screen.findByRole("table", { name: "Apuestas del experimento" })).getByText("7: USD 1.25")).toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
   });
   it("does not claim historical provenance for a profile dataset without source kind", async () => {
@@ -290,7 +449,9 @@ describe("profile batch v5 detail", () => {
     expect(screen.getByRole("heading", { name: "Lote guardado · Snapshot cold" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Snapshot cold" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Comparar simulaciones" })).toHaveAttribute("href", "/simulaciones/exp/comparacion");
-    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Repetir con cambios" })).toHaveAttribute("href", "/simulaciones/nueva/sesion?base=exp");
+    expect(run).toHaveAttribute("data-result-family", "profile-batch-v5");
+    expect(within(run).getByText(`Dataset: ${"a".repeat(64)}`)).toBeInTheDocument();
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
     expect(within(screen.getByRole("region", { name: "Veredicto" })).getByText(/Motivo de cierre:/)).toHaveTextContent("Límite configurado");
     const technical = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Versión de solicitud"));
@@ -390,7 +551,31 @@ describe("profile batch v5 detail", () => {
 });
 
 describe("LW11 detail", () => {
-  it("offers a classic-only secondary repeat link with the exact encoded base and preserves navigation", async () => {
+  it.each([1, 2, 3, 4] as const)("routes a saved profile schema v%i to its creator with an encoded base", async (version) => {
+    const id = `profile&version=${version}`;
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, id, request: { ...profileSnapshot.request, schema_version: version },
+      runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, schema_version: version } }],
+    } as ProfileExperimentSummary);
+    setup(`/simulaciones/${encodeURIComponent(id)}`);
+    const navigation = await screen.findByRole("navigation", { name: "Navegación de la simulación" });
+    expect(screen.getByRole("region", { name: "Ejecución 1" })).toHaveAttribute("data-result-family", `profile-v${version}`);
+    expect(within(navigation).getByRole("link", { name: "Repetir con cambios" })).toHaveAttribute("href", `/simulaciones/nueva/perfil?base=${encodeURIComponent(id)}`);
+  });
+  it("keeps unsupported saved profile versions fail-safe", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, request: { ...profileSnapshot.request, schema_version: 99 } } as unknown as ProfileExperimentSummary);
+    setup();
+    await screen.findByRole("navigation", { name: "Navegación de la simulación" });
+    expect(screen.queryByRole("link", { name: "Repetir con cambios" })).not.toBeInTheDocument();
+  });
+  it("routes a saved batch v5 to the session creator with an encoded base", async () => {
+    const id = "batch&scope=profile?x=1";
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...batchV5Snapshot, id });
+    setup(`/simulaciones/${encodeURIComponent(id)}`);
+    const navigation = await screen.findByRole("navigation", { name: "Navegación de la simulación" });
+    expect(screen.getByRole("region", { name: "Ejecución 1" })).toHaveAttribute("data-result-family", "profile-batch-v5");
+    expect(within(navigation).getByRole("link", { name: "Repetir con cambios" })).toHaveAttribute("href", `/simulaciones/nueva/sesion?base=${encodeURIComponent(id)}`);
+  });
+  it("offers a classic secondary repeat link with the exact encoded base and preserves navigation", async () => {
     const id = "classic&scope=profile?x=1";
     vi.mocked(apiClient.getExperiment).mockReset().mockResolvedValue({ ...snapshot, id });
     vi.mocked(apiClient.createExperiment).mockReset();
@@ -403,6 +588,9 @@ describe("LW11 detail", () => {
     const repeat = within(navigation).getByRole("link", { name: "Repetir con cambios" });
     expect(repeat).toHaveClass("btn", "btn-secondary");
     expect(navigation).toHaveClass("flex-wrap");
+    const resultFrame = screen.getByRole("region", { name: "Ejecución 1" });
+    expect(resultFrame).toHaveAttribute("data-result-family", "classic-individual");
+    expect(within(resultFrame).getByText("Historial: history.json")).toBeInTheDocument();
     expect(repeat).toHaveAttribute("href", `/simulaciones/nueva?base=${encodeURIComponent(id)}`);
     await user.click(repeat);
     await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones/nueva"));
@@ -428,7 +616,7 @@ describe("LW11 detail", () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...snapshot, status: "completed", runs: [{ ...snapshot.runs[0], bets_count: 1001, result: { ...snapshot.runs[0].result!, bets_count: 1001 } }] });
     vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 1001, offset: 600, limit: 20, items: [bet] });
     setup("/simulaciones/exp?run=0&bet=600&from=comparison");
-    expect(await screen.findByText(/Sorteo seleccionado 601:/)).toBeInTheDocument();
+    expect(await screen.findByText(/Apuesta seleccionada 601:/)).toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledExactlyOnceWith("exp", 0, 600, 20);
     expect(screen.getByRole("tab", { name: "Apuestas" })).toHaveAttribute("aria-selected", "true");
   });
@@ -565,7 +753,7 @@ describe("LW11 detail", () => {
     expect(within(table).getByText("00, 07")).toBeInTheDocument();
     expect(within(table).getByText("RD$10")).toBeInTheDocument();
     await user.click(within(table).getByRole("button", { name: /Detalle/ }));
-    expect(screen.getByText("00, 03, 07, 08, 09")).toBeInTheDocument();
+    expect(within(table).getByText("00, 03, 07, 08, 09")).toBeInTheDocument();
   });
 
   it("does not replace an existing snapshot with a stale response after navigating to another id", async () => {
@@ -614,7 +802,7 @@ describe("LW11 detail", () => {
     await screen.findByText("Prueba");
     await user.click(screen.getByRole("button", { name: /Segunda/ }));
     await act(async () => { resolveReplay(page); });
-    expect(screen.queryByText(/Sorteo mostrado:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Apuesta mostrada:/)).not.toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledTimes(1);
   });
 
@@ -627,9 +815,9 @@ describe("LW11 detail", () => {
     await user.click(screen.getByRole("tab", { name: "Apuestas" }));
     await screen.findByRole("table", { name: "Apuestas del experimento" });
     await user.click(screen.getByRole("button", { name: "Página siguiente" }));
-    await screen.findByText("2026-01-02 11:00:00");
+    await waitFor(() => expect(within(screen.getByRole("table", { name: "Apuestas del experimento" })).getByText("2026-01-02 11:00:00")).toBeInTheDocument());
     await user.click(screen.getByRole("tab", { name: "Resultado" }));
-    expect(screen.getByText(/Sorteo mostrado: 21 de 21/)).toBeInTheDocument();
+    expect(screen.getByText(/Apuesta mostrada: 21 de 21/)).toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenNthCalledWith(2, "exp", 0, 20, 20);
     expect(apiClient.getReplay).toHaveBeenCalledTimes(2);
   });
@@ -640,7 +828,7 @@ describe("LW11 detail", () => {
     vi.mocked(apiClient.getReplay).mockResolvedValue({ total: 2, offset: 0, limit: 20, items: [bet, { ...bet, label: "2026-01-02T10:10:00", balance: 120 }] });
     const { user, unmount } = setup();
     await screen.findByText("Prueba");
-    await screen.findByText(/Sorteo mostrado: 1 de 2/);
+    await screen.findByText(/Apuesta mostrada: 1 de 2/);
     const final = screen.getByText("Saldo final").parentElement?.textContent;
     const resultTab = screen.getByRole("tab", { name: "Resultado" });
     resultTab.focus();
@@ -653,10 +841,10 @@ describe("LW11 detail", () => {
     expect(screen.getByRole("button", { name: "Pausar" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Pausar" }));
     await act(async () => { await vi.advanceTimersByTimeAsync(2500); });
-    expect(screen.getByText(/Sorteo mostrado: 1 de 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Apuesta mostrada: 1 de 2/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reproducir" }));
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
-    expect(screen.getByText(/Sorteo mostrado: 2 de 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Apuesta mostrada: 2 de 2/)).toBeInTheDocument();
     expect(screen.getByText("Saldo final").parentElement?.textContent).toBe(final);
     unmount(); vi.useRealTimers();
   });
@@ -672,8 +860,8 @@ describe("LW11 detail", () => {
     const { user } = setup();
     await screen.findByText("Prueba");
     const final = screen.getByText(/Saldo final/).parentElement?.textContent;
-    await user.click(screen.getByRole("button", { name: "Siguiente sorteo" }));
-    expect(screen.getByText(/Sorteo mostrado/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Siguiente apuesta" }));
+    expect(screen.getByText(/Apuesta mostrada/)).toBeInTheDocument();
     expect(screen.getByText(/Saldo final/).parentElement?.textContent).toBe(final);
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
     expect(screen.getByText("history.json")).toBeInTheDocument();

@@ -5,12 +5,13 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient, NetworkError } from "../../api/client";
 import { ProfileExperimentPage } from "./ProfileExperimentPage";
-import { audazDataset, audazProfile, cyclingProfile, datasetItem, profileItem, recoveryDataset, recoveryProfile } from "./profile-model.test";
+import { buildProfileRequest } from "./profile-model";
+import { audazDataset, audazProfile, cyclingProfile, datasetItem, profileItem, recoveryDataset, recoveryProfile, validDraft } from "./profile-model.test";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
   return { ...actual, apiClient: { ...actual.apiClient, getProfiles: vi.fn(), getDatasets: vi.fn(),
-    getDataset: vi.fn(), getDatasetDraws: vi.fn(), createProfileExperiment: vi.fn() } };
+    getDataset: vi.fn(), getDatasetDraws: vi.fn(), getExperiment: vi.fn(), createProfileExperiment: vi.fn() } };
 });
 const id = "c".repeat(32);
 function setup(initialEntry = "/simulaciones/nueva/perfil") {
@@ -53,6 +54,41 @@ beforeEach(() => {
 });
 
 describe("profile session creator", () => {
+  it("validates native Strategy and Capital at their own steps before Review", async () => {
+    const { user } = setup();
+    await screen.findByRole("option", { name: "Perfil de juego 1" });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
+    await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "2");
+    const numbers = screen.getByRole("textbox", { name: /Números distintos/ });
+    await user.type(numbers, "0,0");
+    await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
+    expect(screen.getByRole("alert")).toHaveTextContent(/Números.*distintos/);
+    await user.clear(numbers); await user.type(numbers, "0,1");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Historial compatible" }), datasetItem.dataset_sha256);
+    await screen.findByRole("option", { name: "2025-01-01 05:10" });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-01-01 05:10");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Nativa");
+    const capital = screen.getByRole("textbox", { name: /Capital inicial/ });
+    await user.type(capital, "2000.001");
+    await user.type(screen.getByRole("textbox", { name: /Meta de saldo final/ }), "2800");
+    const elapsed = screen.getByRole("textbox", { name: /Límite de sorteos transcurridos/ });
+    await user.type(elapsed, "10001");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "4");
+    expect(screen.getByRole("alert")).toHaveTextContent(/decimales/);
+    await user.clear(capital); await user.type(capital, "2000.00");
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/Sorteos transcurridos.*rango/);
+    expect(screen.queryByRole("button", { name: "Crear simulación y agregar a la cola" })).not.toBeInTheDocument();
+    expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
+  });
   it("# F-CREATE-001 F-CREATE-036 shows the three plain rule groups and keeps technical values behind closed disclosures", async () => {
     const { user } = setup();
     await screen.findByRole("option", { name: "Perfil de juego 1" });
@@ -253,6 +289,24 @@ describe("profile session creator", () => {
     expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("link", { name: "Revisá Simulaciones" })).toHaveAttribute("href", "/simulaciones");
   });
+  it("repeats a saved profile request only after paging to its exact immutable revision and verifies its draw", async () => {
+    const original = buildProfileRequest({ ...validDraft, name: "Saved session" }, profileItem, datasetItem, validDraft.start_draw);
+    original.conditions.end_minute = Math.floor(Date.parse("2025-01-01T05:10:00Z") / 60_000) + 30;
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ request_kind: "profile", id: "a".repeat(32), request: original } as never);
+    vi.mocked(apiClient.getProfiles).mockImplementation(async (offset = 0) => ({ total: 21, offset, limit: 20,
+      items: offset ? [profileItem] : [{ ...profileItem, profile: { ...profileItem.profile, profile_id: "other" } }], templates: [] }));
+    const { user } = setup(`/simulaciones/nueva/perfil?base=${"a".repeat(32)}`);
+    const name = await screen.findByRole("textbox", { name: "Nombre de la simulación" });
+    await waitFor(() => expect(name).toHaveValue("Saved session"));
+    expect(apiClient.getProfiles).toHaveBeenCalledWith(20, 20);
+    await user.clear(name); await user.type(name, "Repeat saved");
+    await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
+    await waitFor(() => expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1));
+    expect(apiClient.createProfileExperiment).toHaveBeenCalledWith(expect.objectContaining({ schema_version: 1, name: "Repeat saved",
+      conditions: expect.objectContaining({ start_draw: original.conditions.start_draw, end_minute: original.conditions.end_minute }),
+      profile_sha256: original.profile_sha256, dataset_sha256: original.dataset_sha256 }));
+  });
+
   it("# F-CREATE-043 shows no false compatibility and keeps keyboard-labeled controls accessible", async () => {
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [{ ...datasetItem, profile_sha256: "e".repeat(64) }] });

@@ -10,9 +10,9 @@ import pytest
 from fastapi.testclient import TestClient
 from test_import_records import profile
 
-from laboratorio.app import create_app
+from laboratorio.app import _IMPORT_ENVELOPE_BYTES, create_app
 from laboratorio.domain.profile_request import profile_sha256
-from laboratorio.importing.history import parse_history
+from laboratorio.importing.history import MAX_HISTORY_BYTES, parse_history
 from laboratorio.settings import Settings
 
 
@@ -185,3 +185,97 @@ def test_history_promote_revalidates_quota_and_old_import_format_stays_strict(ap
         headers={"Origin": "http://127.0.0.1:8765"},
     )
     assert legacy.status_code == 422
+
+
+@pytest.mark.parametrize("action", ["preview", "promote"])
+def test_common_history_entry_is_lossless_and_retains_native_admission(api, action):
+    client, _, game, app = api
+    # Valid history over the generic wire cap must arrive unchanged at the native parser.
+    raw = json.dumps(document()).encode() + b" " * _IMPORT_ENVELOPE_BYTES
+    legacy_headers = history_headers(game)
+    baseline = client.post(
+        "/api/v1/imports/history/preview", content=raw, headers=legacy_headers
+    ).json()
+    headers = {
+        **history_headers(game, expected=baseline["dataset_sha256"]),
+        "X-Import-Mode": "history",
+    }
+    path = f"/api/v1/imports/{action}"
+    response = client.post(path, content=raw, headers=headers)
+    assert response.status_code == 200
+    if action == "preview":
+        assert response.json() == baseline
+    else:
+        assert response.json()["retained_source_sha256"] == sha256(raw).hexdigest()
+        alias = client.post("/api/v1/imports/history/promote", content=raw, headers=headers)
+        assert alias.status_code == 200 and not alias.json()["created"]
+    assert client.post(path, content=raw, headers=legacy_headers).status_code == 413
+    assert (
+        client.post(
+            path,
+            content=raw,
+            headers={"Origin": "http://127.0.0.1:8765", "X-Import-Mode": "history"},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            path, content=raw, headers={**headers, "Origin": "http://evil.example"}
+        ).status_code
+        == 403
+    )
+    for change, status in (
+        ({"X-Profile-Sha256": "0" * 64}, 409),
+        ({"X-Profile-Id": "missing"}, 422),
+        ({"X-Confirm-Source": "wrong"}, 409),
+        ({"X-Confirm-Timezone": "wrong"}, 409),
+    ):
+        assert client.post(path, content=raw, headers={**headers, **change}).status_code == status
+    assert (
+        client.post(path, content=b'{"metadata":{},"metadata":{}}', headers=headers).status_code
+        == 422
+    )
+    if action == "promote":
+        assert (
+            client.post(
+                path, content=raw, headers={**headers, "X-Expected-Dataset-Sha256": "0" * 64}
+            ).status_code
+            == 409
+        )
+        app.state.settings = replace(app.state.settings, quota_bytes=1, quota_explicit=True)
+        # A distinct source/dataset still revalidates quota through the native promotion path.
+        changed = json.dumps(
+            document({"2025-01-01": [{"hora": "06:00", "numeros": [1, 2, 3]}]})
+        ).encode()
+        digest = client.post("/api/v1/imports/preview", content=changed, headers=headers).json()[
+            "dataset_sha256"
+        ]
+        assert (
+            client.post(
+                path, content=changed, headers={**headers, "X-Expected-Dataset-Sha256": digest}
+            ).status_code
+            == 409
+        )
+    assert (
+        client.post(
+            path, content=b"{}", headers={**headers, "Content-Length": str(MAX_HISTORY_BYTES + 1)}
+        ).status_code
+        == 413
+    )
+
+    def chunks():
+        for _ in range(32):
+            yield b" " * (1024 * 1024)
+        yield b"x"
+
+    for length in ({}, {"Content-Length": "2"}):
+        assert client.post(path, content=chunks(), headers={**headers, **length}).status_code == 413
+    for alias in ("preview", "promote"):
+        assert (
+            client.post(
+                f"/api/v1/imports/history/{alias}",
+                content=raw,
+                headers={**legacy_headers, "X-Import-Mode": "records"},
+            ).status_code
+            == 422
+        )

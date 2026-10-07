@@ -15,10 +15,13 @@ import asyncio
 import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from threading import Event, Lock
 
 import httpx
 import pytest
+from fastapi import FastAPI
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from test_api import CatalogStub
 from test_history_import import document, history_headers
@@ -26,6 +29,16 @@ from test_import_records import profile
 from test_profile_batch_api import _capture_enqueue, _submission_body
 
 from laboratorio.agent_credentials import load_or_create_token
+from laboratorio.api import (
+    agent,
+    catalog,
+    datasets,
+    experiments,
+    imports,
+    profile_batches,
+    queue,
+    strategies,
+)
 from laboratorio.app import create_app
 from laboratorio.domain.profile_session_v5 import run_profile_batch_v5
 from laboratorio.importing.history import MAX_HISTORY_BYTES
@@ -457,3 +470,285 @@ def test_concurrent_agent_credential_creation_publishes_only_complete_winner(tmp
     assert first_result == second_result == "B" * 43
     assert credential_path.read_text(encoding="ascii") == first_result
     assert list(tmp_path.iterdir()) == [credential_path]
+
+
+# Fixed contract, not derived from native routers: additions there must not grant
+# the agent new capabilities. Callable identity proves forwarding code is gone.
+_AGENT_ENDPOINTS = {
+    ("GET", "/catalog"): catalog.read_catalog,
+    ("GET", "/starting-draws"): catalog.starting_draws,
+    ("GET", "/profiles"): catalog.profiles,
+    ("GET", "/profiles/{identifier}/revisions/{revision}"): agent.profile_detail,
+    ("GET", "/datasets"): datasets.datasets,
+    ("GET", "/datasets/{sha256}"): datasets.dataset_detail,
+    ("GET", "/datasets/{sha256}/draws"): datasets.dataset_draws,
+    ("GET", "/strategies"): strategies.list_all,
+    ("POST", "/strategies"): strategies.create,
+    ("GET", "/strategies/{identifier}"): strategies.detail,
+    ("GET", "/strategies/{identifier}/revisions"): strategies.revisions,
+    ("GET", "/strategies/{identifier}/revisions/{revision}"): agent.strategy_revision,
+    ("GET", "/experiments"): agent.list_experiments,
+    ("GET", "/experiments/{identifier}"): experiments.detail,
+    ("GET", "/experiments/{identifier}/compare"): experiments.compare,
+    ("GET", "/experiments/{identifier}/runs/{ordinal}/replay"): experiments.replay,
+    ("GET", "/experiments/{identifier}/runs/{ordinal}/trajectory"): experiments.trajectory,
+    ("POST", "/experiments/{identifier}/cancel"): queue.cancel,
+    ("POST", "/profile-batches/validate"): profile_batches.validate,
+    ("POST", "/profile-batches"): agent.create_batch,
+    ("GET", "/profile-batches/by-client-request/{client_request_id:path}"): (
+        agent.batch_by_client_request
+    ),
+    ("POST", "/history/preview"): imports.history_preview,
+    ("POST", "/history/promote"): imports.history_promote,
+}
+
+
+def _facade_only_app():
+    # No lifespan, worker, storage or origin middleware: test the router's own gate.
+    app = FastAPI()
+    app.state.agent_token = "test-only-agent-token"
+    app.include_router(agent.router, prefix="/api")
+    return app
+
+
+def test_agent_registers_only_allowlisted_native_callables_with_bearer_dependency():
+    routes = {}
+    for route in agent.router.routes:
+        assert isinstance(route, APIRoute)
+        for method in route.methods:
+            routes[(method, route.path.removeprefix("/agent/v1"))] = route
+    assert routes.keys() == _AGENT_ENDPOINTS.keys()
+    for key, endpoint in _AGENT_ENDPOINTS.items():
+        route = routes[key]
+        assert route.endpoint is endpoint
+        assert [dependency.call for dependency in route.dependant.dependencies] == [
+            agent._require_bearer
+        ]
+        expected_status = (
+            201 if key in {("POST", "/strategies"), ("POST", "/profile-batches")} else None
+        )
+        assert route.status_code == expected_status
+
+
+def test_agent_openapi_keeps_bounded_queries_body_and_operation_names():
+    schema = _facade_only_app().openapi()
+    paths = schema["paths"]
+    queries = {
+        "/catalog": set(),
+        "/starting-draws": {"offset", "limit", "date"},
+        "/profiles": {"offset", "limit"},
+        "/datasets": {"offset", "limit"},
+        "/datasets/{sha256}": set(),
+        "/datasets/{sha256}/draws": {"offset", "limit", "date"},
+        "/strategies": {"offset", "limit"},
+        "/strategies/{identifier}": {"profile_id", "profile_revision", "profile_sha256"},
+        "/strategies/{identifier}/revisions": {"offset", "limit"},
+        "/experiments": {"offset", "limit"},
+        "/experiments/{identifier}": set(),
+        "/experiments/{identifier}/compare": set(),
+        "/experiments/{identifier}/runs/{ordinal}/replay": {"offset", "limit"},
+        "/experiments/{identifier}/runs/{ordinal}/trajectory": {"max_points"},
+    }
+    for suffix, expected in queries.items():
+        parameters = paths[f"/api/agent/v1{suffix}"]["get"].get("parameters", [])
+        actual = {item["name"]: item["schema"] for item in parameters if item["in"] == "query"}
+        assert actual.keys() == expected
+        if "offset" in actual:
+            assert actual["offset"]["minimum"] == actual["offset"]["default"] == 0
+            assert actual["limit"]["minimum"] == 1
+            assert actual["limit"]["maximum"] == 100
+            assert actual["limit"]["default"] == (100 if suffix.endswith("draws") else 20)
+        if "date" in actual:
+            assert actual["date"]["anyOf"][0]["pattern"] == r"^\d{4}-\d{2}-\d{2}$"
+        if "max_points" in actual:
+            assert actual["max_points"]["minimum"] == 4
+            assert actual["max_points"]["maximum"] == 2000
+            assert actual["max_points"]["default"] == 500
+    assert paths["/api/agent/v1/profiles"]["get"]["operationId"] == (
+        "list_profiles_api_agent_v1_profiles_get"
+    )
+    strategy_post = paths["/api/agent/v1/strategies"]["post"]
+    assert strategy_post["operationId"] == "create_strategy_api_agent_v1_strategies_post"
+    assert strategy_post["summary"] == "Create Strategy"
+    assert "201" in strategy_post["responses"]
+    assert strategy_post["requestBody"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/StrategyBody"
+    }
+    assert schema["components"]["schemas"]["StrategyBody"]["additionalProperties"] is False
+
+
+@pytest.mark.parametrize(
+    "authorization",
+    [
+        [],
+        [("Authorization", "Bearer wrong")],
+        [
+            ("Authorization", "Bearer test-only-agent-token"),
+            ("Authorization", "Bearer test-only-agent-token"),
+        ],
+    ],
+)
+def test_every_agent_route_requires_one_valid_bearer_without_app_middleware(authorization):
+    with TestClient(_facade_only_app()) as client:
+        for method, path in _AGENT_ENDPOINTS:
+            path = (
+                path.replace("{identifier}", "missing")
+                .replace("{revision}", "1")
+                .replace("{sha256}", "a" * 64)
+                .replace("{ordinal}", "0")
+                .replace("{client_request_id:path}", "nested/request")
+            )
+            response = client.request(method, f"/api/agent/v1{path}", headers=authorization)
+            assert response.status_code == 401, (method, path, response.text)
+            assert response.json() == {"detail": "agent authentication required"}
+
+
+def test_agent_experiment_list_does_not_forward_native_only_queries(monkeypatch):
+    calls = []
+
+    def native_list(request, offset, limit, *, name_contains):
+        assert name_contains is None
+        calls.append((offset, limit, name_contains))
+        return {"items": []}
+
+    monkeypatch.setattr(experiments, "list_all", native_list)
+    with TestClient(_facade_only_app()) as client:
+        response = client.get(
+            "/api/agent/v1/experiments",
+            params={
+                "offset": 2,
+                "limit": 3,
+                "name_contains": "ignored",
+                "status": "invalid",
+                "sort": "invalid",
+                "order": "invalid",
+            },
+            headers={"Authorization": "Bearer test-only-agent-token"},
+        )
+    assert response.status_code == 200
+    assert calls == [(2, 3, None)]
+
+
+def test_agent_experiment_list_uses_real_native_handler_with_plain_defaults():
+    calls = []
+
+    class RepositoryDouble:
+        def search_experiments(
+            self,
+            offset,
+            limit,
+            *,
+            name_contains,
+            status,
+            sort,
+            order,
+            include_completed_cycling,
+        ):
+            assert name_contains is None
+            assert status is None
+            assert sort == "created_at"
+            assert order == "desc"
+            assert include_completed_cycling is True
+            calls.append((offset, limit))
+            return 0, []
+
+    app = _facade_only_app()
+    app.state.repo = RepositoryDouble()
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/agent/v1/experiments",
+            params={
+                "offset": 2,
+                "limit": 3,
+                "name_contains": "ignored",
+                "status": "invalid",
+                "sort": "invalid",
+                "order": "invalid",
+            },
+            headers={"Authorization": "Bearer test-only-agent-token"},
+        )
+    assert response.status_code == 200, response.text
+    assert response.json() == {"total": 0, "offset": 2, "limit": 3, "items": []}
+    assert calls == [(2, 3)]
+
+
+@pytest.mark.parametrize(
+    ("path", "params"),
+    [
+        ("/profiles", {"limit": 101}),
+        ("/strategies", {"offset": -1}),
+        ("/strategies/missing", {"profile_revision": 0}),
+        ("/starting-draws", {"date": "not-a-date"}),
+        (f"/datasets/{'a' * 64}/draws", {"limit": 101}),
+        ("/datasets/invalid", {}),
+        ("/experiments/missing/runs/0/replay", {"limit": 0}),
+        ("/experiments/missing/runs/0/trajectory", {"max_points": 2001}),
+    ],
+)
+def test_reused_agent_endpoints_keep_input_bounds_before_storage_access(path, params):
+    with TestClient(_facade_only_app()) as client:
+        response = client.get(
+            f"/api/agent/v1{path}",
+            params=params,
+            headers={"Authorization": "Bearer test-only-agent-token"},
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("status_code", [200, 201])
+def test_agent_batch_link_adapters_copy_only_links_preserve_identity_and_status(
+    monkeypatch, status_code
+):
+    native = {
+        "id": "frozen-batch",
+        "created": status_code == 201,
+        "batch_admission": {"source_identity": {"dataset_sha256": "a" * 64}},
+        "runs": [{"ordinal": 2, "strategy_ref": {"revision": 7}}],
+        "links": {
+            "self": "/api/v1/experiments/frozen-batch",
+            "compare": "/api/v1/experiments/frozen-batch/compare",
+            "runs": [
+                {"ordinal": ordinal, "replay": "native-replay", "trajectory": "native-trajectory"}
+                for ordinal in (2, 0)
+            ],
+        },
+    }
+    before = deepcopy(native)
+
+    async def native_create(request, response):
+        response.status_code = status_code
+        return native
+
+    def native_lookup(client_request_id, request):
+        assert client_request_id == "nested/request"
+        return native
+
+    monkeypatch.setattr(profile_batches, "create", native_create)
+    monkeypatch.setattr(profile_batches, "by_client_request", native_lookup)
+    headers = {"Authorization": "Bearer test-only-agent-token"}
+    with TestClient(_facade_only_app()) as client:
+        created = client.post("/api/agent/v1/profile-batches", headers=headers)
+        lookup = client.get(
+            "/api/agent/v1/profile-batches/by-client-request/nested/request", headers=headers
+        )
+    assert created.status_code == status_code
+    assert lookup.status_code == 200
+    for response in (created, lookup):
+        value = response.json()
+        assert {key: item for key, item in value.items() if key != "links"} == {
+            key: item for key, item in before.items() if key != "links"
+        }
+        base = "/api/agent/v1/experiments/frozen-batch"
+        assert value["links"] == {
+            "self": base,
+            "compare": f"{base}/compare",
+            "runs": [
+                {
+                    "ordinal": ordinal,
+                    "replay": f"{base}/runs/{ordinal}/replay",
+                    "trajectory": f"{base}/runs/{ordinal}/trajectory",
+                }
+                for ordinal in (2, 0)
+            ],
+        }
+    assert native == before

@@ -34,6 +34,44 @@ describe("historical backtest configuration", () => {
     expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, selector: "system", system: null } } as never)).toBeNull();
   });
 
+  it("rejects saved strategies outside the historical wire contract", () => {
+    const config = { name: "Guardada", strategy: { name: "Stored", selector: "parity", coverage: 17, staking: "flat" },
+      game: { numbers: 100, positions: 1, prizes: [1], min_stake: 1 }, conditions: { capital: 2, goal: 3 },
+      inputs: { history_sha256: "a", rankings_sha256: "b" } };
+    expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, coverage: 51 } } as never)).toBeNull();
+    expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, system: "cold" } } as never)).toBeNull();
+    expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, components: [] } } as never)).toBeNull();
+    expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, selector: "blend" } } as never)).toBeNull();
+    expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, staking: "other" } } as never)).toBeNull();
+    expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, selector: "system", system: "random" } } as never)).toBeNull();
+    expect(hydrateBacktestDraft({ ...config, strategy: { ...config.strategy, selector: "system", system: "cold", components: [] } } as never)).toBeNull();
+  });
+
+  it.each([1, 17, 49, 50])("validates and hydrates historical parity coverage %s without coercion", (coverage) => {
+    const parity = { ...draft, parity: true, coverage: String(coverage), strategyName: " Paridad guardada " };
+    expect(validateBacktestDraft(parity)).toEqual([]);
+    const body = buildBacktestBody(parity, game, { history_sha256: "a".repeat(64), rankings_sha256: "b".repeat(64) });
+    const hydrated = hydrateBacktestDraft(body)!;
+    expect(hydrated.coverage).toBe(String(coverage));
+    expect(buildBacktestBody(hydrated, game, hydrated.inputs!)).toEqual(body);
+  });
+
+  it.each([0, -1, 17.5, 51, NaN, Infinity, -Infinity])("rejects invalid historical parity coverage %s in drafts and saved runs", (coverage) => {
+    const parity = { ...draft, parity: true, coverage: String(coverage) };
+    expect(validateBacktestDraft(parity)).not.toEqual([]);
+    expect(hydrateBacktestDraft(buildBacktestBody(parity, game, { history_sha256: "a", rankings_sha256: "b" }))).toBeNull();
+  });
+
+  it("bounds parity by the native game universe as well as optional game settings", () => {
+    const parity = { ...draft, parity: true, numbers: "17", coverage: "17" };
+    expect(validateBacktestDraft(parity, game)).toEqual([]);
+    const overflow = { ...parity, coverage: "18" };
+    expect(validateBacktestDraft(overflow)).toContain("La cobertura supera los 17 números posibles; la estrategia no puede elegirlos.");
+    expect(validateBacktestDraft(overflow, game)).not.toEqual([]);
+    expect(validateBacktestDraft(parity, { ...game, numbers: 16 })).not.toEqual([]);
+    expect(hydrateBacktestDraft(buildBacktestBody(overflow, game, { history_sha256: "a", rankings_sha256: "b" }))).toBeNull();
+  });
+
   it("preserves the saved ranking selector and its exact strategy label", () => {
     const config = {
       name: "Guardada", strategy: { name: "Etiqueta original", selector: "system" as const, system: "mix" as const, coverage: 22, staking: "flat" as const },

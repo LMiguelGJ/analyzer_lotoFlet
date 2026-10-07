@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 // Contract coverage: F-LIST-038–F-LIST-055 — ordered history/import tasks, original Blob and explicit confirmation, hash-bound promote, library paging/errors/stale requests, uncertain promotion lock, and no continuation for non-executable profiles.
@@ -225,6 +225,35 @@ describe("canonical history import and saved library", () => {
     expect(screen.getByText(/Comprobá el estado desde la cola/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Importar historial/i })).toBeDisabled();
     expect(historyClient.promoteHistoryImport).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByText("Importar archivo CSV o JSON"));
+    const recordsMode = screen.getByRole("radio", { name: /Archivo avanzado CSV o JSON/ });
+    expect(recordsMode).toBeDisabled();
+    fireEvent.click(recordsMode);
+    expect(screen.getByRole("radio", { name: /Historial ordinario/ })).toBeChecked();
+    expect(screen.getByText(/Comprobá el estado desde la cola/)).toBeVisible();
+  });
+
+  it("preserves history metadata, confirmations and its preview snapshot when switching idle modes", async () => {
+    const user = userEvent.setup(); mount();
+    const original = new File([JSON.stringify({ metadata, sorteos_por_fecha: {} })], "history.json");
+    await user.upload(await screen.findByLabelText("Archivo del historial (hasta 32 MB)"), original);
+    await screen.findByText(/Juego: Juego/);
+    await user.selectOptions(screen.getByLabelText("Reglas del juego"), "local@1");
+    await user.click(screen.getByRole("checkbox", { name: /Confirmo la fuente/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ }));
+    await user.click(screen.getByRole("button", { name: "Importar historial" }));
+    await screen.findByRole("button", { name: /Confirmar y guardar historial/ });
+    const form = screen.getByRole("form", { name: "Importar datos" });
+    expect(document.querySelectorAll("form form")).toHaveLength(0);
+    await user.click(screen.getByText("Importar archivo CSV o JSON"));
+    await user.click(screen.getByRole("radio", { name: /Archivo avanzado CSV o JSON/ }));
+    expect(within(form).queryByRole("button", { name: /Confirmar y guardar historial/ })).not.toBeInTheDocument();
+    expect(within(form).getByRole("button", { name: "Generar vista previa" })).toBeVisible();
+    await user.click(screen.getByRole("radio", { name: /Historial ordinario/ }));
+    expect(screen.getByRole("checkbox", { name: /Confirmo la fuente/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Confirmo la zona horaria/ })).toBeChecked();
+    await user.click(screen.getByRole("button", { name: /Confirmar y guardar historial/ }));
+    expect(historyClient.promoteHistoryImport).toHaveBeenCalledWith(original, listing, metadata.origen, metadata.zona_horaria, validPreview.dataset_sha256);
   });
 
   it("retries a failed library request and recovers without selecting a dataset", async () => {

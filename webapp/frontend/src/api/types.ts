@@ -82,6 +82,50 @@ export interface CreateBacktestBody {
   inputs: BacktestInputs;
 }
 export interface BacktestWindow { bets: number; wagered: number; paid: number; sessions: number; incomplete: number }
+export interface BacktestSourceIdentity {
+  label: string;
+  /** Zero-based position in original replay rows, NOT an official draw ID. */
+  source_index: number | null;
+  minute: number | null;
+}
+/** Decimal string only above JS's safe-integer boundary; these are native RD$, not cents. */
+export type BacktestMoney = number | string;
+export type BacktestTraceMetadata = { status: "not_stored"; reason: "legacy" } | ({
+  version: 1;
+  unit: "native-RD$-integer";
+  total_sessions: number; stored_sessions: number;
+  total_bets: number; stored_bets: number;
+  source_window: { count: number; first: BacktestSourceIdentity; last: BacktestSourceIdentity } | null;
+  limits: { bytes: number; bets: number; sessions: number };
+} & ({ status: "complete" | "empty"; reason: null } | { status: "truncated"; reason: "limit_exceeded" }));
+export interface BacktestSessionSummary {
+  /** Original zero-based ordinal; each captured session is whole. */
+  ordinal: number;
+  outcome: "reached_goal" | "quiebre" | "incomplete";
+  final_balance: BacktestMoney;
+  bets_count: number;
+  first_bet: BacktestSourceIdentity | null;
+  last_bet: BacktestSourceIdentity | null;
+}
+export interface BacktestBet extends Omit<Bet, "per_number" | "wagered" | "paid" | "balance"> {
+  per_number: BacktestMoney;
+  wagered: BacktestMoney;
+  paid: BacktestMoney;
+  balance: BacktestMoney;
+  bet_index: number;
+  source_index: number | null;
+  minute: number | null;
+}
+export interface BacktestSessionsPage extends Page<BacktestSessionSummary> {
+  id: string;
+  trace: BacktestTraceMetadata;
+}
+export interface BacktestBetsPage extends Page<BacktestBet> {
+  id: string;
+  ordinal: number;
+  trace: BacktestTraceMetadata;
+  session: BacktestSessionSummary;
+}
 export interface BacktestReport {
   id: string;
   name: string;
@@ -94,6 +138,8 @@ export interface BacktestReport {
   incomplete: number | null;
   window: BacktestWindow;
   config: CreateBacktestBody;
+  /** Absent only in old response snapshots. Never carries the raw stored ledger. */
+  trace?: BacktestTraceMetadata;
 }
 export interface BacktestCreated { id: string; status: "completed"; report: BacktestReport }
 

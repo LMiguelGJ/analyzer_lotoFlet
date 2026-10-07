@@ -6,7 +6,7 @@ ceiling bounds each replay, so the single-run API needs no separate job queue.
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 from pydantic import Field, model_validator
 
 from laboratorio.api import StrictBody, repo
@@ -171,10 +171,10 @@ def create_backtest(body: CreateBacktest, request: Request):
         "inputs": body.inputs.model_dump(mode="json"),
     }
     try:
-        identifier, created_at = repo(request).create_backtest(body.name, config_echo, result)
+        identifier, _ = repo(request).create_backtest(body.name, config_echo, result, rows)
+        report = repo(request).get_backtest(identifier)
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(409, "The backtest result could not be saved.") from exc
-    report = _report(identifier, body.name, config_echo, result, created_at)
     return {"id": identifier, "status": "completed", "report": report}
 
 
@@ -189,6 +189,37 @@ def list_backtests(
     except ValueError as exc:
         raise HTTPException(409, "A saved backtest is damaged and cannot be shown.") from exc
     return {"total": total, "offset": offset, "limit": limit, "items": rows}
+
+
+@router.get("/{identifier}/sessions")
+def backtest_sessions(
+    identifier: str,
+    request: Request,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+):
+    return _trace_page(request, identifier, offset, limit)
+
+
+@router.get("/{identifier}/sessions/{ordinal}/bets")
+def backtest_session_bets(
+    identifier: str,
+    ordinal: Annotated[int, Path(ge=0)],
+    request: Request,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+):
+    return _trace_page(request, identifier, offset, limit, ordinal)
+
+
+def _trace_page(request, identifier, offset, limit, ordinal=None):
+    try:
+        page = repo(request).page_backtest_trace(identifier, offset, limit, ordinal)
+    except ValueError as exc:
+        raise HTTPException(409, "The saved session detail is unavailable or damaged.") from exc
+    if page is None:
+        raise HTTPException(404, "Backtest or session not found.")
+    return page
 
 
 @router.get("/{identifier}")

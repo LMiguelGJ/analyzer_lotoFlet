@@ -189,3 +189,57 @@ def test_decoded_limit_and_other_route_unchanged(client):
         "/api/v1/does-not-exist", content=b"x" * (_IMPORT_ENVELOPE_BYTES + 1), headers=ORIGIN
     )
     assert other.status_code == 404
+
+
+@pytest.mark.parametrize("action", ["preview", "promote"])
+def test_common_entry_strict_mode_and_records_budget(client, action):
+    api, settings = client
+    body = payload()
+    if action == "promote":
+        body["expected_dataset_sha256"] = post(api, "preview", body).json()["dataset_sha256"]
+    # Explicit records uses exactly the old envelope/parser, including decoded limit.
+    headers = {**ORIGIN, "X-Import-Mode": "records"}
+    assert post(api, action, body, headers=headers).status_code == 200
+    oversized = payload(b"x" * (2 * 1024 * 1024 + 1))
+    if action == "promote":
+        oversized["expected_dataset_sha256"] = "0" * 64
+    assert post(api, action, oversized, headers=headers).status_code == 413
+    assert (
+        api.post(
+            f"{PATH}/{action}",
+            content=b"{}",
+            headers={**headers, "Content-Length": str(_IMPORT_ENVELOPE_BYTES + 1)},
+        ).status_code
+        == 413
+    )
+
+    def chunks():
+        yield b" " * _IMPORT_ENVELOPE_BYTES
+        yield b"x"
+
+    for length in ({}, {"Content-Length": "2"}):
+        assert (
+            api.post(
+                f"{PATH}/{action}", content=chunks(), headers={**headers, **length}
+            ).status_code
+            == 413
+        )
+    for values in (
+        ["unknown"],
+        ["History"],
+        ["history,records"],
+        [""],
+        ["history", "records"],
+        ["history", "history"],
+    ):
+        response = api.post(
+            f"{PATH}/{action}",
+            content=b"{}",
+            headers=[
+                *ORIGIN.items(),
+                *(("X-Import-Mode", value) for value in values),
+                ("Content-Length", str(_IMPORT_ENVELOPE_BYTES + 1)),
+            ],
+        )
+        assert response.status_code == 422  # invalid mode never selects a larger budget
+    assert count(settings) == (1 if action == "promote" else 0)

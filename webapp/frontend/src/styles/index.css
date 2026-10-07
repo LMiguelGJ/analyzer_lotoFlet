@@ -340,6 +340,8 @@
   .backtest-step-actions .btn { min-width: 112px; }
   .backtest-report caption { padding: 12px; color: var(--md-sys-color-on-surface); font-weight: 600; text-align: left; }
   .backtest-report-table { display: none; }
+  .backtest-bets-ledger { display: block; min-width: 0; max-width: 100%; overflow-x: auto; }
+  .backtest-bets-ledger table { width: 100%; min-width: 760px; }
   .backtest-mobile-result { display: grid; gap: 0; margin: 0; padding: 0; }
   .backtest-mobile-result > div { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--md-sys-color-outline-variant); padding: 12px 4px; }
   .backtest-mobile-result dt, .backtest-window dt, .backtest-definitions dt { color: var(--md-sys-color-on-surface-variant); }

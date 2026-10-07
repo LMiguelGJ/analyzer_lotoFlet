@@ -85,6 +85,82 @@ def test_create_report_and_list_persist_configuration(setup):
     assert setup.get("/api/v1/backtests/not-found").status_code == 404
 
 
+def test_native_trace_post_get_list_unified_and_paging(setup, monkeypatch):
+    created = post(setup, "/api/v1/backtests", payload())
+    assert created.status_code == 201, created.text
+    identifier = created.json()["id"]
+    report = created.json()["report"]
+    assert report["trace"]["status"] == "complete"
+    assert "sessions" not in report["trace"]
+    monkeypatch.setattr(
+        "laboratorio.api.backtests.run_backtest",
+        lambda *args: pytest.fail("saved read re-executed"),
+    )
+    assert setup.get(f"/api/v1/backtests/{identifier}").json() == report
+    assert setup.get("/api/v1/backtests").json()["items"][0] == report
+    unified = setup.get("/api/v1/simulations?scope=historical")
+    assert unified.status_code == 200, unified.text
+    assert unified.json()["items"][0]["report"] == report
+    page = setup.get(f"/api/v1/backtests/{identifier}/sessions?limit=1").json()
+    assert (page["offset"], page["limit"], page["total"]) == (0, 1, 2)
+    assert page["items"][0]["ordinal"] == 0
+    assert "bets" not in page["items"][0]
+    assert page["items"][0]["outcome"] == "reached_goal"
+    bets = setup.get(f"/api/v1/backtests/{identifier}/sessions/0/bets").json()
+    assert (bets["offset"], bets["limit"], bets["total"]) == (0, 20, 1)
+    assert bets["items"][0]["balance"] == 89
+    assert bets["items"][0]["source_index"] == 0
+    assert (
+        setup.get(f"/api/v1/backtests/{identifier}/sessions/0/bets?offset=1").json()["items"] == []
+    )
+    assert setup.get(f"/api/v1/backtests/{identifier}/sessions/99/bets").status_code == 404
+    assert setup.get("/api/v1/backtests/missing/sessions").status_code == 404
+    for suffix in (
+        "sessions?offset=-1",
+        "sessions?limit=101",
+        "sessions/-1/bets",
+        "sessions/0/bets?limit=0",
+    ):
+        assert setup.get(f"/api/v1/backtests/{identifier}/{suffix}").status_code == 422
+
+
+def test_uncaptured_session_returns_409_not_fake_empty(setup, monkeypatch):
+    monkeypatch.setattr("laboratorio.storage.backtest_trace.MAX_TRACE_SESSIONS", 0)
+    created = post(setup, "/api/v1/backtests", payload())
+    assert created.status_code == 201, created.text
+    identifier = created.json()["id"]
+    assert created.json()["report"]["trace"]["status"] == "truncated"
+    page = setup.get(f"/api/v1/backtests/{identifier}/sessions").json()
+    assert page["total"] == 0 and page["trace"]["total_sessions"] == 2
+    assert setup.get(f"/api/v1/backtests/{identifier}/sessions/0/bets").status_code == 409
+
+
+def test_corrupt_trace_all_routes_fail_closed_with_opaque_409(setup, monkeypatch):
+    def corrupt(*args, **kwargs):
+        raise ValueError("secret internal corruption detail")
+
+    monkeypatch.setattr(
+        "laboratorio.storage.repository.Repository._validate_simulation_backtest",
+        staticmethod(corrupt),
+    )
+    for path in (
+        "/api/v1/backtests/saved",
+        "/api/v1/backtests",
+        "/api/v1/backtests/saved/sessions",
+        "/api/v1/backtests/saved/sessions/0/bets",
+    ):
+        # Force the repository's read, independent of absent test records.
+        method = (
+            "search_backtests"
+            if path == "/api/v1/backtests"
+            else ("page_backtest_trace" if "/sessions" in path else "get_backtest")
+        )
+        monkeypatch.setattr(f"laboratorio.storage.repository.Repository.{method}", corrupt)
+        response = setup.get(path)
+        assert response.status_code == 409
+        assert "secret" not in response.text
+
+
 def test_create_rejects_invalid_coverage_hashes_and_prizes(setup):
     bad_coverage = payload(
         strategy={

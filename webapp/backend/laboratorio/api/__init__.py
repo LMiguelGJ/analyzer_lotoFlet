@@ -1,13 +1,12 @@
 """Versioned HTTP resources and presentation helpers."""
 
 import json
-from dataclasses import asdict
 
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
-from laboratorio.api.profile_views import v5_run_summary, v5_strategy_result
-from laboratorio.domain.metrics import financial_metrics
+from laboratorio.api.profile_views import BatchRunContext, run_summary, v5_strategy_result
+from laboratorio.api.profile_views import v5_run_summary as v5_run_summary
 from laboratorio.domain.profile_request import serialize_profile_request
 from laboratorio.domain.profile_request_v2 import serialize_profile_cycling_request
 from laboratorio.domain.profile_request_v3 import serialize_profile_audaz_request
@@ -37,30 +36,6 @@ def missing(value):
     return value
 
 
-def run_summary(run, capital):
-    result = run.result
-    if isinstance(result, (ProfileCyclingResult, ProfileAudazResult, ProfileRecoveryResult)):
-        result = result.session
-    summary = {
-        "ordinal": run.ordinal,
-        "configuration_id": run.configuration_id,
-        "status": run.status,
-        "result": None
-        if result is None
-        else {
-            **{key: value for key, value in asdict(result).items() if key != "bets"},
-            "delta": result.final_balance - capital,
-            **financial_metrics(result, capital),
-        },
-        "bets_count": 0 if result is None else len(result.bets),
-    }
-    if run.result_kind == "profile":
-        summary["result_kind"] = "profile"
-    if run.result_schema_version in (2, 3, 4) and summary["result"] is not None:
-        summary["result"]["schema_version"] = run.result_schema_version
-    return summary
-
-
 def experiment(saved):
     cycling = saved.request_kind == "profile" and saved.request_schema_version == 2
     audaz = saved.request_kind == "profile" and saved.request_schema_version == 3
@@ -68,9 +43,10 @@ def experiment(saved):
     batch = saved.request_kind == "profile" and saved.request_schema_version == 5
     if batch:
         admission = saved.batch_admission
+        batch_request = saved.request
         if (
-            not isinstance(saved.request, ProfileBatchRequestV5)
-            or len(saved.runs) != len(saved.request.strategies)
+            not isinstance(batch_request, ProfileBatchRequestV5)
+            or len(saved.runs) != len(batch_request.strategies)
             or admission is None
             or len(admission["strategy_refs"]) != len(saved.runs)
             or any(
@@ -89,7 +65,7 @@ def experiment(saved):
         for index, run in enumerate(saved.runs):
             if run.result is not None:
                 v5_strategy_result(run)
-                if run.result.results[0].definition != saved.request.strategies[index]:
+                if run.result.results[0].definition != batch_request.strategies[index]:
                     raise HTTPException(409, "stored profile batch result association is corrupt")
     if cycling or audaz or recovery:
         if (
@@ -150,16 +126,20 @@ def experiment(saved):
             "code_version": saved.code_version,
         },
         "runs": [
-            v5_run_summary(
+            run_summary(
                 run,
                 saved.request.conditions.capital,
-                saved.batch_admission["source_identity"]["row_count"],
-                saved.batch_admission["requested_constraints"],
-                saved.batch_admission["effective_constraints"],
-                saved.batch_admission["strategy_refs"][index],
+                batch_context=(
+                    BatchRunContext(
+                        saved.batch_admission["source_identity"]["row_count"],
+                        saved.batch_admission["requested_constraints"],
+                        saved.batch_admission["effective_constraints"],
+                        saved.batch_admission["strategy_refs"][index],
+                    )
+                    if batch
+                    else None
+                ),
             )
-            if batch
-            else run_summary(run, saved.request.conditions.capital)
             for index, run in enumerate(saved.runs)
         ],
     }

@@ -5,6 +5,7 @@ import { apiClient, ApiError, NetworkError } from "../../api/client";
 import { isProfileBatchExperiment, isProfileBatchRun, isProfileExperiment, isProfileReplay, isProfileRun } from "../../api/types";
 import type { AnyRunSummary, Bet, ExperimentSummary, LegacyExperimentSummary, ProfileBatchExperimentSummary, ProfileBet, ProfileExperimentSummary, ProfileRunResult, ReplayPage, RunSummary } from "../../api/types";
 import { RunTrajectory } from "../../components/RunTrajectory";
+import { SimulationResultFrame } from "../../components/SimulationResultFrame";
 import { FinancialMetrics } from "../../components/FinancialMetrics";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
@@ -12,6 +13,7 @@ import { StatusLabel } from "../../components/StatusLabel";
 import { Disclosure, Figure, Loading, SectionHeader, Stat } from "../../components/ui";
 import type { FigureVariant } from "../../components/ui";
 import { formatDOP, formatTwoDigit } from "../../lib/format";
+import { experimentResultViewModel } from "../../lib/simulation-result-model";
 import { PROFILE_COLLISION_LABELS, PROFILE_OUTCOME_LABELS, profileMoney } from "../../lib/profile-display";
 import { FIELD_HELP_DELTA, FIELD_LABEL_DELTA, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 import { PAGE_SIZE, pageOffset, replayIndex } from "./replay";
@@ -31,6 +33,12 @@ function detailError(error: unknown) {
   if (error instanceof NetworkError) return "No se pudo contactar al servidor. El cálculo puede continuar en el servidor; comprobá el estado desde la cola antes de reintentar.";
   if (error instanceof ApiError && error.status === 404) return "Este experimento no existe o fue eliminado.";
   return "No se pudo consultar el experimento. Reintentá.";
+}
+function repeatHref(data: ExperimentSummary, id: string): string | null {
+  if (!isProfileExperiment(data)) return `/simulaciones/nueva?base=${encodeURIComponent(id)}`;
+  if (isProfileBatchExperiment(data)) return `/simulaciones/nueva/sesion?base=${encodeURIComponent(id)}`;
+  const version = data.request.schema_version;
+  return version >= 1 && version <= 4 ? `/simulaciones/nueva/perfil?base=${encodeURIComponent(id)}` : null;
 }
 export function verdictPhrase(outcome: string | undefined, status: string): string {
   if (outcome === "goal") return "Meta alcanzada";
@@ -52,7 +60,7 @@ function financialConclusion(run: AnyRunSummary): string | null {
 }
 
 function profileCloseReason(result: ProfileRunResult): string {
-  const reasons = result.collisions.map((reason) => PROFILE_COLLISION_LABELS[reason]).filter((reason): reason is string => Boolean(reason));
+  const reasons = result.collisions.map((reason) => PROFILE_COLLISION_LABELS[reason] ?? reason);
   return `${PROFILE_OUTCOME_LABELS[result.outcome]}${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
 }
 
@@ -61,6 +69,23 @@ function replayError(error: unknown) {
   if (error instanceof ApiError && error.status === 409) return "La reproducción todavía no está disponible para esta ejecución.";
   if (error instanceof ApiError && error.status === 404) return "La ejecución o el experimento ya no existe.";
   return "No se pudo cargar esta página de apuestas. Reintentá.";
+}
+
+function SelectedBet({ bet, money }: { bet: Bet | ProfileBet; money: (amount: number) => string }) {
+  const profile = "stakes" in bet;
+  return <section aria-label="Detalle de la apuesta mostrada" className="mt-4">
+    <dl className="data-list">
+      <dt>Fecha del sorteo</dt><dd>{storedDate(bet.label)}</dd>
+      {profile && bet.source_index != null && <><dt>Índice del sorteo en la fuente</dt><dd>{bet.source_index}</dd></>}
+      <dt>Números elegidos</dt><dd>{profile ? bet.stakes.map(([number]) => number).join(", ") : numberList(bet.numbers)}</dd>
+      <dt>{profile ? "Apuestas por número" : "Apuesta por número"}</dt><dd>{profile ? bet.stakes.map(([number, stake]) => `${number}: ${money(stake)}`).join(", ") : money(bet.per_number)}</dd>
+      <dt>Gasto de esta apuesta</dt><dd className="data-list-numeric">{money(bet.wagered)}</dd>
+      <dt>Resultados registrados ({bet.results.length} posiciones)</dt><dd>{profile ? bet.results.join(", ") : numberList(bet.results)}</dd>
+      <dt>Cobro de esta apuesta</dt><dd className="data-list-numeric">{money(bet.paid)}</dd>
+      <dt>Saldo tras esta apuesta</dt><dd className="data-list-numeric">{money(bet.balance)}</dd>
+    </dl>
+    <p className="mt-2 text-sm text-text-secondary">El registro de esta apuesta no incluye el motivo de selección de los números.</p>
+  </section>;
 }
 
 function BetDetails({ bet }: { bet: Bet }) {
@@ -94,7 +119,7 @@ function ProfileBetDetails({ bet, data }: { bet: ProfileBet; data: ProfileExperi
 function profileColumns(data: ProfileExperimentSummary, canonical = false): DataTableColumn<ProfileBet>[] {
   return [
     ...(canonical ? [
-      { key: "source-index", header: "Sorteo n.º", render: (bet: ProfileBet) => bet.source_index == null ? "—" : bet.source_index },
+      { key: "source-index", header: "Índice en la fuente", render: (bet: ProfileBet) => bet.source_index == null ? "—" : bet.source_index },
       { key: "bet-index", header: "Apuesta n.º", render: (bet: ProfileBet) => bet.bet_index == null ? "—" : bet.bet_index + 1 },
     ] : []),
     { key: "date", header: "Fecha y hora", render: (bet) => storedDate(bet.label) },
@@ -243,11 +268,11 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
   const closeReason = run.result ? isProfileBatchRun(run) ? stopCategoryLabel(run.result.stop_category) : isProfileRun(run) ? profileCloseReason(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : "Todavía no hay un resultado guardado.";
 
   useEffect(() => {
-    if (!run.result) { setPage(null); setError(""); setLoading(false); return; }
+    if (!run.result || total === 0) { setPage(null); setError(""); setLoading(false); cache.current.clear(); return; }
     const cached = cache.current.get(offset);
     if (cached && retry === 0) { setPage(cached); setError(""); setLoading(false); return; }
     let live = true;
-    setLoading(true); setError("");
+    setPage(null); setLoading(true); setError("");
     void apiClient.getReplay(data.id, run.ordinal, offset, PAGE_SIZE).then((result) => {
       if (!live) return;
       // Keep at most three bounded pages per mounted run; never eagerly download history.
@@ -257,7 +282,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
       setPage(result); setLoading(false);
     }).catch((cause: unknown) => { if (live) { setError(replayError(cause)); setLoading(false); setPlaying(false); } });
     return () => { live = false; };
-  }, [data.id, run.ordinal, !!run.result, offset, retry]);
+  }, [data.id, run.ordinal, !!run.result, total, offset, retry]);
 
   useEffect(() => {
     if (!playing || !run.result || !page || loading || error || cursor >= total - 1) {
@@ -284,9 +309,11 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
     if (next < 0) return;
     event.preventDefault(); selectTab(tabs[next]); tabRefs.current[next]?.focus();
   }
-  const visiblePage = page?.offset === offset ? page : null;
+  const visiblePage = !loading && !error && page?.offset === offset ? page : null;
   const current = visiblePage?.items[cursor - offset];
-  return <section className="mt-6" aria-label={`Ejecución ${run.ordinal + 1}`}>
+  const resultModel = experimentResultViewModel(data, run);
+  return <SimulationResultFrame model={resultModel} className="mt-6" statusDisplay={<StatusLabel kind="execution" value={run.status} />}>
+    <div>
     {run.result && <>
       <section aria-label="Veredicto" className="ledger-block">
         <h2 className="ledger-verdict-title">{verdictPhrase(outcome, run.status)}</h2>
@@ -297,6 +324,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
           <Stat label="Sorteos jugados" value={<Figure value={drawCount ?? "—"} />} />
         </div>
         <p>Motivo de cierre: {closeReason}</p>
+        {isProfileBatchRun(run) && <dl className="data-list mt-2"><dt>Cierre registrado</dt><dd className="break-words">{run.result.stop_reason}</dd></dl>}
         <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
         <p className="text-sm">Tu ganancia o pérdida está en «Cambio respecto del inicio», más abajo.</p>
       </section>
@@ -319,7 +347,14 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
         <dt>Duración</dt><dd className="data-list-numeric">Sin resultado guardado</dd>
       </dl>
     </>}
-    <div className="flex flex-wrap items-center gap-4">{data.runs.length === 1 && <StatusLabel kind="execution" value={run.status} />}</div>
+    <section aria-label="Inicio de la ejecución" className="border-b border-border py-3">
+      <dl className="data-list">
+        <dt>Inicio solicitado</dt><dd>{storedDate(data.request.conditions.start_draw)}</dd>
+        {isProfileBatchRun(run) && run.result && <><dt>Índice de inicio en la fuente</dt><dd>{run.result.start_draw_index}</dd></>}
+      </dl>
+      <p className="mt-2 text-sm text-text-secondary">El inicio solicitado no es necesariamente la primera apuesta registrada.</p>
+      {run.result && <button type="button" className="btn btn-secondary mt-3" onClick={() => { selectTab("Apuestas"); tabRefs.current[1]?.focus(); }}>Ver apuestas registradas</button>}
+    </section>
     <div role="tablist" aria-label="Secciones del detalle" className="mt-6 flex flex-wrap gap-2 border-b border-border">
       {tabs.map((name, index) => <button key={name} ref={(node) => { tabRefs.current[index] = node; }} type="button" role="tab" id={`detail-tab-${index}`} aria-controls={`detail-panel-${index}`} aria-selected={tab === name} tabIndex={tab === name ? 0 : -1} onClick={() => selectTab(name)} onKeyDown={(event) => onTabKey(event, index)} className={`min-h-control px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${tab === name ? "border-b-2 border-accent text-text" : "text-text-secondary hover:text-text"}`}>{name}</button>)}
     </div>
@@ -327,41 +362,46 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
       {tab === "Parámetros y datos" ? (
         <Disclosure summary="Cómo se hizo"><dl className="data-list mb-4"><dt>Nombre de ejecución</dt><dd>{runName}</dd></dl>{isProfileBatchExperiment(data) ? <ProfileBatchParameters data={data} run={run} /> : isProfileExperiment(data) ? <ProfileParameters data={data} run={run} /> : !isProfileRun(run) ? <Parameters data={data} run={run} /> : null}</Disclosure>
       ) : !run.result ? (
-        <div><p role="status">Esta ejecución todavía no tiene un resultado guardado. Volvé a la pestaña Resultado más tarde; el estado se actualiza automáticamente.</p>{isProfileBatchRun(run) && <><p className="mt-2 text-sm">{stopCategoryLabel(run.stop_category)}</p><Disclosure summary="Detalles técnicos"><dl className="data-list pt-2"><dt>Categoría de parada (código)</dt><dd>{run.stop_category}</dd><dt>Motivo informado</dt><dd>{run.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd>{run.error && <><dt>Error</dt><dd>{run.error}</dd></>}</dl></Disclosure></>}</div>
+        <div><p role="status">Esta ejecución todavía no tiene un resultado guardado. Volvé a la pestaña Resultado más tarde; el estado se actualiza automáticamente.</p>{isProfileBatchRun(run) && <><p className="mt-2 text-sm">{stopCategoryLabel(run.stop_category)} · Cierre registrado: {run.stop_reason}</p><Disclosure summary="Detalles técnicos"><dl className="data-list pt-2"><dt>Categoría de parada (código)</dt><dd>{run.stop_category}</dd><dt>Motivo informado</dt><dd>{run.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd>{run.error && <><dt>Error</dt><dd>{run.error}</dd></>}</dl></Disclosure></>}</div>
       ) : tab === "Resultado" ? (
         <div>
           {isProfileBatchRun(run) && !run.result.complete && <p role="status" className="mb-4 text-sm">Resultado incompleto · {stopCategoryLabel(run.result.stop_category)}. Revisá el motivo antes de comparar esta simulación.</p>}
           <SectionHeader title="Evolución del saldo" />
-          <RunTrajectory id={data.id} ordinal={run.ordinal} name={runName} goal={goal} money={money} onLoad={(_ordinal, trajectory) => setTrajectoryMaximum(trajectory.maximum.balance)} onSelect={(index) => { setPlaying(false); setCursor(index); setOffset(pageOffset(index)); setTab("Apuestas"); }} />
+          {total > 0 && <RunTrajectory id={data.id} ordinal={run.ordinal} name={runName} goal={goal} money={money} onLoad={(_ordinal, trajectory) => setTrajectoryMaximum(trajectory.maximum.balance)} onSelect={(index) => { setPlaying(false); setCursor(index); setOffset(pageOffset(index)); setTab("Apuestas"); }} />}
           <div className="border-t border-border pt-5" role="region" aria-label="Reproducción visual">
             <h3 className="section-header">Reproducción visual</h3>
-            <p aria-live="polite" className="mb-3 text-sm">Sorteo mostrado: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)} · saldo en ese sorteo ${money(current.balance)}` : ""}</p>
+            <p className="mb-3 text-sm text-text-secondary">Esta reproducción recorre apuestas registradas, no todos los sorteos transcurridos. No muestra una cronología de sorteos sin apuesta.</p>
+            <p aria-live="polite" className="mb-3 text-sm">Apuesta mostrada: {total ? `${cursor + 1} de ${total}` : "sin apuestas"}{current ? ` · ${storedDate(current.label)} · saldo tras esa apuesta ${money(current.balance)}` : ""}</p>
             <div className="flex flex-wrap items-center gap-2">
-              <button className={button} type="button" disabled={!total || cursor === 0} onClick={() => move(-1)}>Sorteo anterior</button>
+              <button className={button} type="button" disabled={!total || cursor === 0} onClick={() => move(-1)}>Apuesta anterior</button>
               <button className={button} type="button" disabled={!total || cursor >= total - 1 || (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)} onClick={() => setPlaying(!playing)}>{playing ? "Pausar" : "Reproducir"}</button>
-              <button className={button} type="button" disabled={!total || cursor >= total - 1} onClick={() => move(1)}>Siguiente sorteo</button>
+              <button className={button} type="button" disabled={!total || cursor >= total - 1} onClick={() => move(1)}>Siguiente apuesta</button>
               <label htmlFor="replay-speed" className="text-sm">Velocidad</label><select id="replay-speed" value={speed} onChange={(event) => setSpeed(Number(event.target.value))} className="min-h-control border border-border-control bg-field px-2 text-sm"><option value={0.5}>0,5×</option><option value={1}>1×</option><option value={2}>2×</option></select>
             </div>
             {typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches && <p className="mt-2 text-sm">Movimiento reducido: usá anterior y siguiente.</p>}
+            {current && <SelectedBet bet={current} money={money} />}
+            {total === 0 && <p role="status" className="mt-3">No hay apuestas registradas en este resultado.</p>}
+            {total > 0 && visiblePage && !current && <p role="status" className="mt-3">La página recibida no contiene la apuesta seleccionada.</p>}
           </div>
           {visiblePage && visiblePage.items.length > 0 && (isProfileReplay(visiblePage) && isProfileExperiment(data) ? <DataTable caption="Libro de sorteos" columns={profileLedgerColumns(data)} rows={visiblePage.items} getRowKey={(bet) => bet.label} /> : !isProfileReplay(visiblePage) && <DataTable caption="Libro de sorteos" columns={ledgerColumns} rows={visiblePage.items} getRowKey={(bet) => bet.label} />)}
-          {visiblePage && visiblePage.items.length === 0 && <p role="status">Todavía no hay sorteos registrados. La simulación puede seguir en curso.</p>}
           <FinancialMetrics result={run.result} money={money} />
           {isProfileBatchRun(run) && <Disclosure summary="Detalles técnicos"><dl className="data-list break-all pt-2"><dt>Versión de solicitud</dt><dd>{isProfileBatchExperiment(data) ? `Perfil v${data.request.schema_version}` : "No disponible"}</dd><dt>Versión del resultado</dt><dd>{run.result.schema_version}</dd><dt>Categoría de parada (código)</dt><dd>{run.result.stop_category}</dd><dt>Motivo informado</dt><dd>{run.result.stop_reason}</dd><dt>Código de parada</dt><dd>{run.stop_code}</dd><dt>Índice de inicio en la fuente</dt><dd>{run.result.start_draw_index}</dd></dl></Disclosure>}
         </div>
       ) : (
         <div>
-          {current && <p role="status">Sorteo seleccionado {cursor + 1}: {storedDate(current.label)} · {money(current.balance)}</p>}
+          {current && <><p role="status">Apuesta seleccionada {cursor + 1}: {storedDate(current.label)} · {money(current.balance)}</p><SelectedBet bet={current} money={money} /></>}
           {visiblePage && visiblePage.items.length > 0 && (isProfileReplay(visiblePage) && isProfileExperiment(data) ? <DataTable caption="Apuestas del experimento" columns={profileColumns(data, isProfileBatchRun(run))} rows={visiblePage.items} getRowKey={(bet) => bet.label} /> : !isProfileReplay(visiblePage) && <DataTable caption="Apuestas del experimento" columns={columns} rows={visiblePage.items} getRowKey={(bet) => bet.label} />)}
-          {visiblePage && visiblePage.items.length === 0 && <p role="status">No hay sorteos registrados en esta página.</p>}
+          {total === 0 && <p role="status">No hay apuestas registradas en este resultado.</p>}
+          {total > 0 && visiblePage && visiblePage.items.length === 0 && <p role="status">No hay apuestas registradas en esta página.</p>}
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm"><span>Mostrando {total ? offset + 1 : 0}–{Math.min(offset + (visiblePage?.items.length ?? 0), total)} de {total}</span><button type="button" className={button} disabled={offset === 0} onClick={() => { const previous = Math.max(0, offset - PAGE_SIZE); setPlaying(false); setOffset(previous); setCursor(previous); }}>Página anterior</button><button type="button" className={button} disabled={offset + PAGE_SIZE >= total} onClick={() => { const next = offset + PAGE_SIZE; setPlaying(false); setOffset(next); setCursor(next); }}>Página siguiente</button></div>
         </div>
       )}
-      {loading && <Loading rows={3} label="Cargando sorteos…" className="mt-3" />}
+      {loading && <Loading rows={3} label="Cargando apuestas…" className="mt-3" />}
       {error && <p role="alert" className="mt-3">{error} Los datos guardados no se modificaron. Podés volver a cargar esta página de sorteos. <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar página</button></p>}
     </div>
     {tabs.map((name, index) => name !== tab && <div key={name} role="tabpanel" id={`detail-panel-${index}`} aria-labelledby={`detail-tab-${index}`} hidden />)}
-  </section>;
+    </div>
+  </SimulationResultFrame>;
 }
 
 export function DetailPage() {
@@ -398,6 +438,7 @@ export function DetailPage() {
   const target = requestedRun !== null && /^(0|[1-9]\d*)$/.test(requestedRun) ? Number(requestedRun) : null;
   const requested = data?.runs.find((run) => run.ordinal === target);
   const selected = data?.runs.find((run) => run.ordinal === ordinal) ?? requested ?? data?.runs[0];
+  const repeat = data ? repeatHref(data, id) : null;
   return <div>
     {!data && !error && <Loading rows={4} label="Cargando el estado de la simulación…" className="my-4" />}
     {error && <div role="alert" className="mb-4 border-y border-border py-4"><p>{error}</p><p>Tu información guardada se conserva. Podés consultar la cola y volver a intentar la carga.</p><button type="button" className="btn btn-secondary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar</button></div>}
@@ -412,7 +453,7 @@ export function DetailPage() {
       <nav aria-label="Navegación de la simulación" className="mt-6 flex flex-wrap gap-2 text-sm">
         <Link className="btn btn-tertiary" to="/simulaciones">Volver a simulaciones</Link>
         <Link className="btn btn-primary" to={`/simulaciones/${encodeURIComponent(id)}/comparacion`}>{fromComparison ? "Volver a comparación" : "Comparar simulaciones"}</Link>
-        {!isProfileExperiment(data) && <Link className="btn btn-secondary" to={`/simulaciones/nueva?base=${encodeURIComponent(id)}`}>Repetir con cambios</Link>}
+        {repeat && <Link className="btn btn-secondary" to={repeat}>Repetir con cambios</Link>}
       </nav>
     </>}
   </div>;

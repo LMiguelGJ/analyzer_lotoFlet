@@ -1,4 +1,7 @@
 import type { BacktestReport as BacktestReportData, StakingStyle } from "../api/types";
+import { SimulationResultFrame } from "./SimulationResultFrame";
+import { BacktestSessions } from "./BacktestSessions";
+import { historicalResultViewModel } from "../lib/simulation-result-model";
 
 const methods: Record<string, string> = {
   transition: "Transición", cold: "Fríos", select_interpretable: "Selector automático", mix: "Mezclas", ensemble: "Ensemble",
@@ -16,7 +19,12 @@ const fixedDecimal = (value: number) => {
   return `${group(whole)},${fraction}`;
 };
 const decimal = (value: number | null | undefined, suffix = "") => value == null ? "Sin dato" : `${fixedDecimal(value)}${suffix}`;
-const money = (value: number | null | undefined, signed = false) => value == null ? "Sin dato" : `${signed && value > 0 ? "+" : signed && value < 0 ? "−" : ""}RD$${fixedDecimal(value)}`;
+const money = (value: number | string | null | undefined, signed = false) => {
+  if (value == null) return "Sin dato";
+  // Trace projections use exact decimal strings only for unsafe JS integers.
+  if (typeof value === "string") return `RD$${group(value)},0`;
+  return `${signed && value > 0 ? "+" : signed && value < 0 ? "−" : ""}RD$${fixedDecimal(value)}`;
+};
 
 function methodName(report: BacktestReportData) {
   const strategy = report.config.strategy;
@@ -35,7 +43,8 @@ export function BacktestReport({ report }: { report: BacktestReportData }) {
     <td>{integer(report.quiebres)}</td>
     <td>{money(report.neto_medio, true)}</td>
   </tr>;
-  return <article className="backtest-report space-y-5" aria-label={`Informe: ${report.name}`}>
+  return <SimulationResultFrame model={historicalResultViewModel(report)}>
+    <article className="backtest-report space-y-5" aria-label={`Informe: ${report.name}`}>
     <p className="backtest-caveat">Simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
     <section aria-label="Resultados del escenario">
       <div className="backtest-report-table overflow-x-auto">
@@ -71,11 +80,13 @@ export function BacktestReport({ report }: { report: BacktestReportData }) {
       <dl><div><dt>Sorteos apostados</dt><dd>{integer(report.window.bets)}</dd></div><div><dt>Apostado</dt><dd>{report.window.wagered == null ? "Sin dato" : `RD$${integer(report.window.wagered)}`}</dd></div><div><dt>Pagado</dt><dd>{report.window.paid == null ? "Sin dato" : `RD$${integer(report.window.paid)}`}</dd></div><div><dt>Sesiones iniciadas</dt><dd>{integer(report.window.sessions)}</dd></div></dl>
       <p>{integer(report.incomplete)} sesión histórica inconclusa al final de los datos; no se cuenta en tasas ni promedios de sesiones completas.</p>
     </section>
+    <BacktestSessions report={report} formatMoney={money} />
     <section aria-labelledby="backtest-config-title" className="backtest-config">
       <h3 id="backtest-config-title">Configuración usada</h3>
       <p>{methodName(report)} · {integer(strategy.coverage)} números · {staking} · capital RD${integer(report.config.conditions.capital)} · meta RD${integer(report.config.conditions.goal)}</p>
       <p>Reglas del juego: {integer(report.config.game.numbers)} números posibles · {integer(report.config.game.positions)} posiciones · premios {report.config.game.prizes?.join(" / ") || "Sin dato"} · apuesta mínima RD${integer(report.config.game.min_stake)}.</p>
       <details><summary className="disclosure-summary">Detalles técnicos</summary><div className="space-y-2 break-all"><p>ID: <code>{report.id || "Sin dato"}</code></p><p>Historial SHA-256: <code>{report.config.inputs?.history_sha256 || "Sin dato"}</code></p><p>Rankings SHA-256: <code>{report.config.inputs?.rankings_sha256 || "Sin dato"}</code></p></div></details>
     </section>
-  </article>;
+    </article>
+  </SimulationResultFrame>;
 }

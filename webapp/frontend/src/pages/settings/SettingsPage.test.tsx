@@ -6,12 +6,12 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "../../App";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
-import type { GameSettings, SettingsView } from "../../api/types";
+import type { GameSettings, ProfileListing, SettingsView } from "../../api/types";
 import fixture from "../../api/__fixtures__/settings.json";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getSettings: vi.fn(), updateSettings: vi.fn(), getAgentCredential: vi.fn(), getGameSettings: vi.fn(), saveGameSettings: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getSettings: vi.fn(), updateSettings: vi.fn(), getAgentCredential: vi.fn(), getGameSettings: vi.fn(), saveGameSettings: vi.fn(), getProfiles: vi.fn() } };
 });
 const agentApi = apiClient as typeof apiClient & {
   getAgentCredential: () => Promise<{ token: string }>;
@@ -53,6 +53,7 @@ beforeEach(() => {
   vi.mocked(apiClient.getSettings).mockReset().mockResolvedValue(base);
   vi.mocked(apiClient.updateSettings).mockReset().mockResolvedValue(base);
   vi.mocked(agentApi.getAgentCredential).mockReset();
+  vi.mocked(apiClient.getProfiles).mockReset();
   vi.mocked(apiClient.getGameSettings).mockReset().mockResolvedValue(storedGame);
   vi.mocked(apiClient.saveGameSettings).mockReset().mockResolvedValue({ ...storedGame, source: "stored" });
   originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
@@ -621,4 +622,40 @@ it("shows the server reason when the rules are rejected with 422", async () => {
   await user.click(screen.getByRole("button", { name: "Guardar reglas" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("every prize must be at least 1");
   expect(screen.getByLabelText("Nombre")).toHaveValue("Quiniela 80");
+});
+
+it("consults explicitly selected native revisions with paging/retry without changing the classic draft", async () => {
+  const listing: ProfileListing = {
+    profile: { schema_version: 1, profile_id: "eur-native", revision: 3, universe_size: 12,
+      positions: 1, allows_repeats: false, multipliers: [{ numerator: 7, denominator: 3 }],
+      currency: "EUR", scale: 2, minimum_stake: 125, maximum_stake: 500, stake_increment: 5,
+      max_coverage: 2, max_exposure: 1000, best_rule: "maximum-payout/v1" },
+    profile_sha256: "c".repeat(64), execution_supported: false,
+    profile_execution: { ready: false, selector_capabilities: [], staking_capabilities: [], entry_policies: [],
+      settlements: ["best"], requires_compatible_dataset: true },
+  };
+  vi.mocked(apiClient.getProfiles).mockResolvedValueOnce({ items: [listing], offset: 0, limit: 20, total: 21, templates: [] })
+    .mockRejectedValueOnce(new NetworkError())
+    .mockResolvedValueOnce({ items: [], offset: 20, limit: 20, total: 20, templates: [] });
+  const { user } = setup({ stayOnRules: true });
+  const name = await screen.findByLabelText("Nombre");
+  await user.clear(name); await user.type(name, "Borrador propio");
+  expect(apiClient.getProfiles).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Consultar reglas de perfiles (solo lectura)" }));
+  const select = await screen.findByLabelText("Revisión del perfil a consultar");
+  expect(select).toHaveValue("");
+  expect(screen.queryByLabelText("Resumen de reglas de perfil")).not.toBeInTheDocument();
+  await user.selectOptions(select, JSON.stringify([listing.profile.profile_id, listing.profile.revision, listing.profile_sha256]));
+  const summary = screen.getByLabelText("Resumen de reglas de perfil");
+  expect(within(summary).getByText("EUR 1.25")).toBeInTheDocument();
+  expect(within(summary).getByText(/multiplicador exacto 7\/3/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Perfiles siguientes" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("No se pudieron cargar los perfiles");
+  expect(name).toHaveValue("Borrador propio");
+  expect(screen.getByLabelText("Resumen de reglas de perfil")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Reintentar catálogo de perfiles" }));
+  expect(await screen.findByText("No hay perfiles en esta página. Volvé a la anterior.")).toBeInTheDocument();
+  expect(apiClient.getProfiles).toHaveBeenLastCalledWith(20, 20);
+  expect(apiClient.saveGameSettings).not.toHaveBeenCalled();
+  expect(apiClient.updateSettings).not.toHaveBeenCalled();
 });

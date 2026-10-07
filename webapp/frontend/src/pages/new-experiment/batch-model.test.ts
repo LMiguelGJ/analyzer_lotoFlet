@@ -21,6 +21,8 @@ const definition: ClosedStrategyDefinition = {
 };
 
 const baseDraft = createBatchDraft("a".repeat(64));
+const minute = (draw: string) => Date.parse(`${draw.replace(" ", "T")}:00Z`) / 60_000;
+const shiftDraw = (draw: string, amount: number) => new Date((minute(draw) + amount) * 60_000).toISOString().slice(0, 16).replace("T", " ");
 
 describe("bounded profile batch draft and request", () => {
   it("# F-UTIL-009 persists only versioned identities and editable inputs, never library/history records", () => {
@@ -50,6 +52,38 @@ describe("bounded profile batch draft and request", () => {
     expect(parseBatchDraft(JSON.stringify(mismatched))?.selectedDraw).toBeNull();
   });
 
+  it("preserves duration-only and compatible absolute-end templates across a verified start change", () => {
+    const draft = { ...baseDraft, profile: { id: "local", revision: 4, sha256: "c".repeat(64) },
+      strategyRefs: [{ id: "first", revision: 2, definition_sha256: "b".repeat(64) }],
+      conditions: { ...baseDraft.conditions, start_draw: "2025-01-01 08:30", capital: "100", goal: "200", settlement: "all" as const,
+        max_elapsed_draws: "20", max_draws: "30" },
+      selectedDraw: { datasetSha256: "a".repeat(64), index: 1, draw: "2025-01-01 08:30" },
+      savedTimeBounds: { start_draw: "2025-01-01 08:30", end_minute: minute("2025-01-01 08:30") + 30, duration_minutes: 30 } } as typeof baseDraft & {
+        savedTimeBounds: { start_draw: string; end_minute: number | null; duration_minutes: number | null } };
+    expect((parseBatchDraft(serializeBatchDraft(draft)) as typeof draft | null)?.savedTimeBounds).toEqual(draft.savedTimeBounds);
+    const start = "2025-01-01 08:30";
+    const changedStart = shiftDraw(start, 5);
+    const durationOnly = { ...draft, conditions: { ...draft.conditions, start_draw: changedStart, max_elapsed_draws: "" },
+      selectedDraw: { datasetSha256: "a".repeat(64), index: 2, draw: changedStart },
+      savedTimeBounds: { ...draft.savedTimeBounds, start_draw: start, end_minute: null } };
+    const durationBody = buildBatchBody(durationOnly, 0, "duration-repeat");
+    expect(durationBody.conditions).toMatchObject({ start_draw: changedStart, max_elapsed_draws: null, end_minute: null, duration_minutes: 30 });
+    expect(buildBatchBody({ ...durationOnly, conditions: { ...durationOnly.conditions, max_elapsed_draws: "25" } }, 0, "elapsed-edit").conditions.max_elapsed_draws).toBe(25);
+
+    const compatible = { ...draft, conditions: { ...draft.conditions, start_draw: changedStart },
+      selectedDraw: { datasetSha256: "a".repeat(64), index: 2, draw: changedStart } };
+    const boundedBody = buildBatchBody(compatible, 0, "saved-bounds");
+    expect(boundedBody.conditions).toMatchObject({ start_draw: changedStart, end_minute: minute(start) + 30, duration_minutes: 30 });
+    const pendingDraft = { ...compatible, pending: { clientRequestId: boundedBody.client_request_id, frozenBody: boundedBody } };
+    expect(parseBatchDraft(serializeBatchDraft(pendingDraft))?.pending).toEqual(pendingDraft.pending);
+
+    const invalidated = shiftDraw(start, 30);
+    expect(() => buildBatchBody({ ...compatible, conditions: { ...compatible.conditions, start_draw: invalidated },
+      selectedDraw: { datasetSha256: "a".repeat(64), index: 3, draw: invalidated } }, 0, "after-end")).toThrow(/límite de hora absoluta/);
+    const { savedTimeBounds: _savedTimeBounds, ...freshDraft } = draft;
+    expect(buildBatchBody(freshDraft, 0, "fresh-default").conditions).toMatchObject({ end_minute: null, duration_minutes: null });
+    expect(() => buildBatchBody({ ...freshDraft, conditions: { ...freshDraft.conditions, max_elapsed_draws: "" } }, 0, "fresh-empty-elapsed")).toThrow(/Sorteos transcurridos/);
+  });
   it("# F-UTIL-012 builds the exact closed batch body with ordered immutable references and explicit shared conditions", () => {
     const body: BatchSubmissionBody = {
       schema_version: 1,

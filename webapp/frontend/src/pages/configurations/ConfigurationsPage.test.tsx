@@ -9,10 +9,17 @@ import { apiClient, ApiError, NetworkError } from "../../api/client";
 
 vi.mock("../../api/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, getCatalog: vi.fn(), listConfigurations: vi.fn(), getConfiguration: vi.fn(), createConfiguration: vi.fn(), updateConfiguration: vi.fn(), deleteConfiguration: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, getCatalog: vi.fn(), listConfigurations: vi.fn(), getConfiguration: vi.fn(), createConfiguration: vi.fn(), updateConfiguration: vi.fn(), deleteConfiguration: vi.fn(), listProfileBatchStrategies: vi.fn(), getProfileBatchStrategy: vi.fn(), getProfileBatchStrategyRevisions: vi.fn() } };
 });
 const strategy = { name: "Fríos", selector: "system" as const, system: "cold", coverage: 1, staking: "flat" as const };
 const item = { id: "cfg-1", name: "Mi plantilla", strategy };
+const profileDefinition = {
+  id: "cfg-1", name: "Mi plantilla", revision: 2, latest_revision: 2, definition_version: 1,
+  definition: { definition_version: 1 as const, name: "Mi plantilla", selector: "static-numbers/v1" as const, coverage: 1, staking: "flat-per-number/v1" as const, selector_parameters: { numbers: [1] }, staking_parameters: { per_number_stake: 1 }, closing_defaults: {} },
+  definition_sha256: "a".repeat(64), created_at: "2026-01-01", revision_created_at: "2026-01-02",
+  protected: true, preset_explanation: null, definition_valid: true, profile_context_provided: false,
+  profile_compatible: null, incompatibilities: [], requirements: {}, execution_available: false, execution_unavailable_reason: "Se requiere un perfil",
+};
 const catalog = { systems: { cold: "Fríos", transition: "Transición" }, selectors: ["system", "blend", "random", "parity"], coverages: [1, 5, 50], parity_coverage: 50 };
 function setup() {
   const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: ["/configuraciones"] });
@@ -25,7 +32,81 @@ beforeEach(() => {
   vi.mocked(apiClient.createConfiguration).mockReset().mockResolvedValue(item);
   vi.mocked(apiClient.updateConfiguration).mockReset().mockResolvedValue(item);
   vi.mocked(apiClient.deleteConfiguration).mockReset().mockResolvedValue();
+  vi.mocked(apiClient.listProfileBatchStrategies).mockReset().mockResolvedValue({ total: 0, offset: 0, limit: 20, items: [] });
+  vi.mocked(apiClient.getProfileBatchStrategy).mockReset().mockResolvedValue(profileDefinition);
+  vi.mocked(apiClient.getProfileBatchStrategyRevisions).mockReset().mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [profileDefinition] });
 });
+it("discovers colliding names and IDs in one library without giving immutable entries classic actions", async () => {
+  vi.mocked(apiClient.listProfileBatchStrategies).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [profileDefinition] });
+  const { user } = setup();
+  const library = await screen.findByRole("region", { name: "Biblioteca común de estrategias" });
+  const classic = within(library).getByRole("region", { name: "Configuraciones clásicas" });
+  const profiles = within(library).getByRole("region", { name: "Definiciones por perfil" });
+  expect(await within(classic).findByText("Mi plantilla")).toBeInTheDocument();
+  expect(await within(profiles).findByText("Mi plantilla")).toBeInTheDocument();
+  expect(within(profiles).queryByRole("link", { name: /Usar/ })).not.toBeInTheDocument();
+  expect(within(profiles).queryByRole("button", { name: /Editar|Eliminar/ })).not.toBeInTheDocument();
+  expect(within(profiles).getByText("Definición por perfil · inmutable")).toBeInTheDocument();
+  await user.type(screen.getByRole("textbox", { name: "Buscar estrategia guardada" }), "sin coincidencia");
+  expect(within(classic).queryByText("Mi plantilla")).not.toBeInTheDocument();
+  expect(within(profiles).queryByText("Mi plantilla")).not.toBeInTheDocument();
+  expect(apiClient.listConfigurations).toHaveBeenCalledTimes(1);
+  expect(apiClient.listProfileBatchStrategies).toHaveBeenCalledTimes(1);
+});
+
+it("pages each source independently with accurate native totals", async () => {
+  vi.mocked(apiClient.listConfigurations).mockResolvedValue({ total: 41, offset: 0, limit: 20, items: [item] });
+  vi.mocked(apiClient.listProfileBatchStrategies).mockResolvedValueOnce({ total: 22, offset: 0, limit: 20, items: [profileDefinition] })
+    .mockResolvedValueOnce({ total: 22, offset: 20, limit: 20, items: [{ ...profileDefinition, id: "profile-next", name: "Otra definición" }] });
+  const { user } = setup();
+  const profiles = await screen.findByRole("navigation", { name: "Páginas de definiciones por perfil" });
+  expect(profiles).toHaveTextContent("22 definiciones en total");
+  await user.click(within(profiles).getByRole("button", { name: "Siguiente" }));
+  expect(await screen.findByText("Otra definición")).toBeInTheDocument();
+  expect(apiClient.listProfileBatchStrategies).toHaveBeenLastCalledWith(20, 20);
+  expect(apiClient.listConfigurations).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("navigation", { name: "Páginas de estrategias guardadas" })).toHaveTextContent("Página 1 · 41 en total");
+});
+
+it("keeps the surviving source visible and reports real API failures rather than empty", async () => {
+  vi.mocked(apiClient.listProfileBatchStrategies).mockRejectedValue(new ApiError(403, "Acceso rechazado"));
+  setup();
+  expect(await screen.findByText("Mi plantilla")).toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent("HTTP 403");
+  expect(screen.queryByText("No hay definiciones por perfil guardadas.")).not.toBeInTheDocument();
+});
+
+it("keeps profile discovery when the classic source fails", async () => {
+  vi.mocked(apiClient.listConfigurations).mockRejectedValue(new NetworkError());
+  vi.mocked(apiClient.listProfileBatchStrategies).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [profileDefinition] });
+  setup();
+  expect(await screen.findByText("Mi plantilla")).toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent("contactar al servidor");
+  expect(screen.getByRole("button", { name: "Ver detalles y revisiones de Mi plantilla" })).toBeInTheDocument();
+});
+
+it("rejects silent latest-revision substitution but reads exact bounded native revisions", async () => {
+  const older = { ...profileDefinition, revision: 1, definition_sha256: "b".repeat(64) };
+  vi.mocked(apiClient.listProfileBatchStrategies).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [profileDefinition] });
+  vi.mocked(apiClient.getProfileBatchStrategy).mockResolvedValue({ ...profileDefinition, revision: 3, definition_sha256: "c".repeat(64) });
+  vi.mocked(apiClient.getProfileBatchStrategyRevisions).mockResolvedValueOnce({ total: 21, offset: 0, limit: 20, items: [profileDefinition] })
+    .mockResolvedValueOnce({ total: 21, offset: 20, limit: 20, items: [older] });
+  const { user } = setup();
+  await user.click(await screen.findByRole("button", { name: "Ver detalles y revisiones de Mi plantilla" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("No se sustituyó");
+  expect(apiClient.getProfileBatchStrategy).toHaveBeenCalledWith("cfg-1");
+  const pager = await screen.findByRole("navigation", { name: "Páginas de revisiones" });
+  await user.click(within(pager).getByRole("button", { name: "Siguiente" }));
+  await user.click(await screen.findByRole("button", { name: "Consultar revisión 1" }));
+  expect(apiClient.getProfileBatchStrategyRevisions).toHaveBeenLastCalledWith("cfg-1", 20, 20);
+  const detail = screen.getByRole("region", { name: "Consulta de definición Mi plantilla" });
+  expect(within(detail).getByText("1 · inmutable · /strategies")).toBeInTheDocument();
+  expect(within(detail).getByText("b".repeat(64), { selector: "dd" })).toBeInTheDocument();
+  expect(within(detail).getByText(/esta consulta no envía contexto de perfil/)).toBeInTheDocument();
+  expect(apiClient.updateConfiguration).not.toHaveBeenCalled();
+  expect(apiClient.deleteConfiguration).not.toHaveBeenCalled();
+});
+
 it("frames saved strategies as an optional reusable library", async () => {
   const { user } = setup();
   expect(await screen.findByRole("heading", { name: "Estrategias" })).toBeInTheDocument();

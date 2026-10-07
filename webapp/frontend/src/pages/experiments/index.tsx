@@ -56,6 +56,12 @@ function experimentName(row: SimulationListing): string {
 function detailName(row: ExperimentSummary): string {
   return isProfileBatchExperiment(row) ? row.display.name : row.request.name;
 }
+function repeatHref(detail: ExperimentSummary, id: string): string | null {
+  if (!isProfileExperiment(detail)) return `/simulaciones/nueva?base=${encodeURIComponent(id)}`;
+  if (isProfileBatchExperiment(detail)) return `/simulaciones/nueva/sesion?base=${encodeURIComponent(id)}`;
+  const version = detail.request.schema_version;
+  return version >= 1 && version <= 4 ? `/simulaciones/nueva/perfil?base=${encodeURIComponent(id)}` : null;
+}
 
 function createdAt(value: string | null | undefined) {
   if (!value) return "—";
@@ -113,11 +119,12 @@ function RowActions({ row, onDelete }: { row: SimulationListing; onDelete: () =>
   const detail = experimentDetail(row);
   const trigger = useRef<HTMLButtonElement>(null);
   const first = useRef<HTMLAnchorElement>(null);
+  const firstRepeat = useRef<HTMLAnchorElement>(null);
   const firstProfile = useRef<HTMLButtonElement>(null);
   const menuId = `actions-${row.source_kind}-${encodeURIComponent(row.id)}`;
   useEffect(() => {
     if (!open || !detail) return;
-    (isProfileExperiment(detail) ? firstProfile.current : first.current)?.focus();
+    (isProfileExperiment(detail) ? firstRepeat.current ?? firstProfile.current : first.current)?.focus();
     function dismiss(event: KeyboardEvent) {
       if (event.key === "Escape") { setOpen(false); trigger.current?.focus(); }
     }
@@ -129,14 +136,15 @@ function RowActions({ row, onDelete }: { row: SimulationListing; onDelete: () =>
     return () => { document.removeEventListener("keydown", dismiss); document.removeEventListener("pointerdown", outside); };
   }, [open, row.id, detail, menuId]);
   if (!detail) return null;
+  const repeat = repeatHref(detail, row.id);
   return <>
     <button ref={trigger} type="button" className="ledger-button ledger-button-ghost" aria-label={`Acciones de ${experimentName(row)}`} aria-expanded={open} aria-controls={menuId} onClick={() => {
       if (!open) { const rect = trigger.current!.getBoundingClientRect(); setPosition({ top: Math.min(rect.bottom, window.innerHeight - 100), left: Math.max(0, rect.right - 180) }); }
       setOpen(!open);
     }}>Acciones</button>
     {open && createPortal(<div id={menuId} role="menu" aria-label={`Acciones de ${experimentName(row)}`} style={{ position: "fixed", zIndex: 50, ...position }} className="min-w-[180px] border border-border-control bg-surface p-1 text-sm">
-      {!isProfileExperiment(detail) && <Link ref={first} role="menuitem" className="ledger-button ledger-button-ghost w-full justify-start" to={`/simulaciones/nueva?base=${encodeURIComponent(row.id)}`} onClick={() => setOpen(false)}>Repetir con cambios</Link>}
-      {isProfileExperiment(detail) && <span className="block px-3 py-2 text-text-secondary">No disponible como base</span>}
+      {repeat && <Link ref={isProfileExperiment(detail) ? firstRepeat : first} role="menuitem" className="ledger-button ledger-button-ghost w-full justify-start" to={repeat} onClick={() => setOpen(false)}>Repetir con cambios</Link>}
+      {isProfileExperiment(detail) && !repeat && <span className="block px-3 py-2 text-text-secondary">No disponible como base</span>}
       <button ref={firstProfile} role="menuitem" type="button" className="ledger-button ledger-button-ghost w-full justify-start" onClick={() => { trigger.current?.focus(); setOpen(false); onDelete(); }}>Eliminar</button>
     </div>, document.body)}
   </>;

@@ -19,7 +19,7 @@ import asyncio
 import json
 import sqlite3
 import time
-from dataclasses import replace
+from dataclasses import asdict, replace
 from hashlib import sha256
 from unittest.mock import patch
 
@@ -30,9 +30,11 @@ from test_import_records import options, row
 from test_import_records import profile as imported_profile
 from test_profile_storage import cycling_result, profile_request, replay
 
+from laboratorio.api import run_summary
 from laboratorio.domain.contracts import (
     ExperimentRequest,
     ExperimentStatus,
+    RunStatus,
     SettlementMode,
     legacy_quiniela_80_profile,
 )
@@ -46,6 +48,7 @@ from laboratorio.domain.profile_result_v2 import serialize_profile_cycling_resul
 from laboratorio.domain.profile_session import ProfileConditions, ProfileSelector, Q80CyclingStaking
 from laboratorio.settings import Settings
 from laboratorio.storage.quota import QuotaExceeded
+from laboratorio.storage.repository import SavedRun
 
 
 @pytest.fixture
@@ -1073,3 +1076,40 @@ def test_public_schema4_stop_persists_round_limit_and_replays(api_setup):
     replay = client.get(f"/api/v1/experiments/{identifier}/runs/0/replay")
     assert replay.status_code == 200
     assert replay.json()["schema_version"] == 4
+
+
+@pytest.mark.parametrize("kind", ["legacy", "profile"])
+def test_common_run_read_boundary_retains_resultless_native_envelope(kind):
+    run = SavedRun(7, "persisted-configuration", RunStatus.PENDING, None, kind, None)
+    summary = run_summary(run, 100)
+    expected = {
+        "ordinal": 7,
+        "configuration_id": "persisted-configuration",
+        "status": "pending",
+        "result": None,
+        "bets_count": 0,
+    }
+    if kind == "profile":
+        expected["result_kind"] = "profile"
+    assert json.loads(json.dumps(summary)) == expected
+    assert "result_schema_version" not in summary and "complete" not in summary
+
+
+def test_common_run_read_boundary_keeps_legacy_result_and_count_native():
+    native = result()
+    before = asdict(native)
+    run = SavedRun(9, "saved-configuration", RunStatus.COMPLETED, native)
+    summary = run_summary(run, 100)
+    assert summary == {
+        "ordinal": 9,
+        "configuration_id": "saved-configuration",
+        "status": RunStatus.COMPLETED,
+        "result": {
+            **{key: value for key, value in before.items() if key != "bets"},
+            "delta": native.final_balance - 100,
+            **financial_metrics(native, 100),
+        },
+        "bets_count": len(native.bets),
+    }
+    assert run.result is native and asdict(native) == before
+    assert "strategy" not in summary and "source_count" not in summary["result"]

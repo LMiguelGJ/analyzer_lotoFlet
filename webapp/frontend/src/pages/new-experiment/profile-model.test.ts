@@ -55,6 +55,25 @@ export const recoveryProfile = { ...profileItem,
 export const recoveryDataset = { ...datasetItem, profile_id: "rational-recovery", profile_sha256: recoveryProfile.profile_sha256,
   profile_execution: recoveryProfile.profile_execution } as DatasetListing;
 
+describe("native profile step validation", () => {
+  it("validates Strategy without future source or capital inputs", () => {
+    const strategyOnly = { ...validDraft, name: "", start_draw: "", capital: "", goal: "", max_elapsed_draws: "", settlement: "" as const };
+    expect(profileModel.validateProfileStrategy(strategyOnly, profileItem, "fixed").stake).toBe(125);
+    expect(() => profileModel.validateProfileStrategy({ ...strategyOnly, numbers: "0,0" }, profileItem, "fixed")).toThrow(/Números/);
+    expect(() => profileModel.validateProfileStrategy({ ...strategyOnly, per_number_stake: "1.26" }, profileItem, "fixed")).toThrow(/apuesta por número/i);
+    expect(() => profileModel.validateProfileStrategy({ ...strategyOnly, selector: "random", seed: "-1" }, profileItem, "fixed")).toThrow(/Semilla/);
+    expect(() => profileModel.validateProfileStrategy({ ...strategyOnly, target_margin: "12", rounds: "10001", end_mode: "stop" }, recoveryProfile, "recovery")).toThrow(/Rondas/);
+  });
+  it("validates exact native money and limits at Capital, retaining nullable repeat bounds", () => {
+    expect(profileModel.validateProfileCapital(validDraft, profileItem)).toMatchObject({ capital: 200000, goal: 280000, max_elapsed_draws: 12 });
+    expect(() => profileModel.validateProfileCapital({ ...validDraft, capital: "2000.001" }, profileItem)).toThrow(/decimales/);
+    expect(() => profileModel.validateProfileCapital({ ...validDraft, goal: "2000" }, profileItem)).toThrow(/superar/);
+    expect(() => profileModel.validateProfileCapital({ ...validDraft, max_elapsed_draws: "10001" }, profileItem)).toThrow(/Sorteos/);
+    expect(() => profileModel.validateProfileCapital({ ...validDraft, max_bet_draws: "1.5" }, profileItem)).toThrow(/Sorteos/);
+    expect(profileModel.validateProfileCapital({ ...validDraft, max_elapsed_draws: "" }, profileItem, true).max_elapsed_draws).toBeNull();
+  });
+});
+
 describe("profile request v1 builder", () => {
   it("hydrates saved v1 requests for repeat without losing time conditions", () => {
     const request = buildProfileRequest(validDraft, profileItem, datasetItem, validDraft.start_draw);

@@ -24,6 +24,7 @@ async function setup() {
   const user = userEvent.setup();
   render(<DataPage />);
   await user.click(screen.getByText("Importar archivo CSV o JSON"));
+  await user.click(screen.getByRole("radio", { name: /Archivo avanzado CSV o JSON/ }));
   await screen.findByLabelText("Perfil guardado completo");
   await user.upload(screen.getByLabelText(/Archivo de datos/), file());
   await user.selectOptions(screen.getByLabelText(/Formato del archivo/), "csv");
@@ -70,7 +71,7 @@ describe("visible game profiles", () => {
     render(<DataPage />);
     const library = await screen.findByRole("region", { name: "Biblioteca de historiales" });
     expect(within(library).getByRole("status")).toHaveTextContent(/Todavía no hay historiales guardados/);
-    expect(within(library).getByRole("link", { name: "Ir a importar historial" })).toHaveAttribute("href", "#history-import-title");
+    expect(within(library).getByRole("link", { name: "Ir a importar historial" })).toHaveAttribute("href", "#import-entry-title");
     expect(screen.getByRole("heading", { name: "Importar historial" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Importar historial" })).toBeDisabled();
     expect(screen.getByRole("heading", { name: "Más formas de importar" })).toBeInTheDocument();
@@ -166,6 +167,7 @@ describe("bounded local import", () => {
     const user = userEvent.setup();
     render(<DataPage />);
     await user.click(screen.getByText("Importar archivo CSV o JSON"));
+    await user.click(screen.getByRole("radio", { name: /Archivo avanzado CSV o JSON/ }));
     await screen.findByLabelText("Perfil guardado completo");
     await user.upload(screen.getByLabelText(/Archivo de datos/), file());
     await user.selectOptions(screen.getByLabelText("Perfil guardado completo"), "saved@2");
@@ -238,6 +240,9 @@ describe("bounded local import", () => {
     expect(screen.getByLabelText(/Archivo de datos/)).toBeDisabled();
     expect(screen.getByRole("button", { name: "Generar vista previa" })).toBeDisabled();
     expect(confirm).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Historial ordinario/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: /Historial ordinario/ }));
+    expect(screen.getByRole("radio", { name: /Archivo avanzado CSV o JSON/ })).toBeChecked();
     expect(screen.getByText(/esperá la respuesta/)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Importación guardada" })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Tipo de fuente"), { target: { value: "artificial" } });
@@ -289,11 +294,12 @@ describe("bounded local import", () => {
     const summary = screen.getByText("Importar archivo CSV o JSON");
     const details = summary.closest("details") as HTMLDetailsElement;
     await user.click(summary);
+    await user.click(screen.getByRole("radio", { name: /Archivo avanzado CSV o JSON/ }));
     await screen.findByLabelText("Perfil guardado completo");
     await user.type(screen.getByLabelText("Identificador de fuente"), "ledger");
     details.open = false;
     expect(details.open).toBe(false);
-    fireEvent.submit(screen.getByRole("button", { name: "Generar vista previa" }).closest("form") as HTMLFormElement);
+    fireEvent.submit(screen.getByRole("form", { name: "Importar datos" }));
     expect(details.open).toBe(true);
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(/Elegí un archivo CSV o JSON/);
@@ -322,5 +328,27 @@ describe("bounded local import", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/Iniciá el laboratorio desde el lanzador y volvé a intentar/);
     expect(apiClient.promoteImport).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Confirmar y guardar importación" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generar vista previa" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Historial ordinario/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: /Historial ordinario/ }));
+    expect(screen.getByRole("radio", { name: /Archivo avanzado CSV o JSON/ })).toBeChecked();
+    expect(screen.getByText(/Comprobá el estado desde la cola o la biblioteca/)).toBeVisible();
+  });
+
+  it("uses one shared form and retains native drafts and hash-bound previews across explicit mode switches", async () => {
+    const user = await setup();
+    const form = screen.getByRole("form", { name: "Importar datos" });
+    expect(document.querySelectorAll("form form")).toHaveLength(0);
+    expect(screen.getAllByRole("form", { name: "Importar datos" })).toHaveLength(1);
+    expect(within(form).queryByRole("button", { name: "Importar historial" })).not.toBeInTheDocument();
+    await preview(user);
+    await user.click(screen.getByRole("radio", { name: /Historial ordinario/ }));
+    expect(within(form).getByRole("button", { name: "Importar historial" })).toBeVisible();
+    expect(within(form).queryByRole("button", { name: "Generar vista previa" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: /Archivo avanzado CSV o JSON/ }));
+    expect(screen.getByLabelText("Identificador de fuente")).toHaveValue("ledger");
+    expect(screen.getByLabelText(/Archivo de datos/)).toHaveProperty("files", expect.objectContaining({ length: 1 }));
+    await user.click(screen.getByRole("button", { name: "Confirmar y guardar importación" }));
+    expect(apiClient.promoteImport).toHaveBeenCalledWith({ ...vi.mocked(apiClient.previewImport).mock.calls[0][0], expected_dataset_sha256: hash });
   });
 });

@@ -5,11 +5,15 @@ import type { ApiFieldError, ExpectedSources } from "../../api/client";
 import { isProfileExperiment } from "../../api/types";
 import type { Catalog, ConfigurationSummary, Page, StartingDrawAvailability } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { FiveStepWizard, useFiveStepWizard } from "../../components/FiveStepWizard";
+import { WizardScopeSelector } from "../../components/WizardScopeSelector";
 import { StrategyEditor } from "../../components/StrategyEditor";
 import { Block, Button, OrderSummary, SectionHeader } from "../../components/ui";
 import { buildRequest, buildStrategy, diffStrategyKey, draftFromRequest, draftFromStrategy, errorDetail, errorMessage, initialConditions, initialStrategy, newStrategy, trimName, validateConditions, validateStrategies } from "./model";
 import type { ConditionsDraft, Errors, StrategyDraft } from "./model";
-import { FIELD_LABEL_SEED, FIELD_LABEL_SETTLEMENT, SELECTOR_LABELS, SETTLEMENT_LABELS } from "../../lib/ui-labels";
+import { FIELD_LABEL_SEED, FIELD_LABEL_SETTLEMENT, SELECTOR_LABELS } from "../../lib/ui-labels";
+import { CLASSIC_SETTLEMENT_LABELS as SETTLEMENT_LABELS, classicRulesView } from "../../lib/game-rules";
+import { GameRulesSummary } from "../../components/GameRulesSummary";
 import { formatDOP } from "../../lib/format";
 
 const control = "control";
@@ -59,13 +63,20 @@ function serverErrors(entries: ApiFieldError[]): Errors {
  * (always rendered), and section-level/unknown errors fall back to no specific target. */
 function firstFocusTarget(mapped: Errors): string | null {
   for (const key of Object.keys(mapped)) {
-    if (key === "form" || key === "conditions") continue;
+    if (key === "form") continue;
+    if (key === "conditions") return "start_draw";
     if (/^strategies\.\d+$/.test(key)) return `${key}.name`;
     if (/^strategies\.\d+\.components$/.test(key)) return `${key}.0.weight`;
     if (/^strategies\.\d+\.components\.\d+$/.test(key)) return `${key}.system`;
     return key;
   }
   return null;
+}
+function owningStep(key: string): number {
+  if (key.startsWith("strategies.")) return 0;
+  if (key === "settlement") return 1;
+  if (key === "start_draw" || key === "conditions") return 2;
+  return 3;
 }
 function savedExpectedSources(value: unknown): ExpectedSources | null {
   if (!value || typeof value !== "object") return null;
@@ -113,9 +124,9 @@ export function NewExperimentPage() {
   const [strategies, setStrategies] = useState<StrategyDraft[]>([initialStrategy(1)]);
   const nextId = useRef(2);
   const [active, setActive] = useState(0);
-  const [wizardStep, setWizardStep] = useState(0);
+  const wizard = useFiveStepWizard(5, validateWizardStep);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [strategyAdvancedOpen, setStrategyAdvancedOpen] = useState(false);
+  const [strategyAdvancedOpen, setStrategyAdvancedOpen] = useState(true);
   const [seedEditing, setSeedEditing] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [notice, setNotice] = useState("");
@@ -155,7 +166,7 @@ export function NewExperimentPage() {
       setConditions({ ...initialConditions, seed: generatedSeed() }); setStrategies([initialStrategy(1)]); nextId.current = 2;
       setDirty(false); setBaseState(baseId ? "loading" : "ready"); setBaseSources(null);
       setConfigurationState(configurationId ? "loading" : "ready");
-      setActive(0); setWizardStep(0); setErrors({}); setNotice(""); setLibraryOpen(false); setAdvancedOpen(false); setStrategyAdvancedOpen(false); setSeedEditing(false);
+      setActive(0); wizard.goTo(0); setErrors({}); setNotice(""); setLibraryOpen(false); setAdvancedOpen(false); setStrategyAdvancedOpen(false); setSeedEditing(false);
     }
     previousSource.current = sourceKey;
   }, [sourceKey, baseId, configurationId]);
@@ -416,12 +427,12 @@ export function NewExperimentPage() {
         ?? keys.find((key) => key === "seed" || key === "max_minutes")
         ?? keys[0];
       const strategyMatch = first.match(/^strategies\.(\d+)/);
-      if (strategyMatch) { setWizardStep(1); setActive(Number(strategyMatch[1])); setAdvancedOpen(true); setStrategyAdvancedOpen(true); }
-      else if (["capital", "goal", "max_bets"].includes(first)) setWizardStep(2);
-      else if (["name", "start_draw", "conditions"].includes(first)) setWizardStep(0);
-      else if (first === "seed" || first === "max_minutes") { setWizardStep(1); setAdvancedOpen(true); }
+      const step = owningStep(first);
+      if (strategyMatch) { setActive(Number(strategyMatch[1])); setAdvancedOpen(true); setStrategyAdvancedOpen(true); }
+      wizard.goTo(step);
+      if (step === 3 && (first === "seed" || first === "max_minutes")) setAdvancedOpen(true);
       if (first === "seed") setSeedEditing(true);
-      const target = firstFocusTarget({ [first]: found[first] }) ?? (first === "conditions" ? "start_draw" : null);
+      const target = firstFocusTarget({ [first]: found[first] });
       if (target) setPendingFocus(target);
       return false;
     }
@@ -445,7 +456,7 @@ export function NewExperimentPage() {
     return field(key, label, <input {...attrs(key, !!help)} className={control} value={conditions[key]} inputMode={key === "name" ? "text" : "numeric"} onChange={(event) => editCondition(key, event.target.value)} />, help);
   }
   async function submit() {
-    if (wizardStep !== 3 || postingRef.current || !catalog || baseId && configurationId ||
+    if (wizard.step !== 4 || loading || postingRef.current || !catalog || baseId && configurationId ||
         baseId && (baseState !== "ready" || baseSources?.baseId !== baseId) ||
         previousSource.current !== sourceKey || configurationId && configurationState !== "ready" || catalogError) return;
     if (!validateAll()) return;
@@ -460,13 +471,13 @@ export function NewExperimentPage() {
     } catch (error) {
       if (error instanceof ApiError && error.status === 422 && error.fieldErrors?.length) {
         const mapped = serverErrors(error.fieldErrors); setErrors(mapped);
-        const strategyKey = Object.keys(mapped).find((key) => key.startsWith("strategies."));
-        if (strategyKey) { setWizardStep(1); setActive(Number(strategyKey.split(".")[1])); setAdvancedOpen(true); setStrategyAdvancedOpen(true); }
-        const target = firstFocusTarget(mapped);
-        if (target === "name" || target === "start_draw") setWizardStep(0);
-        else if (["capital", "goal", "max_bets"].includes(target ?? "")) setWizardStep(2);
+        const firstKey = Object.keys(mapped)[0];
+        const target = firstFocusTarget(firstKey ? { [firstKey]: mapped[firstKey] } : mapped);
+        const strategyMatch = firstKey?.match(/^strategies\.(\d+)/);
+        if (strategyMatch) { setActive(Number(strategyMatch[1])); setAdvancedOpen(true); setStrategyAdvancedOpen(true); }
+        if (firstKey) wizard.goTo(owningStep(firstKey));
         if (target === "seed" || target === "max_minutes") {
-          setWizardStep(1); setAdvancedOpen(true);
+          setAdvancedOpen(true);
           if (target === "seed") setSeedEditing(true);
         }
         setNotice("Revisá los campos señalados.");
@@ -487,33 +498,40 @@ export function NewExperimentPage() {
     (offeredDraws.includes(conditions.start_draw) || verifiedDraw === conditions.start_draw);
   const staleDraw = !!knownDraw && conditions.start_draw === knownDraw && !drawLoading && !drawError && !selectedAvailable;
   const summarySelection = strategies.map((strategy) => catalog ? strategyPlainText(strategy, catalog) : "Selección configurable").join(" · ");
-  const wizardSteps = ["1 · ¿Qué sorteos alimentan la simulación?", "2 · ¿Cómo elegimos los números?", "3 · ¿Cuánto arriesgás y cuál es tu meta?", "4 · Revisá y lanzá"];
-  function moveWizard(next: number) {
-    if (next > wizardStep) {
-      const available = drawDate && availability?.ranked_total === 0 ? [] : [...draws, ...(verifiedDraw ? [verifiedDraw] : [])];
-      const stepErrors: Errors = wizardStep === 0
-        ? { ...(!trimName(conditions.name) || trimName(conditions.name).length > 80 ? { name: "Ingresá un nombre de 1 a 80 caracteres para identificar esta simulación." } : {}), ...(!available.includes(conditions.start_draw) || drawLoading || !!drawError ? { start_draw: "Elegí un sorteo histórico con ranking disponible; ese será el primer dato probado." } : {}) }
-        : wizardStep === 1 && catalog ? validateStrategies(strategies, catalog)
-          : wizardStep === 2 ? validateConditions(conditions, available) : {};
-      if (Object.keys(stepErrors).length) {
-        setErrors((previous) => ({ ...previous, ...stepErrors }));
-        setNotice("Completá los datos de este paso para continuar.");
-        const first = Object.keys(stepErrors)[0];
-        if (wizardStep === 1) { setAdvancedOpen(true); setStrategyAdvancedOpen(true); }
-        const advancedError = ["seed", "max_minutes"].find((key) => Object.hasOwn(stepErrors, key));
-        if (wizardStep === 2 && advancedError) {
-          setWizardStep(1); setAdvancedOpen(true); if (advancedError === "seed") setSeedEditing(true);
-        }
-        const target = firstFocusTarget(advancedError ? { [advancedError]: stepErrors[advancedError] } : stepErrors) ?? (first === "conditions" ? "start_draw" : null);
-        if (target) setPendingFocus(target);
-        return;
-      }
-      setErrors({}); setNotice("");
+  const wizardSteps = [
+    { title: "1 · ¿Cómo elegimos los números?", description: "Elegí una estrategia y ajustá cómo se proponen los números." },
+    { title: "2 · Reglas del sorteo", description: "Revisá las reglas disponibles y cómo se cuentan los premios." },
+    { title: "3 · ¿Desde qué sorteo empezar?", description: "Elegí el sorteo histórico y, si querés, filtrá por fecha." },
+    { title: "4 · Capital y datos", description: "Identificá la simulación y definí el capital, la meta y los límites." },
+    { title: "5 · Revisá y lanzá", description: "Confirmá el plan antes de enviarlo a la cola. Esto simula datos históricos; no predice ni garantiza ganancias." },
+  ];
+  function validateWizardStep(step: number): boolean {
+    const available = drawDate && availability?.ranked_total === 0 ? [] : [...draws, ...(verifiedDraw ? [verifiedDraw] : [])];
+    let found: Errors = {};
+    if (step === 0) found = catalog ? validateStrategies(strategies, catalog) : { form: "Esperá a que cargue el catálogo." };
+    else if (step === 1 && !conditions.settlement)
+      found = { settlement: "Elegí cómo contar los premios." };
+    else if (step === 2 && (!available.includes(conditions.start_draw) || drawLoading || !!drawError))
+      found = { start_draw: "Elegí un sorteo histórico con ranking disponible; ese será el primer dato probado." };
+    else if (step === 3) {
+      const all = validateConditions(conditions, available);
+      for (const key of ["name", "capital", "goal", "max_bets", "max_minutes", "seed"] as const) if (all[key]) found[key] = all[key];
     }
-    const bounded = Math.max(0, Math.min(wizardSteps.length - 1, next));
-    setWizardStep(bounded);
-    const target = document.getElementById(["history-step-heading", "strategy-step-heading", "limits-heading", "order-summary-heading"][bounded]);
-    target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    setErrors((previous) => ({ ...previous, ...found }));
+    if (Object.keys(found).length) {
+      setNotice("Completá los datos de este paso para continuar.");
+      if (step === 0) { setAdvancedOpen(true); setStrategyAdvancedOpen(true); }
+      if (found.seed || found.max_minutes) setAdvancedOpen(true);
+      if (found.seed) setSeedEditing(true);
+      const first = Object.keys(found)[0];
+      const strategyMatch = first.match(/^strategies\.(\d+)/);
+      if (strategyMatch) setActive(Number(strategyMatch[1]));
+      const target = firstFocusTarget({ [first]: found[first] });
+      if (target) setPendingFocus(target);
+      return false;
+    }
+    setErrors({}); setNotice("");
+    return true;
   }
 
   if (baseId && configurationId) return <div><Link to="/simulaciones" className="link">Volver a simulaciones</Link><p role="alert" className="mt-4 text-red-300">Hay dos orígenes (base y estrategia guardada). Elegí solo uno.</p></div>;
@@ -531,25 +549,12 @@ export function NewExperimentPage() {
   return <>
     <Link to="/simulaciones" className="mb-4 inline-block link">Volver a simulaciones</Link>
     <form className="max-w-4xl" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-        <section className="m3-wizard" aria-label="Asistente para crear una simulación">
-          <div className="m3-wizard-progress" role="progressbar" aria-label={`Paso ${wizardStep + 1} de ${wizardSteps.length}`} aria-valuenow={wizardStep + 1} aria-valuemin={1} aria-valuemax={wizardSteps.length}>
-            <span style={{ width: `${((wizardStep + 1) / wizardSteps.length) * 100}%` }} />
-          </div>
-          <p className="m3-wizard-step">Paso {wizardStep + 1} de {wizardSteps.length}</p>
-          <h2 className="m3-wizard-title">{wizardSteps[wizardStep]}</h2>
-          <p className="field-help">{["Elegí desde qué sorteo del historial empezar; esto define los datos que se probarán.", "Elegí cómo se proponen los números y cómo se cuentan los premios.", "Definí el dinero inicial y cuándo detener la simulación.", "Confirmá el plan antes de enviarlo a la cola. Esto simula datos históricos; no predice ni garantiza ganancias."][wizardStep]}</p>
+        <FiveStepWizard steps={wizardSteps} activeStep={wizard.step} onNext={wizard.next} onBack={wizard.back} busy={loading || drawLoading || posting || savingStrategy || libraryBusy}>
           <dl className="m3-wizard-financial" aria-label="Límites financieros siempre visibles">
             <div><dt>Capital</dt><dd>{Number.isInteger(Number(conditions.capital)) && Number(conditions.capital) > 0 ? formatDOP(Number(conditions.capital)) : "Por definir"}</dd></div>
             <div><dt>Meta de saldo</dt><dd>{Number.isInteger(Number(conditions.goal)) && Number(conditions.goal) > 0 ? formatDOP(Number(conditions.goal)) : "Por definir"}</dd></div>
             <div><dt>Duración máxima</dt><dd>{conditions.max_bets || "Sin límite"} sorteos</dd></div>
           </dl>
-          <div className="m3-wizard-actions">
-            <button type="button" className="btn btn-outlined" disabled={wizardStep === 0} onClick={() => moveWizard(wizardStep - 1)}>Atrás</button>
-            {wizardStep < wizardSteps.length - 1
-              ? <button type="button" className="btn btn-primary" onClick={() => moveWizard(wizardStep + 1)}>Siguiente</button>
-              : <span className="m3-wizard-step">Listo para confirmar abajo</span>}
-          </div>
-        </section>
         {(Object.keys(errors).length > 0 || notice) && <div ref={errorRef} tabIndex={-1} role="alert" className="mb-5 border border-border-control p-3 text-sm focus:outline-accent">
           {notice || "Revisá los errores señalados junto a los campos antes de crear la simulación."}
           {errorDetail(errors.form) && <details className="mt-2 text-xs text-text-secondary"><summary className="disclosure-summary">Detalles técnicos</summary><p className="mt-1">{errorDetail(errors.form)}</p></details>}
@@ -559,52 +564,43 @@ export function NewExperimentPage() {
         {catalogError && <p role="alert" className="mb-4 text-red-300">{catalogError} <button type="button" className="btn btn-tertiary" onClick={() => { setCatalogError(""); setCatalogRetry((value) => value + 1); }}>Reintentar</button></p>}
         {drawError && <p role="alert" className="mb-4 text-red-300">{drawError} <button type="button" className="btn btn-tertiary" onClick={() => setDrawRetry((value) => value + 1)}>Reintentar</button></p>}
 
-        {wizardStep === 0 && <section aria-labelledby="history-step-heading">
+        {wizard.step === 2 && <section aria-labelledby="history-step-heading">
         <h2 id="history-step-heading" className="section-header">Elegí desde qué sorteo empezar</h2>
         {catalog && !drawLoading && !drawError && offeredDraws.length === 0 && !knownDraw && <p role="status" className="mb-3">{drawDate && availability?.history_total === 0 ? "No hay sorteos en esta fecha. Probá otra." : drawDate && availability?.ranked_total === 0 ? "Ningún sorteo de esta fecha tiene ranking. Probá otra." : "No hay sorteos iniciales disponibles."}</p>}
+        {staleDraw && <p role="status" className="mb-3 text-text-secondary">Ese sorteo ya no está disponible. Elegí otro.</p>}
+        {draws.length < total && <button type="button" className={`${secondary} mb-3`} disabled={drawLoading} onClick={() => { void loadDraws(); }}>{drawLoading ? "Cargando sorteos…" : "Cargar más sorteos"}</button>}
         <Block border="top" className="mb-6">
           <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">
-            {input("name", "Nombre de la simulación")}
             {field("start_draw", "Sorteo inicial", <select {...attrs("start_draw", true)} className={control} value={conditions.start_draw} disabled={!catalog || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable)} onChange={(event) => editCondition("start_draw", event.target.value)}>
               <option value="">Elegí un sorteo disponible</option>{offeredDraws.map((draw) => <option key={draw} value={draw}>{draw}</option>)}
               {knownDraw && !offeredDraws.includes(knownDraw) && (!drawDate || knownDraw.startsWith(`${drawDate} `)) && <option value={knownDraw} disabled={!selectedAvailable}>{knownDraw}{selectedAvailable ? "" : " (sin ranking disponible)"}</option>}
             </select>, "Los sorteos deben tener ranking disponible para usarse como inicio.")}
           </div>
         </Block>
-        <fieldset aria-labelledby="rules-heading" className="mb-8 min-w-0 border-0 p-0">
-          <SectionHeader id="rules-heading" number="01" title="Reglas del sorteo" className="mb-3" />
-          <p className="field-help mb-3">Estas reglas describen el sorteo histórico; la simulación no las modifica.</p>
-          {catalog && <dl className="data-list mb-3">
-            <dt>Números posibles</dt><dd>00–{String(catalog.game.numbers - 1).padStart(2, "0")} ({catalog.game.numbers} números)</dd>
-            <dt>Posiciones por sorteo</dt><dd>{catalog.game.positions}</dd>
-            <dt>Repeticiones</dt><dd>{catalog.game.allows_repeats ? "Permitidas" : "No permitidas"}</dd>
-            <dt>Premios por posición</dt><dd>{catalog.game.prizes.map((prize, index) => `${index + 1}: ${prize}`).join(" · ")}</dd>
-            <dt>Apuesta mínima por número</dt><dd>{formatDOP(catalog.game.minimum_stake)}</dd>
-          </dl>}
-          <Link to="/ajustes?paso=reglas" className="btn btn-tertiary">Editar reglas</Link>
-        </fieldset>
+        <div className="field max-w-md mb-6"><label htmlFor="draw_date" className="field-label">Filtrar sorteos por fecha</label><input id="draw_date" type="date" className={control} value={drawDate} aria-describedby="draw_date-help" onChange={(event) => changeDrawDate(event.target.value)} /><p id="draw_date-help" className="field-help">Vacío: todas las fechas.</p></div>
+        <WizardScopeSelector currentMode="classic" busy={loading || drawLoading || posting} />
         </section>}
 
-        {wizardStep === 1 && <section aria-labelledby="strategy-step-heading">
+        {wizard.step === 1 && <section aria-labelledby="rules-heading">
+          <fieldset aria-labelledby="rules-heading" className="mb-8 min-w-0 border-0 p-0">
+            <SectionHeader id="rules-heading" number="02" title="Reglas del sorteo" className="mb-3" />
+            <p className="field-help mb-3">Estas reglas describen el sorteo histórico; la simulación no las modifica.</p>
+            {catalog && <GameRulesSummary view={classicRulesView(catalog.game, "Catálogo clásico /catalog · reglas efectivas para la simulación nueva", { settlement: conditions.settlement })} />}
+            {field("settlement", FIELD_LABEL_SETTLEMENT, <select {...attrs("settlement")} className={control} value={conditions.settlement} onChange={(event) => editCondition("settlement", event.target.value)}>{(Object.keys(SETTLEMENT_LABELS) as (keyof typeof SETTLEMENT_LABELS)[]).map((key) => <option value={key} key={key}>{SETTLEMENT_LABELS[key]}</option>)}</select>)}
+            <Link to="/ajustes?paso=reglas" className="btn btn-tertiary mt-4">Editar reglas</Link>
+          </fieldset>
+        </section>}
+
+        {wizard.step === 0 && <section aria-labelledby="strategy-step-heading">
         <h2 id="strategy-step-heading" className="section-header">Elegí la estrategia de selección</h2>
         <fieldset aria-labelledby="selection-heading" className="mb-8 min-w-0 border-0 p-0">
-          <SectionHeader id="selection-heading" number="02" title="Selección" className="mb-3" />
-          {drawLoading && <p role="status" className="mb-3">Cargando sorteos disponibles…</p>}
-          {staleDraw && <p role="status" className="mb-3 text-text-secondary">Ese sorteo ya no está disponible. Elegí otro.</p>}
-          {catalog && !drawLoading && !drawError && offeredDraws.length === 0 && !knownDraw && <p role="status" className="mb-3">{drawDate && availability?.history_total === 0 ? "No hay sorteos en esta fecha. Probá otra." : drawDate && availability?.ranked_total === 0 ? "Ningún sorteo de esta fecha tiene ranking. Probá otra." : "No hay sorteos iniciales disponibles."}</p>}
-
-          {draws.length < total && <button type="button" className={`${secondary} mb-3`} disabled={drawLoading} onClick={() => { void loadDraws(); }}>{drawLoading ? "Cargando sorteos…" : "Cargar más sorteos"}</button>}
-          {field("settlement", FIELD_LABEL_SETTLEMENT, <select {...attrs("settlement")} className={control} value={conditions.settlement} onChange={(event) => editCondition("settlement", event.target.value)}>{(Object.keys(SETTLEMENT_LABELS) as (keyof typeof SETTLEMENT_LABELS)[]).map((key) => <option value={key} key={key}>{SETTLEMENT_LABELS[key]}</option>)}</select>)}
+          <SectionHeader id="selection-heading" number="01" title="Selección" className="mb-3" />
           {catalog && <p className="mt-4" aria-label="Selección inicial">{strategies.map((strategy) => strategyPlainText(strategy, catalog)).join(" · ")}</p>}
         </fieldset>
 
-        <details id="advanced-settings" open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)} className="mb-8 border-y border-border py-3">
+        <details id="advanced-settings" open className="mb-8 border-y border-border py-3">
           <summary className="disclosure-summary">Avanzado</summary>
           <div className="pt-4">
-            <p className="mb-2 text-sm">{FIELD_LABEL_SEED}: <output id="seed-summary">{conditions.seed}</output></p>
-            {seedEditing ? input("seed", FIELD_LABEL_SEED, "Este código permite repetir la misma selección. Se genera automáticamente.") : <><p id="seed-help" className="field-help mb-3">Este código permite repetir la misma selección. Se genera automáticamente.</p><button type="button" className="btn btn-tertiary" onClick={() => setSeedEditing(true)}>Cambiar</button></>}
-            <div className="mt-5 max-w-md">{input("max_minutes", "Máximo de minutos históricos", "Opcional. No incluye el sorteo en la hora límite.")}</div>
-            <div className="field max-w-md"><label htmlFor="draw_date" className="field-label">Filtrar sorteos por fecha</label><input id="draw_date" type="date" className={control} value={drawDate} aria-describedby="draw_date-help" onChange={(event) => changeDrawDate(event.target.value)} /><p id="draw_date-help" className="field-help">Vacío: todas las fechas.</p></div>
             <details open={strategyAdvancedOpen} onToggle={(event) => setStrategyAdvancedOpen(event.currentTarget.open)} className="mt-6 border-t border-border pt-3">
               <summary className="disclosure-summary">Estrategia avanzada</summary>
               {catalog && <div className="pt-4">{strategies.map((strategy, i) => <section key={strategy.id} className="mb-4 border-b border-border pb-4">
@@ -630,15 +626,24 @@ export function NewExperimentPage() {
           </div>
         </details>
         </section>}
-        {wizardStep === 2 && <section aria-labelledby="limits-heading">
+        {wizard.step === 3 && <section aria-labelledby="limits-heading">
         <fieldset aria-labelledby="limits-heading" className="mb-8 min-w-0 border-0 p-0">
           <SectionHeader id="limits-heading" number="03" title="Límites" className="mb-3" />
+          {input("name", "Nombre de la simulación")}
           <p className="field-help mb-3">Definí con cuánto empezar y cuándo detener la prueba; estos topes no predicen el resultado.</p>
           <div className="sm:grid sm:grid-cols-2 sm:gap-x-4">{input("capital", "Capital (RD$)", "Pesos enteros; mínimo RD$1.")}{input("goal", "Meta de saldo (RD$)", "Meta de saldo final, no ganancia: capital RD$2.000 y meta RD$2.800 buscan +RD$800.")}</div>
           {input("max_bets", "Duración máxima (sorteos)", "Cada sorteo con ranking cuenta como una ronda; se detiene al primer límite alcanzado.")}
+          <details open={advancedOpen} onToggle={(event) => setAdvancedOpen(event.currentTarget.open)} className="mt-5 border-y border-border py-3">
+            <summary className="disclosure-summary">Datos avanzados</summary>
+            <div className="pt-4">
+              <p className="mb-2 text-sm">{FIELD_LABEL_SEED}: <output id="seed-summary">{conditions.seed}</output></p>
+              {seedEditing ? input("seed", FIELD_LABEL_SEED, "Este código permite repetir la misma selección. Se genera automáticamente.") : <><p id="seed-help" className="field-help mb-3">Este código permite repetir la misma selección. Se genera automáticamente.</p><button type="button" className="btn btn-tertiary" onClick={() => setSeedEditing(true)}>Cambiar</button></>}
+              <div className="mt-5 max-w-md">{input("max_minutes", "Máximo de minutos históricos", "Opcional. No incluye el sorteo en la hora límite.")}</div>
+            </div>
+          </details>
         </fieldset>
         </section>}
-        {wizardStep === 3 && <section aria-labelledby="order-summary-heading" className="m3-review mb-6">
+        {wizard.step === 4 && <section aria-labelledby="order-summary-heading" className="m3-review mb-6">
           <SectionHeader id="order-summary-heading" title="Revisá antes de lanzar" className="mb-3" />
           <p>Confirmá estos valores antes de agregar la simulación a la cola.</p>
           <dl className="m3-review-list">
@@ -648,16 +653,12 @@ export function NewExperimentPage() {
             <div><dt>Cómo contar premios</dt><dd>{SETTLEMENT_LABELS[conditions.settlement]}</dd></div>
           </dl>
           <OrderSummary capital={Number.isInteger(Number(conditions.capital)) && Number(conditions.capital) > 0 ? Number(conditions.capital) : null} goal={Number.isInteger(Number(conditions.goal)) && Number(conditions.goal) > 0 ? Number(conditions.goal) : null} duration={`${conditions.max_bets || "Sin límite"} sorteos`} coverage={summarySelection} caveat="Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad." />
-          <details className="mt-5 border-t border-border pt-4">
-            <summary className="disclosure-summary">¿Necesitás algo más?</summary>
-            <p className="mt-3 text-sm">Si trabajás con perfiles y datos importados, podés usar el flujo especializado.</p>
-            <Link to="/simulaciones/nueva/perfil" className="btn btn-tertiary mt-2">Crear simulación con perfil</Link>
-          </details>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
             <Button variant="ghost" onClick={() => navigate("/simulaciones")}>Salir</Button>
             <Button variant="primary" type="submit" disabled={!catalog || loading || drawLoading || !!drawError || (!offeredDraws.length && !selectedAvailable) || posting}>{posting ? "Creando…" : "Crear simulación"}</Button>
           </div>
         </section>}
+        </FiveStepWizard>
     </form>
     <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios. Lo que ya está en la cola sigue su curso." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onConfirm={() => blocker.proceed?.()} onCancel={() => blocker.reset?.()} />
   </>;

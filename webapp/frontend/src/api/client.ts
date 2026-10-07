@@ -2,6 +2,8 @@ import type {
   AgentCredentialResponse,
   BacktestCreated,
   BacktestReport,
+  BacktestSessionsPage,
+  BacktestBetsPage,
   CreateBacktestBody,
   Catalog,
   CompareResult,
@@ -196,8 +198,9 @@ export const apiClient = {
     return request<Page<string>>(`/datasets/${encodeURIComponent(sha256)}/draws?${params}`);
   },
 
-  previewHistoryImport: (file: Blob, profile: ProfileListing, source: string, timezone: string) => request<HistoryImportPreview>("/imports/history/preview", {
+  previewHistoryImport: (file: Blob, profile: ProfileListing, source: string, timezone: string) => request<HistoryImportPreview>("/imports/preview", {
     method: "POST", body: file, headers: {
+      "X-Import-Mode": "history",
       "X-Profile-Id": profile.profile.profile_id,
       "X-Profile-Revision": String(profile.profile.revision),
       "X-Profile-Sha256": profile.profile_sha256,
@@ -207,8 +210,9 @@ export const apiClient = {
   }),
 
   promoteHistoryImport: (file: Blob, profile: ProfileListing, source: string, timezone: string, expectedDatasetSha256: string) =>
-    request<ImportPromotion>("/imports/history/promote", {
+    request<ImportPromotion>("/imports/promote", {
       method: "POST", body: file, headers: {
+        "X-Import-Mode": "history",
         "X-Profile-Id": profile.profile.profile_id,
         "X-Profile-Revision": String(profile.profile.revision),
         "X-Profile-Sha256": profile.profile_sha256,
@@ -219,12 +223,12 @@ export const apiClient = {
     }),
 
   previewImport: (body: ImportRequest) => request<ImportPreview>("/imports/preview", {
-    method: "POST", body: JSON.stringify(body),
+    method: "POST", body: JSON.stringify(body), headers: { "X-Import-Mode": "records" },
   }),
 
   promoteImport: (body: ImportRequest & { expected_dataset_sha256: string }) =>
     request<ImportPromotion>("/imports/promote", {
-      method: "POST", body: JSON.stringify(body),
+      method: "POST", body: JSON.stringify(body), headers: { "X-Import-Mode": "records" },
     }),
 
   getStartingDraws: (offset = 0, limit = 100, date?: string) => {
@@ -287,6 +291,12 @@ export const apiClient = {
   listBacktests: (offset = 0, limit = 20) => request<Page<BacktestReport>>(`/backtests${query({ offset, limit })}`),
 
   getBacktest: (identifier: string) => request<BacktestReport>(`/backtests/${encodeURIComponent(identifier)}`),
+
+  getBacktestSessions: (identifier: string, offset = 0, limit = 20) =>
+    request<BacktestSessionsPage>(`/backtests/${encodeURIComponent(identifier)}/sessions${query({ offset, limit })}`),
+
+  getBacktestSessionBets: (identifier: string, ordinal: number, offset = 0, limit = 20) =>
+    request<BacktestBetsPage>(`/backtests/${encodeURIComponent(identifier)}/sessions/${ordinal}/bets${query({ offset, limit })}`),
 
   listSimulations: ({ offset = 0, limit = 20, scope, name_contains, status, sort, order }: SimulationListParams = {}) => {
     const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });

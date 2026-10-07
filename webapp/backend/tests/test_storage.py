@@ -1,5 +1,6 @@
 """Durable snapshots, lifecycle and schema boundaries (isolated SQLite only)."""
 
+import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
@@ -8,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from laboratorio.api.simulations import _validate_public_experiment
 from laboratorio.domain.contracts import (
     Conditions,
     ExperimentRequest,
@@ -1355,3 +1357,92 @@ def test_unknown_or_forged_protected_strategy_is_rejected(repo):
     ):
         with pytest.raises(ValueError, match="protected preset"):
             getter()
+
+
+# R2: reopening and paging read only native saved bytes, never current sources.
+def test_backtest_native_snapshot_roundtrip_and_bounded_projection(repo, monkeypatch):
+    from test_backtest_trace import execution
+
+    config, rows, result, aggregate = execution()
+    identifier, _ = repo.create_backtest(config["name"], config, result, rows)
+    monkeypatch.setattr(
+        "laboratorio.domain.backtest.run_backtest", lambda *args: pytest.fail("re-execution")
+    )
+    reopened = Repository(repo.path)
+    saved = reopened.get_backtest(identifier)
+    assert saved is not None
+    assert {key: saved[key] for key in aggregate} == aggregate
+    assert saved["trace"]["status"] == "complete" and "sessions" not in saved["trace"]
+    assert reopened.search_backtests(0, 20)[1][0] == saved
+    assert (
+        reopened.search_simulations(0, 20, validate_experiment=_validate_public_experiment)[1][0][2]
+        == saved
+    )
+    sessions = reopened.page_backtest_trace(identifier, 1, 1)
+    assert sessions is not None
+    assert sessions["total"] == 2 and sessions["items"][0]["ordinal"] == 1
+    assert sessions["items"][0]["first_bet"]["source_index"] == 2
+    bets = reopened.page_backtest_trace(identifier, 0, 1, 0)
+    assert bets is not None
+    assert bets["total"] == 1 and bets["items"][0]["paid"] == 80
+    empty = reopened.page_backtest_trace(identifier, 1, 1, 0)
+    assert empty is not None and empty["items"] == []
+    assert reopened.page_backtest_trace(identifier, 0, 20, 99) is None
+    assert reopened.page_backtest_trace("missing", 0, 20) is None
+    for offset, limit in ((-1, 1), (0, 101), (True, 1), (0, True)):
+        with pytest.raises(ValueError):
+            reopened.page_backtest_trace(identifier, offset, limit)
+
+
+def test_legacy_backtest_read_keeps_exact_aggregates_and_does_not_rewrite(repo):
+    from test_backtest_trace import execution
+
+    config, _, _, aggregate = execution()
+    raw = json.dumps(aggregate)
+    with sqlite3.connect(repo.path) as db:
+        db.execute(
+            "INSERT INTO backtests VALUES (?, ?, ?, ?, ?)",
+            ("old", config["name"], json.dumps(config), raw, "2025-01-01T00:00:00Z"),
+        )
+    saved = repo.get_backtest("old")
+    assert saved is not None
+    assert {key: saved[key] for key in aggregate} == aggregate
+    assert saved["trace"] == {"status": "not_stored", "reason": "legacy"}
+    assert (
+        repo.search_simulations(0, 20, validate_experiment=_validate_public_experiment)[1][0][2]
+        == saved
+    )
+    page = repo.page_backtest_trace("old", 0, 20)
+    assert page is not None and page["trace"]["status"] == "not_stored"
+    with pytest.raises(ValueError, match="not stored"):
+        repo.page_backtest_trace("old", 0, 20, 0)
+    with sqlite3.connect(repo.path) as db:
+        assert db.execute("SELECT result_json FROM backtests WHERE id='old'").fetchone()[0] == raw
+
+
+@pytest.mark.parametrize("malformed", [None, {}, {"version": 99}])
+def test_invalid_backtest_trace_is_not_legacy_on_any_read(repo, malformed):
+    from test_backtest_trace import execution
+
+    config, rows, result, _ = execution()
+    identifier, _ = repo.create_backtest(config["name"], config, result, rows)
+    with sqlite3.connect(repo.path) as db:
+        raw = json.loads(
+            db.execute("SELECT result_json FROM backtests WHERE id=?", (identifier,)).fetchone()[0]
+        )
+        raw["trace"] = malformed
+        corrupt = json.dumps(raw)
+        db.execute("UPDATE backtests SET result_json=? WHERE id=?", (corrupt, identifier))
+    for read in (
+        lambda: repo.get_backtest(identifier),
+        lambda: repo.search_backtests(0, 20),
+        lambda: repo.page_backtest_trace(identifier, 0, 20),
+        lambda: repo.search_simulations(0, 20, validate_experiment=_validate_public_experiment),
+    ):
+        with pytest.raises(ValueError, match="corrupt"):
+            read()
+    with sqlite3.connect(repo.path) as db:
+        assert (
+            db.execute("SELECT result_json FROM backtests WHERE id=?", (identifier,)).fetchone()[0]
+            == corrupt
+        )

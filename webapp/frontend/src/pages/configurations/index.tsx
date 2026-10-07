@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useBlocker } from "react-router-dom";
 import { ApiError, apiClient, NetworkError } from "../../api/client";
-import type { Catalog, ConfigurationSummary, Page } from "../../api/types";
+import type { Catalog, ConfigurationSummary, Page, ProfileBatchStrategy } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { StrategyEditor } from "../../components/StrategyEditor";
 import { SELECTOR_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
+import { classicLibraryEntry, filterLibraryEntries, libraryEntryKey, matchesProfileRevision, profileLibraryEntry } from "../../lib/strategy-library";
 import { buildStrategy, diffStrategyKey, draftFromStrategy, errorDetail, errorMessage, newStrategy, trimName, validateStrategies } from "../new-experiment/model";
 import type { Errors, StrategyDraft } from "../new-experiment/model";
 
 const control = "control";
 const action = "btn btn-secondary";
 const pageSize = 20;
+
+function profileLibraryError(error: unknown, action: string): string {
+  if (error instanceof NetworkError) return `No se pudo contactar al servidor para ${action}.`;
+  if (error instanceof ApiError) return `No se pudo ${action} (HTTP ${error.status}): ${error.detail}`;
+  return `No se pudo ${action}. Reintentá.`;
+}
+
 type Editor = { id: string | null; name: string; strategy: StrategyDraft; dirty: boolean };
 
 function validationErrors(error: ApiError): Errors {
@@ -31,6 +39,11 @@ export function ConfigurationsPage() {
   const [offset, setOffset] = useState(0);
   const [retry, setRetry] = useState(0);
   const [listError, setListError] = useState("");
+  const [profilePage, setProfilePage] = useState<Page<ProfileBatchStrategy> | null>(null);
+  const [profileOffset, setProfileOffset] = useState(0);
+  const [profileRetry, setProfileRetry] = useState(0);
+  const [profileError, setProfileError] = useState("");
+  const [profileTarget, setProfileTarget] = useState<ProfileBatchStrategy | null>(null);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [catalogError, setCatalogError] = useState("");
   const [search, setSearch] = useState("");
@@ -69,6 +82,18 @@ export function ConfigurationsPage() {
     });
     return () => { live = false; };
   }, [offset, retry]);
+  useEffect(() => {
+    let live = true;
+    setProfilePage(null); setProfileError("");
+    apiClient.listProfileBatchStrategies(profileOffset, pageSize).then((value) => {
+      if (!live) return;
+      if (profileOffset > 0 && value.items.length === 0 && value.total <= profileOffset) {
+        setProfileOffset(Math.max(0, Math.ceil(value.total / pageSize) - 1) * pageSize); return;
+      }
+      setProfilePage(value);
+    }).catch((error: unknown) => { if (live) setProfileError(profileLibraryError(error, "cargar las definiciones por perfil")); });
+    return () => { live = false; };
+  }, [profileOffset, profileRetry]);
   useEffect(() => {
     if (!editor?.dirty) return;
     function beforeUnload(event: BeforeUnloadEvent) { event.preventDefault(); event.returnValue = ""; }
@@ -153,7 +178,8 @@ export function ConfigurationsPage() {
       if (error instanceof ApiError && error.status === 404) setRetry((value) => value + 1);
     } finally { deleteRef.current = false; if (mountedRef.current) setDeletingBusy(false); }
   }
-  const visible = page?.items.filter((item) => item.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())) ?? [];
+  const visible = filterLibraryEntries((page?.items ?? []).map(classicLibraryEntry), search);
+  const visibleProfiles = filterLibraryEntries((profilePage?.items ?? []).map(profileLibraryEntry), search);
   return <>
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <p className="text-sm text-text-secondary">Guardá un método para reutilizarlo.</p>
@@ -180,20 +206,108 @@ export function ConfigurationsPage() {
       </fieldset>
       <div className="flex flex-wrap gap-3"><button type="button" className={`btn ${editor && page?.total === 0 ? "btn-primary" : "btn-primary"}`} disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar estrategia"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
     </section>}
-    {page && page.total > 0 && <>
+    <section aria-label="Biblioteca común de estrategias">
+    <h2 className="section-header">Biblioteca de estrategias</h2>
+    <p className="field-help mb-4">Dos fuentes independientes, sin convertir ni migrar estrategias. Cada lista conserva su orden y su total.</p>
+    {(!!page?.total || !!profilePage?.total) && <>
       <label htmlFor="configSearch" className="field-label">Buscar estrategia guardada</label>
-      <input id="configSearch" className={`${control} mb-4 max-w-md`} value={search} onChange={(event) => setSearch(event.target.value)} />
+      <input id="configSearch" className={`${control} mb-2 max-w-md`} value={search} aria-describedby="library-search-help" onChange={(event) => setSearch(event.target.value)} />
+      <p id="library-search-help" className="field-help mb-4">Nombre o ID en las páginas cargadas de ambas fuentes; no busca en toda la biblioteca.</p>
     </>}
+    <section aria-label="Configuraciones clásicas">
+    <h3 className="section-header">Configuraciones clásicas</h3>
+    <p className="field-help mb-3">Origen: /configurations · Método clásico editable, sin revisiones. Se usa en la simulación clásica.</p>
     {!page && !listError && <p role="status">Cargando estrategias guardadas…</p>}
     {listError && <p role="alert" className="text-red-300">{listError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar las estrategias guardadas</button></p>}
     {page && <>
-      {page.total === 0 ? <p role="status">La biblioteca es opcional; guardá un método para reutilizarlo.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">No hay estrategias con ese nombre en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Mostrar todas las estrategias de esta página</button></div> : <ul className="saved-strategy-list">{visible.map((item) => <li key={item.id} className="saved-strategy-row saved-strategy-card">
-        <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
+      {page.total === 0 ? <p role="status">La biblioteca es opcional; guardá un método para reutilizarlo.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">No hay estrategias con ese nombre en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Mostrar todas las estrategias de esta página</button></div> : <ul className="saved-strategy-list">{visible.map((entry) => { const item = entry.value; return <li key={libraryEntryKey(entry)} className="saved-strategy-row saved-strategy-card">
+        <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Tipo</dt><dd>Configuración clásica · editable</dd><dt>Origen</dt><dd>/configurations</dd><dt>ID nativo</dt><dd className="break-all">{entry.nativeId}</dd><dt>Revisión</dt><dd>No aplica</dd><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
         <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" to={`/simulaciones/nueva?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className="btn btn-tertiary" onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-tertiary" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
-      </li>)}</ul>}
+      </li>; })}</ul>}
       {page.total > 0 && <nav aria-label="Páginas de estrategias guardadas" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {page.total} en total</span><button type="button" className={action} disabled={offset + pageSize >= page.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>}
     </>}
+    </section>
+    <section aria-label="Definiciones por perfil" className="mt-8 border-t border-border pt-5">
+      <h3 className="section-header">Definiciones por perfil</h3>
+      <p className="field-help mb-3">Origen: /strategies · Revisiones inmutables. Su uso y la creación de nuevas revisiones corresponden al creador de lotes por perfil; no se cargan en el editor clásico.</p>
+      <p className="field-help mb-3">Consulta sin perfil seleccionado: no se verifica compatibilidad ni se habilita ejecución. La selección requiere perfil, revisión y digest en el creador de lotes.</p>
+      {!profilePage && !profileError && <p role="status">Cargando definiciones por perfil…</p>}
+      {profileError && <p role="alert" className="text-red-300">{profileError} <button type="button" className="btn btn-tertiary" onClick={() => setProfileRetry((value) => value + 1)}>Volver a cargar las definiciones por perfil</button></p>}
+      {profilePage && <>
+        {profilePage.total === 0 ? <p>No hay definiciones por perfil guardadas.</p> : visibleProfiles.length === 0 ? <p>No hay definiciones por perfil con ese nombre o ID en esta página.</p> : <ul className="saved-strategy-list">{visibleProfiles.map((entry) => <li key={libraryEntryKey(entry)} className="saved-strategy-row saved-strategy-card">
+          <div className="min-w-0"><strong className="block break-words">{entry.value.name}</strong><dl className="mt-2 data-list"><dt>Tipo</dt><dd>Definición por perfil · inmutable</dd><dt>Origen</dt><dd>/strategies · {entry.value.protected ? "Predefinida protegida" : "Definición guardada"}</dd><dt>ID nativo</dt><dd className="break-all">{entry.nativeId}</dd><dt>Revisión</dt><dd>{entry.revision} · Última: {entry.value.latest_revision}</dd><dt>SHA-256 de definición</dt><dd className="break-all">{entry.value.definition_sha256}</dd></dl></div>
+          <button type="button" className="btn btn-secondary" onClick={() => setProfileTarget(entry.value)}>Ver detalles y revisiones de {entry.value.name}</button>
+        </li>)}</ul>}
+        {profilePage.total > 0 && <nav aria-label="Páginas de definiciones por perfil" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={profileOffset === 0} onClick={() => setProfileOffset(Math.max(0, profileOffset - pageSize))}>Anterior</button><span>Página {Math.floor(profileOffset / pageSize) + 1} · {profilePage.total} definiciones en total</span><button type="button" className={action} disabled={profileOffset + pageSize >= profilePage.total} onClick={() => setProfileOffset(profileOffset + pageSize)}>Siguiente</button></nav>}
+      </>}
+      {profileTarget && <ProfileRevisionBrowser key={libraryEntryKey(profileLibraryEntry(profileTarget))} target={profileTarget} onClose={() => setProfileTarget(null)} />}
+    </section>
+    </section>
     <ConfirmDialog open={!!deleting && !deletingBusy} title={deleting ? `¿Eliminar la estrategia guardada «${deleting.name}»?` : "¿Eliminar estrategia guardada?"} description={`Los resultados de experimentos anteriores se conservan. Esta acción no se puede deshacer.`} confirmLabel="Eliminar estrategia guardada" onCancel={() => setDeleting(null)} onConfirm={() => { void remove(); }} />
     <ConfirmDialog open={blocker.state === "blocked"} title="¿Salir sin guardar?" description="Perderás los cambios de la estrategia guardada que aún no guardaste." confirmLabel="Salir sin guardar" cancelLabel="Seguir editando" onCancel={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
   </>;
+}
+
+function ProfileRevisionBrowser({ target, onClose }: { target: ProfileBatchStrategy; onClose: () => void }) {
+  const [detail, setDetail] = useState<ProfileBatchStrategy | null>(null);
+  const [detailLoading, setDetailLoading] = useState(true);
+  const [detailError, setDetailError] = useState("");
+  const [detailRetry, setDetailRetry] = useState(0);
+  const [revisions, setRevisions] = useState<Page<ProfileBatchStrategy> | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [retry, setRetry] = useState(0);
+  const [revisionError, setRevisionError] = useState("");
+  useEffect(() => {
+    let live = true;
+    setDetail(null); setDetailLoading(true); setDetailError("");
+    apiClient.getProfileBatchStrategy(target.id).then((value) => {
+      if (!live) return;
+      if (!matchesProfileRevision(target, value)) {
+        setDetailError("La última revisión cambió o su identidad no coincide. No se sustituyó la definición elegida; consultá sus revisiones o actualizá la lista.");
+        return;
+      }
+      setDetail(value);
+    }).catch((error: unknown) => { if (live) setDetailError(profileLibraryError(error, "cargar el detalle de la definición")); })
+      .finally(() => { if (live) setDetailLoading(false); });
+    return () => { live = false; };
+  }, [target, detailRetry]);
+  useEffect(() => {
+    let live = true;
+    setRevisions(null); setRevisionError("");
+    apiClient.getProfileBatchStrategyRevisions(target.id, offset, pageSize).then((value) => {
+      if (!live) return;
+      if (value.items.some((item) => item.id !== target.id)) {
+        setRevisionError("El servidor devolvió revisiones de otra definición; no se mostrarán."); return;
+      }
+      if (offset > 0 && value.items.length === 0 && value.total <= offset) {
+        setOffset(Math.max(0, Math.ceil(value.total / pageSize) - 1) * pageSize); return;
+      }
+      setRevisions(value);
+    }).catch((error: unknown) => { if (live) setRevisionError(profileLibraryError(error, "cargar las revisiones")); });
+    return () => { live = false; };
+  }, [target.id, offset, retry]);
+  return <section aria-label={`Consulta de definición ${target.name}`} className="mt-6 border-t border-border pt-5">
+    <div className="flex flex-wrap items-center justify-between gap-3"><h4 className="section-header">Consulta: {target.name}</h4><button type="button" className="btn btn-tertiary" onClick={onClose}>Cerrar consulta</button></div>
+    <p className="field-help">Solo lectura. No se puede editar ni eliminar una revisión inmutable aquí, ni usarla como configuración clásica.</p>
+    {detailLoading && <p role="status">Cargando detalle de revisión {target.revision}…</p>}
+    {detailError && <p role="alert" className="text-red-300">{detailError} <button type="button" className="btn btn-tertiary" onClick={() => setDetailRetry((value) => value + 1)}>Reintentar detalle</button></p>}
+    {detail && <div className="mt-3 space-y-3">
+      <dl className="data-list"><dt>ID nativo</dt><dd className="break-all">{detail.id}</dd><dt>Revisión consultada</dt><dd>{detail.revision} · inmutable · /strategies</dd><dt>SHA-256 de definición</dt><dd className="break-all">{detail.definition_sha256}</dd><dt>Versión de definición</dt><dd>{detail.definition_version}</dd><dt>Selección</dt><dd className="break-all">{detail.definition.selector}</dd><dt>Apuesta</dt><dd className="break-all">{detail.definition.staking}</dd><dt>Cobertura</dt><dd>{detail.definition.coverage}</dd><dt>Validez de definición</dt><dd>{detail.definition_valid ? "Válida según el servidor" : "No válida según el servidor"}</dd></dl>
+      {detail.preset_explanation && <p className="field-help">{detail.preset_explanation}</p>}
+      <p className="field-help">Compatibilidad no verificada: esta consulta no envía contexto de perfil. El creador de lotes verifica el perfil y el historial antes de ejecutar.</p>
+      {!detail.execution_available && <p className="field-help">Ejecución no disponible en esta consulta: {detail.execution_unavailable_reason ?? "requiere verificación en el creador de lotes"}.</p>}
+      {detail.incompatibilities.length > 0 && <ul className="list-disc pl-5">{detail.incompatibilities.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
+      <details><summary className="disclosure-summary">Definición y requisitos técnicos</summary><pre className="mt-2 whitespace-pre-wrap break-all text-xs">{JSON.stringify({ definition: detail.definition, requirements: detail.requirements }, null, 2)}</pre></details>
+    </div>}
+    <h5 className="section-header mt-5">Revisiones de {target.name}</h5>
+    {!revisions && !revisionError && <p role="status">Cargando revisiones…</p>}
+    {revisionError && <p role="alert" className="text-red-300">{revisionError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar revisiones</button></p>}
+    {revisions && <>
+      {revisions.total === 0 ? <p>No hay revisiones disponibles.</p> : <ul className="space-y-3">{revisions.items.map((value) => <li key={libraryEntryKey(profileLibraryEntry(value))}>
+        <button type="button" className="btn btn-secondary" disabled={detailLoading} onClick={() => { setDetail(value); setDetailError(""); }}>Consultar revisión {value.revision}</button>
+        <p className="field-help break-all">/strategies · {value.id} · SHA-256: {value.definition_sha256}</p>
+      </li>)}</ul>}
+      {revisions.total > 0 && <nav aria-label="Páginas de revisiones" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {revisions.total} revisiones en total</span><button type="button" className={action} disabled={offset + pageSize >= revisions.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>}
+    </>}
+  </section>;
 }
