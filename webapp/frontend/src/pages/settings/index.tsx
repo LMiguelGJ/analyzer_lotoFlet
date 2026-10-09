@@ -132,7 +132,7 @@ function GameRulesSection({ onSource, onSummary, onValidity, onLoadState, onRetr
   }
 
   const errors = draft ? validateGame(draft) : null;
-  return <section aria-labelledby="game-rules-heading" className="mt-4">
+  return <section aria-labelledby="game-rules-heading" className="bf-plate bf-section-plate mt-4">
     <h2 id="game-rules-heading" className="section-header">Reglas del sorteo</h2>
     <p className="field-help mb-4">Elegí cómo funciona el sorteo. Estos cambios se aplican a las simulaciones nuevas.</p>
     {loadError && <div role="alert" className="mb-4 text-sm text-red-300"><p>{loadError} La cuota y los detalles avanzados siguen disponibles; las reglas no se modificarán.</p><button type="button" className="btn btn-tertiary mt-2" onClick={onRetry}>Reintentar reglas</button></div>}
@@ -180,7 +180,7 @@ function GameRulesSection({ onSource, onSummary, onValidity, onLoadState, onRetr
         {errors.stake ? <p id="game-stake-error" className="mt-2 text-sm text-red-300">{errors.stake}</p>
           : <p id="game-stake-help" className="field-help">Mínimo actual: {formatDOP(Number(draft.stake))}.</p>}
       </div>
-      <p className="border border-border-control bg-field p-3 text-sm">{GAME_WARNING}</p>
+      <p className="settings-warning text-sm">{GAME_WARNING}</p>
       {saveError && <p role="alert" className="text-sm text-red-300">{saveError}</p>}
       {saved && <p role="status" className="text-sm text-accent">Reglas guardadas. Se usarán en las próximas simulaciones.</p>}
       <button type="submit" className="btn btn-secondary" disabled={saving || hasGameErrors(errors)}>{saving ? "Guardando reglas…" : "Guardar reglas"}</button>
@@ -213,7 +213,7 @@ function ProfileRulesDiscovery() {
     return () => { live = false; };
   }, [offset, retry]);
 
-  return <section id="settings-profile-rules" aria-labelledby="settings-profile-rules-heading" className="mt-6 space-y-4 border-t border-border pt-5">
+  return <section id="settings-profile-rules" aria-labelledby="settings-profile-rules-heading" className="bf-plate bf-section-plate mt-6 space-y-4">
     <h3 id="settings-profile-rules-heading" className="section-header">Reglas de perfiles · solo lectura</h3>
     <p className="field-help">Elegí una revisión del catálogo para consultar sus reglas nativas. Guardar ajustes no modifica perfiles. Migración de datos: PENDIENTE; esta vista no reescribe datos.</p>
     {!catalog && !error && <p role="status">Cargando catálogo de perfiles…</p>}
@@ -481,16 +481,16 @@ export function SettingsPage() {
   return <div className="max-w-5xl space-y-8">
     {loading && <Loading rows={3} label="Cargando ajustes…" className="border-y border-border py-5" />}
     {loadError && <ErrorBanner cause={loadError} recovery={view ? "Se muestra la última lectura; reintentá para actualizarla." : "Comprobá que el laboratorio siga abierto y reintentá."} preserved={!!view} actionLabel="Reintentar" onAction={() => setRefresh((previous) => previous + 1)} />}
-    {wizardOutcome && step === 3 && <div role={wizardOutcome.startsWith("No se") ? "alert" : "status"} className="m3-review mb-4"><p className="font-medium">{wizardOutcome}</p>{!wizardOutcome.startsWith("No se") && <Link className="btn btn-tertiary mt-3" to="/simulaciones/nueva">Crear una simulación</Link>}</div>}
+    {wizardOutcome && step === 3 && <div role={wizardOutcome.startsWith("No se") ? "alert" : "status"} className="settings-outcome mb-4"><p className="font-medium">{wizardOutcome}</p>{!wizardOutcome.startsWith("No se") && <Link className="btn btn-tertiary mt-3" to="/simulaciones/nueva">Crear una simulación</Link>}</div>}
     {view && <>
-      <section className="m3-wizard" aria-label="Asistente de ajustes">
-        <div className="m3-wizard-progress" data-step={step + 1} role="progressbar" aria-label={`Paso ${step + 1} de 4`} aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={4}>
+      <section className="settings-wizard bf-plate" aria-label="Asistente de ajustes">
+        <div className="settings-wizard-progress" data-step={step + 1} role="progressbar" aria-label={`Paso ${step + 1} de 4`} aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={4}>
           <span />
         </div>
-        <p className="m3-wizard-step">Paso {step + 1} de 4</p>
-        <h2 className="m3-wizard-title">{stepTitles[step]}</h2>
+        <p className="settings-wizard-step">Paso {step + 1} de 4</p>
+        <h2 className="settings-wizard-title">{stepTitles[step]}</h2>
         <p className="field-help">Guardar ajustes aplica las reglas del sorteo y el límite de almacenamiento a las simulaciones nuevas.</p>
-        <div className="m3-wizard-actions">
+        <div className="settings-wizard-actions">
           <button type="button" className="btn btn-outlined" disabled={step === 0} onClick={() => setStep((current) => Math.max(0, current - 1))}>Atrás</button>
           {step < 3 ? <button type="button" className="btn btn-primary" disabled={(step === 0 && gameRulesState === "ready" && !gameValid) || (step === 1 && !quotaValid)} onClick={() => setStep((current) => Math.min(3, current + 1))}>Siguiente</button>
             : <button type="button" className="btn btn-primary" disabled={(gameRulesState === "ready" && !gameValid) || !quotaValid || saving} onClick={() => {
@@ -511,11 +511,11 @@ export function SettingsPage() {
       <div className="flex justify-end">
         <button type="button" className="btn btn-secondary disabled:cursor-not-allowed" onClick={() => setRefresh((previous) => previous + 1)}>Actualizar estado</button>
       </div>
-      <section aria-labelledby="storage-heading" className="border-t border-border pt-5">
+      <section aria-labelledby="storage-heading" className="bf-plate bf-section-plate">
         <h2 id="storage-heading" className="section-header">Presupuesto y cuota</h2>
         <p className="field-help mb-4">El límite de almacenamiento controla cuánto historial y resultados puede conservar el laboratorio; no es dinero para apostar.</p>
         <p className="field-help">{view.quota.writable ? `Límite actual: ${sourceName}.` : "El límite lo fija el servidor y no se puede cambiar aquí."}</p>
-        <div className="metric-grid">
+        <div className="settings-metrics metric-grid">
           <div className={metric}><h3 className="field-label">Límite de almacenamiento</h3><p className="metric-value">{readableCapacity(view.quota.effective_bytes)}</p></div>
           <div className={metric}><h3 className="field-label">Usado</h3><p className="metric-value">{readableCapacity(used.toString())}</p></div>
           {hasAdmission && <div className={metric}><h3 className="field-label">Disponible</h3><p className="metric-value"><span className="tabular-nums">{readableCapacity(remaining.toString())}</span></p></div>}
@@ -525,9 +525,9 @@ export function SettingsPage() {
           : <p className="mt-4 text-sm text-text-secondary">Uso incompleto: este servidor no informa el total.</p>}
         {hasAdmission && used > limit && <p className="mt-2 text-sm text-text-secondary">Uso superior al límite por {bytes((used - limit).toString())}.</p>}
         <p className="mt-3 text-sm text-text-secondary">El límite de almacenamiento no es el espacio libre en disco.</p>
-        {view.storage.warning && <p role="alert" className="mt-4 border border-border-control bg-field p-3 text-sm">El servidor avisa: cerca del límite o falta de disco.</p>}
+        {view.storage.warning && <p role="alert" className="settings-warning mt-4 text-sm">El servidor avisa: cerca del límite o falta de disco.</p>}
       </section>
-      <section aria-labelledby="quota-form-heading" className="border-t border-border pt-5">
+      <section aria-labelledby="quota-form-heading" className="bf-plate bf-section-plate">
         <h2 id="quota-form-heading" className="section-header">Cambiar límite</h2>
         {view.quota.writable ? <form id="quota-form" onSubmit={(event) => { void save(event); }} noValidate className="max-w-xl">
           <label htmlFor="quota-bytes" className="field-label">Nuevo límite de almacenamiento (en bytes)</label>
@@ -629,18 +629,18 @@ export function SettingsPage() {
         </div>}
       </details>
       </div>
-      <section hidden={step !== 3} aria-labelledby="review-heading" className="m3-review">
+      <section hidden={step !== 3} aria-labelledby="review-heading" className="bf-plate settings-review">
         <h2 id="review-heading">Revisá tus ajustes</h2>
         <p>Antes de guardar, confirmá estos valores. Se usarán en simulaciones nuevas.</p>
-        {gameSummary && <dl className="m3-review-list">
+        {gameSummary && <dl className="settings-review-list">
           <div><dt>Sorteo</dt><dd>{gameSummary.name}</dd></div>
           <div><dt>Números posibles</dt><dd>{gameSummary.numbers}</dd></div>
           <div><dt>Posiciones y premios</dt><dd>{gameSummary.positions}: {gameSummary.prizes.map((prize, index) => `posición ${index + 1}, ${formatDOP(Number(prize))}`).join("; ")}</dd></div>
           <div><dt>Repeticiones</dt><dd>{gameSummary.repeats ? "Permitidas" : "No permitidas"}</dd></div>
           <div><dt>Apuesta mínima por número</dt><dd>{formatDOP(Number(gameSummary.stake))}</dd></div>
         </dl>}
-        <dl className="m3-review-list"><div><dt>Límite de almacenamiento</dt><dd>{readableCapacity(reviewQuota)} ({bytes(reviewQuota)})</dd></div><div><dt>Uso actual</dt><dd>{readableCapacity(used.toString())} ({bytes(used.toString())})</dd></div></dl>
-        <button type="button" className="btn btn-outlined mt-3" onClick={() => setStep(1)}>Editar cuota</button>
+        <dl className="settings-review-list"><div><dt>Límite de almacenamiento</dt><dd>{readableCapacity(reviewQuota)} ({bytes(reviewQuota)})</dd></div><div><dt>Uso actual</dt><dd>{readableCapacity(used.toString())} ({bytes(used.toString())})</dd></div></dl>
+        <button type="button" className="btn btn-secondary mt-3" onClick={() => setStep(1)}>Editar cuota</button>
         {gameRulesState === "error" && <p role="status" className="mt-3 text-sm text-text-secondary">Las reglas no pudieron verificarse. Podés guardar la cuota y volver a intentar cargarlas después.</p>}
         <p className="field-help">Cambiar las reglas afecta simulaciones futuras; las ya guardadas conservan sus reglas. Esto simula resultados históricos: no predice sorteos ni garantiza ganancias.</p>
       </section>

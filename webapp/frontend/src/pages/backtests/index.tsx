@@ -76,7 +76,7 @@ export function BacktestsPage() {
     <p className="backtest-caveat">{CAVEAT}</p>
     {state === "loading" && <Loading rows={4} label="Cargando corridas históricas…" />}
     {state === "error" && <ErrorBanner cause={error} recovery="La configuración no se modificó. Podés volver a intentar." preserved actionLabel="Reintentar" onAction={retryLoad} />}
-    {state === "ready" && total === 0 && <section className="backtest-empty" role="status"><h3>Todavía no hay corridas históricas</h3><p>Elegí un método, una cobertura y una forma de apostar para explorar qué pasó en el historial.</p><Link className="btn btn-primary" to="/simulaciones/nueva-historica">Nueva corrida histórica</Link></section>}
+    {state === "ready" && total === 0 && <section className="bf-state-plate backtest-empty" role="status"><h3>Todavía no hay corridas históricas</h3><p>Elegí un método, una cobertura y una forma de apostar para explorar qué pasó en el historial.</p><Link className="btn btn-primary" to="/simulaciones/nueva-historica">Nueva corrida histórica</Link></section>}
     {state === "ready" && total > 0 && <>
       <p className="field-help">{total.toLocaleString("es-DO")} corridas guardadas</p>
       <ul className="backtest-run-list" aria-label="Corridas históricas guardadas">{items.map((item) => <li key={item.id}>
@@ -244,7 +244,7 @@ export function BacktestCreatePage() {
     <ExperimentTabs active="backtests" />
     <header><h2>Nueva corrida histórica</h2><p>{baseId ? "Se crea una corrida nueva a partir de esta configuración; la original no se modifica." : "Configurá una decisión por paso. Podés cambiar las reglas antes de iniciar."}</p></header>
     <p className="backtest-caveat">{CAVEAT}</p>
-    <dl className="backtest-financial-summary" aria-label="Condiciones financieras de esta corrida">
+    <dl className="bf-plate backtest-financial-summary" aria-label="Condiciones financieras de esta corrida">
       <div><dt>Capital inicial</dt><dd>RD${draft.capital || "Sin dato"}</dd></div>
       <div><dt>Meta de saldo</dt><dd>RD${draft.goal || "Sin dato"}</dd></div>
       <div><dt>Duración</dt><dd>Hasta meta o quiebre; sin límite temporal</dd></div>
@@ -254,7 +254,7 @@ export function BacktestCreatePage() {
     {!loading && !loadError && <form onSubmit={(event) => void submit(event)} noValidate className="backtest-form">
       <FiveStepWizard steps={sections} activeStep={wizard.step} maxReachableStep={wizard.maxReachableStep} onSelectStep={wizard.goTo} onNext={wizard.next} onBack={wizard.back} busy={loading || submitting || configurationPending}>
       {error && <p role="alert" className="backtest-submit-error">{error}</p>}
-      {wizard.step === 0 && <section aria-labelledby="backtest-strategy-heading" className="backtest-step">
+      {wizard.step === 0 && <section aria-labelledby="backtest-strategy-heading" className="bf-plate backtest-step">
         <h3 id="backtest-strategy-heading">¿Cómo se eligen los números?</h3>
         {editorCatalog && <>
           <label className="field"><span className="field-label">Estrategia guardada (opcional)</span><select className="control" aria-label="Estrategia guardada (opcional)" value={selectedConfiguration} onChange={(event) => void selectConfiguration(event.target.value)}><option value="">Configurar manualmente</option>{savedConfigurations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -275,13 +275,13 @@ export function BacktestCreatePage() {
           <p className="field-help">Estas opciones quedan deshabilitadas; las estrategias guardadas incompatibles se rechazan y no se convierten a otro método.</p>
         </>}
       </section>}
-      {wizard.step === 0 && <section aria-labelledby="backtest-staking-heading" className="backtest-step">
+      {wizard.step === 0 && <section aria-labelledby="backtest-staking-heading" className="bf-plate backtest-step">
         <h3 id="backtest-staking-heading">¿Cuántos números y cómo apostar?</h3>
         <label className="field"><span className="field-label">Números cubiertos</span><input aria-label="Números cubiertos" className="control" type="number" min="1" max={draft.parity ? Math.min(50, Number(draft.numbers)) : draft.numbers || undefined} step="1" value={draft.coverage} onChange={(event) => setDraft((current) => ({ ...current, coverage: event.target.value }))} /><span className="field-help">Cantidad de números distintos que se cubren por sorteo.</span></label>
         <label className="field"><span className="field-label">Forma de apostar</span><select className="control" value={draft.staking} onChange={(event) => setDraft((current) => ({ ...current, staking: event.target.value as BacktestDraft["staking"] }))}><option value="flat">Plana</option><option value="ladder">Escalera</option><option value="bold">Audaz</option></select></label>
         <ul className="backtest-method-help">{Object.values(stakingDescriptions).map((description) => <li key={description}>{description}</li>)}</ul>
       </section>}
-      {wizard.step === 1 && <section aria-labelledby="backtest-game-heading" className="backtest-step">
+      {wizard.step === 1 && <section aria-labelledby="backtest-game-heading" className="bf-plate backtest-step">
         <h3 id="backtest-game-heading">Reglas del juego</h3>
         <p className="field-help">{baseId ? "Reglas guardadas de la corrida original. Cambiar aquí solo afecta la nueva corrida." : "Se precargaron desde los ajustes del sorteo. Cambiar aquí solo afecta esta corrida."}</p>
         <GameRulesSummary view={classicRulesView({ numbers: draft.numbers, positions: draft.positions, prizes: draft.prizes, minimum_stake: draft.minStake }, baseId ? `Configuración histórica guardada /backtests/${baseId} · borrador de la corrida nueva` : "Ajustes clásicos /settings/game · borrador local de esta corrida", { draft: true, source: baseId ? undefined : gameSettings?.source, settlementContract: "historical-unreported" })} />
@@ -292,12 +292,12 @@ export function BacktestCreatePage() {
         <Link to="/ajustes?paso=reglas" className="btn btn-tertiary">Editar reglas del sorteo</Link>
         {!baseId && gameSettings && <p className="field-help">Origen de estas reglas: {gameSettings.source === "stored" ? "ajustes guardados" : gameSettings.source === "environment" ? "configuración del sistema" : "valor inicial de la plataforma"} · {gameSettings.name}.</p>}
       </section>}
-      {wizard.step === 2 && <section aria-labelledby="backtest-scope-heading" className="backtest-step">
+      {wizard.step === 2 && <section aria-labelledby="backtest-scope-heading" className="bf-plate backtest-step">
         <h3 id="backtest-scope-heading">Historial completo y fuentes</h3><p>La corrida recorre todo el historial disponible. No se eligió un sorteo inicial parcial.</p>
         {inputs ? <dl className="data-list"><dt>Huella del historial</dt><dd className="break-all">{inputs.history_sha256}</dd><dt>Huella de rankings</dt><dd className="break-all">{inputs.rankings_sha256}</dd></dl> : <p role="alert">No se pudieron verificar las huellas del origen.</p>}
         <WizardScopeSelector currentMode="history" busy={loading || submitting || configurationPending || inFlight.current} />
       </section>}
-      {wizard.step === 3 && <section aria-labelledby="backtest-conditions-heading" className="backtest-step">
+      {wizard.step === 3 && <section aria-labelledby="backtest-conditions-heading" className="bf-plate backtest-step">
         <h3 id="backtest-conditions-heading">Capital y meta</h3>
         <label className="field"><span className="field-label">Nombre de la corrida</span><input className="control" type="text" maxLength={80} value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} /></label>
         <label className="field"><span className="field-label">Capital inicial (RD$)</span><input aria-label="Capital inicial (RD$)" className="control" type="number" min="1" step="1" value={draft.capital} onChange={(event) => setDraft((current) => ({ ...current, capital: event.target.value }))} /></label>
@@ -305,7 +305,7 @@ export function BacktestCreatePage() {
         <p className="field-help">Cada sesión empieza con este capital y termina al llegar a la meta o al no poder financiar la siguiente apuesta.</p>
         <div className="backtest-review"><h4>Configuración que se enviará</h4><p>{draft.parity ? "Tu par/impar" : SYSTEMS.find(([key]) => key === draft.system)?.[1]} · {draft.coverage} números · {draft.staking} · capital RD${draft.capital} · meta RD${draft.goal}</p><p>{draft.numbers} números posibles · {draft.positions} posiciones · apuesta mínima RD${draft.minStake}</p></div>
       </section>}
-      {wizard.step === 4 && <section aria-labelledby="backtest-review-heading" className="backtest-step">
+      {wizard.step === 4 && <section aria-labelledby="backtest-review-heading" className="bf-plate backtest-step">
         <h3 id="backtest-review-heading">Revisá la corrida histórica</h3>
         <dl className="data-list"><dt>Nombre</dt><dd>{draft.name || "Sin nombre"}</dd><dt>Estrategia</dt><dd>{draft.parity ? "Tu par/impar" : draft.strategyName ?? SYSTEMS.find(([key]) => key === draft.system)?.[1]} · {draft.coverage} números · {draft.staking}</dd><dt>Reglas</dt><dd>{draft.numbers} números · {draft.positions} posiciones · apuesta mínima RD${draft.minStake}</dd><dt>Capital y meta</dt><dd>RD${draft.capital} · RD${draft.goal}</dd><dt>Capital</dt><dd>RD${draft.capital}</dd><dt>Meta</dt><dd>RD${draft.goal}</dd><dt>Duración</dt><dd>Hasta meta o quiebre; sin límite temporal</dd><dt>Advertencia</dt><dd>{CAVEAT}</dd><dt>Alcance</dt><dd>Todo el historial · huellas de origen fijadas</dd></dl>
         <button className="btn btn-primary" type="submit" disabled={submitting || loading || errors.length > 0 || !inputs || !!configurationError || configurationPending}>{submitting ? "Creando…" : "Crear corrida histórica"}</button>

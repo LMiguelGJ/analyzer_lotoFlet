@@ -181,15 +181,15 @@ export function ConfigurationsPage() {
   const visible = filterLibraryEntries((page?.items ?? []).map(classicLibraryEntry), search);
   const visibleProfiles = filterLibraryEntries((profilePage?.items ?? []).map(profileLibraryEntry), search);
   return <>
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <div className="configurations-intro mb-6 flex flex-wrap items-center justify-between gap-4">
       <p className="text-sm text-text-secondary">Guardá un método para reutilizarlo.</p>
       <button type="button" disabled={!!catalogError} className={`btn ${editor ? "btn-secondary" : "btn-primary"}`} onClick={create}>{page?.total === 0 ? "Crear estrategia guardada" : "Nueva estrategia guardada"}</button>
     </div>
     {success && <p ref={successRef} tabIndex={-1} role="status" className="mb-4 text-sm text-accent focus:outline-none" onBlur={() => setSuccess("")}>{success}</p>}
-    {message && <p role="alert" className="mb-4 text-sm text-red-300">{message}</p>}
-    {catalogError && <div role="alert" className="mb-4 text-sm text-red-300"><p>{catalogError} Las estrategias guardadas necesitan este catálogo para editarse o crearse.</p><button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar el catálogo</button></div>}
-    {editorLoading && !editor && <p role="status">Cargando estrategia…</p>}
-    {editor && <section aria-label="Editor de estrategia guardada" className="mb-8 max-w-2xl border-t border-border pt-5">
+    {message && <p role="alert" className="bf-state-plate mb-4 text-sm">{message}</p>}
+    {catalogError && <div role="alert" className="bf-state-plate mb-4 text-sm"><p>{catalogError} Las estrategias guardadas necesitan este catálogo para editarse o crearse.</p><button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar el catálogo</button></div>}
+    {editorLoading && !editor && <p role="status" className="bf-state-plate">Cargando estrategia…</p>}
+    {editor && <section aria-label="Editor de estrategia guardada" className="bf-plate mb-8 max-w-2xl">
       <h2 className="section-header">{editor.id ? "Editar estrategia guardada" : "Nueva estrategia guardada"}</h2>
       <fieldset disabled={editorLoading}>
       <label htmlFor="libraryName" className="field-label">Nombre guardado</label>
@@ -206,7 +206,7 @@ export function ConfigurationsPage() {
       </fieldset>
       <div className="flex flex-wrap gap-3"><button type="button" className={`btn ${editor && page?.total === 0 ? "btn-primary" : "btn-primary"}`} disabled={!catalog || editorLoading} onClick={save}>{editor.id ? "Guardar cambios" : "Guardar estrategia"}</button><button type="button" className={action} disabled={editorLoading} onClick={() => { discard(); }}>Cancelar edición</button></div>
     </section>}
-    <section aria-label="Biblioteca común de estrategias">
+    <section aria-label="Biblioteca común de estrategias" className="bf-plate bf-section-plate">
     <h2 className="section-header">Biblioteca de estrategias</h2>
     <p className="field-help mb-4">Dos fuentes independientes, sin convertir ni migrar estrategias. Cada lista conserva su orden y su total.</p>
     {(!!page?.total || !!profilePage?.total) && <>
@@ -214,28 +214,30 @@ export function ConfigurationsPage() {
       <input id="configSearch" className={`${control} mb-2 max-w-md`} value={search} aria-describedby="library-search-help" onChange={(event) => setSearch(event.target.value)} />
       <p id="library-search-help" className="field-help mb-4">Nombre o ID en las páginas cargadas de ambas fuentes; no busca en toda la biblioteca.</p>
     </>}
-    <section aria-label="Configuraciones clásicas">
+    <section aria-label="Configuraciones clásicas" className="bf-subplate">
     <h3 className="section-header">Configuraciones clásicas</h3>
     <p className="field-help mb-3">Origen: /configurations · Método clásico editable, sin revisiones. Se usa en la simulación clásica.</p>
     {!page && !listError && <p role="status">Cargando estrategias guardadas…</p>}
-    {listError && <p role="alert" className="text-red-300">{listError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar las estrategias guardadas</button></p>}
+    {listError && <p role="alert" className="bf-state-plate">{listError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Volver a cargar las estrategias guardadas</button></p>}
     {page && <>
       {page.total === 0 ? <p role="status">La biblioteca es opcional; guardá un método para reutilizarlo.</p> : visible.length === 0 ? <div className="flex flex-wrap items-center gap-3"><p role="status">No hay estrategias con ese nombre en esta página.</p><button type="button" className="btn btn-tertiary" onClick={() => setSearch("")}>Mostrar todas las estrategias de esta página</button></div> : <ul className="saved-strategy-list">{visible.map((entry) => { const item = entry.value; return <li key={libraryEntryKey(entry)} className="saved-strategy-row saved-strategy-card">
-        <div className="min-w-0"><strong className="block break-words">{item.name}</strong><dl className="mt-2 data-list"><dt>Tipo</dt><dd>Configuración clásica · editable</dd><dt>Origen</dt><dd>/configurations</dd><dt>ID nativo</dt><dd className="break-all">{entry.nativeId}</dd><dt>Revisión</dt><dd>No aplica</dd><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
+        <div className="config-card-title"><strong className="block break-words">{item.name}</strong><span className="neutral-stamp">Editable</span></div>
+        <div className="min-w-0"><dl className="mt-2 data-list"><dt>Tipo</dt><dd>Configuración clásica · editable</dd><dt>Origen</dt><dd>/configurations</dd><dt>ID nativo</dt><dd className="break-all">{entry.nativeId}</dd><dt>Revisión</dt><dd>No aplica</dd><dt>Estrategia</dt><dd>{item.strategy.name}</dd><dt>Selección</dt><dd>{SELECTOR_LABELS[item.strategy.selector]}</dd><dt>Forma de ajustar la apuesta</dt><dd>{STAKING_LABELS[item.strategy.staking]}</dd></dl></div>
         <div className="flex flex-wrap gap-2"><Link className="btn btn-secondary" to={`/simulaciones/nueva?configuration=${encodeURIComponent(item.id)}`}>Usar {item.name}</Link><button type="button" className="btn btn-tertiary" onClick={() => { void edit(item.id); }}>Editar {item.name}</button><button type="button" className="btn btn-tertiary" disabled={deletingBusy} onClick={() => { setMessage(""); setDeleting(item); }}>Eliminar {item.name}</button></div>
       </li>; })}</ul>}
       {page.total > 0 && <nav aria-label="Páginas de estrategias guardadas" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - pageSize))}>Anterior</button><span>Página {Math.floor(offset / pageSize) + 1} · {page.total} en total</span><button type="button" className={action} disabled={offset + pageSize >= page.total} onClick={() => setOffset(offset + pageSize)}>Siguiente</button></nav>}
     </>}
     </section>
-    <section aria-label="Definiciones por perfil" className="mt-8 border-t border-border pt-5">
+    <section aria-label="Definiciones por perfil" className="bf-subplate mt-8">
       <h3 className="section-header">Definiciones por perfil</h3>
       <p className="field-help mb-3">Origen: /strategies · Revisiones inmutables. Su uso y la creación de nuevas revisiones corresponden al creador de lotes por perfil; no se cargan en el editor clásico.</p>
       <p className="field-help mb-3">Consulta sin perfil seleccionado: no se verifica compatibilidad ni se habilita ejecución. La selección requiere perfil, revisión y digest en el creador de lotes.</p>
       {!profilePage && !profileError && <p role="status">Cargando definiciones por perfil…</p>}
-      {profileError && <p role="alert" className="text-red-300">{profileError} <button type="button" className="btn btn-tertiary" onClick={() => setProfileRetry((value) => value + 1)}>Volver a cargar las definiciones por perfil</button></p>}
+      {profileError && <p role="alert" className="bf-state-plate">{profileError} <button type="button" className="btn btn-tertiary" onClick={() => setProfileRetry((value) => value + 1)}>Volver a cargar las definiciones por perfil</button></p>}
       {profilePage && <>
         {profilePage.total === 0 ? <p>No hay definiciones por perfil guardadas.</p> : visibleProfiles.length === 0 ? <p>No hay definiciones por perfil con ese nombre o ID en esta página.</p> : <ul className="saved-strategy-list">{visibleProfiles.map((entry) => <li key={libraryEntryKey(entry)} className="saved-strategy-row saved-strategy-card">
-          <div className="min-w-0"><strong className="block break-words">{entry.value.name}</strong><dl className="mt-2 data-list"><dt>Tipo</dt><dd>Definición por perfil · inmutable</dd><dt>Origen</dt><dd>/strategies · {entry.value.protected ? "Predefinida protegida" : "Definición guardada"}</dd><dt>ID nativo</dt><dd className="break-all">{entry.nativeId}</dd><dt>Revisión</dt><dd>{entry.revision} · Última: {entry.value.latest_revision}</dd><dt>SHA-256 de definición</dt><dd className="break-all">{entry.value.definition_sha256}</dd></dl></div>
+          <div className="config-card-title"><strong className="block break-words">{entry.value.name}</strong><span className="neutral-stamp">Inmutable</span></div>
+          <div className="min-w-0"><dl className="mt-2 data-list"><dt>Tipo</dt><dd>Definición por perfil · inmutable</dd><dt>Origen</dt><dd>/strategies · {entry.value.protected ? "Predefinida protegida" : "Definición guardada"}</dd><dt>ID nativo</dt><dd className="break-all">{entry.nativeId}</dd><dt>Revisión</dt><dd>{entry.revision} · Última: {entry.value.latest_revision}</dd><dt>SHA-256 de definición</dt><dd className="break-all">{entry.value.definition_sha256}</dd></dl></div>
           <button type="button" className="btn btn-secondary" onClick={() => setProfileTarget(entry.value)}>Ver detalles y revisiones de {entry.value.name}</button>
         </li>)}</ul>}
         {profilePage.total > 0 && <nav aria-label="Páginas de definiciones por perfil" className="mt-4 flex flex-wrap items-center gap-3 text-sm"><button type="button" className={action} disabled={profileOffset === 0} onClick={() => setProfileOffset(Math.max(0, profileOffset - pageSize))}>Anterior</button><span>Página {Math.floor(profileOffset / pageSize) + 1} · {profilePage.total} definiciones en total</span><button type="button" className={action} disabled={profileOffset + pageSize >= profilePage.total} onClick={() => setProfileOffset(profileOffset + pageSize)}>Siguiente</button></nav>}
@@ -286,11 +288,11 @@ function ProfileRevisionBrowser({ target, onClose }: { target: ProfileBatchStrat
     }).catch((error: unknown) => { if (live) setRevisionError(profileLibraryError(error, "cargar las revisiones")); });
     return () => { live = false; };
   }, [target.id, offset, retry]);
-  return <section aria-label={`Consulta de definición ${target.name}`} className="mt-6 border-t border-border pt-5">
+  return <section aria-label={`Consulta de definición ${target.name}`} className="bf-subplate mt-6">
     <div className="flex flex-wrap items-center justify-between gap-3"><h4 className="section-header">Consulta: {target.name}</h4><button type="button" className="btn btn-tertiary" onClick={onClose}>Cerrar consulta</button></div>
     <p className="field-help">Solo lectura. No se puede editar ni eliminar una revisión inmutable aquí, ni usarla como configuración clásica.</p>
     {detailLoading && <p role="status">Cargando detalle de revisión {target.revision}…</p>}
-    {detailError && <p role="alert" className="text-red-300">{detailError} <button type="button" className="btn btn-tertiary" onClick={() => setDetailRetry((value) => value + 1)}>Reintentar detalle</button></p>}
+    {detailError && <p role="alert" className="bf-state-plate">{detailError} <button type="button" className="btn btn-tertiary" onClick={() => setDetailRetry((value) => value + 1)}>Reintentar detalle</button></p>}
     {detail && <div className="mt-3 space-y-3">
       <dl className="data-list"><dt>ID nativo</dt><dd className="break-all">{detail.id}</dd><dt>Revisión consultada</dt><dd>{detail.revision} · inmutable · /strategies</dd><dt>SHA-256 de definición</dt><dd className="break-all">{detail.definition_sha256}</dd><dt>Versión de definición</dt><dd>{detail.definition_version}</dd><dt>Selección</dt><dd className="break-all">{detail.definition.selector}</dd><dt>Apuesta</dt><dd className="break-all">{detail.definition.staking}</dd><dt>Cobertura</dt><dd>{detail.definition.coverage}</dd><dt>Validez de definición</dt><dd>{detail.definition_valid ? "Válida según el servidor" : "No válida según el servidor"}</dd></dl>
       {detail.preset_explanation && <p className="field-help">{detail.preset_explanation}</p>}
@@ -301,7 +303,7 @@ function ProfileRevisionBrowser({ target, onClose }: { target: ProfileBatchStrat
     </div>}
     <h5 className="section-header mt-5">Revisiones de {target.name}</h5>
     {!revisions && !revisionError && <p role="status">Cargando revisiones…</p>}
-    {revisionError && <p role="alert" className="text-red-300">{revisionError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar revisiones</button></p>}
+    {revisionError && <p role="alert" className="bf-state-plate">{revisionError} <button type="button" className="btn btn-tertiary" onClick={() => setRetry((value) => value + 1)}>Reintentar revisiones</button></p>}
     {revisions && <>
       {revisions.total === 0 ? <p>No hay revisiones disponibles.</p> : <ul className="space-y-3">{revisions.items.map((value) => <li key={libraryEntryKey(profileLibraryEntry(value))}>
         <button type="button" className="btn btn-secondary" disabled={detailLoading} onClick={() => { setDetail(value); setDetailError(""); }}>Consultar revisión {value.revision}</button>

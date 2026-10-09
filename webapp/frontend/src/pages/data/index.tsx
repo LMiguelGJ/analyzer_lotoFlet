@@ -222,7 +222,7 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
   const importSection = <Block key="import" aria-labelledby="import-entry-title" className="space-y-5">
     <h2 id="import-entry-title" className="section-header">Importar datos</h2>
     <form aria-label="Importar datos" onSubmit={(event) => { void (mode === "history" ? showPreview(event) : onRecordsPreview(event)); }} className="space-y-5">
-      <fieldset disabled={modeLocked} className="space-y-2">
+      <fieldset disabled={modeLocked} className="bf-segmented-fieldset">
         <legend className="field-label">Tipo de importación</legend>
         <label className="control-choice"><input type="radio" name="import-mode" value="history" checked={mode === "history"}
           onChange={() => chooseMode("history")} />Historial ordinario (JSON canónico)</label>
@@ -300,8 +300,8 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
         chooseMode("history");
       }}>Ir a importar historial</a></div>}
       {datasets && !libraryError && <ul aria-busy={libraryLoading} className="dataset-card-list">{datasets.items.map((item) => <li key={item.dataset_sha256} className="dataset-card">
-        <h3 className="font-medium">Historial · {item.records_total.toLocaleString("es-ES")} sorteos</h3>
-        <p className="field-help">Fuente: {item.source_id} · {item.first_draw} – {item.last_draw} · {item.positions} posiciones</p>
+        <div className="data-card-title"><h3>Historial · {item.records_total.toLocaleString("es-ES")} sorteos</h3><span className="neutral-stamp">{item.profile_execution.ready ? "Disponible" : "Sin reglas"}</span></div>
+        <dl className="data-list"><dt>Fuente</dt><dd>{item.source_id}</dd><dt>Rango</dt><dd>{item.first_draw} – {item.last_draw}</dd><dt>Posiciones</dt><dd>{item.positions}</dd></dl>
         <p className="dataset-card-status" role="status">{item.profile_execution.ready ? "Reglas disponibles para usar este historial." : "No se puede usar todavía: faltan las reglas de juego guardadas."}</p>
         <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="break-all text-sm">Formato: {item.source_format} · revisión de fuente: {item.source_revision} · identificadores del perfil y la fuente: <code>{item.profile_id}@{item.profile_revision}</code> · huella del historial <code>{item.dataset_sha256}</code> · huella de la fuente <code>{item.source_sha256}</code></p></details>
         {item.profile_execution.ready
@@ -478,14 +478,14 @@ export function DataPage() {
     setMode(next);
   }
 
-  const profilesSection = <section id="perfiles" aria-labelledby="profiles-title" className="space-y-4">
+  const profilesSection = <section id="perfiles" aria-labelledby="profiles-title" className="bf-plate bf-section-plate space-y-4">
       <h2 id="profiles-title" className="section-header">Perfiles de juego</h2>
       {profilesLoading && <Loading rows={2} label="Cargando perfiles guardados…" />}
       {profilesError && <div role="alert" className="field-help space-y-2"><p>{profilesError}</p><button type="button" className="btn btn-tertiary" onClick={() => setProfilesRetry((value) => value + 1)}>Reintentar perfiles</button></div>}
       {!profilesLoading && !profilesError && profiles.length === 0 && <p role="status">Todavía no hay perfiles guardados. Creá uno para definir las reglas del sorteo con el botón «Crear perfil de juego».</p>}
       {profiles.length > 0 && <ul className="profile-card-list">{profiles.map(({ profile }) => <li key={`${profile.profile_id}@${profile.revision}`} className="profile-card">
-        <h3 className="font-medium">{profile.universe_size} números · {profile.positions} posiciones</h3>
-        <p className="field-help">{profile.allows_repeats ? "Permite repeticiones" : "Sin repeticiones"} · {profile.currency}</p>
+        <div className="data-card-title"><h3>{profile.universe_size} números · {profile.positions} posiciones</h3><span className="neutral-stamp">Perfil guardado</span></div>
+        <dl className="data-list"><dt>Repeticiones</dt><dd>{profile.allows_repeats ? "Permite repeticiones" : "Sin repeticiones"}</dd><dt>Moneda</dt><dd>{profile.currency}</dd></dl>
         <details><summary className="disclosure-summary text-sm">Detalles técnicos</summary><p className="text-sm">ID: <code>{profile.profile_id}</code> · revisión: {profile.revision}</p></details>
       </li>)}</ul>}
       {profileTotal > 100 && <p role="status">Solo se pueden elegir los primeros 100 perfiles y los creados ahora.</p>}

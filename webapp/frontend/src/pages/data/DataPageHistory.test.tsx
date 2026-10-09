@@ -74,7 +74,8 @@ describe("canonical history import and saved library", () => {
     expect(await screen.findByText(/Historial · 1 sorteos/)).toBeInTheDocument();
     expect(screen.getByText(/Historial · 1 sorteos/).closest("li")).toHaveClass("dataset-card");
     expect(within(library()).getByRole("status")).toHaveTextContent("Reglas disponibles para usar este historial.");
-    expect(within(library()).getByText(/Fuente: operador-local/)).toBeInTheDocument();
+    expect(within(library()).getByText("Fuente", { selector: "dt" })).toBeInTheDocument();
+    expect(within(library()).getByText("operador-local", { selector: "dd" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Usar este historial/i })).toHaveAttribute("href", `/simulaciones/nueva/sesion?dataset_sha256=${dataset.dataset_sha256}`);
   });
 
