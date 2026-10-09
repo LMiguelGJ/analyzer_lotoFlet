@@ -64,7 +64,7 @@ async function nextBatchStep(user: ReturnType<typeof userEvent.setup>) {
   const before = Number(screen.getByRole("progressbar").getAttribute("aria-valuenow"));
   const step = currentWizardStep();
   console.info(`[ProfileBatchPage wizard] ${JSON.stringify(step)}`);
-  await user.click(document.querySelector(".m3-wizard-actions .btn-primary") as HTMLButtonElement);
+  await user.click(document.querySelector(".wizard-actions .btn-primary") as HTMLButtonElement);
   await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(before + 1)));
 }
 async function goToStep(user: ReturnType<typeof userEvent.setup>, step: string) {

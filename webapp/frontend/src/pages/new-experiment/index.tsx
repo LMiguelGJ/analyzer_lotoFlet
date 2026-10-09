@@ -550,7 +550,7 @@ export function NewExperimentPage() {
     <Link to="/simulaciones" className="mb-4 inline-block link">Volver a simulaciones</Link>
     <form className="max-w-4xl" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         <FiveStepWizard steps={wizardSteps} activeStep={wizard.step} maxReachableStep={wizard.maxReachableStep} onSelectStep={wizard.goTo} onNext={wizard.next} onBack={wizard.back} busy={loading || drawLoading || posting || savingStrategy || libraryBusy}>
-          <dl className="m3-wizard-financial" aria-label="Límites financieros siempre visibles">
+          <dl className="wizard-financial" aria-label="Límites financieros siempre visibles">
             <div><dt>Capital</dt><dd>{Number.isInteger(Number(conditions.capital)) && Number(conditions.capital) > 0 ? formatDOP(Number(conditions.capital)) : "Por definir"}</dd></div>
             <div><dt>Meta de saldo</dt><dd>{Number.isInteger(Number(conditions.goal)) && Number(conditions.goal) > 0 ? formatDOP(Number(conditions.goal)) : "Por definir"}</dd></div>
             <div><dt>Duración máxima</dt><dd>{conditions.max_bets || "Sin límite"} sorteos</dd></div>
@@ -643,10 +643,10 @@ export function NewExperimentPage() {
           </details>
         </fieldset>
         </section>}
-        {wizard.step === 4 && <section aria-labelledby="order-summary-heading" className="m3-review mb-6">
+        {wizard.step === 4 && <section aria-labelledby="order-summary-heading" className="wizard-review mb-6">
           <SectionHeader id="order-summary-heading" title="Revisá antes de lanzar" className="mb-3" />
           <p>Confirmá estos valores antes de agregar la simulación a la cola.</p>
-          <dl className="m3-review-list">
+          <dl className="review-list">
             <div><dt>Nombre</dt><dd>{trimName(conditions.name) || "Sin nombre"}</dd></div>
             <div><dt>Sorteo inicial</dt><dd>{conditions.start_draw || "Sin elegir"}</dd></div>
             <div><dt>Estrategia</dt><dd>{summarySelection}</dd></div>

@@ -1,111 +1,88 @@
-// Contract coverage: BossFarmer token aliases and accessible text contrast.
+// Contract coverage for the BossFarmer-only token system and accessible contrast.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { contrastRatio, WCAG_AA_TEXT_RATIO } from "./contrast";
 
 const tokensCss = readFileSync(resolve(import.meta.dirname, "../styles/tokens.css"), "utf-8");
+const indexCss = readFileSync(resolve(import.meta.dirname, "../styles/index.css"), "utf-8");
+const tailwindConfig = readFileSync(resolve(import.meta.dirname, "../../tailwind.config.ts"), "utf-8");
 const rootBlock = tokensCss.match(/:root\s*\{([^}]+)\}/)?.[1];
-if (!rootBlock) throw new Error(":root token definition not found in tokens.css");
+if (!rootBlock) throw new Error("BossFarmer token definition not found in tokens.css");
 const tokens = new Map(Array.from(rootBlock.matchAll(/(--[\w-]+):\s*([^;]+);/g), ([, name, value]) => [name, value.trim()]));
 
-const bossFarmerColors = {
-  "--bf-chassis": "#17191a",
-  "--bf-chassis-rail": "#121415",
-  "--bf-rule": "#2e3233",
-  "--bf-legend": "#e6e4de",
-  "--bf-legend-dim": "#9aa097",
-  "--bf-signal": "#1db954",
-  "--bf-alerta": "#e8b12c",
-  "--bf-field-sunken": "#0e1010",
-  "--bf-field-placeholder": "#80857d",
+const expectedTokens = {
+  "--bf-chassis": "#17191a", "--bf-chassis-rail": "#121415", "--bf-rule": "#2e3233",
+  "--bf-legend": "#e6e4de", "--bf-legend-dim": "#9aa097", "--bf-signal": "#1db954",
+  "--bf-alerta": "#e8b12c", "--bf-field-sunken": "#0e1010", "--bf-field-placeholder": "#80857d",
+  "--bf-font-display": "\"Archivo Narrow\", ui-sans-serif, sans-serif",
+  "--bf-font-body": "\"Archivo\", ui-sans-serif, sans-serif",
+  "--bf-font-mono": "ui-monospace, \"SFMono-Regular\", Consolas, monospace",
+  "--bf-type-display": "2.6rem", "--bf-type-display-sm": "3.4rem", "--bf-type-display-lg": "4rem",
+  "--bf-type-headline": "1.6rem", "--bf-type-headline-sm": "2rem",
+  "--bf-type-title-min": "1.05rem", "--bf-type-title-max": "1.3rem",
+  "--bf-type-numeral": "2.4rem", "--bf-type-numeral-sm": "3.4rem",
+  "--bf-type-body-default": "1rem", "--bf-type-body-min": "0.95rem", "--bf-type-body-max": "1.1rem",
+  "--bf-type-body-small": "0.8rem", "--bf-type-label-min": "0.6rem", "--bf-type-label-max": "0.7rem",
+  "--bf-line-display": "0.9", "--bf-line-headline": "1", "--bf-line-body": "1.625",
+  "--bf-tracking-display": "0.01em", "--bf-tracking-legend": "0.16em", "--bf-tracking-numeral": "-0.02em",
+  "--bf-space-gutter": "20px", "--bf-space-gutter-sm": "32px", "--bf-space-row-y": "16px",
+  "--bf-space-row-x": "20px", "--bf-space-section-min": "40px", "--bf-space-section-max": "72px",
+  "--bf-space-container": "72rem", "--bf-space-touch": "48px",
+  "--bf-motion-duration-short3": "150ms", "--bf-motion-duration-medium1": "200ms",
+  "--bf-motion-easing-standard": "cubic-bezier(0.2, 0, 0, 1)",
+  "--bf-motion-easing-emphasized": "cubic-bezier(0.2, 0, 0, 0.2)",
 } as const;
 
-function resolveToken(name: string, seen = new Set<string>()): string {
-  if (seen.has(name)) throw new Error(`cyclic token reference at ${name}`);
-  const value = tokens.get(name);
-  if (!value) throw new Error(`missing token ${name}`);
-  const reference = value.match(/^var\((--[\w-]+)\)$/);
-  if (!reference) return value;
-  return resolveToken(reference[1], new Set([...seen, name]));
-}
+const colors = ["chassis", "chassis-rail", "rule", "legend", "legend-dim", "signal", "alerta", "field-sunken", "field-placeholder"] as const;
+function color(name: typeof colors[number]): string { return tokens.get(`--bf-${name}`)!; }
 
-const requiredColors = [
-  "primary", "on-primary", "primary-container", "on-primary-container",
-  "secondary", "on-secondary", "secondary-container", "on-secondary-container",
-  "tertiary", "on-tertiary", "tertiary-container", "on-tertiary-container",
-  "background", "on-background", "surface", "on-surface", "surface-variant",
-  "on-surface-variant", "surface-container-lowest", "surface-container-low", "surface-container",
-  "surface-container-high", "surface-container-highest", "outline", "outline-variant",
-  "error", "on-error", "error-container", "on-error-container", "shadow", "scrim",
-  "inverse-surface", "inverse-on-surface", "inverse-primary", "surface-tint",
-];
-
-const requiredLegacyAliases = [
-  "--color-bg", "--color-surface", "--color-field", "--color-text", "--color-text-secondary",
-  "--color-accent", "--color-border", "--color-border-control", "--color-positive", "--color-negative",
-  "--color-warning", "--color-info", "--chart-1", "--chart-2", "--chart-3", "--chart-4",
-];
-
-const expectedColorAliases: Record<string, keyof typeof bossFarmerColors | "--bf-elevation-flat"> = {
-  primary: "--bf-legend", "on-primary": "--bf-chassis", "primary-container": "--bf-signal",
-  "on-primary-container": "--bf-chassis", secondary: "--bf-legend-dim", "on-secondary": "--bf-chassis",
-  "secondary-container": "--bf-chassis-rail", "on-secondary-container": "--bf-legend",
-  tertiary: "--bf-legend-dim", "on-tertiary": "--bf-chassis", "tertiary-container": "--bf-chassis-rail",
-  "on-tertiary-container": "--bf-legend", error: "--bf-alerta", "on-error": "--bf-chassis",
-  "error-container": "--bf-chassis-rail", "on-error-container": "--bf-alerta",
-  background: "--bf-chassis", "on-background": "--bf-legend", surface: "--bf-chassis",
-  "on-surface": "--bf-legend", "surface-variant": "--bf-chassis-rail", "on-surface-variant": "--bf-legend-dim",
-  "surface-container-lowest": "--bf-field-sunken", "surface-container-low": "--bf-chassis-rail",
-  "surface-container": "--bf-chassis-rail", "surface-container-high": "--bf-chassis-rail",
-  "surface-container-highest": "--bf-chassis-rail", outline: "--bf-rule", "outline-variant": "--bf-rule",
-  shadow: "--bf-elevation-flat", scrim: "--bf-chassis", "inverse-surface": "--bf-legend",
-  "inverse-on-surface": "--bf-chassis", "inverse-primary": "--bf-chassis", "surface-tint": "--bf-legend",
+const colorKeys: Record<string, string> = {
+  bg: "chassis", surface: "chassis-rail", field: "field-sunken", text: "legend",
+  "text-secondary": "legend-dim", accent: "legend", border: "rule", "border-control": "rule",
+  chassis: "chassis", rail: "chassis-rail", rule: "rule", legend: "legend", "legend-dim": "legend-dim",
+  signal: "signal", alerta: "alerta", sunken: "field-sunken", "field-placeholder": "field-placeholder",
 };
 
 describe("BossFarmer design tokens", () => {
-  it("defines the exact palette once and retains complete legacy aliases and type/motion tokens", () => {
+  it("defines only the exact BossFarmer token contract, with one dark root and no compatibility aliases", () => {
     expect(tokensCss.match(/:root\s*\{/g)).toHaveLength(1);
-    expect(tokensCss).not.toMatch(/\[data-theme\s*=|:root:not\s*\(/);
-    expect(tokensCss).not.toContain("prefers-color-scheme");
-    for (const [name, value] of Object.entries(bossFarmerColors)) expect(tokens.get(name)).toBe(value);
-    for (const role of requiredColors) {
-      expect(tokens.get(`--md-sys-color-${role}`)).toBe(`var(${expectedColorAliases[role]})`);
-      const resolved = resolveToken(`--md-sys-color-${role}`);
-      if (role === "shadow") expect(resolved).toBe("none");
-      else expect(resolved).toMatch(/^#[\da-f]{6}$/i);
-    }
-    for (const name of requiredLegacyAliases) {
-      expect(tokens.get(name)).toMatch(/^var\(--bf-[\w-]+\)$/);
-      expect(resolveToken(name)).toMatch(/^#[\da-f]{6}$/i);
-    }
-    for (const name of [
-      "--md-sys-typescale-display-large-size", "--md-sys-typescale-headline-small-size",
-      "--md-sys-typescale-title-medium-size", "--md-sys-typescale-body-large-size",
-      "--md-sys-typescale-label-small-size", "--md-sys-motion-duration-medium2",
-      "--md-sys-motion-easing-emphasized",
-    ]) expect(tokens.has(name)).toBe(true);
+    expect(tokensCss).not.toMatch(/\[data-theme\s*=|:root:not\s*\(|prefers-color-scheme/);
+    expect(tokensCss).not.toContain("md" + "-sys");
+    expect(tokensCss).not.toContain("--" + "color-");
+    expect(indexCss).not.toContain("md" + "-sys");
+    expect(indexCss).not.toContain("--" + "color-");
+    expect(tokens.size).toBe(Object.keys(expectedTokens).length);
+    for (const [name, value] of Object.entries(expectedTokens)) expect(tokens.get(name)).toBe(value);
     expect(tokensCss).toContain("font-variant-numeric: tabular-nums");
   });
 
-  it("keeps every shape token square and every elevation token flat", () => {
-    expect(tokens.get("--bf-radius-live")).toBe("0px");
-    expect(tokens.get("--bf-elevation-flat")).toBe("none");
-    for (const corner of ["xs", "sm", "md", "lg", "xl", "full"]) {
-      expect(resolveToken(`--md-sys-shape-corner-${corner}`)).toBe("0px");
-    }
-    for (const level of [0, 1, 2, 3, 4, 5]) {
-      expect(resolveToken(`--md-sys-elevation-level${level}`)).toBe("none");
-    }
+  it("keeps shape and elevation out of the token contract and fixes them through Tailwind", () => {
+    expect(tokensCss).not.toMatch(/--bf-(?:shape|elevation|radius|shadow)[\w-]*\s*:/i);
+    expect(tailwindConfig).toMatch(/borderRadius:\s*\{[\s\S]*?DEFAULT:\s*"0px"/);
+    expect(tailwindConfig).toMatch(/boxShadow:\s*\{[\s\S]*?DEFAULT:\s*"none"/);
   });
 
-  it("keeps important text role pairs at WCAG AA contrast against resolved palette colors", () => {
+  it("keeps required BossFarmer text and field pairs at WCAG AA contrast", () => {
     for (const [foreground, background] of [
-      ["--md-sys-color-on-surface", "--md-sys-color-surface"],
-      ["--md-sys-color-on-background", "--md-sys-color-background"],
-      ["--md-sys-color-on-primary", "--md-sys-color-primary"],
-      ["--md-sys-color-on-primary-container", "--md-sys-color-primary-container"],
-      ["--md-sys-color-on-tertiary", "--md-sys-color-tertiary"],
-    ]) expect(contrastRatio(resolveToken(foreground), resolveToken(background))).toBeGreaterThanOrEqual(WCAG_AA_TEXT_RATIO);
+      [color("legend"), color("chassis")],
+      [color("chassis"), color("signal")],
+      [color("legend-dim"), color("chassis")],
+      [color("alerta"), color("chassis")],
+      [color("field-placeholder"), color("field-sunken")],
+    ]) expect(contrastRatio(foreground, background)).toBeGreaterThanOrEqual(WCAG_AA_TEXT_RATIO);
+  });
+
+  it("maps all semantic and BossFarmer Tailwind color names directly to BossFarmer variables", () => {
+    for (const [key, token] of Object.entries(colorKeys)) {
+      const configKey = key.includes("-") ? `"${key}"` : key;
+      expect(tailwindConfig).toContain(`${configKey}: "var(--bf-${token})"`);
+    }
+    expect(tailwindConfig).toContain('heading: "var(--bf-font-display)"');
+    expect(tailwindConfig).toContain('body: "var(--bf-font-body)"');
+    expect(tailwindConfig).toContain('mono: "var(--bf-font-mono)"');
+    expect(tailwindConfig).toContain('"page-margin": "var(--bf-space-gutter)"');
+    expect(tailwindConfig).toContain('"section-gap": "var(--bf-space-section-min)"');
+    expect(tailwindConfig).toContain('control: "var(--bf-space-touch)"');
   });
 });

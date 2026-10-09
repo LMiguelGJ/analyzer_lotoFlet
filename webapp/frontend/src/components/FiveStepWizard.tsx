@@ -37,8 +37,8 @@ export function FiveStepWizard({
     headingRef.current?.focus();
     headingRef.current?.scrollIntoView?.({ block: "start" });
   }, [activeStep]);
-  return <div className="m3-wizard-frame">
-    <section className="m3-wizard" aria-label="Asistente para crear una simulación">
+  return <div className="wizard-frame">
+    <section className="wizard-body" aria-label="Asistente para crear una simulación">
       <div className="wizard-progress-sr" role="progressbar" aria-label={`Paso ${activeStep + 1} de ${steps.length}`} aria-valuenow={activeStep + 1} aria-valuemin={1} aria-valuemax={steps.length} />
       <nav className="wizard-stepper" aria-label="Pasos de la simulación">
         <ol>{steps.map((item, index) => {
@@ -53,16 +53,16 @@ export function FiveStepWizard({
           </li>;
         })}</ol>
       </nav>
-      <p className="m3-wizard-step">Paso {activeStep + 1} de {steps.length}</p>
-      <h2 ref={headingRef} tabIndex={-1} className="m3-wizard-title">{current.title}</h2>
+      <p className="wizard-step-count">Paso {activeStep + 1} de {steps.length}</p>
+      <h2 ref={headingRef} tabIndex={-1} className="wizard-title">{current.title}</h2>
       <p className="field-help">{current.description}</p>
     </section>
     <div className="wizard-content">{children}</div>
-    <div className="m3-wizard-actions" role="group" aria-label="Navegación del asistente">
+    <div className="wizard-actions" role="group" aria-label="Navegación del asistente">
       <button type="button" className="btn btn-secondary" disabled={activeStep === 0 || busy} onClick={onBack}>Atrás</button>
       {activeStep < steps.length - 1
         ? <button type="button" className="btn btn-primary" disabled={busy} onClick={onNext}>Siguiente</button>
-        : <span className="m3-wizard-step">Listo para confirmar abajo</span>}
+        : <span className="wizard-step-count">Listo para confirmar abajo</span>}
     </div>
   </div>;
 }
