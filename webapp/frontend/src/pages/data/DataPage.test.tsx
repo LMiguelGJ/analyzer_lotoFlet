@@ -53,6 +53,16 @@ beforeEach(() => {
     duplicates_merged: 1, execution_supported: false });
 });
 
+describe("import mode presentation", () => {
+  it("keeps both modes in the same segmented radio group and advanced content disclosure", async () => {
+    render(<DataPage />);
+    const group = await screen.findByRole("group", { name: "Tipo de importación" });
+    expect(within(group).getByRole("radio", { name: /Historial ordinario/ })).toBeChecked();
+    expect(within(group).getByRole("radio", { name: /Archivo avanzado CSV o JSON/ })).not.toBeChecked();
+    expect(screen.getByText("Importar archivo CSV o JSON").closest("details")).not.toHaveAttribute("open");
+  });
+});
+
 describe("visible game profiles", () => {
   it("shows profile creation before import and opens it without an advanced disclosure", async () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 0, offset: 0, limit: 100, items: [], templates: [] });

@@ -126,7 +126,7 @@ export function ComparisonPage() {
     {error && <div role="alert" className="border-y border-border py-4"><p>{error}</p><p>La información guardada se conserva. Podés volver a cargar la comparación.</p><button type="button" className="btn btn-secondary mt-2" onClick={() => setRetry((n) => n + 1)}>Reintentar comparación</button></div>}
     {data && <>
       <section aria-label="Veredicto" className="ledger-block">
-        <h1 className="ledger-verdict-title">{leader ? reached ? `${names(goalRun!.ordinal)} alcanzó la meta.` : data.comparison.complete ? "Ninguna alcanzó la meta." : "Ninguna alcanzó la meta entre las simulaciones con resultado." : "Sin resultado guardado."}</h1>
+        <h2 className="ledger-verdict-title">{leader ? reached ? `${names(goalRun!.ordinal)} alcanzó la meta.` : data.comparison.complete ? "Ninguna alcanzó la meta." : "Ninguna alcanzó la meta entre las simulaciones con resultado." : "Sin resultado guardado."}</h2>
         {leader && !reached && <p className="mt-2 text-sm">Entre las ejecuciones con resultado, {names(leader.ordinal)} terminó con más saldo.</p>}
         <div className="ledger-verdict-figures">
           <Stat label="Saldo final más alto" value={leader ? money(leader.result!.final_balance) : "Sin dato"} />

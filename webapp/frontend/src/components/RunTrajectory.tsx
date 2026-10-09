@@ -58,7 +58,7 @@ export function RunTrajectory({ id, ordinal, name, goal, money, onSelect, onLoad
     {chart && data.total > 0 && <BalanceChart points={plottedPoints} goal={goal} total={data.total} formatMoney={money} initialCapital={data.initial_capital} reductionMethod={data.reduction_method} />}
     {data.total === 0 && <p role="status">Todavía no hay sorteos jugados; consultá la cola más tarde para ver la evolución.</p>}
     {data.total > 0 && <div className="flex flex-wrap items-center gap-2">
-      <label htmlFor={`trajectory-jump-${ordinal}`}>Ir a sorteo (1–{data.total})</label>
+      <label htmlFor={`trajectory-jump-${ordinal}`} className="legend">Ir a sorteo (1–{data.total})</label>
       <input id={`trajectory-jump-${ordinal}`} type="number" min={1} max={data.total} value={jump} onChange={(event) => setJump(event.target.value)} className="w-28 border border-border-control bg-field p-2" />
       {onSelect ? <button type="button" disabled={!canJump} className="btn btn-secondary" onClick={() => onSelect(jumpIndex)}>Ver apuesta exacta</button>
         : canJump ? <Link className="btn btn-tertiary" to={`/simulaciones/${encodeURIComponent(id)}?run=${ordinal}&bet=${jumpIndex}&from=comparison`}>Ver apuesta exacta</Link> : <span>Elegí un número válido</span>}

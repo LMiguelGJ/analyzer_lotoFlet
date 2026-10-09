@@ -21,10 +21,10 @@ export function ComparisonChart({ series, onToggle, formatMoney = formatDOP }: {
   const y = (balance: number) => 180 - ((balance - low) / (high - low || 1)) * 145;
   const timeLabels = series.flatMap((entry) => entry.points.map((point) => point.label)).sort((a, b) => time(a) - time(b));
   return <figure aria-label="Evolución comparada de saldos" className="min-w-0 space-y-3">
-    <figcaption className="font-heading text-xl">Evolución comparada · fechas guardadas</figcaption>
+    <figcaption className="legend text-xl">Evolución comparada · fechas guardadas</figcaption>
     <p className="text-sm text-text-secondary">Las líneas conectan observaciones guardadas y el capital inicial; no agregan valores intermedios ni prolongan la sesión. Las trayectorias reducidas conservan inicio, fin y extremos; la reducción se declara por corrida.</p>
     <fieldset aria-label="Series visibles" className="flex flex-wrap gap-x-5 gap-y-2">
-      {series.map((entry) => <label key={entry.ordinal} className="inline-flex min-h-control items-center gap-2 text-sm">
+      {series.map((entry) => <label key={entry.ordinal} className="legend inline-flex min-h-control items-center gap-2">
         <input type="checkbox" checked={entry.visible} onChange={() => onToggle(entry.ordinal)} aria-label={`Mostrar ${entry.name}`} className="accent-accent" />
         <svg aria-hidden="true" width="34" height="16" viewBox="0 0 34 16"><line x1="0" x2="34" y1="8" y2="8" stroke={colors[entry.ordinal % colors.length]} strokeWidth="2" strokeDasharray={patterns[entry.ordinal % patterns.length]} /></svg>
         {entry.name} · {markers[entry.ordinal % markers.length]}, {patterns[entry.ordinal % patterns.length] === "none" ? "línea continua" : "línea a trazos"}
@@ -50,7 +50,7 @@ export function ComparisonChart({ series, onToggle, formatMoney = formatDOP }: {
             {points.map((point) => <g key={point.ordinal} transform={`translate(${x(point.label)} ${y(point.balance)})`}>
               {entry.ordinal % markers.length === 0 ? <circle r="3.5" fill={color} /> : entry.ordinal % markers.length === 1 ? <rect x="-3.5" y="-3.5" width="7" height="7" fill={color} /> : entry.ordinal % markers.length === 2 ? <path d="M0 -5 5 0 0 5 -5 0Z" fill={color} /> : entry.ordinal % markers.length === 3 ? <path d="M0 -5 5 4 -5 4Z" fill={color} /> : <path d="M-4 -4 4 4 M4 -4 -4 4" fill="none" stroke={color} strokeWidth="2" />}
             </g>)}
-            {points.length > 0 && <text className="comparison-chart-end-label" x={x(points[points.length - 1].label)} y={Math.max(18, y(points[points.length - 1].balance) - 8)} textAnchor="end" fill="var(--bf-legend)" fontSize="12">{entry.name} · {formatMoney(points[points.length - 1].balance)}</text>}
+            {points.length > 0 && <text className="legend comparison-chart-end-label" x={x(points[points.length - 1].label)} y={Math.max(18, y(points[points.length - 1].balance) - 8)} textAnchor="end" fill="var(--bf-legend)" fontSize="12">{entry.name} · {formatMoney(points[points.length - 1].balance)}</text>}
           </g>;
         })}
       </svg>

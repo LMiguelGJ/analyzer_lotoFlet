@@ -565,7 +565,7 @@ figure table th, figure table td { border-color: var(--bf-rule); }
 .dataset-card > .btn, .dataset-card > p.field-help:last-child { margin: 12px 20px 16px; }
 .settings-wizard { display: grid; gap: 16px; margin-bottom: 24px; }
 .settings-wizard-progress { height: 4px; background: var(--bf-rule); }
-.settings-wizard-progress span { display: block; width: 25%; height: 100%; background: var(--bf-signal); }
+.settings-wizard-progress span { display: block; width: 25%; height: 100%; background: var(--bf-signal); color: var(--bf-chassis); }
 .settings-wizard-progress[data-step="2"] span { width: 50%; }
 .settings-wizard-progress[data-step="3"] span { width: 75%; }
 .settings-wizard-progress[data-step="4"] span { width: 100%; }

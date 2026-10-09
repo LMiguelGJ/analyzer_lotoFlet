@@ -253,7 +253,8 @@ describe("LW12 comparison", () => {
     vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...comparison, complete: true, requested: 1, completed: 1, runs: [lostRun] });
     setup();
     const verdict = await screen.findByRole("region", { name: "Veredicto" });
-    expect(within(verdict).getByRole("heading", { level: 1 })).toHaveTextContent("Ninguna alcanzó la meta");
+    expect(within(verdict).getByRole("heading", { level: 2 })).toHaveTextContent("Ninguna alcanzó la meta");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(within(verdict).getByText(/terminó con más saldo/)).toBeInTheDocument();
     expect(within(verdict).queryByText(/ganador|mejor estrategia/i)).not.toBeInTheDocument();
     expect(screen.getByText("Cómo se hizo · condiciones y datos de origen")).toBeInTheDocument();
@@ -265,7 +266,8 @@ describe("LW12 comparison", () => {
     vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...comparison, runs: enrichedRuns });
     const { user } = setup();
     const verdict = await screen.findByRole("region", { name: "Veredicto" });
-    expect(within(verdict).getByRole("heading", { level: 1 })).toHaveTextContent("Primera alcanzó la meta.");
+    expect(within(verdict).getByRole("heading", { level: 2 })).toHaveTextContent("Primera alcanzó la meta.");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(within(verdict).getByText("Saldo final más alto").nextElementSibling).toHaveTextContent("RD$150");
     expect(within(verdict).getAllByText(/Saldo final más alto|Cambio respecto del inicio|Sorteos jugados|¿Alcanzó la meta\?/)).toHaveLength(4);
     expect(within(verdict).getByText(/Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad/)).toBeInTheDocument();

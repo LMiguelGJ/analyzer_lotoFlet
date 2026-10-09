@@ -226,6 +226,8 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
         <legend className="field-label">Tipo de importación</legend>
         <label className="control-choice"><input type="radio" name="import-mode" value="history" checked={mode === "history"}
           onChange={() => chooseMode("history")} />Historial ordinario (JSON canónico)</label>
+        <label className="control-choice"><input type="radio" name="import-mode" value="records" checked={mode === "records"}
+          disabled={modeLocked} onChange={() => chooseMode("records")} />Archivo avanzado CSV o JSON (columnas y contexto explícitos)</label>
       </fieldset>
       <p role="status" aria-live="polite" className="field-help">Modo activo: {mode === "history" ? "historial ordinario" : "archivo avanzado CSV o JSON"}.</p>
       {modeLocked && <p className="field-help">No cambies de modo mientras hay una operación pendiente o un guardado sin confirmar.</p>}
@@ -284,8 +286,6 @@ function HistoryImportAndLibrary({ profiles, profilesLoading, profilesError, onC
           setAdvancedOpen(event.currentTarget.open);
         }}>
           <summary className="disclosure-summary font-medium">Importar archivo CSV o JSON</summary>
-          <label className="control-choice mt-4"><input type="radio" name="import-mode" value="records" checked={mode === "records"}
-            disabled={modeLocked} onChange={() => chooseMode("records")} />Archivo avanzado CSV o JSON (columnas y contexto explícitos)</label>
           <div hidden={mode !== "records"} className="mt-5 space-y-8">{recordsView}</div>
         </details>
       </section>

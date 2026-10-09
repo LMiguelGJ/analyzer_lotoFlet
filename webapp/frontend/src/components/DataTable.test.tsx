@@ -57,7 +57,7 @@ describe("DataTable", () => {
 
   it("lets the table flex to the region while preserving word-level wrapping and compact fields", () => {
     const css = readFileSync("src/styles/index.css", "utf8");
-    const tableRules = css.slice(css.indexOf("  .data-table-region {"), css.indexOf("  @media (max-width: 799px)"));
+    const tableRules = css.match(/(?:^|\n)\s*\.data-table-region[^{}]*\{[^{}]*\}/g)?.join("\n") ?? "";
     expect(tableRules).toMatch(/\.data-table-region th\s*\{\s*white-space:\s*nowrap;/);
     expect(tableRules).toMatch(/\.data-table-region td\s*\{[^}]*overflow-wrap:\s*break-word;/s);
     expect(tableRules).toMatch(/\.table-date\s*\{[^}]*white-space:\s*nowrap;/s);

@@ -162,7 +162,7 @@ function GameRulesSection({ onSource, onSummary, onValidity, onLoadState, onRetr
           {draft.prizes.map((prize, index) => {
             const error = errors.prizes[index];
             return <div key={index}>
-              <label htmlFor={`game-prize-${index}`} className="text-sm text-text-secondary">Posición {index + 1}</label>
+              <label htmlFor={`game-prize-${index}`} className="legend">Posición {index + 1}</label>
               <input id={`game-prize-${index}`} type="text" inputMode="numeric" autoComplete="off" className="control tabular-nums" value={prize} disabled={saving} aria-invalid={!!error} aria-describedby={error ? `game-prize-${index}-error` : `game-prize-${index}-help`} onChange={(event) => edit({ prizes: draft.prizes.map((current, at) => (at === index ? event.target.value : current)) })} />
               {error ? <p id={`game-prize-${index}-error`} className="mt-1 text-sm text-red-300">{error}</p>
                 : <p className="mt-1 text-sm text-text-secondary">Paga {formatDOP(Number(prize))} por cada RD$1.</p>}
@@ -171,7 +171,7 @@ function GameRulesSection({ onSource, onSummary, onValidity, onLoadState, onRetr
         </div>
       </fieldset>
       <div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.repeats} disabled={saving} onChange={(event) => edit({ repeats: event.target.checked })} />Repeticiones permitidas</label>
+        <label className="legend flex items-center gap-2"><input type="checkbox" checked={draft.repeats} disabled={saving} onChange={(event) => edit({ repeats: event.target.checked })} />Repeticiones permitidas</label>
         <p className="field-help">Si se permiten, el mismo número puede salir en varias posiciones.</p>
       </div>
       <div>
