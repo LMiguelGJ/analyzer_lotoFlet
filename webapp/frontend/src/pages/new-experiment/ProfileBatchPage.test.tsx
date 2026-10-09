@@ -54,6 +54,49 @@ beforeEach(() => {
   vi.mocked(apiClient.createProfileBatch).mockReset();
 });
 function mount(path = `/simulaciones/nueva/sesion?dataset_sha256=${dataset.dataset_sha256}`) { render(<MemoryRouter initialEntries={[path]}><ProfileBatchPage /></MemoryRouter>); }
+function currentWizardStep() {
+  return {
+    progress: screen.getByRole("progressbar").getAttribute("aria-valuenow"),
+    heading: screen.getByRole("heading", { level: 2, name: /^(?:[1-5] · )/ }).textContent,
+  };
+}
+async function nextBatchStep(user: ReturnType<typeof userEvent.setup>) {
+  const wizard = within(screen.getByRole("region", { name: "Asistente para crear una simulación" }));
+  const before = Number(screen.getByRole("progressbar").getAttribute("aria-valuenow"));
+  const step = currentWizardStep();
+  console.info(`[ProfileBatchPage wizard] ${JSON.stringify(step)}`);
+  await user.click(wizard.getByRole("button", { name: "Siguiente" }));
+  await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(before + 1)));
+}
+async function goToStep(user: ReturnType<typeof userEvent.setup>, step: string) {
+  const wizard = within(screen.getByRole("navigation", { name: "Pasos de la simulación" }));
+  const state = currentWizardStep();
+  console.info(`[ProfileBatchPage wizard] ${JSON.stringify(state)}`);
+  const button = wizard.getAllByRole("button").find((candidate) => candidate.textContent?.trim().endsWith(step));
+  if (!button) throw new Error(`Wizard step button not found: ${step}`);
+  if (button.getAttribute("aria-current") !== "step") await user.click(button);
+  await waitFor(() => expect(button).toHaveAttribute("aria-current", "step"));
+}
+async function advanceBatchTo(user: ReturnType<typeof userEvent.setup>, step: number) {
+  while (Number(screen.getByRole("progressbar").getAttribute("aria-valuenow")) < step + 1) await nextBatchStep(user);
+}
+const nextWizardStep = nextBatchStep;
+const advanceTo = advanceBatchTo;
+async function reachScope(user: ReturnType<typeof userEvent.setup>) {
+  await user.selectOptions(await screen.findByLabelText("Perfil de juego"), "local@2");
+  await user.click(await screen.findByRole("button", { name: "Agregar" }));
+  const strategyArticle = screen.getByRole("heading", { name: "Fijas" }).closest("article");
+  await waitFor(() => expect(within(strategyArticle!).getByRole("button", { name: "Quitar" })).toHaveAttribute("aria-pressed", "true"));
+  await nextWizardStep(user);
+  await user.selectOptions(screen.getByLabelText("Cómo contar los premios"), "all");
+  await nextWizardStep(user);
+  await screen.findByRole("option", { name: "2025-01-01 08:30" });
+}
+async function reachCapital(user: ReturnType<typeof userEvent.setup>) {
+  await reachScope(user);
+  await user.selectOptions(screen.getByLabelText("Sorteo inicial"), "2025-01-01 08:30");
+  await nextWizardStep(user);
+}
 
 const savedBatch = { request_kind: "profile", request_schema_version: 5, id: "saved-base", status: "completed", created_at: null,
   request: { schema_version: 5, kind: "profile_batch", profile_id: "local", profile_revision: 2, profile_sha256: "a".repeat(64), dataset_sha256: dataset.dataset_sha256,
@@ -188,7 +231,9 @@ describe("guided v5 profile batch", () => {
     await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
     resolveCatalog({ total: 25, offset: 0, limit: 20, items: [], templates: [] });
     await waitFor(() => expect(apiClient.getProfiles).toHaveBeenCalledWith(0, 20));
-    await userEvent.setup().click(screen.getByRole("button", { name: "Condiciones" }));
+    const user = userEvent.setup();
+    await advanceTo(user, 3);
+    await goToStep(user, "Estrategia");
     expect(screen.getByLabelText("Perfil de juego")).toHaveValue("local@2");
     expect(screen.getByLabelText("Apuesta por número (DOP)")).toBeInTheDocument();
   });
@@ -202,18 +247,20 @@ describe("guided v5 profile batch", () => {
     mount(`/simulaciones/nueva/sesion?base=saved-base`);
     await waitFor(() => expect(apiClient.getExperiment).toHaveBeenCalledWith("saved-base"));
     await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Condiciones" }));
+    await advanceTo(user, 3);
     expect(screen.getByLabelText("Capital inicial (DOP)")).toHaveValue("100");
     expect(screen.getByLabelText("Meta de saldo (DOP)")).toHaveValue("200");
     expect(screen.getByLabelText("Máximo sorteos transcurridos")).toHaveValue("50");
     expect(screen.getByLabelText("Máximo sorteos apostados (opcional)")).toHaveValue("20");
-    const maxDraws = screen.getByLabelText("Límite operativo solicitado");
-    expect(maxDraws).toHaveValue("40");
+    expect(screen.getByLabelText("Límite operativo solicitado")).toHaveValue("40");
+    await goToStep(user, "Reglas");
     expect(screen.getByLabelText("Cómo contar los premios")).toHaveValue("best");
+    await goToStep(user, "Capital y meta");
+    const maxDraws = screen.getByLabelText("Límite operativo solicitado");
     await user.clear(maxDraws); await user.type(maxDraws, "41");
     expect(sessionStorage.getItem(BATCH_DRAFT_STORAGE_KEY)).toBe(priorSerialized);
-    await user.click(screen.getByRole("button", { name: "Validación" }));
-    await user.click(screen.getByRole("button", { name: "Validar simulación" }));
+    await advanceTo(user, 4);
+    await user.click(screen.getByRole("button", { name: "Validar solicitud actual" }));
     await screen.findByText("Validación aceptada");
     expect(apiClient.validateProfileBatch).toHaveBeenCalledWith(expect.objectContaining({ max_draws: 41,
       strategies: savedBatch.batch_admission.strategy_refs, client_request_id: expect.not.stringMatching(/^saved-base$/) }));
@@ -228,13 +275,14 @@ describe("guided v5 profile batch", () => {
     </MemoryRouter>);
     await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Validación" }));
-    await user.click(screen.getByRole("button", { name: "Validar simulación" }));
+    await advanceTo(user, 4);
+    await user.click(screen.getByRole("button", { name: "Validar solicitud actual" }));
     await waitFor(() => expect(apiClient.validateProfileBatch).toHaveBeenCalledTimes(1));
     await user.click(screen.getByRole("link", { name: "Switch base" }));
     await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
     resolveValidation(validation);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Historial y perfil" })).toHaveAttribute("aria-current", "step"));
+    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3"));
+    expect(screen.getByRole("heading", { level: 2, name: "3 · Alcance" })).toBeInTheDocument();
     expect(screen.queryByText("Validación aceptada")).not.toBeInTheDocument();
   });
   it("keeps hydration from a previous base from overwriting the active base", async () => {
@@ -248,7 +296,7 @@ describe("guided v5 profile batch", () => {
     </MemoryRouter>);
     await userEvent.setup().click(screen.getByRole("link", { name: "Cambiar referencia" }));
     await waitFor(() => expect(screen.queryByText(/Recuperando y verificando/)).not.toBeInTheDocument());
-    await userEvent.setup().click(screen.getByRole("button", { name: "Condiciones" }));
+    await advanceTo(userEvent.setup(), 3);
     expect(screen.getByLabelText("Capital inicial (DOP)")).toHaveValue("120");
     resolveFirst(savedBatch);
     await waitFor(() => expect(screen.getByLabelText("Capital inicial (DOP)")).toHaveValue("120"));
@@ -271,24 +319,25 @@ describe("guided v5 profile batch", () => {
   });
   it("# F-CREATE-045 binds profile and exact dataset, preserves shared inputs, and enables simulation only after current server validation", async () => {
     const user = userEvent.setup(); mount();
-    await screen.findByRole("option", { name: /historial/ });
+    await reachScope(user);
+    await screen.findByRole("option", { name: /Historial 1/ });
     await user.selectOptions(screen.getByLabelText("Historial"), dataset.dataset_sha256);
     await user.selectOptions(screen.getByLabelText("Perfil de juego"), "local@2");
-    await user.click(screen.getByRole("button", { name: "Estrategias" }));
     await user.click(await screen.findByRole("button", { name: "Agregar" }));
-    await user.click(screen.getByRole("button", { name: "Condiciones" }));
+    await nextWizardStep(user);
+    await user.selectOptions(screen.getByLabelText("Cómo contar los premios"), "all");
+    await nextWizardStep(user);
+    await user.selectOptions(screen.getByLabelText("Sorteo inicial"), "2025-01-01 08:30");
+    await nextWizardStep(user);
     const elapsed = screen.getByLabelText("Máximo sorteos transcurridos");
     await user.type(screen.getByLabelText("Capital inicial (DOP)"), "100");
     await user.type(screen.getByLabelText("Meta de saldo (DOP)"), "200");
     await user.type(elapsed, "50");
     await user.type(screen.getByLabelText("Límite operativo solicitado"), "50");
-    await user.selectOptions(screen.getByLabelText("Sorteo inicial"), "2025-01-01 08:30");
-    await user.selectOptions(screen.getByLabelText("Cómo contar los premios"), "all");
-    await user.click(screen.getByRole("button", { name: "Simulación" }));
+    await nextWizardStep(user);
     const simulate = screen.getByRole("button", { name: "Crear simulaciones" });
     expect(simulate).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Validación" }));
-    await user.click(screen.getByRole("button", { name: "Validar simulación" }));
+    await user.click(screen.getByRole("button", { name: "Validar solicitud actual" }));
     expect(await screen.findByText("Validación aceptada")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Validar comprueba la solicitud; no reserva capacidad.");
     expect(screen.getByRole("button", { name: "Crear simulaciones" })).toBeEnabled();
@@ -296,27 +345,21 @@ describe("guided v5 profile batch", () => {
       profile: { id: "local", revision: 2, sha256: "a".repeat(64) }, dataset_sha256: dataset.dataset_sha256,
       strategies: [{ id: "custom", revision: 1, definition_sha256: "d".repeat(64) }],
       conditions: expect.objectContaining({ capital: 100, goal: 200, start_draw: "2025-01-01 08:30", settlement: "all" }) }));
-    await user.click(screen.getByRole("button", { name: "Condiciones" }));
+    await goToStep(user, "Capital y meta");
     await user.type(screen.getByLabelText("Máximo sorteos transcurridos"), "1");
-    await user.click(screen.getByRole("button", { name: "Simulación" }));
+    await advanceTo(user, 4);
     expect(screen.getByRole("button", { name: "Crear simulaciones" })).toBeDisabled();
   });
 
   it("# F-CREATE-046 looks up the frozen client request identity before retrying an uncertain create", async () => {
     const user = userEvent.setup(); mount();
-    await screen.findByRole("option", { name: /historial/ });
-    await user.selectOptions(screen.getByLabelText("Perfil de juego"), "local@2");
-    await user.click(screen.getByRole("button", { name: "Estrategias" }));
-    await user.click(await screen.findByRole("button", { name: "Agregar" }));
-    await user.click(screen.getByRole("button", { name: "Condiciones" }));
+    await reachCapital(user);
     await user.type(screen.getByLabelText("Capital inicial (DOP)"), "100");
     await user.type(screen.getByLabelText("Meta de saldo (DOP)"), "200");
     await user.type(screen.getByLabelText("Máximo sorteos transcurridos"), "50");
     await user.type(screen.getByLabelText("Límite operativo solicitado"), "50");
-    await user.selectOptions(screen.getByLabelText("Sorteo inicial"), "2025-01-01 08:30");
-    await user.selectOptions(screen.getByLabelText("Cómo contar los premios"), "all");
-    await user.click(screen.getByRole("button", { name: "Validación" }));
-    await user.click(screen.getByRole("button", { name: "Validar simulación" }));
+    await nextWizardStep(user);
+    await user.click(screen.getByRole("button", { name: "Validar solicitud actual" }));
     await screen.findByText("Validación aceptada");
     vi.mocked(apiClient.createProfileBatch).mockRejectedValueOnce(new NetworkError()).mockResolvedValueOnce({ id: "e".repeat(32), status: "pending" });
     vi.mocked(apiClient.getProfileBatchByClientRequestId).mockRejectedValueOnce(new ApiError(404, "resource not found"));
@@ -354,10 +397,16 @@ describe("guided v5 profile batch", () => {
     vi.mocked(apiClient.getProfileBatchByClientRequestId).mockRejectedValueOnce(new ApiError(404, "resource not found"));
     vi.mocked(apiClient.createProfileBatch).mockRejectedValueOnce(new NetworkError());
     const user = userEvent.setup(); mount();
-    await user.click(screen.getByRole("button", { name: "Condiciones" }));
-    await user.type(screen.getByLabelText(/Capital inicial/), "999");
-    await user.click(await screen.findByRole("button", { name: /recuperar creación pendiente/i }));
+    // C: pending recovery locks wizard navigation; editing the prior draft is superseded by frozen-request recovery.
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "5");
+    const stepButtons = within(screen.getByRole("navigation", { name: "Pasos de la simulación" })).getAllByRole("button");
+    expect(stepButtons).toHaveLength(5);
+    stepButtons.forEach((button) => expect(button).toBeDisabled());
+    expect(screen.getByRole("button", { name: /recuperar creación pendiente/i })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: /recuperar creación pendiente/i }));
     await waitFor(() => expect(apiClient.createProfileBatch).toHaveBeenCalledWith(frozenBody));
+    await screen.findByRole("alert");
+    expect(apiClient.createProfileBatch).toHaveBeenCalledTimes(1);
     expect(parseBatchDraft(sessionStorage.getItem(BATCH_DRAFT_STORAGE_KEY))?.pending).toEqual({
       clientRequestId: frozenBody.client_request_id, frozenBody,
     });
@@ -372,7 +421,7 @@ describe("guided v5 profile batch", () => {
       vi.mocked(apiClient.reviseProfileBatchStrategy).mockResolvedValue(strategy as never);
       const user = userEvent.setup(); mount();
       await user.selectOptions(await screen.findByLabelText("Perfil de juego"), "local@2");
-      await user.click(screen.getByRole("button", { name: "Estrategias" }));
+      await goToStep(user, "Estrategia");
       await user.click(screen.getByRole("button", { name: "Editar y guardar nueva revisión" }));
       expect(screen.getByLabelText(/Apuesta por número/)).toHaveValue(decimal);
       await user.click(screen.getByRole("button", { name: "Guardar nueva revisión" }));
@@ -385,9 +434,9 @@ describe("guided v5 profile batch", () => {
       closing_defaults: { settlement: "best" as const, max_elapsed_draws: 15, max_bet_draws: 12 } } };
     vi.mocked(apiClient.listProfileBatchStrategies).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [protectedStrategy] });
     vi.mocked(apiClient.createProfileBatchStrategy).mockResolvedValue(strategy as never);
-    const user = userEvent.setup(); mount();
+const user = userEvent.setup(); mount();
     await user.selectOptions(await screen.findByLabelText("Perfil de juego"), "local@2");
-    await user.click(screen.getByRole("button", { name: "Estrategias" }));
+    await goToStep(user, "Estrategia");
     await user.click(screen.getByRole("button", { name: "Crear copia editable" }));
     expect(screen.getByLabelText("Nombre")).toHaveValue("Fijas copia");
     await user.click(screen.getByRole("button", { name: "Guardar como estrategia nueva" }));
@@ -404,7 +453,7 @@ describe("guided v5 profile batch", () => {
       closing_defaults: { settlement: "best" as const, max_bet_draws: 12 } } };
     vi.mocked(apiClient.listProfileBatchStrategies).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [advanced] as never });
     const user = userEvent.setup(); mount();
-    await user.click(screen.getByRole("button", { name: "Estrategias" }));
+    await goToStep(user, "Estrategia");
     const strategyArticle = screen.getByRole("heading", { name: /Fijas/ }).closest("article");
     expect(strategyArticle).not.toBeNull();
     await user.click(strategyArticle!.querySelector("summary")!);
@@ -419,41 +468,52 @@ describe("guided v5 profile batch", () => {
     vi.mocked(apiClient.getDatasetDraws).mockImplementation(async (_hash, offset) => ({ total: 101, offset: offset ?? 0, limit: 100,
       items: offset === 0 ? ["2025-01-01 08:30"] : ["2025-01-02 08:30"] }));
     const user = userEvent.setup(); mount();
-    await screen.findByRole("option", { name: /historial/ });
-    await user.selectOptions(screen.getByLabelText("Perfil de juego"), "local@2");
-    await user.click(screen.getByRole("button", { name: "Estrategias" }));
-    await user.click(await screen.findByRole("button", { name: "Agregar" }));
-    await user.click(screen.getByRole("button", { name: "Condiciones" }));
+    await reachCapital(user);
     await user.type(screen.getByLabelText("Capital inicial (DOP)"), "100");
     await user.type(screen.getByLabelText("Meta de saldo (DOP)"), "200");
     await user.type(screen.getByLabelText("Máximo sorteos transcurridos"), "50");
     await user.type(screen.getByLabelText("Límite operativo solicitado"), "50");
+    await goToStep(user, "Alcance");
     await user.selectOptions(screen.getByLabelText("Sorteo inicial"), "2025-01-01 08:30");
+    await goToStep(user, "Reglas");
     await user.selectOptions(screen.getByLabelText("Cómo contar los premios"), "all");
+    await goToStep(user, "Alcance");
     await user.click(screen.getByRole("navigation", { name: "Páginas de sorteos" }).querySelector("button:last-of-type")!);
     await screen.findByRole("option", { name: "2025-01-02 08:30" });
-    await user.click(screen.getByRole("button", { name: "Validación" }));
-    await user.click(screen.getByRole("button", { name: "Validar simulación" }));
+    await goToStep(user, "Capital y meta");
+    await nextWizardStep(user);
+    await user.click(screen.getByRole("button", { name: "Validar solicitud actual" }));
     await waitFor(() => expect(apiClient.validateProfileBatch).toHaveBeenCalled());
     expect(apiClient.validateProfileBatch).toHaveBeenCalledWith(expect.objectContaining({ conditions: expect.objectContaining({ start_draw: "2025-01-01 08:30" }) }));
   });
 
   it("# F-CREATE-052 accepts the current dataset draw page response after an unrelated condition edit", async () => {
     let resolveDraws!: (page: { total: number; offset: number; limit: number; items: string[] }) => void;
-    vi.mocked(apiClient.getDatasetDraws).mockReturnValueOnce(new Promise((resolve) => { resolveDraws = resolve; }));
+    vi.mocked(apiClient.getDatasetDraws).mockImplementation(async (_hash, offset) => (offset ?? 0) === 0
+      ? { total: 101, offset: 0, limit: 100, items: ["2025-01-01 08:30"] }
+      : new Promise((resolve) => { resolveDraws = resolve; }));
     const user = userEvent.setup(); mount();
-    await user.click(screen.getByRole("button", { name: "Condiciones" }));
-    await user.type(await screen.findByLabelText("Máximo sorteos transcurridos"), "5");
-    resolveDraws({ total: 1, offset: 0, limit: 100, items: ["2025-01-01 08:30"] });
-    expect(await screen.findByRole("option", { name: "2025-01-01 08:30" })).toBeInTheDocument();
+    await reachCapital(user);
+    await user.type(screen.getByLabelText("Máximo sorteos transcurridos"), "5");
+    await goToStep(user, "Alcance");
+    await user.click(screen.getByRole("navigation", { name: "Páginas de sorteos" }).querySelector("button:last-of-type")!);
+    await waitFor(() => expect(apiClient.getDatasetDraws).toHaveBeenCalledWith(dataset.dataset_sha256, 100, expect.anything()));
+    resolveDraws({ total: 101, offset: 100, limit: 100, items: ["2025-01-02 08:30"] });
+    expect(await screen.findByRole("option", { name: /2025-01-01 08:30/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "2025-01-02 08:30" })).toBeInTheDocument();
   });
 
   it("# F-CREATE-053 does not submit an invalid or stale profile binding and reports source references without financial claims", async () => {
     const user = userEvent.setup(); mount();
-    await screen.findByRole("option", { name: /historial/ });
+    await reachScope(user);
+    await screen.findByRole("option", { name: /Historial 1/ });
     await user.selectOptions(screen.getByLabelText("Historial"), dataset.dataset_sha256);
-    expect(await screen.findByText(/2025-01-01 08:30/, { selector: "p" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Validación" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Perfil de juego"), "local@2");
+    await user.click(await screen.findByRole("button", { name: "Agregar" }));
+    await nextWizardStep(user);
+    await user.selectOptions(screen.getByLabelText("Cómo contar los premios"), "all");
+    await nextWizardStep(user);
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
     expect(apiClient.createProfileBatch).not.toHaveBeenCalled();
   });
 });
