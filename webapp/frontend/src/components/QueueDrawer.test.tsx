@@ -293,7 +293,7 @@ describe("LW15 queue drawer", () => {
     const { user } = setup();
     const dialog = await open(user);
     await user.click(await within(dialog).findByRole("button", { name: "Iniciar held-1" }));
-    await user.click(within(dialog).getByRole("button", { name: "Cerrar cola" }));
+    await user.click(within(dialog).getByRole("button", { name: "Cerrar" }));
     resolveStart({ id: "held-1", status: "queued" });
     const reopened = await open(user);
     await waitFor(() => expect(apiClient.getExperiment).toHaveBeenCalledWith("held-1"));

@@ -88,14 +88,14 @@ describe("DataTable", () => {
     expect(onAction).toHaveBeenCalledWith("a");
   });
 
-  it("draws hairline rules with a 150ms hover transition and tracked labels without changing the class contract", () => {
+  it("draws hairline rules with plain rows and tracked label headers without changing the class contract", () => {
     render(<DataTable caption="Experimentos" columns={columns(() => {})} rows={rows} getRowKey={(row) => row.id} />);
     const region = screen.getByRole("region", { name: "Experimentos" });
     expect(region).toHaveClass("border-border");
     expect(region).not.toHaveClass("rounded", "shadow");
     const bodyRow = within(region).getAllByRole("row")[1];
-    expect(bodyRow).toHaveClass("border-b", "border-border", "transition-colors", "duration-150", "hover:bg-surface");
-    expect(within(region).getAllByRole("columnheader")[0]).toHaveClass("uppercase", "tracking-[0.08em]");
+    expect(bodyRow).toHaveClass("data-table-row");
+    expect(within(region).getAllByRole("columnheader")[0]).toHaveClass("data-table-header");
   });
 
   it("renders an empty body without throwing when there are no rows", () => {

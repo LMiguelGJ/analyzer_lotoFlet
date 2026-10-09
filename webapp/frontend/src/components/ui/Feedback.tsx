@@ -48,8 +48,8 @@ export interface LoadingProps {
 
 export function Loading({ rows = 3, label = "Cargando información…", className = "" }: LoadingProps) {
   const count = Math.max(1, Math.floor(rows));
-  return <div className={className}>
-    <span className="ledger-sr-only" role="status">{label}</span>
+  return <div className={`ledger-loading ${className}`.trim()}>
+    <p className="ledger-loading-label" role="status">{label}</p>
     <div aria-hidden="true">{Array.from({ length: count }, (_, index) => <div key={index} className="ledger-skeleton-row" />)}</div>
   </div>;
 }

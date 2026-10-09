@@ -13,7 +13,7 @@ describe("ledger blocks and headers", () => {
     expect(container.firstElementChild?.classList.contains("ledger-block-top-rule")).toBe(false);
   });
 
-  it("# F-UI-001 F-UI-002 supports top-rule blocks and serif section headers with meaningful sequence labels", () => {
+  it("# F-UI-001 F-UI-002 supports top-rule blocks and stamped section headers with meaningful sequence labels", () => {
     const { container } = render(<><Block border="top">Fila</Block><SectionHeader kicker="ORDEN" number="02" title="Selección" /></>);
     expect(container.querySelector(".ledger-block-top-rule")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Selección" })).toBeTruthy();
@@ -39,20 +39,24 @@ describe("ledger figures and states", () => {
     expect(screen.getByText("−2 puntos")).toBeTruthy();
   });
 
-  it.each(["success", "neutral", "warning", "danger", "info"] as const)("# F-UI-005 renders %s chip with color-only text/border class", (variant) => {
+  it.each(["success", "neutral", "warning", "danger", "info"] as const)("# F-UI-005 renders %s chip with its text-bearing treatment", (variant) => {
     render(<Chip variant={variant}>En curso</Chip>);
     const chip = screen.getByText("En curso");
     expect(chip.classList.contains("ledger-chip")).toBe(true);
     expect(chip.classList.contains(`ledger-chip-${variant}`)).toBe(true);
     const variantRule = styles.match(new RegExp(`\\.ledger-chip-${variant}\\s*\\{([^}]+)\\}`))?.[1] ?? "";
     expect(variantRule).toContain("color:");
-    expect(variantRule).not.toMatch(/background(?:-color)?:/);
+    if (variant === "success") {
+      expect(variantRule).toContain("background:");
+    } else {
+      expect(variantRule).not.toMatch(/background(?:-color)?:/);
+    }
   });
 
-  it("# F-UI-005 F-UI-006 keeps chip fills transparent and figures tabular", () => {
-    const chipRule = styles.match(/\.ledger-chip\s*\{([^}]+)\}/)?.[1] ?? "";
+  it("# F-UI-005 F-UI-006 uses a signal stamp and tabular figures", () => {
+    const successRule = styles.match(/\.ledger-chip-success\s*\{([^}]+)\}/)?.[1] ?? "";
     const figureRule = styles.match(/\.ledger-figure\s*\{([^}]+)\}/)?.[1] ?? "";
-    expect(chipRule).toMatch(/background:\s*transparent/);
+    expect(successRule).toContain("background:");
     expect(figureRule).toContain("font-variant-numeric: tabular-nums");
     expect(figureRule).toContain('font-feature-settings: "tnum"');
   });

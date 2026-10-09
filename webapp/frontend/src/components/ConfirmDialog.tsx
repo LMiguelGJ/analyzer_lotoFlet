@@ -99,14 +99,14 @@ export function ConfirmDialog({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="confirm-dialog-scrim fixed inset-0 z-50 flex items-center justify-center">
       <div
         ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="w-full max-w-md rounded-control border border-border-control bg-surface p-6 text-text"
+        className="confirm-dialog-panel w-full max-w-md p-6 text-text"
       >
         <h2 id={titleId} className="section-header break-words">
           {title}

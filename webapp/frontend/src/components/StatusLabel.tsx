@@ -6,10 +6,8 @@ import { Chip } from "./ui";
  * (goal/ruin/limit/history_exhausted) are different vocabularies (UX37).
  * They are never rendered with the same word. Text is the authoritative,
  * non-color signal: every value in EXECUTION_STATUS and every value in
- * OUTCOME has its own unique Spanish label. The shape glyph is a supporting
- * cue, not a guarantee of uniqueness - related states in the same tone
- * family (e.g. cancelled/failed) may intentionally share a shape, since the
- * label text is what actually distinguishes them.
+ * OUTCOME has its own unique Spanish label. Shape remains metadata for
+ * consumers, but is not drawn; the label text distinguishes every state.
  */
 
 interface StatusEntry {
@@ -39,20 +37,10 @@ const OUTCOME: Record<Outcome, StatusEntry> = {
   history_exhausted: { label: "Historial agotado", shape: "square", tone: "neutral" },
 };
 
-const SHAPE_PATH: Record<StatusEntry["shape"], string> = {
-  circle: "M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1Z",
-  square: "M1.5 1.5h9v9h-9z",
-  triangle: "M6 1 11 10.5H1z",
-  diamond: "M6 1 11 6 6 11 1 6z",
-  hexagon: "M3.5 1h5L11 6l-2.5 5h-5L1 6z",
-  cross: "M1.6 1.6 10.4 10.4M10.4 1.6 1.6 10.4",
-  check: "M1.5 6.2 4.5 9.5 10.5 2.5",
-};
-
 const CHIP_VARIANT: Record<StatusEntry["tone"], "neutral" | "success" | "warning" | "danger"> = {
   neutral: "neutral",
   positive: "success",
-  warning: "warning",
+  warning: "neutral",
   danger: "danger",
 };
 
@@ -70,10 +58,7 @@ export function StatusLabel({ kind, value, className }: StatusLabelProps) {
   }
 
   return <Chip variant={CHIP_VARIANT[entry.tone]} className={`font-mono ${className ?? ""}`.trim()}>
-    <span className="inline-flex items-center gap-1.5" data-status-kind={kind} data-status-value={value} data-status-shape={entry.shape}>
-      <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" className="shrink-0">
-        <path d={SHAPE_PATH[entry.shape]} fill={entry.shape === "cross" || entry.shape === "check" ? "none" : "currentColor"} stroke="currentColor" strokeWidth="1.2" />
-      </svg>
+    <span data-status-kind={kind} data-status-value={value} data-status-shape={entry.shape}>
       {entry.label}
     </span>
   </Chip>;
