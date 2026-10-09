@@ -26,13 +26,14 @@ export interface StatProps {
   value: ReactNode;
   delta?: ReactNode;
   variant?: FigureVariant;
+  numeral?: boolean;
   className?: string;
 }
 
-export function Stat({ label, value, delta, variant = "neutral", className = "" }: StatProps) {
+export function Stat({ label, value, delta, variant = "neutral", numeral = false, className = "" }: StatProps) {
   return <div className={`ledger-stat ${className}`.trim()}>
     <span className="ledger-label">{label}</span>
-    <Figure value={value} variant={variant} />
+    <Figure value={value} variant={variant} className={numeral ? "ledger-numeral" : ""} />
     {delta !== undefined && <span className="ledger-hint">{delta}</span>}
   </div>;
 }

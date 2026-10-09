@@ -32,11 +32,12 @@ describe("ledger figures and states", () => {
   });
 
   it("# F-UI-004 renders generic figures, stat label/value/delta and semantic variants", () => {
-    render(<><Figure value="42%" variant="negative" /><Stat label="Probabilidad" value="18%" delta="−2 puntos" variant="positive" /></>);
+    render(<><Figure value="42%" variant="negative" /><Stat label="Probabilidad" value="18%" delta="−2 puntos" variant="positive" /><Stat label="Saldo final" value="RD$140" numeral /></>);
     expect(screen.getByText("42%").classList.contains("ledger-money-negative")).toBe(true);
     expect(screen.getByText("Probabilidad").classList.contains("ledger-label")).toBe(true);
     expect(screen.getByText("18%").classList.contains("ledger-figure")).toBe(true);
     expect(screen.getByText("−2 puntos")).toBeTruthy();
+    expect(screen.getByText("RD$140")).toHaveClass("ledger-numeral");
   });
 
   it.each(["success", "neutral", "warning", "danger", "info"] as const)("# F-UI-005 renders %s chip with its text-bearing treatment", (variant) => {

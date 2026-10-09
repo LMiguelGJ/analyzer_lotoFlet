@@ -300,7 +300,7 @@ caveat como filas término/valor antes de confirmar. «Avanzado» es una fila pl
 
 ### Resultado de una corrida
 Una placa con el sello de estado, el numeral del saldo final, las filas de capital inicial, meta, duración,
-neto y proveniencia (versión, huella, fuente), y el gráfico de trayectoria en su propia placa. La
+neto y proveniencia legible (versión del cálculo y fuente en lenguaje cotidiano), y el gráfico de trayectoria en su propia placa. Los identificadores técnicos (huella, nombre de archivo, JSON, semilla) quedan plegados bajo «Detalles técnicos»: se pliegan, nunca se eliminan. La
 advertencia fija «Simula, no predice ni garantiza rentabilidad» ocupa una fila `legend-dim` visible en la
 misma placa, sin disclosure.
 

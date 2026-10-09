@@ -391,9 +391,13 @@
 .simulation-result-status { display: inline-flex; align-items: center; min-height: 28px; padding: 6px 10px; border: 1px solid var(--bf-rule); color: var(--bf-legend-dim); font: 600 0.6rem/1 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
 .simulation-result-status .ledger-chip-success { border: 0; background: var(--bf-signal); color: var(--bf-chassis); }
 .simulation-result-status .ledger-chip-danger { border-color: var(--bf-alerta); background: transparent; color: var(--bf-alerta); }
-.simulation-result-frame:has([data-status-kind="outcome"][data-status-value="goal"]) .simulation-result-status .ledger-chip-success { background: var(--bf-signal); color: var(--bf-chassis); }
+.simulation-result-frame .simulation-result-status .ledger-chip-success { border: 1px solid var(--bf-rule); background: transparent; color: var(--bf-legend-dim); }
+.simulation-result-frame:has([data-status-kind="outcome"][data-status-value="goal"]) .simulation-result-status .ledger-chip-success { border: 0; background: var(--bf-signal); color: var(--bf-chassis); }
 .simulation-result-frame:has([data-status-kind="outcome"][data-status-value="ruin"]) .simulation-result-status .ledger-chip-success,
 .simulation-result-frame:has([data-status-kind="execution"][data-status-value="failed"]) .simulation-result-status .ledger-chip-success { border: 1px solid var(--bf-alerta); background: transparent; color: var(--bf-alerta); }
+.result-adverse-label { display: inline-block; padding: 2px 6px; border: 1px solid var(--bf-alerta); color: var(--bf-alerta); }
+.ledger-figure.ledger-numeral { font: 400 2.4rem/1 var(--bf-font-body); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+@media (min-width: 640px) { .ledger-figure.ledger-numeral { font-size: 3.4rem; } }
 .simulation-result-source { margin: 8px 0 0; overflow-wrap: break-word; color: var(--bf-legend-dim); font-size: 0.8rem; }
 .simulation-result-content { min-width: 0; padding: 16px 20px; }
 .simulation-result-content > div { min-width: 0; }
@@ -428,6 +432,7 @@
 .backtest-bets-ledger th:first-child, .backtest-bets-ledger td:first-child { white-space: normal; }
 .backtest-bets-ledger [role="row"] { background: transparent; }
 .backtest-window p, .backtest-report p, .backtest-config p { color: var(--bf-legend); }
+.backtest-report p.backtest-caveat { color: var(--bf-legend-dim); }
 .backtest-window .field-help, .backtest-report .field-help { color: var(--bf-legend-dim); }
 .backtest-report .data-list, .backtest-window dl, .backtest-config dl { color: var(--bf-legend); }
 .backtest-definitions { border-top: 1px solid var(--bf-rule); padding-top: 12px; }

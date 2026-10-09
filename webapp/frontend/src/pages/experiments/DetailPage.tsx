@@ -265,7 +265,18 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
   const outcome = run.result?.outcome;
   const delta = run.result?.delta;
   const deltaVariant: FigureVariant = delta == null || delta === 0 ? "neutral" : delta > 0 ? "positive" : "negative";
-  const closeReason = run.result ? isProfileBatchRun(run) ? stopCategoryLabel(run.result.stop_category) : isProfileRun(run) ? profileCloseReason(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : "Todavía no hay un resultado guardado.";
+  const isRuin = outcome === "ruin" || (isProfileBatchRun(run) && run.result?.stop_category === "financial_ruin");
+  let closeReason: React.ReactNode = "Todavía no hay un resultado guardado.";
+  if (run.result) {
+    if (isRuin) closeReason = <span className="result-adverse-label" data-status-kind="outcome" data-status-value="ruin">Sin capital</span>;
+    else if (isProfileBatchRun(run)) closeReason = stopCategoryLabel(run.result.stop_category);
+    else if (isProfileRun(run)) closeReason = profileCloseReason(run.result);
+    else closeReason = <StatusLabel kind="outcome" value={run.result.outcome} />;
+  }
+  const statusDisplay = outcome === "ruin" || outcome === "goal"
+    ? <StatusLabel kind="outcome" value={outcome} />
+    : <StatusLabel kind="execution" value={run.status} />;
+  const signedDelta = delta == null ? null : `${delta > 0 ? "+" : ""}${money(delta)}`;
 
   useEffect(() => {
     if (!run.result || total === 0) { setPage(null); setError(""); setLoading(false); cache.current.clear(); return; }
@@ -312,14 +323,17 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
   const visiblePage = !loading && !error && page?.offset === offset ? page : null;
   const current = visiblePage?.items[cursor - offset];
   const resultModel = experimentResultViewModel(data, run);
-  return <SimulationResultFrame model={resultModel} className="mt-6" statusDisplay={<StatusLabel kind="execution" value={run.status} />}>
+  const plateModel = resultModel?.family === "classic-individual"
+    ? { ...resultModel, source: "Historial congelado de Quiniela 80" }
+    : resultModel;
+  return <SimulationResultFrame model={plateModel} className="mt-6" statusDisplay={statusDisplay}>
     <div>
     {run.result && <>
       <section aria-label="Veredicto" className="ledger-block">
         <h2 className="ledger-verdict-title">{verdictPhrase(outcome, run.status)}</h2>
         <p className="mt-3 text-lg font-medium">{financialConclusion(run)}</p>
         <div className="ledger-verdict-figures">
-          <Stat label="Saldo final" value={money(run.result.final_balance)} variant={run.result.final_balance > capital ? "positive" : run.result.final_balance < capital ? "negative" : "neutral"} />
+          <Stat label="Saldo final" value={money(run.result.final_balance)} numeral variant={run.result.final_balance > capital ? "positive" : run.result.final_balance < capital ? "negative" : "neutral"} />
           <Stat label="Mejor saldo" value={trajectoryMaximum == null ? "—" : money(trajectoryMaximum)} variant="neutral" />
           <Stat label="Sorteos jugados" value={<Figure value={drawCount ?? "—"} />} />
         </div>
@@ -332,8 +346,12 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
         <dt>Capital inicial</dt><dd className="data-list-numeric">{money(capital)}</dd>
         <dt>Meta de saldo</dt><dd className="data-list-numeric">{money(goal)}</dd>
         <dt>{isProfileRun(run) ? "Duración transcurrida" : "Límite de duración"}</dt><dd className="data-list-numeric">{isProfileExperiment(data) || isProfileBatchExperiment(data) ? isProfileRun(run) ? `${run.result.elapsed_draws} sorteos transcurridos` : `${run.result.bets_count} sorteos jugados` : data.request.conditions.max_bets != null ? `${data.request.conditions.max_bets} sorteos` : data.request.conditions.max_minutes != null ? `${data.request.conditions.max_minutes} minutos` : "Sin límite"}</dd>
-        <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help"><Figure value={money(delta!)} variant={deltaVariant} align="right" /><span id="detail-delta-help" className="field-help block text-right">{FIELD_HELP_DELTA}</span></dd>
+        <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help"><Figure value={signedDelta ?? "No disponible"} variant={deltaVariant} align="right" /><span id="detail-delta-help" className="field-help block text-right">{FIELD_HELP_DELTA}</span></dd>
       </dl>
+      {tab === "Resultado" && !isProfileExperiment(data) && <dl className="data-list result-provenance" aria-label="Proveniencia del resultado">
+        <dt>Versión del cálculo</dt><dd>{data.sources.code_version || "No disponible"}</dd>
+        <dt>Fuente</dt><dd>Historial congelado de Quiniela 80</dd>
+      </dl>}
     </>}
     {!run.result && <>
       <section aria-label="Veredicto" className="ledger-block">

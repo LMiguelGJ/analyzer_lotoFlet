@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -10,6 +12,8 @@ vi.mock("../api/client", async (importOriginal) => {
   return { ...actual, apiClient: { ...actual.apiClient,
     getBacktestSessions: vi.fn(), getBacktestSessionBets: vi.fn() } };
 });
+
+const styles = readFileSync(resolve(import.meta.dirname, "../styles/index.css"), "utf8");
 
 const report: BacktestReportData = {
   id: "run-1", name: "Prueba histórica", created_at: "2026-10-01T00:00:00Z",
@@ -43,6 +47,12 @@ describe("BacktestReport", () => {
     expect(table.getByText("Transición")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Sesiones y apuestas" })).toBeInTheDocument();
     expect(screen.getByText("Detalle no almacenado")).toBeInTheDocument();
+  });
+
+  it("keeps historical caveat ink dim despite report paragraph styling", () => {
+    render(<BacktestReport report={report} />);
+    expect(screen.getByText("Simula, no predice ni garantiza rentabilidad")).toHaveClass("backtest-caveat");
+    expect(styles).toContain(".backtest-report p.backtest-caveat { color: var(--bf-legend-dim); }");
   });
 
   it("uses the incumbent money format for native saved sessions and bets", async () => {

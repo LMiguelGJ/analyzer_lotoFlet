@@ -181,6 +181,44 @@ describe("R1 execution traceability", () => {
     expect(apiClient.getReplay).toHaveBeenCalledTimes(1);
   });
 
+  it("marks a completed profile batch financial ruin as an adverse outcome", async () => {
+    const ruined = { ...batchV5Snapshot, runs: [{ ...batchV5Snapshot.runs[0], stop_category: "financial_ruin" as const, stop_code: "financial_ruin", result: { ...batchV5Snapshot.runs[0].result!, outcome: "ruin" as const, stop_category: "financial_ruin" as const } }] };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(ruined);
+    setup();
+    const frame = await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(within(frame).getByText("Sin capital")).toHaveAttribute("data-status-kind", "outcome");
+    expect(within(frame).getByText("Sin capital")).toHaveAttribute("data-status-value", "ruin");
+    expect(within(frame).getByText("Quiebre")).toHaveAttribute("data-status-value", "ruin");
+    expect(within(frame).queryByText("Ejecución completada")).not.toBeInTheDocument();
+  });
+
+  it("marks a single-profile ruin as an adverse outcome", async () => {
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot, runs: [{ ...profileSnapshot.runs[0], result: { ...profileSnapshot.runs[0].result!, outcome: "ruin" } }] });
+    setup();
+    const frame = await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(within(frame).getByText("Sin capital")).toHaveAttribute("data-status-kind", "outcome");
+    expect(within(frame).getByText("Sin capital")).toHaveAttribute("data-status-value", "ruin");
+    expect(within(frame).getByText("Quiebre")).toHaveAttribute("data-status-value", "ruin");
+    expect(within(frame).queryByText("Ejecución completada")).not.toBeInTheDocument();
+  });
+
+  it("shows plain-language classic provenance, folds identifiers, and signs positive delta", async () => {
+    const { user } = setup();
+    const rows = await screen.findByLabelText("Proveniencia del resultado");
+    expect(within(rows).getByText("Versión del cálculo").nextElementSibling).toHaveTextContent("1");
+    expect(within(rows).getByText("Fuente").nextElementSibling).toHaveTextContent("Historial congelado de Quiniela 80");
+    expect(screen.queryByText("history.json")).not.toBeInTheDocument();
+    expect(screen.queryByText("abc")).not.toBeInTheDocument();
+    expect(screen.getByText("Cambio respecto del inicio").nextElementSibling).toHaveTextContent("+RD$40");
+
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    const technical = screen.getByText("Cómo se hizo");
+    expect(technical.closest("details")).not.toHaveAttribute("open");
+    await user.click(technical);
+    expect(screen.getByText("SHA-256 historial").nextElementSibling).toHaveTextContent("abc");
+    expect(screen.getByText("Historial").nextElementSibling).toHaveTextContent("history.json");
+  });
+
   it("preserves the native profile currency and scale in the selected step", async () => {
     vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...profileSnapshot,
       profile: { ...profileSnapshot.profile, currency: "EUR", scale: 3 },
@@ -590,7 +628,10 @@ describe("LW11 detail", () => {
     expect(navigation).toHaveClass("flex-wrap");
     const resultFrame = screen.getByRole("region", { name: "Ejecución 1" });
     expect(resultFrame).toHaveAttribute("data-result-family", "classic-individual");
-    expect(within(resultFrame).getByText("Historial: history.json")).toBeInTheDocument();
+    // Product decision: the result plate names the source in plain language; file names and hashes live in the
+    // "Parámetros y datos" tab, folded under "Cómo se hizo".
+    expect(within(resultFrame).getAllByText("Historial congelado de Quiniela 80").length).toBeGreaterThan(0);
+    expect(within(resultFrame).queryByText(/history\.json/)).not.toBeInTheDocument();
     expect(repeat).toHaveAttribute("href", `/simulaciones/nueva?base=${encodeURIComponent(id)}`);
     await user.click(repeat);
     await waitFor(() => expect(router.state.location.pathname).toBe("/simulaciones/nueva"));
@@ -629,7 +670,7 @@ describe("LW11 detail", () => {
     expect(screen.getByText("Retorno por peso apostado").nextElementSibling).toHaveTextContent("0.456789");
   });
   it.each([
-    [40, "RD$40"],
+    [40, "+RD$40"],
     [-15, "-RD$15"],
     [0, "RD$0"],
   ])("shows the API-projected delta %i without subtracting balances in the browser", async (delta, displayed) => {
