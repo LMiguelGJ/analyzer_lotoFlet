@@ -13,7 +13,7 @@ import { StatusLabel } from "../../components/StatusLabel";
 import { Disclosure, Figure, Loading, SectionHeader, Stat } from "../../components/ui";
 import type { FigureVariant } from "../../components/ui";
 import { formatDOP, formatTwoDigit } from "../../lib/format";
-import { experimentResultViewModel } from "../../lib/simulation-result-model";
+import { experimentResultViewModel, FROZEN_HISTORY_SOURCE_LABEL } from "../../lib/simulation-result-model";
 import { PROFILE_COLLISION_LABELS, PROFILE_OUTCOME_LABELS, profileMoney } from "../../lib/profile-display";
 import { FIELD_HELP_DELTA, FIELD_LABEL_DELTA, SELECTOR_LABELS, SETTLEMENT_LABELS, STAKING_LABELS } from "../../lib/ui-labels";
 import { PAGE_SIZE, pageOffset, replayIndex } from "./replay";
@@ -28,6 +28,19 @@ function storedDate(label: string) {
 }
 function stopCategoryLabel(category: string) {
   return ({ financial_goal: "Meta financiera alcanzada", financial_ruin: "Quiebre financiero", recovery_end: "Fin de escalera de recuperación", interrupted: "Interrumpida", configured_limit: "Límite configurado", operational_budget: "Límite operativo; fuente incompleta", operational_window: "Ventana operativa; fuente incompleta", source_end: "Fin de la fuente guardada", unknown: "Cierre no disponible" } as Record<string, string>)[category] ?? "Cierre no reconocido";
+}
+function stopReasonLabel(reason: string) {
+  return ({
+    insufficient_capital: "Capital insuficiente",
+    financial_ruin: "Quiebre financiero",
+    max_bet_draws: "Límite de apuestas alcanzado",
+    max_elapsed_draws: "Límite de sorteos transcurridos alcanzado",
+    max_draws: "Límite de sorteos alcanzado",
+    financial_goal: "Meta financiera alcanzada",
+    source_end: "Fin de la fuente guardada",
+    interrupted: "Interrumpida",
+    cancelled: "Cancelada",
+  } as Record<string, string>)[reason] ?? "Cierre registrado por el sistema";
 }
 function detailError(error: unknown) {
   if (error instanceof NetworkError) return "No se pudo contactar al servidor. El cálculo puede continuar en el servidor; comprobá el estado desde la cola antes de reintentar.";
@@ -234,6 +247,7 @@ function ProfileBatchParameters({ data, run }: { data: ProfileBatchExperimentSum
     <dt>Restricciones solicitadas</dt><dd><code>{JSON.stringify(admission.requested_constraints)}</code></dd>
     <dt>Restricciones efectivas</dt><dd><code>{JSON.stringify(admission.effective_constraints)}</code></dd>
     <dt>Política de ejecución</dt><dd>Revisión {admission.policy_revision} · <code>{JSON.stringify(admission.policy)}</code></dd>
+    {isProfileBatchRun(run) && run.result && <><dt>Motivo de cierre (código)</dt><dd className="font-mono">{run.result.stop_reason}</dd></>}
     <dt>Versión de código</dt><dd className="font-mono">{data.sources.code_version}</dd>
   </dl></div>;
 }
@@ -323,9 +337,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
   const visiblePage = !loading && !error && page?.offset === offset ? page : null;
   const current = visiblePage?.items[cursor - offset];
   const resultModel = experimentResultViewModel(data, run);
-  const plateModel = resultModel?.family === "classic-individual"
-    ? { ...resultModel, source: "Historial congelado de Quiniela 80" }
-    : resultModel;
+  const plateModel = resultModel;
   return <SimulationResultFrame model={plateModel} className="mt-6" statusDisplay={statusDisplay}>
     <div>
     {run.result && <>
@@ -338,7 +350,7 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
           <Stat label="Sorteos jugados" value={<Figure value={drawCount ?? "—"} />} />
         </div>
         <p>Motivo de cierre: {closeReason}</p>
-        {isProfileBatchRun(run) && <dl className="data-list mt-2"><dt>Cierre registrado</dt><dd className="break-words">{run.result.stop_reason}</dd></dl>}
+        {isProfileBatchRun(run) && <dl className="data-list mt-2"><dt>Cierre registrado</dt><dd className="break-words">{stopReasonLabel(run.result.stop_reason)}</dd></dl>}
         <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
         <p className="text-sm">Tu ganancia o pérdida está en «Cambio respecto del inicio», más abajo.</p>
       </section>
@@ -348,9 +360,9 @@ function RunView({ data, run }: { data: ExperimentSummary; run: AnyRunSummary })
         <dt>{isProfileRun(run) ? "Duración transcurrida" : "Límite de duración"}</dt><dd className="data-list-numeric">{isProfileExperiment(data) || isProfileBatchExperiment(data) ? isProfileRun(run) ? `${run.result.elapsed_draws} sorteos transcurridos` : `${run.result.bets_count} sorteos jugados` : data.request.conditions.max_bets != null ? `${data.request.conditions.max_bets} sorteos` : data.request.conditions.max_minutes != null ? `${data.request.conditions.max_minutes} minutos` : "Sin límite"}</dd>
         <dt>{FIELD_LABEL_DELTA}</dt><dd className="data-list-numeric" aria-describedby="detail-delta-help"><Figure value={signedDelta ?? "No disponible"} variant={deltaVariant} align="right" /><span id="detail-delta-help" className="field-help block text-right">{FIELD_HELP_DELTA}</span></dd>
       </dl>
-      {tab === "Resultado" && !isProfileExperiment(data) && <dl className="data-list result-provenance" aria-label="Proveniencia del resultado">
+      {tab === "Resultado" && (!isProfileExperiment(data) || isProfileBatchExperiment(data)) && <dl className="data-list result-provenance" aria-label="Proveniencia del resultado">
         <dt>Versión del cálculo</dt><dd>{data.sources.code_version || "No disponible"}</dd>
-        <dt>Fuente</dt><dd>Historial congelado de Quiniela 80</dd>
+        <dt>Fuente</dt><dd>{FROZEN_HISTORY_SOURCE_LABEL}</dd>
       </dl>}
     </>}
     {!run.result && <>

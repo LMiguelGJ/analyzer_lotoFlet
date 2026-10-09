@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 // Contract coverage: F-RESULT-001–F-RESULT-018 detail verdict, honest closure, backend values, dynamic stakes, absent results, profile currency/positions, status vocabularies and folded technical copy; F-RESULT-027 exact deep-link replay; F-RESULT-028 polling; F-RESULT-029 stale response rejection; F-RESULT-030 differentiated errors; F-RESULT-031 paginated/keyboard replay with immutable final metrics; F-RESULT-032 axe.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../App";
+import { FROZEN_HISTORY_SOURCE_LABEL } from "../../lib/simulation-result-model";
 import { verdictPhrase } from "./DetailPage";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import type { Bet, ExperimentSummary, Page, ProfileBatchExperimentSummary, ProfileExperimentSummary, ReplayPage } from "../../api/types";
@@ -171,7 +172,7 @@ describe("R1 execution traceability", () => {
     if (version === 5) {
       expect(within(step).getByText("Índice del sorteo en la fuente").nextElementSibling).toHaveTextContent("7");
       expect(within(start).getByText("Índice de inicio en la fuente").nextElementSibling).toHaveTextContent("5");
-      expect(screen.getByText("Cierre registrado").nextElementSibling).toHaveTextContent("max_bet_draws");
+      expect(screen.getByText("Cierre registrado").nextElementSibling).toHaveTextContent("Límite de apuestas alcanzado");
       await user.click(screen.getByRole("tab", { name: "Apuestas" }));
       expect(screen.getByRole("columnheader", { name: "Índice en la fuente" })).toBeInTheDocument();
     } else {
@@ -297,7 +298,7 @@ describe("R1 execution traceability", () => {
     const start = await screen.findByRole("region", { name: "Inicio de la ejecución" });
     expect(within(start).getByText("Inicio solicitado").nextElementSibling).toHaveTextContent("2025-01-01 05:10");
     expect(within(start).getByText("Índice de inicio en la fuente").nextElementSibling).toHaveTextContent("5");
-    expect(screen.getByText("Cierre registrado").nextElementSibling).toHaveTextContent("max_bet_draws");
+    expect(screen.getByText("Cierre registrado").nextElementSibling).toHaveTextContent("Límite de apuestas alcanzado");
     expect(screen.getByText("No hay apuestas registradas en este resultado.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Siguiente apuesta" })).toBeDisabled();
     expect(screen.queryByRole("region", { name: "Detalle de la apuesta mostrada" })).not.toBeInTheDocument();
@@ -489,7 +490,8 @@ describe("profile batch v5 detail", () => {
     expect(screen.getByRole("link", { name: "Comparar simulaciones" })).toHaveAttribute("href", "/simulaciones/exp/comparacion");
     expect(screen.getByRole("link", { name: "Repetir con cambios" })).toHaveAttribute("href", "/simulaciones/nueva/sesion?base=exp");
     expect(run).toHaveAttribute("data-result-family", "profile-batch-v5");
-    expect(within(run).getByText(`Dataset: ${"a".repeat(64)}`)).toBeInTheDocument();
+    expect(run.querySelector(".simulation-result-source")).toHaveTextContent(FROZEN_HISTORY_SOURCE_LABEL);
+    expect(within(run).queryByText(/^Dataset:/)).not.toBeInTheDocument();
     expect(screen.getByText("Neto").nextElementSibling).toHaveTextContent("-USD 2.50");
     expect(within(screen.getByRole("region", { name: "Veredicto" })).getByText(/Motivo de cierre:/)).toHaveTextContent("Límite configurado");
     const technical = Array.from(run.querySelectorAll("details")).find((details) => details.textContent?.includes("Versión de solicitud"));
@@ -497,7 +499,11 @@ describe("profile batch v5 detail", () => {
     expect(screen.getByText("Categoría de parada (código)").nextElementSibling).toHaveTextContent("configured_limit");
     expect(screen.getByText("Motivo informado").nextElementSibling).toHaveTextContent("max_bet_draws");
     await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    const batchParametersDisclosure = screen.getByText("Cómo se hizo").closest("details");
+    expect(batchParametersDisclosure).not.toHaveAttribute("open");
     await user.click(screen.getByText("Cómo se hizo"));
+    expect(within(batchParametersDisclosure!).getByText("Dataset SHA-256").nextElementSibling).toHaveTextContent("a".repeat(64));
+    expect(within(batchParametersDisclosure!).getByText("Motivo de cierre (código)").nextElementSibling).toHaveTextContent("max_bet_draws");
     expect(screen.getByText("Nombre de ejecución").nextElementSibling).toHaveTextContent("Snapshot cold");
     expect(screen.getByText("Estrategia").nextElementSibling).toHaveTextContent("Snapshot cold · revisión 2");
     const parameters = screen.getByRole("region", { name: "Ejecución 1" });
@@ -513,6 +519,37 @@ describe("profile batch v5 detail", () => {
     expect(within(table).getByText("5")).toBeInTheDocument();
     expect(within(table).getByText("1")).toBeInTheDocument();
     expect(apiClient.getReplay).toHaveBeenCalledWith("exp", 0, 0, 20);
+  });
+  it("shows batch provenance and human closure while keeping dataset identity and raw reason folded", async () => {
+    const base = batchV5Snapshot.runs[0];
+    const saved = { ...batchV5Snapshot, runs: [{ ...base, stop_category: "financial_ruin" as const,
+      stop_reason: "insufficient_capital", stop_code: "financial_ruin",
+      result: { ...base.result!, outcome: "ruin" as const, stop_category: "financial_ruin" as const, stop_reason: "insufficient_capital" },
+    }] };
+    vi.mocked(apiClient.getExperiment).mockResolvedValue(saved);
+    const { user } = setup();
+    const run = await screen.findByRole("region", { name: "Ejecución 1" });
+    expect(within(run).queryByText(/^Dataset:/)).not.toBeInTheDocument();
+    expect(within(run).queryByText(/[a-f0-9]{64}/i)).not.toBeInTheDocument();
+    const provenance = within(run).getByLabelText("Proveniencia del resultado");
+    expect(within(provenance).getByText("Versión del cálculo").nextElementSibling).toHaveTextContent("profile-v1");
+    expect(within(provenance).getByText("Fuente").nextElementSibling).toHaveTextContent(FROZEN_HISTORY_SOURCE_LABEL);
+    const verdict = within(run).getByRole("region", { name: "Veredicto" });
+    expect(within(verdict).getByText("Cierre registrado").nextElementSibling).toHaveTextContent("Capital insuficiente");
+    expect(within(verdict).queryByText("insufficient_capital")).not.toBeInTheDocument();
+    const foldedReason = within(run).getByText("insufficient_capital");
+    expect(foldedReason.closest("details")).not.toHaveAttribute("open");
+    expect(foldedReason).not.toBeVisible();
+    expect(within(verdict).getByText("Sin capital")).toHaveAttribute("data-status-value", "ruin");
+
+    await user.click(screen.getByRole("tab", { name: "Parámetros y datos" }));
+    const technical = screen.getByText("Cómo se hizo");
+    expect(technical.closest("details")).not.toHaveAttribute("open");
+    await user.click(technical);
+    const disclosure = technical.closest("details")!;
+    expect(within(disclosure).getByText("Dataset SHA-256").nextElementSibling).toHaveTextContent("a".repeat(64));
+    expect(within(disclosure).getByText("Motivo de cierre (código)").nextElementSibling).toHaveTextContent("insufficient_capital");
+    expect(disclosure).toHaveAttribute("open");
   });
   it.each([
     ["pending", "pending", "unknown", "pending"],

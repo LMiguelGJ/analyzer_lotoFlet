@@ -30,6 +30,7 @@ export type SimulationResultViewModel = ResultViewModelBase & (
 );
 
 const detailSections = ["Resultado", "Apuestas", "Parámetros y datos"] as const;
+export const FROZEN_HISTORY_SOURCE_LABEL = "Historial congelado de Quiniela 80";
 
 function isProfileV1(data: ExperimentSummary): data is ProfileV1ExperimentSummary {
   return isProfileExperiment(data) && data.request.schema_version === 1;
@@ -55,11 +56,11 @@ export function experimentResultViewModel(data: ExperimentSummary, run: AnyRunSu
   };
   if (!isProfileExperiment(data)) {
     if (isProfileRun(run)) return null;
-    return { ...base, family: "classic-individual", source: `Historial: ${data.sources.history_id}`, payload: data };
+    return { ...base, family: "classic-individual", source: FROZEN_HISTORY_SOURCE_LABEL, payload: data };
   }
   if (isProfileBatchExperiment(data)) {
     if (!isProfileBatchRun(run)) return null;
-    return { ...base, family: "profile-batch-v5", source: `Dataset: ${data.batch_admission.source_identity.dataset_sha256}`, payload: data };
+    return { ...base, family: "profile-batch-v5", source: FROZEN_HISTORY_SOURCE_LABEL, payload: data };
   }
   const version = data.request.schema_version;
   if (!isProfileRun(run) || isProfileBatchRun(run) || (run.result && run.result.schema_version !== version)) return null;
