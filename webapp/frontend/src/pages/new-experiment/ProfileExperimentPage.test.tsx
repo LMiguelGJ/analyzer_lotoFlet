@@ -17,7 +17,7 @@ const id = "c".repeat(32);
 async function advanceTo(user: ReturnType<typeof userEvent.setup>, step: number) {
   while (Number(screen.getByRole("progressbar").getAttribute("aria-valuenow")) < step + 1) {
     const before = Number(screen.getByRole("progressbar").getAttribute("aria-valuenow"));
-    await user.click(within(screen.getByRole("region", { name: "Asistente para crear una simulación" })).getByRole("button", { name: "Siguiente" }));
+    await user.click(within(screen.getByRole("group", { name: "Navegación del asistente" })).getByRole("button", { name: "Siguiente" }));
     await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(before + 1)));
   }
 }

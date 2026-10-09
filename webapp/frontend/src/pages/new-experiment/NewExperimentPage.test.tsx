@@ -1245,6 +1245,8 @@ describe("LW09 single-form creation", () => {
     expect(screen.getByRole("progressbar", { name: "Paso 3 de 5" })).toBeInTheDocument();
     expect(screen.getByText("Condiciones rechazadas; revisá esta sección.")).toBeInTheDocument();
     expect(screen.getByText(/goal is the final balance and must exceed capital/)).toBeInTheDocument();
+    await goToNativeWizardStep(user, 3);
+    expect(screen.getByRole("textbox", { name: "Meta de saldo (RD$)" })).not.toHaveAttribute("aria-invalid", "true");
   });
 
   it("# F-CREATE-032 clears the server notice and the matching field error on edit, keeping an unrelated field's error", async () => {

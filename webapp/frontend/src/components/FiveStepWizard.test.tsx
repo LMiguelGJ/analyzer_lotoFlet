@@ -40,6 +40,13 @@ describe("FiveStepWizard", () => {
     expect(screen.getByRole("button", { name: "5 Revisión" })).toHaveAttribute("aria-disabled", "true");
   });
 
+  it("places wizard actions after the active step content in DOM and tab order", () => {
+    render(<Harness />);
+    const content = screen.getByRole("textbox").closest("label")!;
+    const actions = screen.getByRole("button", { name: "Siguiente" }).parentElement!;
+    expect(content.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("allows direct activation of reached steps by keyboard", async () => {
     const user = userEvent.setup();
     render(<Harness />);

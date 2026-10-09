@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,11 +61,10 @@ function currentWizardStep() {
   };
 }
 async function nextBatchStep(user: ReturnType<typeof userEvent.setup>) {
-  const wizard = within(screen.getByRole("region", { name: "Asistente para crear una simulación" }));
   const before = Number(screen.getByRole("progressbar").getAttribute("aria-valuenow"));
   const step = currentWizardStep();
   console.info(`[ProfileBatchPage wizard] ${JSON.stringify(step)}`);
-  await user.click(wizard.getByRole("button", { name: "Siguiente" }));
+  await user.click(document.querySelector(".m3-wizard-actions .btn-primary") as HTMLButtonElement);
   await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(before + 1)));
 }
 async function goToStep(user: ReturnType<typeof userEvent.setup>, step: string) {
@@ -489,24 +488,25 @@ const user = userEvent.setup(); mount();
 
   it("# F-CREATE-052 accepts the current dataset draw page response after an unrelated condition edit", async () => {
     let resolveDraws!: (page: { total: number; offset: number; limit: number; items: string[] }) => void;
-    vi.mocked(apiClient.getDatasetDraws).mockImplementation(async (_hash, offset) => (offset ?? 0) === 0
-      ? { total: 101, offset: 0, limit: 100, items: ["2025-01-01 08:30"] }
-      : new Promise((resolve) => { resolveDraws = resolve; }));
+    vi.mocked(apiClient.getDatasetDraws).mockReturnValueOnce(new Promise((resolve) => { resolveDraws = resolve; }));
     const user = userEvent.setup(); mount();
-    await reachCapital(user);
-    await user.type(screen.getByLabelText("Máximo sorteos transcurridos"), "5");
-    await goToStep(user, "Alcance");
-    await user.click(screen.getByRole("navigation", { name: "Páginas de sorteos" }).querySelector("button:last-of-type")!);
-    await waitFor(() => expect(apiClient.getDatasetDraws).toHaveBeenCalledWith(dataset.dataset_sha256, 100, expect.anything()));
-    resolveDraws({ total: 101, offset: 100, limit: 100, items: ["2025-01-02 08:30"] });
-    expect(await screen.findByRole("option", { name: /2025-01-01 08:30/ })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "2025-01-02 08:30" })).toBeInTheDocument();
+    await user.selectOptions(await screen.findByLabelText("Perfil de juego"), "local@2");
+    await user.click(await screen.findByRole("button", { name: "Agregar" }));
+    const strategyArticle = screen.getByRole("heading", { name: "Fijas" }).closest("article");
+    await waitFor(() => expect(within(strategyArticle!).getByRole("button", { name: "Quitar" })).toHaveAttribute("aria-pressed", "true"));
+    await nextWizardStep(user);
+    // Unrelated condition edit while the draw catalog request is still in flight.
+    await user.selectOptions(screen.getByLabelText("Cómo contar los premios"), "all");
+    await act(async () => { resolveDraws({ total: 1, offset: 0, limit: 100, items: ["2025-01-01 08:30"] }); });
+    await nextWizardStep(user);
+    expect(await screen.findByRole("option", { name: "2025-01-01 08:30" })).toBeInTheDocument();
   });
-
   it("# F-CREATE-053 does not submit an invalid or stale profile binding and reports source references without financial claims", async () => {
     const user = userEvent.setup(); mount();
     await reachScope(user);
     await screen.findByRole("option", { name: /Historial 1/ });
+    expect(await screen.findByText("2025-01-01 08:30", { exact: false, selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText(`${dataset.source_id} · ${dataset.source_revision} · ${dataset.dataset_sha256}`)).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Historial"), dataset.dataset_sha256);
     await user.selectOptions(screen.getByLabelText("Perfil de juego"), "local@2");
     await user.click(await screen.findByRole("button", { name: "Agregar" }));

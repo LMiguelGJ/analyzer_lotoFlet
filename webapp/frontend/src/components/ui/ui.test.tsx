@@ -148,17 +148,18 @@ describe("signature components", () => {
     expect(screen.queryByText(/Esto simula escenarios/)).toBeNull();
   });
 
-  it("# F-UI-017 renders each order label and value as a separate cell, with the selection on its own row", () => {
+  it("# F-UI-017 renders the order as term/value rows including selection and caveat", () => {
     render(<OrderSummary capital={2000} goal={2800} duration="12 sorteos" coverage="Fríos: números que menos salieron" />);
     const summary = screen.getByRole("region", { name: "Resumen de la orden" });
-    const cells = Array.from(summary.querySelectorAll(".ledger-summary-cell"));
-    expect(cells).toHaveLength(3);
-    expect(cells.map((cell) => cell.querySelector(".ledger-label")?.textContent)).toEqual(["Capital", "Meta de saldo", "Duración"]);
-    expect(cells[0].textContent).toMatch(/^Capital.*2[.,]000$/);
-    const selection = summary.querySelector(".ledger-summary-selection")!;
-    expect(selection.querySelector(".ledger-label")?.textContent).toBe("Cobertura");
-    expect(selection.querySelector("p")?.textContent).toBe("Fríos: números que menos salieron");
-    expect(cells.some((cell) => cell.contains(selection))).toBe(false);
+    const rows = Array.from(summary.querySelectorAll(".ledger-summary-rows > .ledger-summary-row"));
+    expect(rows).toHaveLength(5);
+    expect(rows.map((row) => row.querySelector("dt")?.textContent)).toEqual(["Capital inicial", "Meta de saldo", "Duración", "Cobertura", "Aviso"]);
+    expect(rows[0].querySelector("dd")?.textContent).toMatch(/2[.,]000/);
+    expect(rows[1].querySelector("dd")?.textContent).toMatch(/2[.,]800/);
+    expect(rows[2].querySelector("dd")?.textContent).toBe("12 sorteos");
+    expect(rows[3].querySelector("dd")?.textContent).toBe("Fríos: números que menos salieron");
+    expect(rows[4].querySelector("dd")?.textContent).toContain("Esto simula escenarios");
+    expect(summary.querySelector(".ledger-summary-cell")).toBeNull();
   });
 
   it("# F-UI-018 shows all live order figures and keeps the caveat visible", () => {

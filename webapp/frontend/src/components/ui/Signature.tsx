@@ -40,24 +40,29 @@ export interface OrderSummaryProps {
   caveat?: string;
 }
 
-function SummaryCell({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="ledger-summary-cell">
-    <span className="ledger-label">{label}</span>
-    {typeof children === "string" || typeof children === "number" ? <Figure value={children} /> : children}
-  </div>;
-}
-
 export function OrderSummary({ capital, goal, duration, coverage, caveat = DEFAULT_CAVEAT }: OrderSummaryProps) {
   return <section className="ledger-block" aria-label="Resumen de la orden">
-    <div className="ledger-summary-cells">
-      <SummaryCell label="Capital">{capital == null ? "Sin definir" : <Money amount={capital} />}</SummaryCell>
-      <SummaryCell label="Meta de saldo">{goal == null ? "Sin definir" : <Money amount={goal} />}</SummaryCell>
-      <SummaryCell label="Duración">{duration}</SummaryCell>
-    </div>
-    <div className="ledger-summary-selection">
-      <span className="ledger-label">Cobertura</span>
-      <p>{coverage}</p>
-    </div>
-    <p className="ledger-caveat">{caveat}</p>
+    <dl className="ledger-summary-rows">
+      <div className="ledger-summary-row">
+        <dt className="ledger-label">Capital inicial</dt>
+        <dd className="ledger-summary-value">{capital == null ? "Sin definir" : <Money amount={capital} />}</dd>
+      </div>
+      <div className="ledger-summary-row">
+        <dt className="ledger-label">Meta de saldo</dt>
+        <dd className="ledger-summary-value">{goal == null ? "Sin definir" : <Money amount={goal} />}</dd>
+      </div>
+      <div className="ledger-summary-row">
+        <dt className="ledger-label">Duración</dt>
+        <dd className="ledger-summary-value">{typeof duration === "string" || typeof duration === "number" ? <Figure value={duration} /> : duration}</dd>
+      </div>
+      <div className="ledger-summary-row">
+        <dt className="ledger-label">Cobertura</dt>
+        <dd className="ledger-summary-value">{coverage}</dd>
+      </div>
+      <div className="ledger-summary-row">
+        <dt className="ledger-label">Aviso</dt>
+        <dd className="ledger-summary-value ledger-caveat">{caveat}</dd>
+      </div>
+    </dl>
   </section>;
 }

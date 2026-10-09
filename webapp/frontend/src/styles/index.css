@@ -159,8 +159,10 @@
   .ledger-summary-cell .ledger-figure { white-space: normal; overflow-wrap: anywhere; }
   .ledger-summary-selection { padding-top: 16px; }
   .ledger-summary-selection p { margin: 0; overflow-wrap: anywhere; }
-  .ledger-summary-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
-  .ledger-summary-row { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--md-sys-color-outline-variant); padding: 8px 0; }
+  .ledger-summary-rows { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .ledger-summary-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--md-sys-color-outline-variant); padding: 8px 0; }
+  .ledger-summary-value { min-width: 0; margin: 0; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+  .ledger-summary-value.ledger-caveat { margin: 0; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-body-small-size); }
   .ledger-caveat { margin: 16px 0 0; color: var(--md-sys-color-on-surface-variant); font-size: var(--md-sys-typescale-body-small-size); }
   .ledger-verdict-title { font-size: var(--md-sys-typescale-headline-small-size); }
   .ledger-verdict-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 16px; margin-block: 24px; }
@@ -185,6 +187,7 @@
   .metric-item dt, .metric-item .field-label { color: var(--md-sys-color-on-surface-variant); }
   .metric-item dd, .metric-value { margin-top: 4px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
   .section-header { margin-bottom: 16px; font-family: var(--font-heading); font-size: var(--md-sys-typescale-title-large-size); font-style: normal; font-weight: 500; }
+  .m3-wizard-frame { min-width: 0; }
   .m3-wizard { display: grid; gap: 16px; margin: 0 0 20px; padding: 0; }
   .wizard-progress-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   .wizard-stepper { min-width: 0; border: 1px solid var(--bf-rule); background: var(--bf-chassis-rail); }
@@ -321,7 +324,13 @@
   .backtest-definitions dd { text-align: left; }
 }
 
+@media (max-width: 899px) {
+  .m3-wizard-frame { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .m3-wizard-actions { position: sticky; bottom: calc(56px + env(safe-area-inset-bottom)); z-index: 25; border-top: 1px solid var(--bf-rule); background: var(--bf-chassis-rail); padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
+}
+
 @media (min-width: 900px) {
+  .m3-wizard-frame { padding-bottom: 0; }
   .experiment-card-list, .comparison-card-list { display: none; }
   .experiment-wide-table, .comparison-wide-table { display: block; }
   .backtest-report-table { display: block; }
