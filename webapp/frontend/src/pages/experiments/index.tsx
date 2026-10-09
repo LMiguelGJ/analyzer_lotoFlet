@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiClient, ApiError, NetworkError } from "../../api/client";
 import type { SimulationListParams } from "../../api/client";
-import { isProfileBatchExperiment, isProfileExperiment } from "../../api/types";
+import { isProfileBatchExperiment, isProfileExperiment, isProfileRun } from "../../api/types";
 import type { ExperimentStatus, ExperimentSummary, SimulationListing, SimulationScope } from "../../api/types";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { DataTable } from "../../components/DataTable";
@@ -317,11 +317,18 @@ export function ExperimentsPage() {
               <span className="experiment-card-title">{name}</span>
               <StatusChip row={row} />
             </div>
-            <p className="experiment-card-meta">{createdAt(row.created_at)} · {strategy}</p>
-            {detail && <p className="experiment-card-outcome">
-              <span>{detail.runs.length === 1 && detail.runs[0].result ? "Cambio respecto del inicio" : "Resultado financiero"}</span>
-              {result ? <Figure value={result.text} variant={result.variant} /> : <strong>{detail.runs.length === 1 ? "Sin resultado guardado" : "Varias ejecuciones · abrí para revisar"}</strong>}
-            </p>}
+            <dl className="experiment-card-data">
+              <div><dt>Creado</dt><dd>{createdAt(row.created_at)}</dd></div>
+              <div><dt>Tipo</dt><dd>{strategy}</dd></div>
+              {detail && <>
+                <div><dt>Capital</dt><dd>{isProfileExperiment(detail) ? profileMoney(detail, detail.display.capital) : formatDOP(detail.request.conditions.capital)}</dd></div>
+                <div><dt>Meta</dt><dd>{isProfileExperiment(detail) ? profileMoney(detail, detail.display.goal) : formatDOP(detail.request.conditions.goal)}</dd></div>
+                <div><dt>Duración</dt><dd>{detail.runs.length === 1 && detail.runs[0].result
+                  ? `${isProfileRun(detail.runs[0]) ? detail.runs[0].result.elapsed_draws : detail.runs[0].result.bets_count} sorteos`
+                  : "Sin dato"}</dd></div>
+                <div className="experiment-card-result"><dt>{detail.runs.length === 1 && detail.runs[0].result ? "Resultado neto" : "Resultado"}</dt><dd>{result ? <Figure value={result.text} variant={result.variant} /> : detail.runs.length === 1 ? "Sin resultado guardado" : "Varias ejecuciones · abrí para revisar"}</dd></div>
+              </>}
+            </dl>
             <div className="experiment-card-actions">
               <Link to={href} className="btn btn-secondary" aria-label={`Abrir resultado de ${name}`}>Abrir resultado</Link>
               <RowActions row={row} onDelete={() => { setRowError(""); if (row.source_kind === "experiment") setDeleteTarget(row); }} />

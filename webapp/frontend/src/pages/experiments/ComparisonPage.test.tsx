@@ -147,6 +147,7 @@ describe("profile comparison READ", () => {
     await openDetailedComparison();
     await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
+    expect(screen.getByText("Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito.")).toBeInTheDocument();
     expect(screen.getByText("Datos de origen")).toBeInTheDocument();
     expect(screen.getByText("SHA-256 de datos de origen")).toBeInTheDocument();
     expect(screen.getByText("Evolución comparada · fechas guardadas")).toBeInTheDocument();
@@ -287,9 +288,12 @@ describe("LW12 comparison", () => {
     expect(screen.getByRole("columnheader", { name: "Caída máxima del saldo" })).toBeInTheDocument();
   });
 
-  it("offers mobile comparison cards with literal missing metrics inside the details disclosure", async () => {
+  it("offers mobile comparison cards with net values and literal missing metrics inside the details disclosure", async () => {
     const previousWidth = window.innerWidth;
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    const netRuns = [{ ...runs[0], result: { ...runs[0].result!, net: 25 } }, runs[1]];
+    vi.mocked(apiClient.getExperiment).mockResolvedValue({ ...detail, runs: netRuns });
+    vi.mocked(apiClient.compareExperiment).mockResolvedValue({ ...comparison, runs: netRuns });
     setup();
     await openDetailedComparison();
 
@@ -298,8 +302,9 @@ describe("LW12 comparison", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("Primera");
     expect(rows[0]).toHaveTextContent("RD$150");
+    expect(within(rows[0]).getByText("Cambio neto").nextElementSibling).toHaveTextContent("RD$25");
     expect(rows[1]).toHaveTextContent("Segunda");
-    expect(rows[1]).toHaveTextContent("Sin dato");
+    expect(within(rows[1]).getByText("Cambio neto").nextElementSibling).toHaveTextContent("Sin dato");
     expect(rows[1]).not.toHaveTextContent("RD$0");
     Object.defineProperty(window, "innerWidth", { configurable: true, value: previousWidth });
   });
@@ -343,7 +348,7 @@ describe("LW12 comparison", () => {
     const table = await screen.findByRole("table", { name: "Comparación de ejecuciones" });
     expect(within(table).getByRole("columnheader", { name: "Cambio respecto del inicio" })).toBeInTheDocument();
     expect(screen.getByText("Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.")).toBeInTheDocument();
-    expect(screen.queryByText(/Resultados históricos sobre datos ya investigados/)).not.toBeInTheDocument();
+    expect(screen.getByText("Resultados históricos sobre datos ya investigados: no constituyen validación independiente de rentabilidad.")).toBeInTheDocument();
     expect(screen.getByText("Historial")).toBeInTheDocument();
     expect(screen.getByText("SHA-256 historial")).toBeInTheDocument();
   });

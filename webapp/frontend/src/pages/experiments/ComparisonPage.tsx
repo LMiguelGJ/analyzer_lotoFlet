@@ -135,6 +135,7 @@ export function ComparisonPage() {
           <Stat label="¿Alcanzó la meta?" value={reached ? "Sí" : completedRuns.length ? "No" : "Sin dato"} />
         </div>
         <p className="ledger-caveat">Esto simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
+        <p className="comparison-validation-warning">{profileContext ? "Resultados sobre datos del conjunto seleccionado: no constituyen una validación independiente de rentabilidad ni una probabilidad de éxito." : "Resultados históricos sobre datos ya investigados: no constituyen validación independiente de rentabilidad."}</p>
         <p className="text-sm">El saldo no equivale a ganancia o pérdida; el cambio se calcula frente al capital inicial.</p>
         {leader && <p className="mt-3"><Link className="btn btn-primary" to={`/simulaciones/${encodeURIComponent(id)}?run=${leader.ordinal}&from=comparison`}>Ver detalle de {names(leader.ordinal)}</Link></p>}
       </section>
@@ -154,6 +155,7 @@ export function ComparisonPage() {
             <dl className="comparison-card-metrics">
               <div><dt>Saldo final</dt><dd>{run.result ? money(run.result.final_balance) : missingMetric()}</dd></div>
               <div><dt>Cambio respecto del inicio</dt><dd>{run.result ? money(run.result.delta) : missingMetric()}</dd></div>
+              <div><dt>Cambio neto</dt><dd>{run.result?.net == null ? missingMetric() : money(run.result.net)}</dd></div>
               <div><dt>Motivo de cierre</dt><dd>{run.result ? isProfileRun(run) ? isProfileBatchRun(run) ? profileBatchOutcome(run.result) : profileOutcome(run.result) : <StatusLabel kind="outcome" value={run.result.outcome} /> : missingMetric()}</dd></div>
               <div><dt>Sorteos jugados</dt><dd>{run.result ? isProfileRun(run) ? run.result.bet_draws : run.result.bets_count : missingMetric()}</dd></div>
               <div><dt>Total apostado</dt><dd>{run.result ? money(run.result.wagered) : missingMetric()}</dd></div>

@@ -497,3 +497,47 @@ figure table th, figure table td { border-color: var(--bf-rule); }
   .backtest-report-table { display: block; }
   .backtest-mobile-result { display: none; }
 }
+
+/* T6a: experiment and comparison plates. */
+.experiment-card-list, .comparison-card-list { gap: 12px; }
+.experiment-card, .comparison-card {
+  min-width: 0; padding: 0; border: 1px solid var(--bf-rule); border-radius: 0;
+  background: var(--bf-chassis-rail); box-shadow: none;
+}
+.experiment-card-heading { align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--bf-rule); }
+.experiment-card-title { color: var(--bf-legend); font: 600 1.05rem/1 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
+.experiment-card-data { display: grid; grid-template-columns: minmax(8.5rem, max-content) minmax(0, 1fr); gap: 0 16px; margin: 0; padding: 8px 20px; }
+.experiment-card-data > div { display: contents; }
+.experiment-card-data dt, .comparison-card-metrics dt {
+  padding-block: 10px; border-bottom: 1px solid var(--bf-rule); color: var(--bf-legend-dim);
+  font: 600 0.6rem/1.2 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase;
+}
+.experiment-card-data dd, .comparison-card-metrics dd {
+  min-width: 0; margin: 0; padding-block: 10px; border-bottom: 1px solid var(--bf-rule);
+  color: var(--bf-legend); font-variant-numeric: tabular-nums; overflow-wrap: break-word;
+}
+.experiment-card-data .experiment-card-result dt, .experiment-card-data .experiment-card-result dd { border-bottom: 0; }
+.experiment-card-result dd, .experiment-card-result .ledger-figure { font-size: 1.5rem; }
+.experiment-card-actions { min-height: 64px; padding: 8px 20px; border-top: 1px solid var(--bf-rule); }
+.comparison-card-metrics { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; margin: 0; padding: 8px 20px 16px; }
+.comparison-card-metrics > div { display: grid; grid-template-columns: minmax(8.5rem, max-content) minmax(0, 1fr); gap: 16px; }
+.comparison-card-metrics dt, .comparison-card-metrics dd { border-bottom: 1px solid var(--bf-rule); }
+.comparison-card-metrics dd { text-align: right; }
+.comparison-validation-warning { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--bf-rule); color: var(--bf-legend-dim); font-size: 0.8rem; }
+.experiment-wide-table .data-table-region, .comparison-wide-table .data-table-region { border: 1px solid var(--bf-rule); border-radius: 0; background: var(--bf-chassis-rail); box-shadow: none; }
+.experiment-wide-table .data-table-row, .comparison-wide-table .data-table-row { background: transparent; }
+.experiment-wide-table .data-table-region th, .comparison-wide-table .data-table-region th { border-bottom: 1px solid var(--bf-rule); }
+.experiment-wide-table .data-table-region td, .comparison-wide-table .data-table-region td { border-bottom: 1px solid var(--bf-rule); }
+.experiment-wide-table .data-table-region tbody tr:last-child td, .comparison-wide-table .data-table-region tbody tr:last-child td { border-bottom: 0; }
+.experiment-card .ledger-money-positive, .experiment-card .ledger-money-negative,
+.experiment-card .ledger-figure-positive, .experiment-card .ledger-figure-negative { color: var(--bf-legend); }
+.experiment-card .ledger-chip-danger, .comparison-card .ledger-chip-danger { border-color: var(--bf-alerta); color: var(--bf-alerta); }
+@media (max-width: 899px) {
+  .experiment-card-heading { flex-direction: row; }
+  .experiment-card-data, .comparison-card-metrics { grid-template-columns: minmax(0, 1fr); }
+  .experiment-card-data > div { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .experiment-card-data dt, .comparison-card-metrics dt { padding-bottom: 2px; border-bottom: 0; }
+  .experiment-card-data dd, .comparison-card-metrics dd { padding-top: 2px; }
+  .experiment-card-actions { padding-inline: 12px; }
+  .comparison-card-metrics > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}

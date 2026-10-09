@@ -279,7 +279,7 @@ describe("LW10 experiments list · data and navigation", () => {
     expect(within(card).getByText(/\+.*837/)).toBeInTheDocument();
     expect(within(card).getByText(/2026/)).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "Abrir resultado de Fríos K1" })).toBeVisible();
-    expect(card.querySelector(".experiment-card-meta")).not.toHaveTextContent("todo_o_nada");
+    expect(card.querySelector(".experiment-card-data")).not.toHaveTextContent("todo_o_nada");
     Object.defineProperty(window, "innerWidth", { configurable: true, value: previousWidth });
   });
 
