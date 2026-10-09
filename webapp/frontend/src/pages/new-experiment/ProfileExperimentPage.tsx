@@ -280,7 +280,7 @@ export function ProfileExperimentPage() {
         { title: "3 · Alcance", description: "Elegí el historial compatible y el sorteo inicial." },
         { title: "4 · Capital y datos", description: "Definí nombre, capital, meta y límites." },
         { title: "5 · Revisá y creá", description: "Confirmá la solicitud antes de enviarla." },
-      ]} activeStep={wizard.step} onNext={wizard.next} onBack={wizard.back} busy={posting || uncertain || repeatState === "loading" || inFlight.current}>
+      ]} activeStep={wizard.step} maxReachableStep={wizard.maxReachableStep} onSelectStep={wizard.goTo} onNext={wizard.next} onBack={wizard.back} busy={posting || uncertain || repeatState === "loading" || inFlight.current}>
       {error && <p ref={alertRef} tabIndex={-1} role="alert" className="border-y border-border py-3 text-red-300">{error}</p>}
       {wizard.step === 0 && <section aria-labelledby="profile-prerequisite-title" className="space-y-4"><h3 id="profile-prerequisite-title" className="section-header">Perfil de juego requerido</h3>
         {!profiles && !profileError && <p role="status">Cargando perfiles…</p>}{profileError && <p role="alert">{profileError} <button type="button" className="btn btn-tertiary" onClick={() => setProfileRetry((n) => n + 1)}>Reintentar perfiles</button></p>}
@@ -329,7 +329,7 @@ export function ProfileExperimentPage() {
           <details><summary className="disclosure-summary">Ajustes avanzados</summary><Field label="Límite de sorteos apostados (opcional)" id="bet-draws" value={draft.max_bet_draws} onChange={(value) => edit("max_bet_draws", value)} numeric /></details>
         </div>
       </section>}
-      {wizard.step === 4 && <section aria-labelledby="profile-review-title" className="space-y-4"><h3 id="profile-review-title" className="section-header">Revisá la solicitud</h3><dl className="data-list"><dt>Perfil y revisión</dt><dd>{profileChoice?.item.profile.profile_id} · {profileChoice?.item.profile.revision}</dd><dt>Historial</dt><dd>{datasetChoice?.item.dataset_sha256}</dd><dt>Sorteo inicial</dt><dd>{draft.start_draw}</dd><dt>Selección</dt><dd>{draft.selector} · cobertura {draft.coverage}</dd><dt>Política</dt><dd>{policy}</dd><dt>Nombre y capital</dt><dd>{draft.name} · {draft.capital} → {draft.goal}</dd></dl>
+      {wizard.step === 4 && <section aria-labelledby="profile-review-title" className="space-y-4"><h3 id="profile-review-title" className="section-header">Revisá la solicitud</h3><dl className="data-list"><dt>Perfil y revisión</dt><dd>{profileChoice?.item.profile.profile_id} · {profileChoice?.item.profile.revision}</dd><dt>Historial</dt><dd>{datasetChoice?.item.dataset_sha256}</dd><dt>Sorteo inicial</dt><dd>{draft.start_draw}</dd><dt>Selección</dt><dd>{draft.selector} · cobertura {draft.coverage}</dd><dt>Política</dt><dd>{policy}</dd><dt>Capital</dt><dd>{draft.capital} {profile?.currency ?? "moneda"}</dd><dt>Meta</dt><dd>{draft.goal} {profile?.currency ?? "moneda"}</dd><dt>Duración</dt><dd>{draft.max_elapsed_draws || "Sin límite"} sorteos transcurridos</dd><dt>Advertencia</dt><dd>Simula, no predice ni garantiza rentabilidad.</dd></dl>
         {uncertain && <p role="status">Envío bloqueado para evitar duplicados. <Link className="btn btn-tertiary" to="/simulaciones">Revisá Simulaciones</Link>.</p>}
         <button type="submit" className="btn btn-primary" disabled={disabled}>{posting ? "Creando simulación…" : "Crear simulación y agregar a la cola"}</button>
       </section>}

@@ -252,7 +252,7 @@ export function BacktestCreatePage() {
     {loadError && <div role="alert" className="space-y-2"><p>{loadError}</p><button className="btn btn-secondary" type="button" onClick={() => setRetry((value) => value + 1)}>Reintentar carga</button>{baseId && <Link className="btn btn-tertiary" to="/simulaciones/historicas">Volver a corridas históricas</Link>}</div>}
     {loading && <Loading rows={3} label={baseId ? "Cargando la configuración guardada…" : "Cargando reglas guardadas y datos históricos…"} />}
     {!loading && !loadError && <form onSubmit={(event) => void submit(event)} noValidate className="backtest-form">
-      <FiveStepWizard steps={sections} activeStep={wizard.step} onNext={wizard.next} onBack={wizard.back} busy={loading || submitting || configurationPending}>
+      <FiveStepWizard steps={sections} activeStep={wizard.step} maxReachableStep={wizard.maxReachableStep} onSelectStep={wizard.goTo} onNext={wizard.next} onBack={wizard.back} busy={loading || submitting || configurationPending}>
       {error && <p role="alert" className="backtest-submit-error">{error}</p>}
       {wizard.step === 0 && <section aria-labelledby="backtest-strategy-heading" className="backtest-step">
         <h3 id="backtest-strategy-heading">¿Cómo se eligen los números?</h3>
@@ -307,7 +307,7 @@ export function BacktestCreatePage() {
       </section>}
       {wizard.step === 4 && <section aria-labelledby="backtest-review-heading" className="backtest-step">
         <h3 id="backtest-review-heading">Revisá la corrida histórica</h3>
-        <dl className="data-list"><dt>Nombre</dt><dd>{draft.name || "Sin nombre"}</dd><dt>Estrategia</dt><dd>{draft.parity ? "Tu par/impar" : draft.strategyName ?? SYSTEMS.find(([key]) => key === draft.system)?.[1]} · {draft.coverage} números · {draft.staking}</dd><dt>Reglas</dt><dd>{draft.numbers} números · {draft.positions} posiciones · apuesta mínima RD${draft.minStake}</dd><dt>Capital y meta</dt><dd>RD${draft.capital} · RD${draft.goal}</dd><dt>Alcance</dt><dd>Todo el historial · huellas de origen fijadas</dd></dl>
+        <dl className="data-list"><dt>Nombre</dt><dd>{draft.name || "Sin nombre"}</dd><dt>Estrategia</dt><dd>{draft.parity ? "Tu par/impar" : draft.strategyName ?? SYSTEMS.find(([key]) => key === draft.system)?.[1]} · {draft.coverage} números · {draft.staking}</dd><dt>Reglas</dt><dd>{draft.numbers} números · {draft.positions} posiciones · apuesta mínima RD${draft.minStake}</dd><dt>Capital y meta</dt><dd>RD${draft.capital} · RD${draft.goal}</dd><dt>Capital</dt><dd>RD${draft.capital}</dd><dt>Meta</dt><dd>RD${draft.goal}</dd><dt>Duración</dt><dd>Hasta meta o quiebre; sin límite temporal</dd><dt>Advertencia</dt><dd>{CAVEAT}</dd><dt>Alcance</dt><dd>Todo el historial · huellas de origen fijadas</dd></dl>
         <button className="btn btn-primary" type="submit" disabled={submitting || loading || errors.length > 0 || !inputs || !!configurationError || configurationPending}>{submitting ? "Creando…" : "Crear corrida histórica"}</button>
       </section>}
       </FiveStepWizard>

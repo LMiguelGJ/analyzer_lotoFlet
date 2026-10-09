@@ -549,7 +549,7 @@ export function NewExperimentPage() {
   return <>
     <Link to="/simulaciones" className="mb-4 inline-block link">Volver a simulaciones</Link>
     <form className="max-w-4xl" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-        <FiveStepWizard steps={wizardSteps} activeStep={wizard.step} onNext={wizard.next} onBack={wizard.back} busy={loading || drawLoading || posting || savingStrategy || libraryBusy}>
+        <FiveStepWizard steps={wizardSteps} activeStep={wizard.step} maxReachableStep={wizard.maxReachableStep} onSelectStep={wizard.goTo} onNext={wizard.next} onBack={wizard.back} busy={loading || drawLoading || posting || savingStrategy || libraryBusy}>
           <dl className="m3-wizard-financial" aria-label="Límites financieros siempre visibles">
             <div><dt>Capital</dt><dd>{Number.isInteger(Number(conditions.capital)) && Number(conditions.capital) > 0 ? formatDOP(Number(conditions.capital)) : "Por definir"}</dd></div>
             <div><dt>Meta de saldo</dt><dd>{Number.isInteger(Number(conditions.goal)) && Number(conditions.goal) > 0 ? formatDOP(Number(conditions.goal)) : "Por definir"}</dd></div>
