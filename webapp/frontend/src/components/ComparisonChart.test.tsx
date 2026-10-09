@@ -16,6 +16,10 @@ describe("comparison chronological chart", () => {
     const b = within(figure).getByTestId("series-1");
     expect(a).toHaveAttribute("stroke-dasharray", "none");
     expect(b).toHaveAttribute("stroke-dasharray", "8 5");
+    expect(a).toHaveAttribute("stroke", "var(--bf-legend)");
+    expect(b).toHaveAttribute("stroke", "var(--bf-legend-dim)");
+    expect(within(figure).getByText("A · RD$120")).toBeInTheDocument();
+    expect(within(figure).getByText("B · RD$90")).toBeInTheDocument();
     expect(a.getAttribute("points")?.split(" ")).toHaveLength(2);
     expect(b.getAttribute("points")?.split(" ")).toHaveLength(1);
     const [start, end] = a.getAttribute("points")!.split(" ").map((point) => Number(point.split(",")[0]));

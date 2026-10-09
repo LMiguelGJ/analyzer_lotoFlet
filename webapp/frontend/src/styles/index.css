@@ -376,3 +376,119 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* T5: result plates, chart figures, aggregate reports, and the persisted session ledger. */
+.simulation-result-frame, .backtest-report {
+  min-width: 0;
+  border: 1px solid var(--bf-rule);
+  border-radius: 0;
+  background: var(--bf-chassis-rail);
+  box-shadow: none;
+}
+.simulation-result-heading { padding: 16px 20px; border-bottom: 1px solid var(--bf-rule); }
+.simulation-result-title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.simulation-result-title-row h2 { margin: 0; font: 600 1.05rem/1 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); }
+.simulation-result-status { display: inline-flex; align-items: center; min-height: 28px; padding: 6px 10px; border: 1px solid var(--bf-rule); color: var(--bf-legend-dim); font: 600 0.6rem/1 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
+.simulation-result-status .ledger-chip-success { border: 0; background: var(--bf-signal); color: var(--bf-chassis); }
+.simulation-result-status .ledger-chip-danger { border-color: var(--bf-alerta); background: transparent; color: var(--bf-alerta); }
+.simulation-result-frame:has([data-status-kind="outcome"][data-status-value="goal"]) .simulation-result-status .ledger-chip-success { background: var(--bf-signal); color: var(--bf-chassis); }
+.simulation-result-frame:has([data-status-kind="outcome"][data-status-value="ruin"]) .simulation-result-status .ledger-chip-success,
+.simulation-result-frame:has([data-status-kind="execution"][data-status-value="failed"]) .simulation-result-status .ledger-chip-success { border: 1px solid var(--bf-alerta); background: transparent; color: var(--bf-alerta); }
+.simulation-result-source { margin: 8px 0 0; overflow-wrap: break-word; color: var(--bf-legend-dim); font-size: 0.8rem; }
+.simulation-result-content { min-width: 0; padding: 16px 20px; }
+.simulation-result-content > div { min-width: 0; }
+.simulation-result-content .ledger-block, .backtest-window, .backtest-config, .backtest-report-table,
+.backtest-bets-ledger, .comparison-chart-plate, .simulation-result-content figure {
+  border: 1px solid var(--bf-rule);
+  border-radius: 0;
+  background: var(--bf-chassis-rail);
+  box-shadow: none;
+}
+.simulation-result-content .ledger-block { padding: 20px; }
+.simulation-result-content .ledger-verdict-title { font-family: var(--bf-font-display); }
+.simulation-result-content .ledger-caveat, .backtest-caveat { color: var(--bf-legend-dim); font-size: 0.8rem; }
+.backtest-caveat { margin: 0; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--bf-rule); border-radius: 0; background: transparent; }
+.backtest-context { padding-top: 8px; }
+.backtest-report { padding: 0; }
+.backtest-report > .space-y-5 { padding: 0 20px 20px; }
+.backtest-report-table { overflow-x: auto; }
+.backtest-report caption { color: var(--bf-legend); font-weight: 600; }
+.backtest-report thead th, .backtest-bets-ledger thead th { color: var(--bf-legend-dim); font: 600 0.6rem/1.2 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
+.backtest-report tbody tr, .backtest-bets-ledger tbody tr { background: transparent; }
+.backtest-report th, .backtest-report td, .backtest-bets-ledger th, .backtest-bets-ledger td { border-bottom: 1px solid var(--bf-rule); font-variant-numeric: tabular-nums; }
+.backtest-report-table table, .backtest-bets-ledger table { border-collapse: collapse; }
+.backtest-window, .backtest-config { padding: 16px 20px; }
+.backtest-window dt, .backtest-mobile-result dt, .backtest-definitions dt { color: var(--bf-legend-dim); font: 600 0.6rem/1.2 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
+.backtest-window dd, .backtest-mobile-result dd, .backtest-definitions dd { color: var(--bf-legend); font-variant-numeric: tabular-nums; }
+.backtest-mobile-result > div { border-color: var(--bf-rule); }
+.backtest-mobile-result { border-top: 1px solid var(--bf-rule); }
+.backtest-bets-ledger { overflow-x: auto; padding: 0; }
+.backtest-bets-ledger table { min-width: 760px; }
+.backtest-bets-ledger th, .backtest-bets-ledger td { white-space: nowrap; }
+.backtest-bets-ledger th:first-child, .backtest-bets-ledger td:first-child { white-space: normal; }
+.backtest-bets-ledger [role="row"] { background: transparent; }
+.backtest-window p, .backtest-report p, .backtest-config p { color: var(--bf-legend); }
+.backtest-window .field-help, .backtest-report .field-help { color: var(--bf-legend-dim); }
+.backtest-report .data-list, .backtest-window dl, .backtest-config dl { color: var(--bf-legend); }
+.backtest-definitions { border-top: 1px solid var(--bf-rule); padding-top: 12px; }
+.financial-metrics-plate .metric-item, .financial-metrics-plate .metric-grid, .simulation-result-content .data-list,
+.financial-metrics-plate .data-list, .game-rules-plate .data-list { font-variant-numeric: tabular-nums; }
+.financial-metrics-plate .metric-item dt, .simulation-result-content .data-list dt, .financial-metrics-plate .data-list dt,
+.game-rules-plate .data-list dt, .financial-metrics-plate .metric-item .field-label { color: var(--bf-legend-dim); font: 600 0.6rem/1.2 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
+.financial-metrics-plate .metric-item dd, .financial-metrics-plate .metric-value, .simulation-result-content .data-list dd,
+.financial-metrics-plate .data-list dd, .game-rules-plate .data-list dd { color: var(--bf-legend); }
+.simulation-result-content .data-list, .financial-metrics-plate .data-list, .game-rules-plate .data-list { gap: 0 16px; }
+.simulation-result-content .data-list dt, .simulation-result-content .data-list dd, .financial-metrics-plate .data-list dt,
+.financial-metrics-plate .data-list dd, .game-rules-plate .data-list dt, .game-rules-plate .data-list dd { padding-block: 10px; border-bottom: 1px solid var(--bf-rule); }
+.simulation-result-content .data-list dd, .financial-metrics-plate .data-list dd, .game-rules-plate .data-list dd { margin: 0; }
+.ledger-money-positive, .ledger-money-negative, .ledger-figure-positive, .ledger-figure-negative { color: var(--bf-legend) !important; }
+.ledger-summary-row { border-color: var(--bf-rule); }
+.ledger-summary-row dt, .ledger-summary-row .ledger-label { color: var(--bf-legend-dim); }
+.ledger-summary-row dd { color: var(--bf-legend); }
+.ledger-chip-warning, .ledger-chip-neutral, .ledger-chip-info { border-color: var(--bf-rule); color: var(--bf-legend-dim); }
+.comparison-chart-plate { overflow-x: auto; background: var(--bf-chassis-rail); }
+.comparison-chart-plate svg text { fill: var(--bf-legend-dim); }
+.comparison-chart-plate svg .comparison-chart-end-label { fill: var(--bf-legend); }
+.comparison-chart-plate svg polyline, .comparison-chart-plate svg circle, .comparison-chart-plate svg rect, .comparison-chart-plate svg path { vector-effect: non-scaling-stroke; }
+figure > svg[role="img"] { border: 0; background: transparent; }
+figure > figcaption { color: var(--bf-legend); }
+figure [role="region"] { border-color: var(--bf-rule); background: var(--bf-chassis-rail); }
+figure table th, figure table td { border-color: var(--bf-rule); }
+.simulation-result-content > div > section[aria-label="Veredicto"] { margin: 0; border-bottom: 0; }
+.simulation-result-content > div > section[aria-label="Veredicto"] + dl.data-list { margin: 0; padding: 8px 20px; border: 1px solid var(--bf-rule); border-top: 0; background: var(--bf-chassis-rail); }
+.simulation-result-content > div > section[aria-label="Inicio de la ejecución"] { padding: 16px 20px; border: 1px solid var(--bf-rule); border-top: 0; background: var(--bf-chassis-rail); }
+.backtest-session-list { display: grid; gap: 0; margin: 0; padding: 0; border: 1px solid var(--bf-rule); background: var(--bf-chassis-rail); list-style: none; }
+.backtest-session { display: grid; gap: 8px; min-width: 0; padding: 16px 20px; border-bottom: 1px solid var(--bf-rule); }
+.backtest-session:last-child { border-bottom: 0; }
+.backtest-session h4, .backtest-session p { margin: 0; }
+.backtest-session h4 { font: 600 0.7rem/1 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
+.backtest-session .field-help, .backtest-session-bets > p { color: var(--bf-legend-dim); }
+.backtest-session-bets { padding: 16px 0 0; border-top: 1px solid var(--bf-rule); }
+.backtest-session-bets h4 { font: 600 0.7rem/1 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
+.backtest-session-bets nav p { color: var(--bf-legend-dim); font-size: 0.8rem; }
+.financial-metrics-plate, .game-rules-plate {
+  min-width: 0; padding: 16px 20px; border: 1px solid var(--bf-rule); border-radius: 0;
+  background: var(--bf-chassis-rail); box-shadow: none;
+}
+.financial-metrics-plate .section-header { color: var(--bf-legend); font: 600 1.05rem/1 var(--bf-font-display); letter-spacing: var(--bf-tracking-legend); text-transform: uppercase; }
+.financial-metrics-plate .data-list { grid-template-columns: minmax(8.5rem, max-content) minmax(0, 1fr); }
+.game-rules-plate > .field-help { color: var(--bf-legend-dim); }
+.game-rules-plate > .data-list { grid-template-columns: minmax(8.5rem, max-content) minmax(0, 1fr); }
+.game-rules-plate > details { border-top: 1px solid var(--bf-rule); }
+.game-rules-plate > details > summary { color: var(--bf-legend); }
+
+@media (max-width: 899px) {
+  .simulation-result-content { padding: 12px; }
+  .backtest-report > .space-y-5 { padding-inline: 12px; }
+  .backtest-mobile-result > div { align-items: baseline; padding: 12px 4px; }
+  .backtest-bets-ledger { padding: 0; }
+  .backtest-bets-ledger table { min-width: 760px; }
+  .backtest-session { padding-inline: 12px; }
+  .financial-metrics-plate, .game-rules-plate { padding: 16px 12px; }
+  .simulation-result-content .data-list, .financial-metrics-plate .data-list, .game-rules-plate > .data-list { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .simulation-result-content .data-list dd, .financial-metrics-plate .data-list dd, .game-rules-plate > .data-list dd { padding-top: 2px; }
+}
+@media (min-width: 900px) {
+  .backtest-report-table { display: block; }
+  .backtest-mobile-result { display: none; }
+}

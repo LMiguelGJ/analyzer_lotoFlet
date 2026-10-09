@@ -198,6 +198,7 @@ FORM: A quiet technical workshop; facts over decoration, legibility over dashboa
   --color-negative: var(--bf-legend);
   --color-warning: var(--bf-alerta);
   --color-info: var(--bf-legend-dim);
+  /* Legacy chart aliases stay strictly neutral; series identity comes from marks and dash patterns. */
   --chart-1: var(--bf-legend);
   --chart-2: var(--bf-legend-dim);
   --chart-3: var(--bf-legend-dim);

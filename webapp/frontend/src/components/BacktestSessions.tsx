@@ -94,8 +94,8 @@ function SessionsBrowser({ report, formatMoney }: { report: BacktestReport; form
     {page?.trace.status === "not_stored" && <p>Detalle no almacenado</p>}
     {page && page.trace.status !== "not_stored" && <>
       {page.items.length === 0 && <p>No hay sesiones almacenadas en esta página.</p>}
-      <ul aria-label="Sesiones almacenadas" className="space-y-4">
-        {page.items.map((session) => <li key={session.ordinal} className="space-y-2">
+      <ul aria-label="Sesiones almacenadas" className="backtest-session-list">
+        {page.items.map((session) => <li key={session.ordinal} className="backtest-session">
           <h4>Sesión {session.ordinal + 1}</h4>
           <p className="field-help">Ordinal original: {session.ordinal} (desde 0)</p>
           <p>Primera apuesta registrada: {session.first_bet?.label ?? "ninguna"}{session.first_bet?.source_index != null && ` · posición en fuente ${session.first_bet.source_index}`}</p>
@@ -115,7 +115,7 @@ function SessionBets({ id, ordinal, formatMoney }: { id: string; ordinal: number
   const heading = useRef<HTMLHeadingElement>(null);
   const load = useCallback(() => apiClient.getBacktestSessionBets(id, ordinal, offset, PAGE_SIZE), [id, ordinal, offset]);
   const { state, retry } = usePage(`${id}:${ordinal}:${offset}`, load);
-  return <section aria-label={`Detalle de la sesión ${ordinal + 1}`} className="space-y-3">
+  return <section aria-label={`Detalle de la sesión ${ordinal + 1}`} className="backtest-session-bets space-y-3">
     <h4 ref={heading} tabIndex={-1}>Apuestas de la sesión {ordinal + 1} · página {Math.floor(offset / PAGE_SIZE) + 1}</h4>
     {state.status === "loading" && <p role="status">Cargando apuestas…</p>}
     {state.status === "error" && <><p role="alert">{state.error}</p><button type="button" className="btn btn-secondary" onClick={() => { focusPage(heading.current); retry(); }}>Reintentar apuestas</button></>}

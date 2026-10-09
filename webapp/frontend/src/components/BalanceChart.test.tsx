@@ -7,7 +7,11 @@ describe("LW11 balance chart", () => {
   it("plots only persisted balances and the actual goal, with a textual alternative", () => {
     render(<BalanceChart points={[{ ordinal: 1, balance: 140 }, { ordinal: 2, balance: 90 }]} goal={200} total={4} />);
     expect(screen.getByText(/2 de 4 sorteos/)).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /saldos registrados/ })).toBeInTheDocument();
+    const image = screen.getByRole("img", { name: /saldos registrados/ });
+    expect(image).toBeInTheDocument();
+    expect(image.querySelector('line[stroke="var(--bf-legend-dim)"]')).toHaveAttribute("stroke-dasharray", "2 4");
+    expect(image.querySelector('polyline[stroke="var(--bf-legend)"]')).toBeInTheDocument();
+    expect(image).toHaveTextContent("Saldo · RD$");
     expect(screen.getByRole("row", { name: /Sorteo 1.*140/ })).toBeInTheDocument();
     expect(screen.getByText(/Meta de saldo:/)).toHaveTextContent("200");
     expect(screen.queryByRole("row", { name: /Sorteo 3/ })).not.toBeInTheDocument();

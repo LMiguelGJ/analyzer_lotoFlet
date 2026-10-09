@@ -4,7 +4,7 @@ export interface ComparisonPoint { ordinal: number; label: string; balance: numb
 export interface ComparisonSeries { ordinal: number; name: string; visible: boolean; total: number; points: ComparisonPoint[]; reductionMethod?: string; initialCapital?: number; startLabel?: string }
 
 const patterns = ["none", "8 5", "2 5", "12 4 2 4", "4 3 1 3"];
-const colors = ["var(--color-accent, currentColor)", "var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
+const colors = ["var(--bf-legend)", "var(--bf-legend-dim)", "var(--bf-legend)", "var(--bf-legend-dim)", "var(--bf-legend)"];
 const markers = ["circle", "square", "diamond", "triangle", "cross"];
 function time(label: string) { return Date.parse(label.replace(" ", "T")); }
 
@@ -30,11 +30,11 @@ export function ComparisonChart({ series, onToggle, formatMoney = formatDOP }: {
         {entry.name} · {markers[entry.ordinal % markers.length]}, {patterns[entry.ordinal % patterns.length] === "none" ? "línea continua" : "línea a trazos"}
       </label>)}
     </fieldset>
-    {dated.length ? <section aria-label="Gráfico comparado" tabIndex={0} className="max-w-full overflow-x-auto border border-border-control bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
+    {dated.length ? <section aria-label="Gráfico comparado" tabIndex={0} className="comparison-chart-plate max-w-full overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
       <svg role="img" aria-label="Saldos por fecha y hora; cada serie se distingue por trazos y marcadores, con datos textuales a continuación" viewBox="0 0 800 240" className="min-w-[640px] w-full h-auto">
-        <line x1="55" x2="755" y1="190" y2="190" stroke="currentColor" />
-        <text x="55" y="215" fontSize="12" fill="currentColor">{timeLabels[0]?.replace("T", " ")}</text>
-        <text x="755" y="215" textAnchor="end" fontSize="12" fill="currentColor">{timeLabels[timeLabels.length - 1]?.replace("T", " ")}</text>
+        {[35, 100, 165, 230].map((lineY) => <line key={lineY} x1="55" x2="755" y1={lineY} y2={lineY} stroke="var(--bf-rule)" />)}
+        <text x="55" y="215" fontSize="12" fill="var(--bf-legend-dim)">{timeLabels[0]?.replace("T", " ")}</text>
+        <text x="755" y="215" textAnchor="end" fontSize="12" fill="var(--bf-legend-dim)">{timeLabels[timeLabels.length - 1]?.replace("T", " ")}</text>
         {series.filter((entry) => entry.visible).map((entry) => {
           const points = entry.points.filter((point) => Number.isFinite(time(point.label))).sort((a, b) => time(a.label) - time(b.label));
           const pattern = patterns[entry.ordinal % patterns.length];
@@ -50,6 +50,7 @@ export function ComparisonChart({ series, onToggle, formatMoney = formatDOP }: {
             {points.map((point) => <g key={point.ordinal} transform={`translate(${x(point.label)} ${y(point.balance)})`}>
               {entry.ordinal % markers.length === 0 ? <circle r="3.5" fill={color} /> : entry.ordinal % markers.length === 1 ? <rect x="-3.5" y="-3.5" width="7" height="7" fill={color} /> : entry.ordinal % markers.length === 2 ? <path d="M0 -5 5 0 0 5 -5 0Z" fill={color} /> : entry.ordinal % markers.length === 3 ? <path d="M0 -5 5 4 -5 4Z" fill={color} /> : <path d="M-4 -4 4 4 M4 -4 -4 4" fill="none" stroke={color} strokeWidth="2" />}
             </g>)}
+            {points.length > 0 && <text className="comparison-chart-end-label" x={x(points[points.length - 1].label)} y={Math.max(18, y(points[points.length - 1].balance) - 8)} textAnchor="end" fill="var(--bf-legend)" fontSize="12">{entry.name} · {formatMoney(points[points.length - 1].balance)}</text>}
           </g>;
         })}
       </svg>

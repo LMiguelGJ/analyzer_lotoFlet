@@ -45,7 +45,8 @@ export function BacktestReport({ report }: { report: BacktestReportData }) {
   </tr>;
   return <SimulationResultFrame model={historicalResultViewModel(report)}>
     <article className="backtest-report space-y-5" aria-label={`Informe: ${report.name}`}>
-    <p className="backtest-caveat">Simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
+    <p className="backtest-caveat">Simula, no predice ni garantiza rentabilidad</p>
+    <p className="backtest-caveat backtest-context">Simula con datos históricos: no predice resultados futuros ni garantiza rentabilidad.</p>
     <section aria-label="Resultados del escenario">
       <div className="backtest-report-table overflow-x-auto">
         <table>

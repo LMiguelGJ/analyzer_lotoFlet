@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-// Contract coverage: F-RESULT-006 backend-only financial values and unavailable/null handling; F-RESULT-007 money-only semantic color; F-RESULT-008 technical terminology remains folded.
+// Contract coverage: F-RESULT-006 backend-only financial values and unavailable/null handling; F-RESULT-007 money signs remain textual and neutral; F-RESULT-008 technical terminology remains folded.
 import { describe, expect, it } from "vitest";
 import { FinancialMetrics } from "./FinancialMetrics";
 
@@ -22,16 +22,18 @@ describe("FinancialMetrics", () => {
     mount();
     expect(screen.getByText("RD$200")).toBeInTheDocument();
     expect(screen.getByText("RD$350")).toBeInTheDocument();
-    expect(screen.getByText("RD$150")).toHaveClass("ledger-money-positive");
+    expect(screen.getByText("RD$150")).toHaveClass("ledger-figure");
+    expect(screen.getByText("RD$150")).not.toHaveClass("ledger-money-positive", "ledger-money-negative");
     expect(screen.getByText("1.750000")).toHaveClass("ledger-figure");
     expect(screen.getByText("0.750000")).toHaveClass("ledger-figure");
     expect(screen.getByText("Detalles técnicos").closest("details")).not.toHaveAttribute("open");
   });
 
-  it("applies semantic colors only to money, never counts or ratios", () => {
+  it("keeps gains and losses textual and neutral, never coloring amounts or ratios", () => {
     mount({ net: -10, roi: -0.25, return_per_wagered: -0.5 });
-    expect(screen.getByText("RD$-10")).toHaveClass("ledger-money-negative");
-    expect(screen.getByText("RD$200")).not.toHaveClass("ledger-money-positive");
+    expect(screen.getByText("RD$-10")).toHaveClass("ledger-figure");
+    expect(screen.getByText("RD$-10")).not.toHaveClass("ledger-money-positive", "ledger-money-negative");
+    expect(screen.getByText("RD$200")).not.toHaveClass("ledger-money-positive", "ledger-money-negative");
     expect(screen.getByText("-0.500000")).not.toHaveClass("ledger-money-negative");
     expect(screen.getByText("-0.500000").className).toContain("ledger-figure");
   });

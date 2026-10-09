@@ -5,7 +5,7 @@ import { CLASSIC_SETTLEMENT_LABELS, classicRulesMoney, gameSettingsSourceLabel, 
 export function GameRulesSummary({ view }: { view: GameRulesView }) {
   if (view.kind === "classic") {
     const { rules } = view;
-    return <div role="group" className="space-y-3" aria-label="Resumen de reglas clásicas">
+    return <div role="group" className="game-rules-plate space-y-3" aria-label="Resumen de reglas clásicas">
       <p className="field-help">Reglas clásicas · {view.draft ? "Borrador; no es una revisión de perfil" : "Lectura efectiva"}. Origen: {view.provenance}.</p>
       <dl className="data-list">
         {rules.name !== undefined && <><dt>Sorteo</dt><dd>{rules.name || "Sin nombre"}</dd></>}
@@ -28,7 +28,7 @@ export function GameRulesSummary({ view }: { view: GameRulesView }) {
   }
 
   const { profile, profile_sha256, profile_execution, execution_supported } = view.listing;
-  return <div role="group" className="space-y-3" aria-label="Resumen de reglas de perfil">
+  return <div role="group" className="game-rules-plate space-y-3" aria-label="Resumen de reglas de perfil">
     <p className="field-help">Perfil versionado · solo lectura. Origen: {view.provenance}. No usa el borrador clásico de Ajustes.</p>
     <dl className="data-list">
       <dt>ID del perfil</dt><dd className="break-all">{profile.profile_id}</dd>
