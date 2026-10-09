@@ -1,9 +1,24 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { apiClient } from "../api/client";
+import type { QueueStatus } from "../api/types";
 import { Shell } from "./Shell";
 import { QueueProvider } from "./QueueProvider";
+
+vi.mock("../api/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../api/client")>();
+  return { ...actual, apiClient: { ...actual.apiClient, getQueue: vi.fn() } };
+});
+
+const emptyQueue: QueueStatus = {
+  active_id: null,
+  pending: { total: 0, offset: 0, limit: 20, count: 0, items: [] },
+  held: { total: 0, offset: 0, limit: 20, count: 0, items: [] },
+  last_failure: null,
+};
+beforeEach(() => vi.mocked(apiClient.getQueue).mockResolvedValue(emptyQueue));
 
 const originalInnerWidth = window.innerWidth;
 afterEach(() => {
@@ -49,15 +64,24 @@ describe("Shell navigation", () => {
     expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/simulaciones/nueva");
   });
 
-  it("# F-SHELL-006 marks the current destination and keeps its icon and label inside the item", () => {
+  it("# F-SHELL-006 marks the current destination with its legend label", () => {
     renderShell("/configuraciones");
     const link = screen.getByRole("link", { name: "Estrategias" });
     expect(link).toHaveAttribute("aria-current", "page");
     expect(link.className).toMatch(/shell-nav-link/);
     expect(link.className).toMatch(/is-active/);
-    expect(within(link).getByText("◇", { selector: ".shell-nav-icon" })).toBeInTheDocument();
     expect(within(link).getByText("Estrategias")).toBeInTheDocument();
+    expect(link.querySelector(".shell-nav-icon")).toBeNull();
     expect(link.className).not.toMatch(/border-l-2/);
+  });
+
+  it("shows the authoritative pending total in the queue control", async () => {
+    vi.mocked(apiClient.getQueue).mockResolvedValueOnce({
+      ...emptyQueue,
+      pending: { ...emptyQueue.pending, total: 2, count: 2, items: ["one", "two"] },
+    });
+    renderShell();
+    expect(await screen.findByRole("button", { name: "Abrir cola de cálculo" })).toHaveTextContent("Cola · Sin cálculos en curso · 2 en espera");
   });
 
   it("# F-SHELL-010 keeps the queue control accessible and connected to QueueDrawer", async () => {
@@ -67,8 +91,12 @@ describe("Shell navigation", () => {
     expect(queue).toHaveAttribute("aria-haspopup", "dialog");
     expect(queue).toHaveAttribute("aria-expanded", "false");
     expect(queue).toHaveAccessibleDescription("Sin cálculos en curso");
+    expect(queue).toHaveTextContent("Cola · Sin cálculos en curso");
     await user.click(queue);
     expect(screen.getByRole("dialog", { name: "Cola de cálculo" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Cola de cálculo" })).not.toBeInTheDocument();
+    expect(queue).toHaveFocus();
   });
 
   it("# F-SHELL-011 uses route-declared mobile titles without inferring from paths", () => {
@@ -89,43 +117,33 @@ describe("Shell navigation", () => {
     expect(heading.className).not.toMatch(/\bbreak-(?:all|words)\b/);
   });
 
-  it("defaults to dark regardless of system preference and lets the user choose light", async () => {
-    window.matchMedia = vi.fn().mockReturnValue({ matches: false });
-    window.localStorage.removeItem("laboratorio-theme");
+  it("keeps the dark-only shell, clears the legacy theme key, and exposes no theme toggle", () => {
+    window.localStorage.setItem("laboratorio-theme", "light");
     renderShell();
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    const toggle = screen.getByRole("button", { name: /Cambiar tema/ });
-    await userEvent.setup().click(toggle);
-    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(window.localStorage.getItem("laboratorio-theme")).toBeNull();
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(screen.queryByRole("button", { name: /Cambiar tema/ })).not.toBeInTheDocument();
   });
 
-  it("falls back to a session-only theme when localStorage is unavailable", async () => {
-    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("storage blocked"); });
-    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage blocked"); });
+  it("clears the legacy key best-effort when localStorage is unavailable", () => {
+    const removeItem = vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => { throw new Error("storage blocked"); });
     try {
-      const user = userEvent.setup();
       renderShell();
-      const toggle = screen.getByRole("button", { name: /Cambiar tema/ });
-      expect(toggle).toBeInTheDocument();
-      await user.click(toggle);
-      expect(document.documentElement.dataset.theme).toMatch(/light|dark/);
+      expect(removeItem).toHaveBeenCalledWith("laboratorio-theme");
+      expect(screen.queryByRole("button", { name: /Cambiar tema/ })).not.toBeInTheDocument();
     } finally {
-      getItem.mockRestore();
-      setItem.mockRestore();
-      delete document.documentElement.dataset.theme;
+      removeItem.mockRestore();
     }
   });
 
-  it("# F-SHELL-012 keeps bottom navigation as the mobile base and exposes theme controls", () => {
+  it("# F-SHELL-012 keeps bottom navigation as the mobile base without theme controls", () => {
     renderShell();
     const nav = screen.getByRole("navigation", { name: "Navegación principal" });
     expect(nav.className).toMatch(/shell-navigation/);
     expect(nav.className).not.toMatch(/hidden/);
-    const theme = screen.getByRole("button", { name: /Cambiar tema/ });
-    expect(theme).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Cambiar tema/ })).not.toBeInTheDocument();
     const queue = screen.getByRole("button", { name: "Abrir cola de cálculo" });
-    expect(theme.compareDocumentPosition(queue) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(theme.closest(".shell-app-bar-actions")).toBeInTheDocument();
-    expect(screen.getAllByRole("link")).toHaveLength(6); // Skip link, four destinations, and extended FAB.
+    expect(queue.closest(".shell-app-bar-actions")).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(6); // Skip link, four destinations, and primary action.
   });
 });

@@ -80,7 +80,7 @@ describe("routing", () => {
 });
 
 describe("skip link", () => {
-  it("# F-SHELL-010 adapts the Experimentos FAB to the historical view without adding a destination", () => {
+  it("# F-SHELL-010 adapts the primary action to the historical view without adding a destination", () => {
     renderAt("/simulaciones/historicas");
     expect(screen.getByRole("link", { name: "Acceso rápido: Nueva corrida histórica" })).toHaveAttribute("href", "/simulaciones/nueva-historica");
     expect(screen.getAllByRole("link").filter((link) => link.getAttribute("href") === "/ajustes")).toHaveLength(1);
@@ -102,16 +102,16 @@ describe("keyboard access", () => {
     renderAt("/simulaciones");
     await user.tab();
     expect(screen.getByText("Saltar al contenido principal")).toHaveFocus();
-    const theme = screen.getByRole("button", { name: /Cambiar tema/ });
     const queue = screen.getByRole("button", { name: "Abrir cola de cálculo" });
-    await user.tab();
-    expect(theme).toHaveFocus();
-    await user.tab();
-    expect(queue).toHaveFocus();
     for (const name of ["Simulaciones", "Estrategias", "Datos", "Ajustes"]) {
       await user.tab();
       expect(within(document.getElementById("primary-navigation")!).getByRole("link", { name })).toHaveFocus();
     }
+    const primaryAction = screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" });
+    await user.tab();
+    expect(primaryAction).toHaveFocus();
+    await user.tab();
+    expect(queue).toHaveFocus();
     expect(queue).toBeEnabled();
   });
 });

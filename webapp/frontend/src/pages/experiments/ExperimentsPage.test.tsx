@@ -154,7 +154,7 @@ describe("LW10 experiments list · states", () => {
     setup();
 
     expect(await screen.findByText(/Las simulaciones muestran cómo se comportan tus estrategias con datos históricos/)).toBeInTheDocument();
-    // The shared FAB is the single creation entry, including the first-run state.
+    // The shared primary action is the single creation entry, including the first-run state.
     expect(screen.getAllByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Acceso rápido: Nueva simulación" })).toHaveAttribute("href", "/simulaciones/nueva");
     expect(screen.queryByRole("group", { name: "Filtros de simulaciones" })).not.toBeInTheDocument();
@@ -197,7 +197,7 @@ describe("LW10 experiments list · states", () => {
     await user.type(screen.getByLabelText("Buscar por nombre"), "no-existe-esto");
     expect(await screen.findByText(/Sin coincidencias/)).toBeInTheDocument();
     expect(screen.queryByText(/Todavía no hay simulaciones/)).not.toBeInTheDocument();
-    // The filtered empty state offers one recovery CTA; creation remains the shared FAB.
+    // The filtered empty state offers one recovery CTA; creation remains the shared primary action.
     const empty = screen.getByText("Sin coincidencias").closest("section")!;
     expect(screen.getAllByRole("button", { name: "Limpiar filtros" })).toHaveLength(1);
     expect(within(empty).getAllByRole("button", { name: "Limpiar filtros" })).toHaveLength(1);
@@ -431,7 +431,7 @@ describe("LW10 experiments list · data and navigation", () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     const { container } = setup();
     await screen.findByText("Fríos K1");
-    expect(container.querySelectorAll(".m3-extended-fab")).toHaveLength(1);
+    expect(container.querySelectorAll(".shell-primary-action")).toHaveLength(1);
     expect(container.querySelectorAll(".ledger-button-primary")).toHaveLength(fixture.items.length);
     for (const row of within(screen.getByRole("table")).getAllByRole("row").slice(1)) {
       expect(within(row).getAllByRole("link", { name: /Abrir resultado de/ })).toHaveLength(1);
@@ -439,7 +439,7 @@ describe("LW10 experiments list · data and navigation", () => {
     }
   });
 
-  it("keeps creation on the FAB and exposes one detail affordance per desktop row", async () => {
+  it("keeps creation on the primary action and exposes one detail affordance per desktop row", async () => {
     vi.mocked(apiClient.listExperiments).mockResolvedValueOnce(fixture);
     setup();
 
