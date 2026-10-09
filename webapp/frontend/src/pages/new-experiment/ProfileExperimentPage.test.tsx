@@ -14,6 +14,18 @@ vi.mock("../../api/client", async (importOriginal) => {
     getDataset: vi.fn(), getDatasetDraws: vi.fn(), getExperiment: vi.fn(), createProfileExperiment: vi.fn() } };
 });
 const id = "c".repeat(32);
+async function advanceTo(user: ReturnType<typeof userEvent.setup>, step: number) {
+  while (Number(screen.getByRole("progressbar").getAttribute("aria-valuenow")) < step + 1) {
+    const before = Number(screen.getByRole("progressbar").getAttribute("aria-valuenow"));
+    await user.click(within(screen.getByRole("region", { name: "Asistente para crear una simulación" })).getByRole("button", { name: "Siguiente" }));
+    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(before + 1)));
+  }
+}
+async function goToProfileStep(user: ReturnType<typeof userEvent.setup>, step: number) {
+  const steps = within(screen.getByRole("navigation", { name: "Pasos de la simulación" })).getAllByRole("button");
+  await user.click(steps[step]);
+  await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", String(step + 1)));
+}
 function setup(initialEntry = "/simulaciones/nueva/perfil") {
   const router = createMemoryRouter([
     { path: "/simulaciones/nueva/perfil", element: <ProfileExperimentPage /> },
@@ -22,27 +34,41 @@ function setup(initialEntry = "/simulaciones/nueva/perfil") {
   const view = render(<RouterProvider router={router} />);
   return { ...view, router, user: userEvent.setup() };
 }
-async function selectChoices(user: ReturnType<typeof userEvent.setup>, profileId = "local-game") {
+async function selectProfileAndReachScope(user: ReturnType<typeof userEvent.setup>, profileId = "local-game") {
   await screen.findByRole("option", { name: "Perfil de juego 1" });
   await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), `${profileId}@2`);
+  await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "2");
+  await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), "0,1");
+  await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
+  await advanceTo(user, 1);
+  await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
+  await advanceTo(user, 2);
+}
+async function fill(user: ReturnType<typeof userEvent.setup>, profileId = "local-game", policy?: "cycling" | "audaz" | "recovery", coverage = "2", numbers = "0,1") {
+  await screen.findByRole("option", { name: "Perfil de juego 1" });
+  await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), `${profileId}@2`);
+  await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), coverage);
+  await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), numbers);
+  if (policy) await user.selectOptions(screen.getByRole("combobox", { name: "Política de apuesta" }), policy);
+  if (policy === "recovery") {
+    await user.type(screen.getByRole("textbox", { name: /Margen objetivo/ }), "10");
+    await user.type(screen.getByRole("textbox", { name: /Rondas de recuperación/ }), "2");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Al completar las rondas" }), "cycle");
+  }
+  if (!policy) await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
+  await advanceTo(user, 1);
+  await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
+  await advanceTo(user, 2);
   await screen.findByRole("option", { name: /Historial 1/ });
   await user.selectOptions(screen.getByRole("combobox", { name: "Historial compatible" }), datasetItem.dataset_sha256);
   await screen.findByRole("option", { name: "2025-01-01 05:10" });
-}
-async function fill(user: ReturnType<typeof userEvent.setup>, profileId = "local-game") {
-  const advanced = screen.getAllByText("Ajustes avanzados");
-  await user.click(advanced[0]);
-  await user.click(advanced[1]);
-  await selectChoices(user, profileId);
   await user.selectOptions(screen.getByRole("combobox", { name: "Sorteo inicial" }), "2025-01-01 05:10");
+  await advanceTo(user, 3);
   await user.type(screen.getByRole("textbox", { name: "Nombre de la simulación" }), "Simulación local");
   await user.type(screen.getByRole("textbox", { name: /Capital inicial/ }), "2000");
   await user.type(screen.getByRole("textbox", { name: /Meta de saldo final/ }), "2800");
   await user.type(screen.getByRole("textbox", { name: /Límite de sorteos transcurridos/ }), "12");
-  await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
-  await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "2");
-  await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), "0,1");
-  await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
+  await advanceTo(user, 4);
 }
 
 beforeEach(() => {
@@ -93,10 +119,16 @@ describe("profile session creator", () => {
     const { user } = setup();
     await screen.findByRole("option", { name: "Perfil de juego 1" });
     await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
+    await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "2");
+    await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), "0,1");
+    await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
+    await advanceTo(user, 1);
     expect(screen.getByRole("heading", { name: "Simulación con perfil" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Reglas del sorteo" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Selección" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Límites" })).toBeInTheDocument();
+    // C: the former all-in-one rule headings are superseded by the dedicated Reglas step and its profile summary.
+    expect(screen.getByRole("heading", { name: "2 · Reglas" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Resumen de reglas de perfil" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
+    await advanceTo(user, 2);
     const technical = screen.getAllByText("Detalles técnicos").map((node) => node.closest("details"));
     expect(technical.length).toBeGreaterThan(0);
     expect(technical.every((details) => !details?.open)).toBe(true);
@@ -105,9 +137,17 @@ describe("profile session creator", () => {
   });
   it("# F-CREATE-036 shows the chosen history identity and the scale context for summary amounts", async () => {
     const { user } = setup();
-    await user.selectOptions(await screen.findByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
+    await screen.findByRole("option", { name: "Perfil de juego 1" });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
+    await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "2");
+    await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), "0,1");
+    await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
+    await advanceTo(user, 1);
+    expect(screen.getByText("Moneda y escala").nextElementSibling).toHaveTextContent(/escala 2/i);
+    expect(screen.getByText(/unidades enteras escaladas/i)).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
+    await advanceTo(user, 2);
     await user.selectOptions(await screen.findByRole("combobox", { name: "Historial compatible" }), datasetItem.dataset_sha256);
-    expect(screen.getByText(/unidades escaladas/i)).toHaveTextContent(/escala 2/i);
     const details = screen.getAllByText("Detalles técnicos").map((node) => node.closest("details"));
     const historyDetails = details.find((item) => item?.textContent?.includes("Identidad del historial"));
     expect(historyDetails).toBeTruthy();
@@ -117,11 +157,18 @@ describe("profile session creator", () => {
 
   it("# F-CREATE-037 keeps a library dataset URL as a read-only identity hint without auto-selecting another profile or dataset", async () => {
     const selectedHash = "f".repeat(64);
-    setup(`/simulaciones/nueva/perfil?dataset_sha256=${selectedHash}`);
+    const { user } = setup(`/simulaciones/nueva/perfil?dataset_sha256=${selectedHash}`);
     const status = await screen.findByRole("status");
     expect(status).toHaveTextContent("Historial elegido desde la biblioteca.");
     expect(status).toHaveTextContent(selectedHash);
     expect(screen.getByRole("combobox", { name: "Perfil de juego" })).toHaveValue("");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
+    await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "2");
+    await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), "0,1");
+    await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
+    await advanceTo(user, 1);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
+    await advanceTo(user, 2);
     expect(screen.getByRole("combobox", { name: "Historial compatible" })).toHaveValue("");
   });
 
@@ -129,9 +176,10 @@ describe("profile session creator", () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [cyclingProfile], templates: [] });
     const { user } = setup();
-    await fill(user);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Política de apuesta" }), "cycling");
+    await fill(user, "local-game", "cycling");
+    await goToProfileStep(user, 0);
     expect(screen.queryByRole("textbox", { name: /Apuesta fija por número/ })).not.toBeInTheDocument();
+    await advanceTo(user, 4);
     vi.mocked(apiClient.createProfileExperiment).mockRejectedValueOnce(new NetworkError());
     await user.dblClick(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/Puede estar en la cola/);
@@ -147,16 +195,13 @@ describe("profile session creator", () => {
       items: [audazDataset] });
     vi.mocked(apiClient.getDataset).mockResolvedValue(audazDataset);
     const { user } = setup();
-    await fill(user, "rational-game");
-    await user.clear(screen.getByRole("textbox", { name: /Cobertura/ }));
-    await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "1");
-    await user.clear(screen.getByRole("textbox", { name: /Números distintos/ }));
-    await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), "0");
+    await fill(user, "rational-game", "audaz", "1", "0");
+    await goToProfileStep(user, 0);
     const policy = screen.getByRole("combobox", { name: "Política de apuesta" });
     expect(within(policy).getByRole("option", { name: /Audaz/ })).toBeInTheDocument();
-    await user.selectOptions(policy, "audaz");
     expect(screen.queryByRole("textbox", { name: /Apuesta fija por número/ })).not.toBeInTheDocument();
     expect(screen.getByText(/hasta cobertura 1/)).toBeInTheDocument();
+    await advanceTo(user, 4);
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
     await waitFor(() => expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1));
     const body = vi.mocked(apiClient.createProfileExperiment).mock.calls[0][0];
@@ -171,11 +216,14 @@ describe("profile session creator", () => {
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [recoveryDataset] });
     vi.mocked(apiClient.getDataset).mockResolvedValue(recoveryDataset);
     const { user } = setup();
-    await fill(user, "rational-recovery");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Política de apuesta" }), "recovery");
+    await fill(user, "rational-recovery", "recovery");
+    await goToProfileStep(user, 0);
+    await user.clear(screen.getByRole("textbox", { name: /Margen objetivo/ }));
     await user.type(screen.getByRole("textbox", { name: /Margen objetivo/ }), "12.34");
+    await user.clear(screen.getByRole("textbox", { name: /Rondas de recuperación/ }));
     await user.type(screen.getByRole("textbox", { name: /Rondas de recuperación/ }), "4");
     await user.selectOptions(screen.getByRole("combobox", { name: "Al completar las rondas" }), end_mode);
+    await advanceTo(user, 4);
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
     await waitFor(() => expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1));
     expect(apiClient.createProfileExperiment).toHaveBeenCalledWith(expect.objectContaining({ schema_version: 4,
@@ -193,11 +241,10 @@ describe("profile session creator", () => {
         recovery_compatibility: { available: false, maximum_compatible_coverage: 0, coverage_rule: "strict", parameters: [] } },
     }] });
     const { user } = setup();
-    await fill(user, "rational-recovery");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Política de apuesta" }), "recovery");
-    await user.type(screen.getByRole("textbox", { name: /Margen objetivo/ }), "10");
-    await user.type(screen.getByRole("textbox", { name: /Rondas de recuperación/ }), "2");
+    await fill(user, "rational-recovery", "recovery");
+    await goToProfileStep(user, 0);
     await user.selectOptions(screen.getByRole("combobox", { name: "Al completar las rondas" }), "stop");
+    await advanceTo(user, 4);
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/cambiaron/);
     expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
@@ -221,8 +268,7 @@ describe("profile session creator", () => {
     vi.mocked(apiClient.getProfiles).mockResolvedValueOnce({ total: 1, offset: 0, limit: 20,
       items: [cyclingProfile], templates: [] });
     const { user } = setup();
-    await fill(user);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Política de apuesta" }), "cycling");
+    await fill(user, "local-game", "cycling");
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/cambiaron/);
     expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
@@ -250,12 +296,18 @@ describe("profile session creator", () => {
       items: date ? ["2025-01-01 05:10"] : offset ? ["2025-01-01 05:10"] : ["2024-12-30 05:10"] }));
     const { user } = setup();
     await screen.findByRole("option", { name: "Perfil de juego 1" });
-    await user.click(screen.getByRole("navigation", { name: "Páginas de perfiles" }).querySelector("button:last-child")!);
+    await user.click(within(screen.getByRole("navigation", { name: "Páginas de perfiles" })).getByRole("button", { name: "Siguiente" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
-    await user.click(screen.getByRole("navigation", { name: "Páginas de datos" }).querySelector("button:last-child")!);
+    await user.type(screen.getByRole("textbox", { name: /Cobertura/ }), "2");
+    await user.type(screen.getByRole("textbox", { name: /Números distintos/ }), "0,1");
+    await user.type(screen.getByRole("textbox", { name: /Apuesta fija por número/ }), "1.25");
+    await advanceTo(user, 1);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Cómo contar los premios" }), "all");
+    await advanceTo(user, 2);
+    await user.click(within(screen.getByRole("navigation", { name: "Páginas de datos" })).getByRole("button", { name: "Siguiente" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "Historial compatible" }), datasetItem.dataset_sha256);
     await screen.findByRole("option", { name: "2024-12-30 05:10" });
-    await user.click(screen.getByRole("navigation", { name: "Páginas de sorteos" }).querySelector("button:last-child")!);
+    await user.click(within(screen.getByRole("navigation", { name: "Páginas de sorteos" })).getByRole("button", { name: "Siguiente" }));
     expect(await screen.findByRole("option", { name: "2025-01-01 05:10" })).toBeInTheDocument();
     await user.type(screen.getByLabelText("Filtrar sorteos por fecha"), "2025-01-01");
     expect(await screen.findByRole("option", { name: "2025-01-01 05:10" })).toBeInTheDocument();
@@ -270,6 +322,7 @@ describe("profile session creator", () => {
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/cambiaron/);
     expect(apiClient.createProfileExperiment).not.toHaveBeenCalled();
+    await goToProfileStep(user, 3);
     expect(screen.getByRole("textbox", { name: "Nombre de la simulación" })).toHaveValue("Simulación local");
   });
   it("# F-CREATE-042 does not lock submission when preflight failed before any POST", async () => {
@@ -296,10 +349,13 @@ describe("profile session creator", () => {
     vi.mocked(apiClient.getProfiles).mockImplementation(async (offset = 0) => ({ total: 21, offset, limit: 20,
       items: offset ? [profileItem] : [{ ...profileItem, profile: { ...profileItem.profile, profile_id: "other" } }], templates: [] }));
     const { user } = setup(`/simulaciones/nueva/perfil?base=${"a".repeat(32)}`);
+    await waitFor(() => expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1"));
+    await advanceTo(user, 3);
     const name = await screen.findByRole("textbox", { name: "Nombre de la simulación" });
     await waitFor(() => expect(name).toHaveValue("Saved session"));
     expect(apiClient.getProfiles).toHaveBeenCalledWith(20, 20);
     await user.clear(name); await user.type(name, "Repeat saved");
+    await advanceTo(user, 4);
     await user.click(screen.getByRole("button", { name: "Crear simulación y agregar a la cola" }));
     await waitFor(() => expect(apiClient.createProfileExperiment).toHaveBeenCalledTimes(1));
     expect(apiClient.createProfileExperiment).toHaveBeenCalledWith(expect.objectContaining({ schema_version: 1, name: "Repeat saved",
@@ -311,8 +367,7 @@ describe("profile session creator", () => {
     vi.mocked(apiClient.getDatasets).mockResolvedValue({ total: 1, offset: 0, limit: 20,
       items: [{ ...datasetItem, profile_sha256: "e".repeat(64) }] });
     const { user, container } = setup();
-    await screen.findByRole("option", { name: "Perfil de juego 1" });
-    await user.selectOptions(screen.getByRole("combobox", { name: "Perfil de juego" }), "local-game@2");
+    await selectProfileAndReachScope(user);
     expect(screen.getByRole("combobox", { name: "Historial compatible" }).querySelectorAll("option")).toHaveLength(1);
     expect(screen.getByText(/No hay datos compatibles/)).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
