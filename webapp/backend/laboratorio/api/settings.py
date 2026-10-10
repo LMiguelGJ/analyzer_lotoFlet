@@ -47,6 +47,7 @@ def read_settings(request: Request):
             "profile_artifact_bytes_exact": str(status.profile_artifact_bytes),
             "dataset_artifact_bytes_exact": str(status.dataset_artifact_bytes),
             "history_artifact_bytes_exact": str(status.history_artifact_bytes),
+            "run_artifact_bytes_exact": str(status.run_artifact_bytes),
             "admission_logical_bytes_exact": str(status.admission_logical_bytes),
         },
         "quota": {

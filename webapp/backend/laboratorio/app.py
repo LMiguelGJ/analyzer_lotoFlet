@@ -3,6 +3,7 @@
 import re
 import socket
 import sys
+import threading
 import webbrowser
 from contextlib import asynccontextmanager
 
@@ -12,6 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from laboratorio.api import settings as settings_api
 from laboratorio.api.history import router as history_router
+from laboratorio.api.runs import router as runs_router
 from laboratorio.engine.active_history import HistoryCatalog
 from laboratorio.engine.adapter import open_lab_data
 from laboratorio.settings import Settings
@@ -56,6 +58,8 @@ def create_app(
         app.state.data = data
         app.state.history = HistoryCatalog(repo, data, settings)
         app.state.settings = settings
+        app.state.rankings_cache = {}
+        app.state.rankings_lock = threading.Lock()
         yield
 
     app = FastAPI(title="Laboratorio Quiniela 80", version="0.1.0", lifespan=lifespan)
@@ -73,6 +77,26 @@ def create_app(
             return JSONResponse({"detail": "same-origin required"}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS") and not origins:
             return JSONResponse({"detail": "Origin required for mutation"}, status_code=403)
+        if request.method == "POST" and request.url.path == "/api/v1/runs":
+            byte_limit = 64 * 1024
+            lengths = request.headers.getlist("content-length")
+            invalid_length = len(lengths) > 1 or (
+                lengths and (not lengths[0].isdecimal() or int(lengths[0]) > byte_limit)
+            )
+            if invalid_length:
+                return JSONResponse(
+                    {"detail": "La solicitud supera el límite de 64 KiB."}, status_code=413
+                )
+            chunks = []
+            size = 0
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > byte_limit:
+                    return JSONResponse(
+                        {"detail": "La solicitud supera el límite de 64 KiB."}, status_code=413
+                    )
+                chunks.append(chunk)
+            request._body = b"".join(chunks)
         if request.method == "POST" and request.url.path == "/api/v1/history":
             byte_limit = 32 * 1024 * 1024
             lengths = request.headers.getlist("content-length")
@@ -94,6 +118,7 @@ def create_app(
 
     app.include_router(settings_api.router, prefix="/api/v1")
     app.include_router(history_router, prefix="/api/v1")
+    app.include_router(runs_router, prefix="/api/v1")
 
     if serve_frontend:
 
