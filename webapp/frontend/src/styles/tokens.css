@@ -1,86 +1,54 @@
-/*
-THESIS: A mobile-first financial-simulation lab where each run is a stamped data plate on matte industrial steel.
-OWN-WORLD: BossFarmer's single dark chassis, Archivo Narrow legends, fine rules, live corners, and no shadows.
-STORY: The user configures game rules, runs a simulation, and reads whether the strategy survives — with zero jargon.
-FIRST VIEWPORT: Phone width: one clear task surface, an extended primary action, and four-destination navigation; financial summary visible at a glance.
-FORM: A quiet technical workshop; facts over decoration, legibility over dashboard density.
-*/
-
+/* Local paper-and-ink vocabulary. Archivo assets remain bundled from fonts.css. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --bf-chassis: #17191a;
-  --bf-chassis-rail: #121415;
-  --bf-rule: #2e3233;
-  --bf-legend: #e6e4de;
-  --bf-legend-dim: #9aa097;
-  --bf-signal: #1db954;
-  --bf-alerta: #e8b12c;
-  --bf-field-sunken: #0e1010;
-  --bf-field-placeholder: #80857d;
+  --paper: #F7FBFC;
+  --paper-sheet: #FCFEFF;
+  --grid: #CDE5EA;
+  --ink: #142C36;
+  --ink-muted: #405B64;
+  --pencil-red: #B42332;
+  --highlighter-yellow: #FFE66D;
+  --control-fill: #FFFFFF;
+  --line: #A9C0C7;
+  --grid-size: 24px;
 
-  --bf-font-display: "Archivo Narrow", ui-sans-serif, sans-serif;
-  --bf-font-body: "Archivo", ui-sans-serif, sans-serif;
-  --bf-font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --font-display: "Archivo Narrow", "Archivo", ui-sans-serif, sans-serif;
+  --font-body: "Archivo", ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
 
-  --bf-type-display: 2.6rem;
-  --bf-type-display-sm: 3.4rem;
-  --bf-type-display-lg: 4rem;
-  --bf-type-headline: 1.6rem;
-  --bf-type-headline-sm: 2rem;
-  --bf-type-title-min: 1.05rem;
-  --bf-type-title-max: 1.3rem;
-  --bf-type-numeral: 2.4rem;
-  --bf-type-numeral-sm: 3.4rem;
-  --bf-type-body-default: 1rem;
-  --bf-type-body-min: 0.95rem;
-  --bf-type-body-max: 1.1rem;
-  --bf-type-body-small: 0.8rem;
-  --bf-type-label-min: 0.6rem;
-  --bf-type-label-max: 0.7rem;
-  --bf-line-display: 0.9;
-  --bf-line-headline: 1;
-  --bf-line-body: 1.625;
-  --bf-tracking-display: 0.01em;
-  --bf-tracking-legend: 0.16em;
-  --bf-tracking-numeral: -0.02em;
+  --type-display: 2.5rem;
+  --type-headline: 2rem;
+  --type-title: 1.5rem;
+  --type-body: 1rem;
+  --type-body-small: 0.875rem;
+  --type-label: 0.75rem;
+  --line-body: 1.5;
+  --tracking-label: 0.08em;
 
-  --bf-space-gutter: 20px;
-  --bf-space-gutter-sm: 32px;
-  --bf-space-row-y: 16px;
-  --bf-space-row-x: 20px;
-  --bf-space-section-min: 40px;
-  --bf-space-section-max: 72px;
-  --bf-space-container: 72rem;
-  --bf-space-touch: 48px;
-  --bf-motion-duration-short3: 150ms;
-  --bf-motion-duration-medium1: 200ms;
-  --bf-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
-  --bf-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 0.2);
-
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-6: 3rem;
+  --touch-size: 48px;
+  --control-border: 2px;
+  --focus-width: 3px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
+* { box-sizing: border-box; }
 html, body {
   min-height: 100%;
-  background-color: var(--bf-chassis);
-  color: var(--bf-legend);
-  font-family: var(--bf-font-body);
-  font-size: var(--bf-type-body-default);
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--type-body);
   font-style: normal;
   font-synthesis: none;
   font-optical-sizing: auto;
 }
-
-* { box-sizing: border-box; }
+body { margin: 0; line-height: var(--line-body); }
 button, input, select, textarea { font: inherit; }
-figure, .metric-value, .data-list-numeric, .table-numeric, .ledger-figure, .ledger-verdict-figures { font-variant-numeric: tabular-nums; }
-body { margin: 0; }
+figure, .metric-value, .data-list-numeric, .table-numeric, .ledger-figure, .ledger-verdict-figures {
+  font-variant-numeric: tabular-nums;
+}

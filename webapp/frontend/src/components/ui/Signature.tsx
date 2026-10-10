@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Figure, Money, type FigureVariant } from "./Data";
 
-const DEFAULT_CAVEAT = "Esto simula escenarios; no predice ni garantiza rentabilidad.";
+const DEFAULT_CAVEAT = "Describe lo ocurrido en el historial; no predice ni garantiza resultados futuros.";
 
 export interface VerdictFigure {
   label: string;

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatDOP } from "../../lib/format";
+import { formatSignedDOP } from "../../lib/format";
 
 export type FigureVariant = "neutral" | "positive" | "negative";
 export interface FigureProps {
@@ -18,7 +18,7 @@ export interface MoneyProps extends Omit<FigureProps, "value"> {
 }
 
 export function Money({ amount, ...props }: MoneyProps) {
-  return <Figure value={formatDOP(amount)} {...props} />;
+  return <Figure value={formatSignedDOP(amount)} {...props} />;
 }
 
 export interface StatProps {

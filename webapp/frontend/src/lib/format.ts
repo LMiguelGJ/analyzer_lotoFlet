@@ -1,13 +1,43 @@
-// Spanish thousands separator ("."), applied by hand: Intl es-ES skips grouping for 4-digit amounts
-// and renders the DOP symbol as "DOP", neither of which is the intended "RD$2.800".
+// Spanish thousands separator ("."), kept explicit so integer Dominican amounts are stable.
 const groupThousands = (digits: string): string => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
-/** Money is always an integer DOP amount (backend contract: capital, goal, bets, balances). */
+/** Signed financial presentation. Return values are signed even when zero; -0 is normalized. */
+export function formatSignedDOP(amount: number): string {
+  if (!Number.isInteger(amount)) throw new RangeError(`DOP amounts must be integers, got ${amount}`);
+  const sign = amount < 0 ? "−" : "+";
+  return `${sign}RD$${groupThousands(Math.abs(amount).toString())}`;
+}
+
+/** Compatibility name for existing consumers; DOP amounts remain explicitly signed. */
 export function formatDOP(amount: number): string {
-  if (!Number.isInteger(amount)) {
-    throw new RangeError(`DOP amounts must be integers, got ${amount}`);
-  }
-  return `${amount < 0 ? "-" : ""}RD$${groupThousands(Math.abs(amount).toString())}`;
+  return formatSignedDOP(amount);
+}
+
+/** Dominican integer grouping for counts and draw labels. */
+export function formatNumber(value: number): string {
+  if (!Number.isFinite(value)) throw new RangeError(`value must be finite, got ${value}`);
+  const [integer, fraction] = Math.abs(value).toString().split(".");
+  return `${value < 0 ? "−" : ""}${groupThousands(integer)}${fraction ? `,${fraction}` : ""}`;
+}
+
+/** API return_pct is already expressed in percentage points, not a 0–1 ratio. */
+export function formatPercent(value: number): string {
+  if (!Number.isFinite(value)) throw new RangeError(`percentage must be finite, got ${value}`);
+  const normalized = Object.is(value, -0) ? 0 : value;
+  const [integer, fraction] = Math.abs(normalized).toFixed(1).split(".");
+  const formatted = `${groupThousands(integer)},${fraction}`;
+  return `${normalized < 0 ? "−" : "+"}${formatted} %`;
+}
+
+export type Outcome = "goal" | "ruin" | "limit" | "incomplete";
+const OUTCOME_LABELS: Record<Outcome, string> = {
+  goal: "Meta",
+  ruin: "Quiebra",
+  limit: "Límite",
+  incomplete: "Incompleta",
+};
+export function formatOutcome(outcome: Outcome): string {
+  return OUTCOME_LABELS[outcome];
 }
 
 /** Q80 numbers are 00-99, always shown zero-padded to two digits. */

@@ -1,9 +1,6 @@
 /** A single FastAPI/pydantic validation error entry, as sent in a 422 `detail` array. */
-export interface ApiFieldError {
-  loc: (string | number)[];
-  msg: string;
-  type: string;
-}
+import type { ApiFieldError } from "./types";
+export type { ApiFieldError } from "./types";
 
 function isApiFieldError(value: unknown): value is ApiFieldError {
   return (
@@ -50,6 +47,10 @@ export const BACKEND_UNREACHABLE_HEADER = "X-Laboratorio-Backend-Unreachable";
 const INVALID_REQUEST_DETAIL = "La solicitud tiene datos inválidos.";
 const UNEXPECTED_RESPONSE_DETAIL = "El servidor respondió con un formato inesperado.";
 
+function isAbortError(error: unknown): boolean {
+  return !!error && typeof error === "object" && "name" in error && error.name === "AbortError";
+}
+
 async function parseErrorBody(
   response: Response,
 ): Promise<{ detail: string; fieldErrors: ApiFieldError[] | null }> {
@@ -64,8 +65,9 @@ async function parseErrorBody(
         return { detail: INVALID_REQUEST_DETAIL, fieldErrors: raw };
       }
     }
-  } catch {
-    // no JSON body: fall through to the status text
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    // malformed/no JSON body: fall through to the status text
   }
   return { detail: response.statusText || `HTTP ${response.status}`, fieldErrors: null };
 }
@@ -78,7 +80,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) throw error;
     throw new NetworkError();
   }
   if (response.headers.get(BACKEND_UNREACHABLE_HEADER)) {
@@ -95,7 +98,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   try {
     return (await response.json()) as T;
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) throw error;
     throw new ApiError(response.status, UNEXPECTED_RESPONSE_DETAIL);
   }
 }

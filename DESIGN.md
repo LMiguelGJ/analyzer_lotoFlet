@@ -1,7 +1,94 @@
-<!-- SEED: established before implementation (yolo mode, no decision page; assigned by concept-seed key d55eb430, index 6 of the grounded list). Re-run /impeccable document in scan mode once the first screens exist to carbonize exact tokens and components. -->
 ---
 name: Laboratorio Quiniela 80
-description: La libreta del apostador, ahora con una estrategia que se corre sola sobre el historial.
+description: Una libreta de papel cuadriculado para medir corridas históricas con claridad.
+colors:
+  paper: "#F7FBFC"
+  paper-sheet: "#FCFEFF"
+  grid: "#CDE5EA"
+  ink: "#142C36"
+  ink-muted: "#405B64"
+  pencil-red: "#B42332"
+  highlighter-yellow: "#FFE66D"
+  control-fill: "#FFFFFF"
+  line: "#A9C0C7"
+typography:
+  display:
+    fontFamily: "Archivo Narrow, Archivo, ui-sans-serif, sans-serif"
+    fontSize: "2.5rem"
+    fontWeight: 600
+    lineHeight: 1.1
+  headline:
+    fontFamily: "Archivo Narrow, Archivo, ui-sans-serif, sans-serif"
+    fontSize: "2rem"
+    fontWeight: 600
+    lineHeight: 1.1
+  title:
+    fontFamily: "Archivo Narrow, Archivo, ui-sans-serif, sans-serif"
+    fontSize: "1.5rem"
+    fontWeight: 600
+    lineHeight: 1.15
+  body:
+    fontFamily: "Archivo, ui-sans-serif, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 400
+    lineHeight: 1.5
+  label:
+    fontFamily: "Archivo Narrow, Archivo, ui-sans-serif, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 600
+    lineHeight: 1.5
+    letterSpacing: "0.08em"
+rounded:
+  none: "0px"
+spacing:
+  xs: "8px"
+  sm: "16px"
+  md: "24px"
+  lg: "32px"
+  xl: "48px"
+components:
+  button-primary:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.paper}"
+    rounded: "{rounded.none}"
+    padding: "12px 24px"
+    height: "48px"
+  button-primary-hover:
+    backgroundColor: "{colors.paper-sheet}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+  button-secondary:
+    backgroundColor: "{colors.paper-sheet}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    padding: "12px 24px"
+    height: "48px"
+  button-ghost:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    padding: "12px 24px"
+    height: "48px"
+  navigation:
+    rounded: "{rounded.none}"
+    height: "48px"
+  chip:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    padding: "4px 12px"
+    height: "32px"
+  card:
+    backgroundColor: "{colors.paper-sheet}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    padding: "24px"
+  input:
+    backgroundColor: "{colors.control-fill}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    padding: "12px 14px"
+    height: "48px"
 ---
 
 # Design System: Laboratorio Quiniela 80
@@ -10,86 +97,124 @@ description: La libreta del apostador, ahora con una estrategia que se corre sol
 
 **Creative North Star: "La libreta del apostador"**
 
-Una libreta de hojas cuadriculadas donde alguien apunta números a mano: cada corrida es una página rayada, cada sesión una fila apoyada en la cuadrícula y el resultado se subraya con marcador. El mundo viene de la cultura de la banca: quien juega a la quiniela lleva su libreta, tacha, suma y vuelve a probar. Aquí la libreta hace las cuentas por él, sin dejar de parecer una libreta.
+La interfaz es una libreta de hojas claras y cuadriculadas: cada corrida es una hoja de trabajo y sus cifras descansan sobre una retícula precisa. El mundo sugiere apuntar, sumar y volver a probar; la interfaz hace las cuentas sin disfrazarse de una libreta física ni convertir la expresión en ruido.
 
-Reemplaza por completo el diseño anterior (una adaptación oscura y plana de BossFarmer), que el usuario rechazó. No se hereda su paleta, su tipografía de rótulos ni su lenguaje de placas.
-
-La luz es de escritorio: papel claro de día o bajo una lámpara. La interfaz es de **operación** (Operate): la tarea es correr, leer y repetir, y la expresión nunca tapa una cifra.
+Es una superficie de operación, no de promoción. La cuadrícula y la tinta ordenan la información; cifras legibles y palabras explícitas llevan el significado. El sistema visual y la navegación están implementados como base; las páginas de Corridas y Ajustes siguen pendientes y no se deben inferir como pantallas ya resueltas.
 
 **Key Characteristics:**
-- Papel blanco azulado con cuadrícula de 24 px; las filas, los campos y las tablas se apoyan en las líneas.
-- Tinta azul-negra para las cifras; lápiz rojo para pérdidas y correcciones; marcador amarillo solo detrás de la cifra clave de cada pantalla.
-- Esquinas vivas, sin sombras ni desenfoques: el relieve lo da la línea y el papel.
-- Sin gráficos, sin iconos decorativos, sin ilustraciones. La cuadrícula y los números son la imagen.
-- Cada número lleva signo y unidad; el color nunca es el único portador de significado.
+- Papel blanco frío y cuadrícula cian tenue de 24 px.
+- Tinta azul-negra, tinta secundaria AA y lápiz rojo para pérdidas, quiebras y errores.
+- Marcador amarillo opcional, limitado a una aplicación por pantalla.
+- Esquinas vivas, superficies planas y bordes precisos.
+- Archivo local de Archivo y Archivo Narrow; las cifras usan numerales tabulares.
 
 ## Colors
 
-Estrategia **restringida**: neutros de papel y tinta más un acento de lápiz rojo y un marcador amarillo de uso mínimo. Los valores exactos se fijan al implementar `[to be resolved during implementation]`, dentro de estas reglas:
+Paleta restringida de papel, tinta y dos acentos funcionales. Los tokens del frontmatter son la fuente normativa; el rojo siempre acompaña una palabra o signo y nunca es el único indicador.
+
+### Primary
+- **Tinta azul-negra** (`colors.ink`): texto, cifras, foco y acciones principales.
+- **Lápiz rojo** (`colors.pencil-red`): pérdidas, quiebra, errores y correcciones; no sustituye etiquetas ni signos.
 
 ### Neutral
-- **Papel cuadriculado**: blanco con un matiz azul-verdoso muy leve, no crema. Fondo de página y de las hojas.
-- **Línea de cuadrícula**: azul-cian pálido; sirve de textura y de regla de filas. No es borde de control.
-- **Tinta**: azul-negro de bolígrafo; texto y cifras. Contraste de texto AA como mínimo, AAA para cifras clave.
-- **Tinta suave**: gris azulado para rótulos y ayudas, con contraste AA sobre el papel.
+- **Papel frío** (`colors.paper`): fondo general, sin crema ni sepia.
+- **Hoja clara** (`colors.paper-sheet`): hojas, grupos y controles secundarios.
+- **Cuadrícula cian** (`colors.grid`): textura tenue y alineación; nunca cuenta como límite de control.
+- **Tinta secundaria** (`colors.ink-muted`): rótulos, ayudas y texto secundario con contraste AA.
+- **Línea de hoja** (`colors.line`): divisiones y bordes de superficies.
+- **Relleno de control** (`colors.control-fill`): campos sobre el papel.
 
-### Accent
-- **Lápiz rojo**: pérdidas, quiebras, errores y la línea de margen. Siempre acompañado de signo o palabra.
-- **Marcador amarillo**: un único uso por pantalla, detrás de la cifra clave (neto total). Texto en tinta encima.
+### Tertiary
+- **Marcador amarillo** (`colors.highlighter-yellow`): fondo opcional de la cifra clave; como máximo una vez por pantalla y con tinta encima.
 
 ### Named Rules
-**The One Highlighter Rule.** El marcador amarillo aparece una sola vez por pantalla. Su escasez es lo que marca "esto es lo que importa".
-**The Sign Always Rule.** Toda cifra monetaria lleva signo (+ o −) y unidad (RD$); el rojo acompaña, nunca sustituye.
-**The Not Cream Rule.** El papel no es crema ni sepia: es blanco frío de libreta escolar. Nada de serif display con terracota.
+**The One Highlighter Rule.** El amarillo es raro por diseño: una sola aplicación por pantalla como máximo.
+**The Sign Always Rule.** Cada cantidad monetaria se presenta con signo (+ o −) y unidad RD$; el color solo refuerza el significado.
+**The Not Cream Rule.** El papel permanece frío y claro; no usar crema, sepia ni terracota.
 
 ## Typography
 
-**Display / Body / Label:** familias ya instaladas en local (Archivo y Archivo Narrow); sin red. La elección final de pesos y de cifras tabulares se resuelve al implementar `[to be resolved during implementation]`.
+**Display Font:** Archivo Narrow (con Archivo y sans-serif de sistema como fallback).
+**Body Font:** Archivo (con sans-serif de sistema como fallback).
+**Label/Mono Font:** Archivo Narrow para rótulos; la pila monoespaciada del sistema queda reservada para contenido técnico.
 
-**Character:** letra de imprenta clara para rotular y cifras de ancho fijo para sumar. Ninguna fuente manuscrita: la mano se sugiere con la cuadrícula y el color, no con una tipografía de disfraz.
+**Character:** Imprenta nítida, sobria y funcional. Los pesos y tamaños fijos construyen jerarquía; los datos financieros usan cifras tabulares, no una fuente de exhibición.
 
 ### Hierarchy
-- **Cifra clave** (grande, tabular): el neto total, sobre marcador.
-- **Título de página** y **título de sección**: sobrios; el tamaño y el peso hacen la jerarquía.
-- **Cuerpo**: legible, línea de hasta 65 caracteres en texto corrido.
-- **Rótulo**: pequeño, en mayúsculas o versalitas, con interletraje moderado, para los términos de cada fila.
+- **Display** (600, 2.5rem, 1.1): cifra principal cuando una página la requiera.
+- **Headline** (600, 2rem, 1.1): encabezado de página.
+- **Title** (600, 1.5rem, 1.15): título de hoja o sección.
+- **Body** (400, 1rem, 1.5): texto general; mantener los párrafos de lectura en una medida cómoda, aproximadamente 65–75ch.
+- **Label** (600, 0.75rem, 0.08em): rótulos concisos; caja normal por defecto, sin convertir cada encabezado en un eyebrow.
 
 ### Named Rules
-**The Tabular Rule.** Toda columna de cifras usa números tabulares alineados a la derecha; dos filas nunca desalinean sus dígitos.
+**The Tabular Rule.** Las columnas numéricas alinean cifras tabulares; dinero y retorno muestran signo y unidad.
+**The Local Font Rule.** Usa los archivos Archivo y Archivo Narrow ya empaquetados; no dependas de fuentes remotas.
 
 ## Layout
 
-Una cuadrícula base de **24 px**. La altura de cada fila, el interlineado y los espacios son múltiplos de 24 px, y las filas de tablas descansan sobre las líneas. Los objetivos táctiles miden al menos 2 celdas (48 px). Una línea de margen roja vertical a la izquierda en escritorio; en móvil el margen se pliega y la hoja ocupa el ancho.
+Una cuadrícula de 24 px sostiene la composición; filas, grupos y pausas principales siguen ese ritmo. Los espacios reutilizables son 8, 16, 24, 32 y 48 px. Los campos y controles interactivos miden al menos 48 px de alto.
 
-Dos secciones de navegación (Corridas, Ajustes) en una barra superior de texto en escritorio y una barra inferior en móvil. Contenido en una sola columna de lectura; el resultado ordena resumen → sesiones → apuestas de arriba abajo.
+La navegación tiene dos destinos: Corridas y Ajustes. En móvil se fija abajo; desde 900 px se integra en la barra superior. Conserva el enlace para saltar al contenido, el foco de teclado y el área segura inferior del dispositivo. El contenido se centra en una columna de hasta 1440 px; las páginas aún no están implementadas.
 
 ## Elevation & Depth
 
-Plano. Sin sombras ni desenfoques. Una hoja se distingue del fondo por su línea fina y por un tono de papel ligeramente distinto; el foco se marca con un contorno grueso de tinta.
+Plano, sin sombras ni desenfoques. Una hoja se separa del fondo mediante un cambio de papel y una línea fina; los controles tienen un borde de tinta de 2 px y el foco se marca con un contorno visible. El grid es textura, no una sombra ni un borde de control.
 
 ### Named Rules
-**The Flat Sheet Rule.** Nada flota. Un diálogo es una hoja con borde que cubre el fondo atenuado, no una tarjeta con sombra.
+**The Flat Sheet Rule.** Nada flota: contenedores y diálogos son hojas planas con límites claros.
 
 ## Shapes
 
-Esquinas vivas (0 px) en todo. Bordes de 1 px para hojas y de 2 px de tinta para los límites de controles, de modo que cada control tenga un contraste de borde de al menos 3:1 contra su fondo. Las líneas de la cuadrícula no cuentan como borde de control.
+Esquinas vivas en controles, hojas y grupos (0 px). Las superficies pueden tener divisores de 1 px; los límites de campos, botones y controles son de 2 px, con contraste mínimo 3:1. No anides tarjetas: organiza el contenido en hojas planas y grupos sin cajas repetidas.
 
 ## Components
 
-Se definirán al implementar la primera pantalla. Invariantes: los campos son celdas rotuladas sobre la cuadrícula (rótulo arriba, valor abajo); el botón principal es un bloque de tinta con texto de papel; los estados de carga, vacío y error son hojas con su rótulo, no pantallas aparte.
+Los componentes compartidos están implementados; son una base, no una especificación de páginas de negocio.
+
+### Buttons
+- **Shape:** esquinas vivas (0 px), borde de tinta de 2 px, alto mínimo de 48 px.
+- **Primary:** bloque de tinta con texto de papel; padding vertical 12 px y horizontal 24 px.
+- **Hover / Focus:** el primario invierte a hoja clara y tinta; el foco visible usa contorno de tinta de 3 px con separación.
+- **Secondary / Ghost:** fondo de hoja o transparente, borde de tinta; estados hover y active permanecen sobrios.
+- **Disabled / Loading:** deshabilitado conserva texto legible sobre hoja clara, sin opacidad; loading comunica `aria-busy` y deshabilita el envío repetido.
+
+### Chips
+- Etiqueta compacta de texto, sin fondo de acento ni significado transmitido solo por color; altura mínima de 32 px.
+
+### Cards / Containers
+- **Corner Style:** cuadrado (0 px).
+- **Background:** hoja clara sobre papel frío.
+- **Shadow Strategy:** ninguna; la separación usa borde de 1 px.
+- **Internal Padding:** 24 px como base, reducido en pantallas estrechas.
+- Usa secciones planas; no construyas una jerarquía de tarjetas anidadas.
+
+### Inputs / Fields
+- **Style:** campo blanco, tinta azul-negra, borde de 2 px y esquinas vivas; cada campo tiene etiqueta asociada.
+- **Focus:** contorno de teclado de 3 px, desplazado del borde.
+- **Error / Disabled:** error en lápiz rojo y asociado al campo; disabled conserva texto legible sobre hoja clara, sin opacidad, y no finge interactividad.
+- **Choice Fields:** checkbox y radio conservan un glifo de 24 px dentro de una etiqueta clicable de al menos 48 × 48 px.
+- **Loading:** usa un estado anunciado y filas skeleton; no un spinner decorativo central.
+
+### Navigation
+- Barra superior en escritorio y barra inferior fija en móvil; enlaces de texto de al menos 48 px de alto. El destino actual se indica con tinta y subrayado, además del estado semántico del enlace.
+
+### Flat Status Sheets
+Estados vacíos, de error y carga usan hojas planas con texto claro. Los esqueletos son decorativos para lectores de pantalla y el estado de carga se anuncia como `status`.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** apoyar filas, campos y tablas en la cuadrícula de 24 px.
-- **Do** mostrar signo y unidad en cada cifra y alinear columnas con números tabulares.
-- **Do** decir con palabras cuando el detalle está truncado, incompleto o no almacenado.
-- **Do** mantener la advertencia "describe el historial, no promete resultados futuros" visible en el formulario y en el resultado.
-- **Do** respetar `prefers-reduced-motion`; el movimiento es mínimo y opcional.
+- **Do** usar los tokens normativos y la retícula de 24 px para nuevas superficies.
+- **Do** conservar Archivo y Archivo Narrow, cifras tabulares, signo y RD$.
+- **Do** dar al texto contraste mínimo 4.5:1 y a los límites de controles al menos 3:1.
+- **Do** mantener foco visible, navegación por teclado y `prefers-reduced-motion`.
+- **Do** tratar el grid como textura y ofrecer palabras/signos además de color.
+- **Do** reconocer que las pantallas Corridas y Ajustes aún están pendientes; este documento solo fija la base.
 
 ### Don't:
-- **Don't** volver al diseño oscuro y plano de BossFarmer ni a su lenguaje de placas y rótulos.
-- **Don't** usar crema, serif de exhibición ni terracota, ni neón sobre negro, ni los gradientes de las apps de fintech.
-- **Don't** imitar la libreta con espirales, bordes rasgados, sombras de papel o tipografías manuscritas.
-- **Don't** usar gráficos, iconos decorativos ni ilustraciones; la cuadrícula y las cifras bastan.
-- **Don't** usar el marcador amarillo más de una vez por pantalla ni el rojo como único indicador.
+- **Don't** reintroducir la identidad, los tokens `--bf-*` ni el tema de BossFarmer.
+- **Don't** añadir sombras, esquinas redondeadas, vidrio, gráficos o iconos decorativos.
+- **Don't** apilar tarjetas anidadas ni usar el amarillo más de una vez por pantalla.
+- **Don't** usar el rojo como único portador de pérdida, error o quiebra.
+- **Don't** inventar datos, resultados, afirmaciones de producto o páginas no implementadas.
