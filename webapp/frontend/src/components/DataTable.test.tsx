@@ -88,6 +88,14 @@ describe("DataTable", () => {
     expect(onAction).toHaveBeenCalledWith("a");
   });
 
+  it("keeps row hover plain and tracks the new data-table header class in CSS", () => {
+    const css = readFileSync("src/styles/index.css", "utf8");
+    const rowHover = css.match(/(?:^|\n)\s*\.data-table-row:hover\s*\{([^{}]*)\}/)?.[1] ?? "";
+    const headerRules = css.match(/(?:^|\n)\s*[^{}]*\.data-table-header[^{}]*\{[^{}]*\}/g)?.join("\n") ?? "";
+    expect(rowHover).toMatch(/background:\s*transparent/);
+    expect(headerRules).toMatch(/letter-spacing:\s*(?:var\(--bf-tracking-legend\)|0\.16em)/);
+  });
+
   it("draws hairline rules with plain rows and tracked label headers without changing the class contract", () => {
     render(<DataTable caption="Experimentos" columns={columns(() => {})} rows={rows} getRowKey={(row) => row.id} />);
     const region = screen.getByRole("region", { name: "Experimentos" });

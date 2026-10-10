@@ -90,6 +90,17 @@
   input[type="checkbox"]:checked, input[type="radio"]:checked { display: inline-grid; place-content: center; background: var(--bf-signal); color: var(--bf-chassis); }
   input[type="radio"] { border-radius: 0; }
   input[type="radio"]:checked::after { width: 8px; height: 8px; background: var(--bf-chassis); content: ""; }
+  .control:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  .ledger-control:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  input:not([type="checkbox"]):not([type="radio"]):not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  select:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  textarea:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  input[type="checkbox"]:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  input[type="radio"]:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  [role="switch"]:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]) { border-color: var(--bf-legend-dim); }
+  input[type="checkbox"]:checked:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  input[type="radio"]:checked:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]),
+  [role="switch"][aria-checked="true"]:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"]) { border-color: var(--bf-chassis); }
   .control-choice { display: flex; min-height: 48px; align-items: center; gap: 12px; color: var(--bf-legend); }
   .disclosure-summary, .ledger-disclosure summary { display: flex; min-height: 48px; align-items: center; cursor: pointer; color: var(--bf-legend); font-family: var(--bf-font-display); font-weight: 600; }
 
@@ -236,6 +247,7 @@
   th, td { border-bottom: 1px solid var(--bf-rule); padding: 12px; text-align: left; }
   .data-table-region tbody tr:last-child td { border-bottom: 0; }
   .data-table-row { background: transparent; }
+  .data-table-row:hover { background: transparent; }
   .data-table-region th { color: var(--bf-legend-dim); font-size: 0.6rem; font-weight: 600; }
   .confirm-dialog-scrim, .queue-drawer-scrim { background: rgb(23 25 26 / 80%); }
   .confirm-dialog-panel, .queue-drawer-panel, dialog, [role="dialog"] { border: 1px solid var(--bf-rule); border-radius: 0; background: var(--bf-chassis-rail); color: var(--bf-legend); box-shadow: none; }

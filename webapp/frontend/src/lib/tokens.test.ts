@@ -37,6 +37,15 @@ const expectedTokens = {
 const colors = ["chassis", "chassis-rail", "rule", "legend", "legend-dim", "signal", "alerta", "field-sunken", "field-placeholder"] as const;
 function color(name: typeof colors[number]): string { return tokens.get(`--bf-${name}`)!; }
 
+function cssBorderColor(selector: string): string {
+  const rules = Array.from(indexCss.matchAll(/([^{}]+)\{([^{}]*)\}/g), ([, selectors, declarations]) => ({ selectors, declarations }));
+  const matching = rules.filter(({ selectors }) => selectors.split(",").some((candidate) => candidate.trim() === selector));
+  const declaration = matching.map(({ declarations }) => declarations.match(/border-color:\s*([^;]+)|border:\s*[^;]*?\bsolid\s+([^;]+);/)?.slice(1).find(Boolean)).filter(Boolean).at(-1);
+  if (!declaration) throw new Error(`No border color declaration found for ${selector}`);
+  const token = declaration.match(/var\((--[\w-]+)\)/)?.[1];
+  return token ? tokens.get(token)! : declaration;
+}
+
 const colorKeys: Record<string, string> = {
   bg: "chassis", surface: "chassis-rail", field: "field-sunken", text: "legend",
   "text-secondary": "legend-dim", accent: "legend", border: "rule", "border-control": "rule",
@@ -61,6 +70,33 @@ describe("BossFarmer design tokens", () => {
     expect(tokensCss).not.toMatch(/--bf-(?:shape|elevation|radius|shadow)[\w-]*\s*:/i);
     expect(tailwindConfig).toMatch(/borderRadius:\s*\{[\s\S]*?DEFAULT:\s*"0px"/);
     expect(tailwindConfig).toMatch(/boxShadow:\s*\{[\s\S]*?DEFAULT:\s*"none"/);
+  });
+
+  it("gives enabled controls and their focus boundaries 3:1 contrast using declared CSS colors", () => {
+    const controlSelectors = [
+      '.control:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      '.ledger-control:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      'input:not([type="checkbox"]):not([type="radio"]):not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      'select:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      'textarea:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      'input[type="checkbox"]:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      'input[type="radio"]:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      '[role="switch"]:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+    ];
+    for (const selector of controlSelectors) {
+      const border = cssBorderColor(selector);
+      expect(contrastRatio(border, color("field-sunken")), `${selector} border against field`).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(border, color("chassis")), `${selector} border against chassis`).toBeGreaterThanOrEqual(3);
+    }
+    const focusedBorder = cssBorderColor(".control:focus");
+    expect(contrastRatio(focusedBorder, color("field-sunken"))).toBeGreaterThanOrEqual(3);
+    for (const selector of [
+      'input[type="checkbox"]:checked:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      'input[type="radio"]:checked:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+      '[role="switch"][aria-checked="true"]:not(:disabled):not([aria-disabled="true"]):not([aria-invalid="true"])',
+    ]) {
+      expect(contrastRatio(cssBorderColor(selector), color("signal")), `${selector} border against signal`).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it("keeps required BossFarmer text and field pairs at WCAG AA contrast", () => {

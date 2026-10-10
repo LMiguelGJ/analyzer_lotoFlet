@@ -177,8 +177,11 @@ Neutros cálidos casi negros con una sola tinta de serigrafía clara y un verde 
 ### Neutral
 - **Chapa mate** (`chassis`): fondo de página y texto sobre campos verdes o claros.
 - **Raíl** (`chassis-rail`): raíles superior e inferior, placas, pista de scrollbar.
-- **Hairline** (`rule`): toda línea de 1px (bordes de placa, divisores de fila, borde de botón secundario,
-  pulgar de scrollbar, rejilla de gráficos).
+- **Hairline** (`rule`): líneas decorativas de 1px (bordes de placa, divisores de fila, borde de botón secundario,
+  pulgar de scrollbar, rejilla de gráficos). Excepción de accesibilidad: los límites necesarios de campos
+  interactivos habilitados usan `legend-dim` para alcanzar 3:1; los controles activos sobre `signal` usan
+  `chassis` en su borde para alcanzar 3:1. Los controles deshabilitados y los errores conservan sus reglas
+  existentes. Sin cambios de paleta.
 - **Serigrafía** (`legend`): texto principal, fondo de botón primario, anillo de foco, series principales.
 - **Serigrafía gastada** (`legend-dim`): texto secundario, leyendas de término, nav inactivo, series secundarias.
 - **Chapa hundida** (`field-sunken`) y **marcador** (`field-placeholder`): solo interior y placeholder de campos.
@@ -278,11 +281,13 @@ Placas de máquina, no tarjetas.
 ### Inputs / Fields
 - **Style:** chapa hundida `field-sunken`, hairline `rule`, texto `legend` en Archivo 1rem, esquina viva.
   Etiqueta en leyenda de 0.6rem `legend-dim` encima.
-- **Focus:** el borde pasa a `legend-dim`; con teclado, anillo `legend` de 2px a 2px de separación.
+- **Focus:** el borde pasa a `legend-dim` (3:1 mínimo frente a las superficies adyacentes); con teclado,
+  anillo `legend` de 2px a 2px de separación.
 - **Error:** un único aviso bajo el campo o formulario, hairline y texto `alerta`, `role="alert"`.
 - **Selector segmentado:** opciones en un marco `rule` divididas por hairlines; la elegida se vuelve campo
   `signal` con texto `chassis`; las demás `legend-dim`. Sirve también para pestañas y rangos.
-- **Interruptor y casilla:** rectángulos de hairline `rule`; activo = campo `signal` con marca de texto.
+- **Interruptor y casilla:** rectángulos con límite `legend-dim` (o `chassis` al estar activos sobre `signal`);
+  activo = campo `signal` con marca de texto. Los demás hairlines decorativos siguen en `rule`.
 
 ### Navigation
 Móvil: raíl superior `sticky` en `chassis-rail` con la marca tipográfica y, a la derecha, la cola de
