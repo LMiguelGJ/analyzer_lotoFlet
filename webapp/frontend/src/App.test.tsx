@@ -18,9 +18,9 @@ describe("run routes", () => {
     render(<MemoryRouter initialEntries={["/corridas/nueva"]}><App /></MemoryRouter>);
     expect(await screen.findByText("Formulario de corrida")).toBeInTheDocument();
   });
-  it("keeps settings as a placeholder and routes result IDs to the report", async () => {
+  it("loads settings and routes result IDs to the report", async () => {
     const { unmount } = render(<MemoryRouter initialEntries={["/ajustes"]}><App /></MemoryRouter>);
-    expect(await screen.findByText("La pantalla de Ajustes se está reconstruyendo.")).toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent("Cargando ajustes e historial");
     unmount();
     render(<MemoryRouter initialEntries={["/corridas/run-1"]}><App /></MemoryRouter>);
     expect(await screen.findByText("Informe de corrida cargado")).toBeInTheDocument();
