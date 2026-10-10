@@ -3,7 +3,7 @@
 import json
 import shutil
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -17,7 +17,7 @@ from laboratorio.storage.backtest_trace import (
     validate_trace,
 )
 from laboratorio.storage.database import connection, require_database
-from laboratorio.storage.quota import measure, validate_quota_bytes
+from laboratorio.storage.quota import QuotaStatus, measure, validate_quota_bytes
 
 
 class QuotaReadOnly(RuntimeError):
@@ -136,12 +136,35 @@ def _strategy_artifact_bytes(db) -> int:
     ).fetchone()[0]
 
 
+def _history_artifact_bytes(db) -> int:
+    """Every persisted history column byte, each column exactly once."""
+    return db.execute(
+        "SELECT "
+        "(SELECT coalesce(sum(length(CAST(sha256 AS BLOB)) + length(CAST(created_at AS BLOB)) + "
+        "8 + 8 + length(CAST(first_label AS BLOB)) + length(CAST(last_label AS BLOB)) + "
+        "length(raw_bytes)), 0) FROM history_sources) + "
+        "(SELECT coalesce(sum(8 + length(CAST(sha256 AS BLOB))), 0) FROM history_active)"
+    ).fetchone()[0]
+
+
+@dataclass(frozen=True)
+class RepositoryQuotaStatus(QuotaStatus):
+    """``QuotaStatus`` plus imported history bytes, which count toward admission."""
+
+    history_artifact_bytes: int = 0
+
+    @property
+    def admission_logical_bytes(self) -> int:
+        return QuotaStatus.admission_logical_bytes.fget(self) + self.history_artifact_bytes
+
+
 def _admission_logical_bytes(db) -> int:
     return (
         _logical_experiment_bytes(db)
         + _profile_artifact_bytes(db)
         + _dataset_artifact_bytes(db)
         + _strategy_artifact_bytes(db)
+        + _history_artifact_bytes(db)
     )
 
 
@@ -198,6 +221,92 @@ class Repository:
         with connection(self.path) as db:
             return _strategy_artifact_bytes(db)
 
+    def history_artifact_bytes(self) -> int:
+        with connection(self.path) as db:
+            return _history_artifact_bytes(db)
+
+    def get_active_history_sha(self) -> str | None:
+        with connection(self.path) as db:
+            row = db.execute("SELECT sha256 FROM history_active WHERE id = 1").fetchone()
+        return None if row is None else row[0]
+
+    def get_history_source(self, sha256: str) -> dict | None:
+        with connection(self.path) as db:
+            row = db.execute(
+                "SELECT sha256, created_at, draws, added_draws, first_label, last_label, "
+                "raw_bytes FROM history_sources WHERE sha256 = ?",
+                (sha256,),
+            ).fetchone()
+        if row is None:
+            return None
+        keys = ("sha256", "created_at", "draws", "added_draws", "first_label", "last_label")
+        return {**dict(zip(keys, row, strict=False)), "raw_bytes": bytes(row[6])}
+
+    def list_history_sources(self) -> list[dict]:
+        with connection(self.path) as db:
+            rows = db.execute(
+                "SELECT sha256, created_at, draws, added_draws, first_label, last_label "
+                "FROM history_sources ORDER BY created_at DESC, rowid DESC"
+            ).fetchall()
+        keys = ("sha256", "created_at", "draws", "added_draws", "first_label", "last_label")
+        return [dict(zip(keys, row, strict=True)) for row in rows]
+
+    def import_history_source(
+        self,
+        sha256: str,
+        raw_bytes: bytes,
+        *,
+        draws: int,
+        added_draws: int,
+        first_label: str,
+        last_label: str,
+        quota_bytes: int | None = None,
+        quota_explicit: bool | None = None,
+        disk_usage=shutil.disk_usage,
+    ) -> bool:
+        """Store and activate a history; True when new, False when it only reactivated."""
+        # Measure disk outside the write transaction, as the other capacity checks do.
+        limit = self.effective_quota(quota_bytes, quota_explicit=quota_explicit).effective_bytes
+        with _transaction(self.path) as db:
+            created = (
+                db.execute("SELECT 1 FROM history_sources WHERE sha256 = ?", (sha256,)).fetchone()
+                is None
+            )
+            if created:
+                status = measure(
+                    self.path,
+                    limit,
+                    _logical_experiment_bytes(db),
+                    profile_artifact_bytes=_profile_artifact_bytes(db),
+                    dataset_artifact_bytes=_dataset_artifact_bytes(db),
+                    strategy_artifact_bytes=_strategy_artifact_bytes(db),
+                    disk_usage=disk_usage,
+                )
+                status = RepositoryQuotaStatus(
+                    **{f.name: getattr(status, f.name) for f in fields(QuotaStatus)},
+                    history_artifact_bytes=_history_artifact_bytes(db),
+                )
+                status.require_capacity(len(raw_bytes) + len(sha256) + 128)
+                db.execute(
+                    "INSERT INTO history_sources (sha256, created_at, draws, added_draws, "
+                    "first_label, last_label, raw_bytes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        sha256,
+                        _now_iso(),
+                        draws,
+                        added_draws,
+                        first_label,
+                        last_label,
+                        raw_bytes,
+                    ),
+                )
+            db.execute(
+                "INSERT INTO history_active (id, sha256) VALUES (1, ?) "
+                "ON CONFLICT(id) DO UPDATE SET sha256 = excluded.sha256",
+                (sha256,),
+            )
+        return created
+
     def get_quota_preference(self) -> int | None:
         with connection(self.path) as db:
             return _persisted_quota(db)
@@ -243,7 +352,8 @@ class Repository:
             profile_bytes = _profile_artifact_bytes(db)
             dataset_bytes = _dataset_artifact_bytes(db)
             strategy_bytes = _strategy_artifact_bytes(db)
-        return measure(
+            history_bytes = _history_artifact_bytes(db)
+        status = measure(
             self.path,
             limit,
             experiment_bytes,
@@ -251,6 +361,10 @@ class Repository:
             dataset_artifact_bytes=dataset_bytes,
             strategy_artifact_bytes=strategy_bytes,
             disk_usage=disk_usage,
+        )
+        return RepositoryQuotaStatus(
+            **{f.name: getattr(status, f.name) for f in fields(QuotaStatus)},
+            history_artifact_bytes=history_bytes,
         )
 
     def require_capacity(

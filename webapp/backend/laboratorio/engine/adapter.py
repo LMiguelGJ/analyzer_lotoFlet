@@ -78,18 +78,19 @@ class LabData:
     _cache: dict = field(default_factory=dict, repr=False, compare=False)
 
     def parity_votes(self) -> np.ndarray:
-        if "parity" in self._cache:
-            return self._cache["parity"]
-        cache_path = (
-            self.settings.cache_dir / f"parity-{self.history.sha256[:16]}-{PARITY_ALGORITHM}.npz"
-        )
-        n = len(self.history.labels)
-        votes = _load_cached_parity(cache_path, n, self.history.sha256)
-        if votes is None:
-            votes = compute_parity_votes(self.history.nums[:, 0])
-            _write_cached_parity(cache_path, votes, self.history.sha256)
-        self._cache["parity"] = votes
-        return votes
+        if "parity" not in self._cache:
+            self._cache["parity"] = parity_votes_for(self.history, self.settings)
+        return self._cache["parity"]
+
+
+def parity_votes_for(history: History, settings: Settings) -> np.ndarray:
+    """Parity votes for any history, reusing the disk cache keyed by its SHA-256."""
+    cache_path = settings.cache_dir / f"parity-{history.sha256[:16]}-{PARITY_ALGORITHM}.npz"
+    votes = _load_cached_parity(cache_path, len(history.labels), history.sha256)
+    if votes is None:
+        votes = compute_parity_votes(history.nums[:, 0])
+        _write_cached_parity(cache_path, votes, history.sha256)
+    return votes
 
 
 def _validated_records(date_key: str, records: list) -> list[tuple[str, tuple[int, ...]]]:

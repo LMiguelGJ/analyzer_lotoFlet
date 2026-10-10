@@ -15,7 +15,7 @@ import numpy as np
 from laboratorio.domain.contracts import SYSTEMS
 from laboratorio.domain.runs import MAX_COVERAGE, NUMBERS
 from laboratorio.domain.session import Draw
-from laboratorio.engine.adapter import LabData
+from laboratorio.engine.adapter import History, LabData, Rankings
 
 SYSTEM_LABELS = dict(SYSTEMS)
 MAX_COMPONENTS = len(SYSTEMS)
@@ -47,6 +47,23 @@ def source_from_lab(data: LabData) -> RunSource:
     rank_pos[np.asarray(data.rankings.row_ids, dtype=np.int64)] = np.arange(
         len(data.rankings.row_ids), dtype=np.int32
     )
+    return RunSource(
+        labels=history.labels,
+        minutes=np.asarray(history.minutes, dtype=np.int64),
+        results=np.asarray(history.nums, dtype=np.uint8),
+        rank_pos=rank_pos,
+        sha256=history.sha256,
+    )
+
+
+def source_from_history(history: History, frozen_history: History, rankings: Rankings) -> RunSource:
+    """Source for a possibly extended history; rankings are matched to draws by label."""
+    index_of = {label: index for index, label in enumerate(history.labels)}
+    rank_pos = np.full(len(history.labels), -1, dtype=np.int32)
+    for position, row_id in enumerate(np.asarray(rankings.row_ids, dtype=np.int64).tolist()):
+        target = index_of.get(frozen_history.labels[row_id])
+        if target is not None:
+            rank_pos[target] = position
     return RunSource(
         labels=history.labels,
         minutes=np.asarray(history.minutes, dtype=np.int64),
