@@ -22,3 +22,14 @@ def repo(tmp_path):
     path = tmp_path / "lab.db"
     initialize_database(path)
     return Repository(path)
+
+
+@pytest.fixture
+def run_environment(repo, lab_data, tmp_path):
+    from dataclasses import replace
+
+    from laboratorio.engine.active_history import HistoryCatalog
+    from laboratorio.settings import Settings
+
+    settings = replace(Settings.from_environment(), data_dir=tmp_path)
+    return HistoryCatalog(repo, lab_data, settings), settings

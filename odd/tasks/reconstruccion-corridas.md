@@ -35,14 +35,20 @@ Línea base antes de borrar (HEAD `7634679`, `py -3.14`, `PYTEST_DISABLE_PLUGIN_
 Skill `impeccable`: `context.mjs` ejecutado una vez (sin PRODUCT.md ni DESIGN.md previos). Modo yolo: sin entrevista nueva; `PRODUCT.md` escrito desde la especificación aprobada, con lo inferido marcado. La dirección visual se decide con `concept-seed.mjs` y se registra en `DESIGN.md` antes de la primera edición de UI. Todo código nuevo se escribe test-first.
 
 - [x] R0 — Medición base. D4 = síncrono; D11 revisado (ver plan §4b). Commit con el plan.
-- [ ] R1 — Motor de corrida v2 (`domain/runs.py`), test-first, con caracterización contra `run_backtest` y la fila `parity/50/flat` de la tabla de referencia.
-- [ ] R2 — Selección y datos de corrida (mezcla vectorizada, paridad, ventana por fechas).
-- [ ] R3 — Historial activo e importación sin vista previa (migración 0014).
-- [ ] R4 — Corridas: tabla `runs` (migración 0015), traza revisada y API `/api/v1/runs`.
-- [ ] R8a — Dirección visual con `impeccable` (new-work) y `DESIGN.md`.
+- [x] R1 — Motor de corrida v2; 74 tests y caracterización golden. Commit `516ed34`.
+- [x] R2 — Mezcla vectorizada, paridad y ventana; 68 tests nuevos, 142 combinados. Commit `93a82d4`.
+- [x] R3 — Historial activo e importación sin vista previa: almacenamiento `3894d84`, API `244380b`; 176 tests reportados por el worker; comprobación posterior de API 6/6 y Ruff limpio.
+- [ ] R4 — En progreso: R4a almacenamiento/servicio; luego R4b API `/api/v1/runs`. Migración 0015 crea `saved_runs` y `saved_run_sessions`, preservando la tabla histórica `runs` sin cambios.
+- [x] R8a — Dirección visual «La libreta del apostador» en `DESIGN.md`. Commit `8eb1d72`.
 - [ ] R5 — Frontend: lista, formulario, resultado y Ajustes.
 - [ ] R6/R7 — Retirar `/backtests` y el código viejo restante.
 - [ ] R9 — Verificación independiente final, documentación y cierre.
+
+### Estado R4a
+
+Primera ejecución del worker: RED observado; comprobación parcial 2 pasan, 1 falla y 3 errores por colisión con la tabla histórica `runs`. GREEN pendiente; sin suite completa ni Ruff todavía. Decisión: aislar las corridas nuevas en `saved_runs`/`saved_run_sessions`, sin renombrar datos antiguos ni duplicarlos en cuota. Continuación `mv1y4q09-b-anmf`: 20 tests nuevos pasan; suite completa 194 pasan / 2 fallan por expectativas antiguas de versión 14; Ruff limpio. Corrección de versión/inventario en `tests/test_history_store.py` completada (`mv1z0x2b-c-8d7r`): 16 tests pasan y Ruff limpio. Revisión de solo lectura (`mv1z1fmm-d-v8xl`) encontró dos P1: paginación carga/decodifica todas las apuestas y validación insuficiente de cuentas por sesión. Corrección test-first completada (`mv1z5zxr-e-6j8n`) en `run_store.py` y su test: RED 7 fallos → GREEN 13 tests enfocados; suite completa reportada 206 pasan y Ruff/formato limpio. Agregados SQL sin payloads y validación detallada solo al pedir las apuestas de esa sesión; cuota concurrente cubierta. API corresponde a R4b. Verificación independiente (`mv1zuosk-f-vgtj`) aprobada: 206 tests / 162,92 s, Ruff y formato (35 archivos) limpios, `diff --check` limpio. Inspección confirmó paginación sin payloads, integridad contable, cuota concurrente y preservación de tablas antiguas. R4a listo para commit local acotado; R4b API sigue pendiente.
+
+Ejemplo exacto (3 posiciones, premios 60/10/5): 81 sesiones, 65.235 apuestas, neto −159.770, retorno −24,5 %. Con límite de 12 sorteos: 5.932 sesiones, 5.931 cerradas por límite y detalle completo de 65.235 apuestas (resultados reportados por el worker, pendientes de verificación independiente).
 
 ### Evidencia R0
 

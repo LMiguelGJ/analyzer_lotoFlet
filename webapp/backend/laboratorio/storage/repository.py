@@ -149,13 +149,28 @@ def _history_artifact_bytes(db) -> int:
 
 @dataclass(frozen=True)
 class RepositoryQuotaStatus(QuotaStatus):
-    """``QuotaStatus`` plus imported history bytes, which count toward admission."""
+    """``QuotaStatus`` plus persisted history and run bytes admitted by this repository."""
 
     history_artifact_bytes: int = 0
+    run_artifact_bytes: int = 0
 
     @property
     def admission_logical_bytes(self) -> int:
-        return QuotaStatus.admission_logical_bytes.fget(self) + self.history_artifact_bytes
+        return (
+            super().admission_logical_bytes + self.history_artifact_bytes + self.run_artifact_bytes
+        )
+
+
+def _run_artifact_bytes(db) -> int:
+    return db.execute(
+        "SELECT (SELECT coalesce(sum(length(CAST(id AS BLOB)) + length(CAST(name AS BLOB)) + "
+        "8 + length(CAST(config_json AS BLOB)) + length(CAST(summary_json AS BLOB)) + "
+        "length(CAST(created_at AS BLOB))), 0) FROM saved_runs) + "
+        "(SELECT coalesce(sum(length(CAST(run_id AS BLOB)) + 8 + length(CAST(outcome AS BLOB)) + "
+        "8 + 8 + length(CAST(start_label AS BLOB)) + length(CAST(end_label AS BLOB)) + "
+        "8 + 8 + 8 + 8 + 8 + coalesce(length(CAST(bets_json AS BLOB)), 0)), 0) "
+        "FROM saved_run_sessions)"
+    ).fetchone()[0]
 
 
 def _admission_logical_bytes(db) -> int:
@@ -165,6 +180,7 @@ def _admission_logical_bytes(db) -> int:
         + _dataset_artifact_bytes(db)
         + _strategy_artifact_bytes(db)
         + _history_artifact_bytes(db)
+        + _run_artifact_bytes(db)
     )
 
 
@@ -285,6 +301,7 @@ class Repository:
                 status = RepositoryQuotaStatus(
                     **{f.name: getattr(status, f.name) for f in fields(QuotaStatus)},
                     history_artifact_bytes=_history_artifact_bytes(db),
+                    run_artifact_bytes=_run_artifact_bytes(db),
                 )
                 status.require_capacity(len(raw_bytes) + len(sha256) + 128)
                 db.execute(
@@ -353,6 +370,7 @@ class Repository:
             dataset_bytes = _dataset_artifact_bytes(db)
             strategy_bytes = _strategy_artifact_bytes(db)
             history_bytes = _history_artifact_bytes(db)
+            run_bytes = _run_artifact_bytes(db)
         status = measure(
             self.path,
             limit,
@@ -365,6 +383,7 @@ class Repository:
         return RepositoryQuotaStatus(
             **{f.name: getattr(status, f.name) for f in fields(QuotaStatus)},
             history_artifact_bytes=history_bytes,
+            run_artifact_bytes=run_bytes,
         )
 
     def require_capacity(
@@ -606,3 +625,44 @@ class Repository:
                 (limit, offset),
             ).fetchall()
         return total, [self._backtest_row(row) for row in rows]
+
+    def create_run(
+        self, run_id, name, config, summary, session_rows, *, quota_bytes, quota_explicit
+    ):
+        from laboratorio.storage.run_store import create_run
+
+        return create_run(
+            self,
+            run_id,
+            name,
+            config,
+            summary,
+            session_rows,
+            quota_bytes=quota_bytes,
+            quota_explicit=quota_explicit,
+        )
+
+    def get_run(self, run_id):
+        from laboratorio.storage.run_store import get_run
+
+        return get_run(self, run_id)
+
+    def search_runs(self, offset, limit):
+        from laboratorio.storage.run_store import search_runs
+
+        return search_runs(self, offset, limit)
+
+    def page_run_sessions(self, run_id, offset, limit, outcome=None):
+        from laboratorio.storage.run_store import page_run_sessions
+
+        return page_run_sessions(self, run_id, offset, limit, outcome)
+
+    def page_run_bets(self, run_id, ordinal, offset, limit):
+        from laboratorio.storage.run_store import page_run_bets
+
+        return page_run_bets(self, run_id, ordinal, offset, limit)
+
+    def delete_run(self, run_id):
+        from laboratorio.storage.run_store import delete_run
+
+        return delete_run(self, run_id)

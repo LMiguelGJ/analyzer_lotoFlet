@@ -36,10 +36,10 @@ def version(path):
         return db.execute("PRAGMA user_version").fetchone()[0]
 
 
-def test_fresh_database_reaches_14(tmp_path):
+def test_fresh_database_reaches_15(tmp_path):
     path = tmp_path / "a.db"
     initialize_database(path)
-    assert database.SCHEMA_VERSION == 14 and version(path) == 14
+    assert version(path) == database.SCHEMA_VERSION
     assert {"history_sources", "history_active"} <= tables(path)
 
 
@@ -57,8 +57,13 @@ def test_v13_database_upgrades_in_place(tmp_path):
     with closing(sqlite3.connect(path)) as db:
         profiles_before = db.execute("SELECT count(*) FROM game_profiles").fetchone()[0]
     initialize_database(path)
-    assert version(path) == 14
-    assert tables(path) == before | {"history_sources", "history_active"}
+    assert version(path) == database.SCHEMA_VERSION
+    assert tables(path) == before | {
+        "history_sources",
+        "history_active",
+        "saved_runs",
+        "saved_run_sessions",
+    }
     with closing(sqlite3.connect(path)) as db:
         assert db.execute("SELECT count(*) FROM game_profiles").fetchone()[0] == profiles_before
 
