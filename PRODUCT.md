@@ -8,93 +8,51 @@ web
 
 ## Users
 
-Una sola persona usuaria, confirmada (2026-10-05): conoce el dominio de la lotería, quiere probar
-estrategias de Quiniela 80 sobre datos históricos y tiene dificultades reales con interfaces técnicas.
-Escenario real: usa la herramienta sobre todo en el celular (también en computadora), con poco tiempo, y
-quiere responder «¿esta estrategia aguanta o se queda sin plata?» antes de comprometer dinero real.
+Una sola persona que usa la app en su propia computadora. Analiza el historial de Quiniela 80 (una lotería dominicana) y quiere saber si una estrategia de selección de números habría sido rentable. Trabaja repitiendo pruebas: cambia un parámetro, corre otra vez y compara lo que ve. (Confirmado en la entrevista de especificación; el contexto de uso exacto es inferido del brief.)
 
 ## Product Purpose
 
-Laboratorio local de simulación financiera para estrategias de Quiniela 80 sobre un historial congelado.
-Permite configurar las reglas del juego, crear simulaciones (individuales, por lote, de perfiles y
-backtests históricos), analizar resultados, comparar corridas, seguir la cola de experimentos y
-administrar datos. Éxito: la persona completa cada tarea desde el celular, sin jerga, guiada paso a paso,
-y entiende el resultado financiero de un vistazo para decidir con datos, no con esperanza.
+Correr **una** estrategia sobre el historial, en **sesiones consecutivas**, y medir su rentabilidad. Cada sesión arranca con el capital inicial y termina por meta, por quiebra o por un límite opcional de sorteos; la siguiente arranca en el sorteo siguiente, hasta agotar la ventana. El éxito es poder lanzar muchas corridas sobre el mismo historial, repetir con cambios y leer sin ambigüedad cuánto ganó o perdió la estrategia en total.
 
 ## Positioning
 
-La única herramienta de simulación de lotería que trata la verdad financiera como protagonista, se usa
-cómoda en el celular y dice siempre lo mismo: esto SIMULA, no predice ni garantiza rentabilidad.
-
-Lo que no se puede copiar honestamente:
-
-- **Verdad financiera visible** — capital, meta de saldo, duración y caveats nunca se esconden ni se aplazan.
-- **Trazabilidad de cada corrida** — versiones, huellas, fuente de datos y, en corridas históricas nuevas,
-  sesiones y apuestas consultables. Lo que no se guardó se declara («Detalle no almacenado»); nunca se reconstruye.
-- **Guía paso a paso** — cinco pasos, una decisión por vez, lenguaje cotidiano; lo avanzado queda plegado, no eliminado.
+Resultados reproducibles sobre un historial congelado y verificado por huella, con reglas del juego fijadas en cada corrida y apuestas siempre al mínimo. Ninguna otra herramienta de lotería para el público general trata la estrategia como algo que se **mide en el pasado** sin prometer nada hacia adelante.
 
 ## Operating Context
 
-Herramienta local (Windows, `iniciar-laboratorio.bat`, `http://127.0.0.1:8765/`), usada desde el navegador
-del celular y también en escritorio. Historial de Quiniela 80 descargado y congelado en
-`chance_express_history.json`; corre sobre Python (FastAPI) + frontend compilado (Vite, React, TypeScript,
-Tailwind). No hay apuestas reales, no hay sorteos en vivo, no se publica en Internet y funciona sin red:
-ningún recurso (fuentes incluidas) puede depender de servicios externos. Sesión típica: configurar reglas →
-crear simulación guiada → leer resultado → comparar → ajustar. La cola procesa experimentos de a uno.
+- Servidor local en 127.0.0.1 que sirve el frontend compilado; sin cuentas ni acceso remoto.
+- Historial incluido: 105.426 sorteos, del 2025-03-05 al 2026-09-25, con 5 números por sorteo (00–99). Los rankings (13 sistemas, entre ellos transición y fríos) existen solo para los sorteos que cubre el archivo congelado.
+- Dinero en RD$ enteros. Las reglas (posiciones, premios, apuesta mínima) se fijan en cada corrida y no se guardan de forma global.
+- Se puede importar un historial actualizado en formato canónico JSON, sin vista previa.
 
 ## Capabilities and Constraints
 
-- Asistente de cinco pasos común a los cuatro creadores: Estrategia → Reglas → Alcance → Capital y meta → Revisión.
-  Una decisión por paso, resumen antes de confirmar; lo avanzado plegado («Avanzado» / «Detalles técnicos»).
-- Tareas confirmadas, todas importantes: analizar resultados, generar combinaciones, seguir experimentos y administrar datos.
-- Mobile-first en todo: ninguna tarea requiere escritorio.
-- Reglas del juego configurables de punta a punta (números, posiciones, premios, repeticiones, apuesta mínima);
-  nada hardcodeado en la interfaz.
-- La información financiera clave (capital, meta de saldo, duración, caveats) nunca se oculta ni se aplaza.
-- Backend, API, contratos, datos históricos y base de datos son de SOLO LECTURA para el trabajo de diseño:
-  no se cambian endpoints, payloads, identidades, huellas ni semántica financiera nativa.
-- Terminología de dominio en español: sorteo, posición, premio, apuesta, capital, meta de saldo, duración,
-  estrategia, historial, sesión.
-- La UI no promete predicción ni rentabilidad; todo resultado muestra su caveat.
-- Toda la interfaz se escribe **en español**.
-- Sin conexión: las fuentes y cualquier activo se entregan con la aplicación (autoalojados).
-
-Explícitamente fuera de alcance: sesiones consecutivas, mallas, Monte Carlo y estabilidad (plan 80/20).
+- Estrategia: mezcla de rankings con porcentajes que suman 100, o paridad; cobertura de 1 a 50 números. Apuesta siempre la mínima por número.
+- Condiciones: capital, meta de saldo y duración máxima opcional medida en sorteos.
+- Ventana: todo el historial por defecto, con inicio y fin opcionales.
+- Resultado: neto total, retorno sobre lo apostado, sesiones por motivo de cierre (meta, quiebra, límite, incompleta), lista de sesiones y detalle de apuestas. El detalle puede estar completo, parcial o no almacenado. Sin gráficos, sin reproducción, sin comparación entre corridas, sin biblioteca de estrategias.
+- Navegación: dos secciones, Corridas y Ajustes.
+- Fuera de alcance: apuestas reales, predicción de sorteos, probabilidades futuras, Monte Carlo, exportación, generar rankings nuevos.
+- **Sin decidir:** la dirección visual. El usuario rechazó el diseño anterior (una adaptación oscura de BossFarmer) sin precisar por qué.
 
 ## Brand Commitments
 
-Mundo visual vinculante (decisión del usuario, 2026-10-09): **el sistema de diseño de BossFarmer, tal cual**
-(taller industrial: chapa mate oscura, placas con hairlines, leyendas condensadas en versalitas, esquina
-viva, cero sombras), adaptado solo donde la naturaleza de este producto lo exige. Reemplaza al mundo
-Material 3 (decisión del 2026-10-05), que queda como anti-referencia. Los originales de BossFarmer se
-conservan en `docs/referencia-bossfarmer/`.
-
-Se conservan los compromisos conductuales: sin gamificación, sin hype, sin promesas de ganancia.
-No hay logo definitivo: hoy se usa la marca tipográfica «Laboratorio Quiniela 80». El monograma BF
-pertenece a BossFarmer y no se reutiliza.
+Nombre: **Laboratorio Quiniela 80**. Interfaz en español rioplatense con voseo, como el resto de la app. No hay logotipo ni identidad previa vinculante.
 
 ## Evidence on Hand
 
-- Historial real congelado: `chance_express_history.json` (descargado por `download_chance_express.py`).
-- Especificaciones: `docs/especificaciones-laboratorio-integral.md`; contratos de comportamiento en
-  `docs/contrato-comportamiento-backend.md` y `docs/contrato-comportamiento-frontend.md`.
-- Suites de tests de backend y frontend; el estado vigente se verifica ejecutándolas, no se cita de memoria.
-- No hay clientes, testimonios, benchmarks ni métricas de negocio: no se inventan. Las cifras de pantalla
-  provienen del backend o de fixtures etiquetados.
+- `chance_express_history.json` (SHA-256 `d1c0e9ec…9711`) y `repo_ref/reports/chance_rank_v1/predictions/pos1.npz` (SHA-256 `b405041f…4d94d`), verificados al arrancar.
+- Catorce escenarios de referencia con resultado conocido en `docs/resumen_resultados_quiniela.md`.
+- No hay testimonios, clientes, precios ni métricas de uso, y no deben inventarse.
 
 ## Product Principles
 
-1. La verdad financiera primero: capital, meta, duración y caveats siempre visibles.
-2. Guía antes que panel: cada configuración se conduce paso a paso, sin jerga.
-3. El celular manda: si una tarea no funciona en un teléfono, no está terminada.
-4. Lo avanzado existe, pero estorba menos: plegado, secundario, jamás eliminado.
-5. Simula y dilo: cero promesas de predicción o ganancia en toda la interfaz.
-6. Lo que no se guardó se dice, no se inventa.
+1. **Describir el pasado, nunca prometer el futuro.** Todo resultado se presenta como lo ocurrido en el historial; la advertencia no se esconde.
+2. **Una sola tarea, a la vista.** La app existe para correr, leer y repetir; cada elemento que no sirve a eso sobra.
+3. **El número manda.** Las cifras (neto, retorno, saldo, sorteo) se leen primero, con signo y unidad, y nunca se adornan.
+4. **Nada de falsa precisión.** Si el detalle está truncado, incompleto o no almacenado, se dice con claridad.
+5. **Repetir es barato.** Volver a correr con un cambio debe costar un clic, no un formulario nuevo.
 
 ## Accessibility & Inclusion
 
-El usuario declara dificultad real con interfaces técnicas: claridad visual y lenguaje cotidiano son
-requisito de producto. Contraste suficiente (texto `legend` sobre `chassis` y `chassis` sobre `signal`),
-objetivos táctiles de al menos 48 px, teclado completo, foco visible, zoom del navegador sin romper el
-diseño y respeto de `prefers-reduced-motion`. Cuando el color no basta, el estado se dice con texto
-(«Meta alcanzada», «Sin capital»), nunca solo con tono.
+Cumplir WCAG AA: contraste de texto y de los límites de los controles (3:1 como mínimo), operación completa por teclado, foco visible, respeto de `prefers-reduced-motion` y ningún dato transmitido solo por color. Objetivos táctiles de al menos 44 px. (Estándar elegido por el equipo, no un requisito del usuario.)

@@ -103,6 +103,13 @@ Archivo nuevo `engine/run_data.py` (+ tests).
 - Reescribir `webapp/README.md` y `iniciar-laboratorio.bat` si cambia algún requisito; documentar la importación y sus límites.
 - Verificación independiente final (sección 6), cierre del ledger y del mirror, commits locales por unidad de trabajo. Push solo si el usuario lo pide.
 
+## 4b. Resultados de R0 (medido, `py -3.14`, todo el historial)
+
+- Historial: 105.426 sorteos (2025-03-05 → 2026-09-25). **Solo 65.235 (61,9 %) tienen ranking, desde 2025-09-02.** Las estrategias de ranking solo apuestan desde esa fecha; la paridad apuesta en los 105.426.
+- Carga de historial y rankings: 1,4 s; verificar y leer 2 familias de ranking: 0,2 s; votos de paridad: 4,2 s la primera vez.
+- Ejemplo del usuario sin límite de sorteos (capital 2.000, meta 2.800, cobertura 10, apuesta mínima 1, premios 60/10/5/2/1 aplicados a los cinco resultados): la meta **no se alcanza nunca**, todas las sesiones cierran por quiebra tras ~880 apuestas; 71 sesiones, 65.235 apuestas, retorno −21,5 %. Es un resultado del historial, no un error. Con un límite de 12 sorteos se esperan ~5.400 sesiones.
+- Las tres estrategias medidas rinden entre −21,5 % y −23,0 % sobre lo apostado.
+
 ## 5. Supuestos y decisiones (defaults que se aprueban con el plan)
 
 | Id | Decisión | Default |
@@ -110,14 +117,14 @@ Archivo nuevo `engine/run_data.py` (+ tests).
 | D1 | Posiciones y premios con historial de 5 números | La corrida usa los **primeros N resultados** de cada sorteo (N de 1 a 5) y N premios. El rango de números queda fijo en 00–99, lo determina el historial. |
 | D2 | Historial importado sin rankings | Importar **extiende el historial**. Las estrategias con ranking solo apuestan en sorteos que tienen ranking; los demás avanzan el reloj y no apuestan. La paridad apuesta en todos. La interfaz muestra "sorteos con ranking: X de Y". Generar rankings nuevos es un proyecto aparte y queda **fuera de alcance**. |
 | D3 | Qué cuenta como "sorteo" en la duración máxima | Cada sorteo transcurrido desde el inicio de la sesión, incluso sin ranking. |
-| D4 | Ejecución | Si R0 mide ≤ 3 s para el ejemplo sobre todo el historial: **síncrono**, sin cancelación (indicador "Calculando…"). Si > 3 s: hilo en segundo plano con estado, sondeo y cancelación; las corridas en curso al reiniciar quedan "interrumpidas". |
+| D4 | Ejecución | **Resuelto en R0: síncrono, sin cancelación.** Mezcla 60/40 con cobertura 10 sobre todo el historial: 2,0 s (filas 1,6 s + motor 0,4 s; con mezcla vectorizada en R2 baja a menos de 1 s). La paridad calcula sus votos una sola vez (4,2 s) y los deja en caché. Indicador "Calculando…" en pantalla. |
 | D5 | Datos antiguos | Tabla `runs` nueva. `backtests` y todo lo demás quedan en disco **sin mostrarse**. Consecuencia: las corridas históricas ya guardadas dejan de verse. |
 | D6 | Visual | Puerta R8: no se rediseña sin tu dirección. |
 | D7 | Borrar corridas | Incluido (con confirmación). No estaba en el resumen; sin esto la lista solo crece. |
 | D8 | Ajustes | Almacenamiento y cuota, historial e importación, huellas. Se retiran reglas globales y acceso para agentes. |
 | D9 | Base de datos | Solo migraciones aditivas; ninguna destructiva. |
 | D10 | Cobertura | Entero de 1 a 50 para rankings y paridad. |
-| D11 | Topes de la traza | Se mantienen 2 MiB / 10.000 apuestas / 1.000 sesiones. Con un límite de 12 sorteos sobre 105.426 sorteos habrá miles de sesiones, así que el detalle será **parcial** y la interfaz lo dirá. Subir los topes solo con tu aprobación después de ver la medición de R0. |
+| D11 | Topes de la traza | **Revisado en R0.** Con límite de 12 sorteos habrá ~5.400 sesiones y hasta 65.235 apuestas (solo 65.235 de los 105.426 sorteos tienen ranking). Los topes viejos (1.000 sesiones / 10.000 apuestas / 2 MiB) truncarían casi todo. Nuevo diseño de `runs`: el **resumen de todas las sesiones se guarda siempre** (hasta 50.000) y las apuestas se guardan completas hasta 250.000 apuestas / 32 MiB, en columna aparte para que la lista no cargue la traza. Si se superan, se trunca por sesiones enteras y la interfaz lo dice. |
 | D12 | Valores precargados | Tu ejemplo (3 posiciones, 60/10/5, apuesta mínima RD$1, mezcla transición 60 % + fríos 40 %, cobertura 10, capital RD$2.000, meta RD$2.800); la duración máxima queda vacía. |
 | D13 | Rentabilidad | **Neto total** = pagado − apostado en toda la ventana (incluye la cola incompleta); **retorno** = neto total ÷ total apostado. Son métricas descriptivas del historial, no probabilidades. |
 
