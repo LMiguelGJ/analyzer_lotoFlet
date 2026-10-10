@@ -19,16 +19,9 @@ from pathlib import Path
 
 import numpy as np
 
-from laboratorio.domain.contracts import (
-    DRAW_FORMAT,
-    SYSTEMS,
-    Conditions,
-    SelectorKind,
-    Strategy,
-)
-from laboratorio.domain.selection import PARITY_ALGORITHM, blend_order, parity_numbers, random_order
+from laboratorio.domain.contracts import DRAW_FORMAT, SYSTEMS
+from laboratorio.domain.selection import PARITY_ALGORITHM
 from laboratorio.domain.selection import parity_votes as compute_parity_votes
-from laboratorio.domain.session import Draw
 from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256, Settings
 
 _DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -279,63 +272,3 @@ def load_verified_archive(settings: Settings) -> tuple[History, Rankings]:
 def open_lab_data(settings: Settings) -> LabData:
     history, rankings = load_verified_archive(settings)
     return LabData(history=history, rankings=rankings, settings=settings)
-
-
-def session_draws(data: LabData, strategy: Strategy, conditions: Conditions):
-    """Prepare chronological domain rows from verified snapshots, never source paths.
-
-    A ranked starting draw is required. Later unranked history rows remain in
-    the stream so the pure session clock sees them, but have no selection.
-    """
-    history, rankings = data.history, data.rankings
-    start = int(np.searchsorted(history.labels, conditions.start_draw))
-    if start >= len(history.labels) or history.labels[start] != conditions.start_draw:
-        raise DataError("start draw does not exist")
-    rank_index = int(np.searchsorted(rankings.row_ids, start))
-    if rank_index >= len(rankings.row_ids) or rankings.row_ids[rank_index] != start:
-        raise DataError("start draw has no ranking")
-
-    families = {}
-    components = strategy.components or ()
-    if strategy.selector is SelectorKind.SYSTEM:
-        assert strategy.system is not None  # validated by Strategy
-        systems = (strategy.system,)
-    elif strategy.selector is SelectorKind.BLEND:
-        systems = tuple(component.system for component in components)
-    else:
-        systems = ()
-    for system in systems:
-        key = f"ranking:{system}"
-        if key not in data._cache:
-            data._cache[key] = rankings.family(system)
-        families[system] = data._cache[key]
-    weights = {component.system: component.weight for component in components}
-    votes = data.parity_votes() if strategy.selector is SelectorKind.PARITY else None
-
-    def rows():
-        cursor = rank_index
-        for index in range(start, len(history.labels)):
-            order = None
-            if cursor < len(rankings.row_ids) and rankings.row_ids[cursor] == index:
-                if strategy.selector is SelectorKind.SYSTEM:
-                    assert strategy.system is not None
-                    order = families[strategy.system][cursor]
-                elif strategy.selector is SelectorKind.BLEND:
-                    order = blend_order(
-                        {key: value[cursor] for key, value in families.items()}, weights
-                    )
-                elif strategy.selector is SelectorKind.RANDOM:
-                    order = random_order(conditions.seed, history.labels[index])
-                else:
-                    assert votes is not None
-                    order = parity_numbers(int(votes[index]))
-                cursor += 1
-            result = history.nums[index]
-            yield Draw(
-                history.labels[index],
-                int(history.minutes[index]),
-                (int(result[0]), int(result[1]), int(result[2]), int(result[3]), int(result[4])),
-                None if order is None else tuple(int(n) for n in order[: strategy.coverage]),
-            )
-
-    return rows()

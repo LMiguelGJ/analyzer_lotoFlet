@@ -1,79 +1,23 @@
-"""Local-only API factory; no database or worker is created at import time."""
+"""Local-only API factory; no database is created at import time."""
 
 import re
 import socket
 import sys
-import threading
 import webbrowser
-from collections.abc import Callable
 from contextlib import asynccontextmanager
-from pathlib import Path
-from typing import Protocol
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from laboratorio.agent_credentials import load_or_create_token
-from laboratorio.api import (
-    agent,
-    catalog,
-    configurations,
-    datasets,
-    execution_policy,
-    experiments,
-    imports,
-    profile_batches,
-    queue,
-    simulations,
-    strategies,
-)
 from laboratorio.api import settings as settings_api
-from laboratorio.domain.contracts import configure_game
-from laboratorio.domain.strategy_library import seed_presets
 from laboratorio.engine.adapter import open_lab_data
-from laboratorio.importing.history import MAX_HISTORY_BYTES
-from laboratorio.jobs.queue import JobQueue
 from laboratorio.settings import Settings
 from laboratorio.storage.database import initialize_database
 from laboratorio.storage.repository import Repository
 
 _HOST = re.compile(r"(localhost|127\.0\.0\.1)(?::([0-9]{1,5}))?\Z")
-_IMPORT_ENVELOPE_BYTES = 3 * 1024 * 1024
-_STRATEGY_BODY_BYTES = 64 * 1024
-_STRATEGY_POST_PATH = re.compile(r"/api/(?:agent/v1|v1)/strategies\Z")
-_PROFILE_BATCH_POST_PATH = re.compile(r"/api/(?:agent/v1|v1)/profile-batches(?:/validate)?\Z")
-_IMPORT_PATHS = frozenset(
-    (
-        "/api/v1/imports/preview",
-        "/api/v1/imports/promote",
-    )
-)
-_HISTORY_PATHS = frozenset(
-    (
-        "/api/v1/imports/history/preview",
-        "/api/v1/imports/history/promote",
-        "/api/agent/v1/history/preview",
-        "/api/agent/v1/history/promote",
-    )
-)
-_OWNERS_LOCK = threading.Lock()
-_SPA_PATH = re.compile(
-    r"/(?:|experimentos(?:/nuevo(?:/perfil|/sesion)?|/[^/]+(?:/comparacion)?)?|configuraciones|ajustes|datos)\Z"
-)
-
-
-class QueueLifecycle(Protocol):
-    def start(self) -> None: ...
-
-    def shutdown(self) -> None: ...
-
-    @property
-    def is_stopped(self) -> bool: ...
-
-
-# None reserves the database while startup constructs its queue.
-_OWNED_DATABASES: dict[str, QueueLifecycle | None] = {}
+_SPA_PATH = re.compile(r"/(?:corridas|ajustes)?\Z")
 
 
 def _valid_host(value: str, port: int) -> bool:
@@ -89,7 +33,6 @@ def create_app(
     settings: Settings,
     *,
     catalog_loader=open_lab_data,
-    queue_factory: Callable[[Path, Settings], QueueLifecycle] = JobQueue,
     serve_frontend: bool = False,
 ) -> FastAPI:
     if settings.host != "127.0.0.1":
@@ -105,50 +48,13 @@ def create_app(
                 "Frontend build missing or unsafe: run npm ci and npm run build "
                 "in webapp/frontend before starting the launcher."
             )
-        key = str(settings.database_path.resolve())
-        with _OWNERS_LOCK:
-            if key in _OWNED_DATABASES:
-                previous = _OWNED_DATABASES[key]
-                if previous is None or not previous.is_stopped:
-                    raise RuntimeError("a queue already owns this database in this process")
-            _OWNED_DATABASES[key] = None
-        jobs = None
-        try:
-            agent_token = load_or_create_token(settings.data_dir / "agent-token")
-            initialize_database(settings.database_path)
-            repo = Repository(settings.database_path)
-            # Startup seam: stored rules > LABORATORIO_GAME_* > Quiniela 80 default.
-            # Only future simulations use them; saved experiments keep their own profile.
-            stored_game = repo.get_game_settings()
-            if stored_game is not None:
-                configure_game(stored_game)
-            seed_presets(
-                repo,
-                quota_bytes=settings.quota_bytes,
-                quota_explicit=settings.is_quota_explicit,
-            )
-            data = catalog_loader(settings)  # fail startup rather than fabricate catalog data
-            jobs = queue_factory(settings.database_path, settings)
-            with _OWNERS_LOCK:
-                _OWNED_DATABASES[key] = jobs
-            jobs.start()  # recover interrupted and held jobs before serving requests
-            app.state.repo = repo
-            app.state.jobs = jobs
-            app.state.data = data
-            app.state.settings = settings
-            app.state.agent_token = agent_token
-            yield
-        finally:
-            stopped = jobs is None
-            try:
-                if jobs is not None:
-                    jobs.shutdown()  # a failure must retain ownership until the thread exits
-                    stopped = True
-            finally:
-                if stopped:
-                    with _OWNERS_LOCK:
-                        if key in _OWNED_DATABASES and _OWNED_DATABASES[key] is jobs:
-                            del _OWNED_DATABASES[key]
+        initialize_database(settings.database_path)
+        repo = Repository(settings.database_path)
+        data = catalog_loader(settings)  # fail startup rather than fabricate catalog data
+        app.state.repo = repo
+        app.state.data = data
+        app.state.settings = settings
+        yield
 
     app = FastAPI(title="Laboratorio Quiniela 80", version="0.1.0", lifespan=lifespan)
 
@@ -165,78 +71,9 @@ def create_app(
             return JSONResponse({"detail": "same-origin required"}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS") and not origins:
             return JSONResponse({"detail": "Origin required for mutation"}, status_code=403)
-        if request.url.path == "/api/agent/v1" or request.url.path.startswith("/api/agent/v1/"):
-            expected = getattr(request.app.state, "agent_token", None)
-            if not agent.bearer_authorized(request.headers.getlist("authorization"), expected):
-                return JSONResponse({"detail": "agent authentication required"}, status_code=401)
-        if request.method == "POST" and (
-            request.url.path in _IMPORT_PATHS or request.url.path in _HISTORY_PATHS
-        ):
-            try:
-                mode = imports.import_mode(
-                    request,
-                    native_mode="history" if request.url.path in _HISTORY_PATHS else None,
-                )
-            except HTTPException as exc:
-                return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-            byte_limit = MAX_HISTORY_BYTES if mode == "history" else _IMPORT_ENVELOPE_BYTES
-            lengths = request.headers.getlist("content-length")
-            if any(value.isdecimal() and int(value) > byte_limit for value in lengths):
-                return JSONResponse({"detail": "import body exceeds size limit"}, status_code=413)
-            # Bound actual streamed bytes too: Content-Length may be absent or false.
-            # Cache only accepted chunks so the downstream raw-body parser sees the same bytes.
-            chunks = []
-            size = 0
-            async for chunk in request.stream():
-                size += len(chunk)
-                if size > byte_limit:
-                    return JSONResponse(
-                        {"detail": "import body exceeds size limit"}, status_code=413
-                    )
-                chunks.append(chunk)
-            request._body = b"".join(chunks)
-        elif request.method == "POST" and (
-            _STRATEGY_POST_PATH.fullmatch(request.url.path)
-            or _PROFILE_BATCH_POST_PATH.fullmatch(request.url.path)
-        ):
-            body_label = (
-                "profile batch"
-                if _PROFILE_BATCH_POST_PATH.fullmatch(request.url.path)
-                else "strategy"
-            )
-            lengths = request.headers.getlist("content-length")
-            if any(value.isdecimal() and int(value) > _STRATEGY_BODY_BYTES for value in lengths):
-                return JSONResponse(
-                    {"detail": f"{body_label} body exceeds size limit"}, status_code=413
-                )
-            chunks = []
-            size = 0
-            async for chunk in request.stream():
-                size += len(chunk)
-                if size > _STRATEGY_BODY_BYTES:
-                    return JSONResponse(
-                        {"detail": f"{body_label} body exceeds size limit"}, status_code=413
-                    )
-                chunks.append(chunk)
-            request._body = b"".join(chunks)
         return await call_next(request)
 
-    app.include_router(agent.router, prefix="/api")
-
-    for router in (
-        catalog.router,
-        experiments.router,
-        imports.router,
-        datasets.router,
-        configurations.router,
-        queue.router,
-        settings_api.router,
-        strategies.router,
-        profile_batches.router,
-        simulations.router,
-        execution_policy.router,
-    ):
-        app.include_router(router, prefix="/api/v1")
+    app.include_router(settings_api.router, prefix="/api/v1")
 
     if serve_frontend:
 

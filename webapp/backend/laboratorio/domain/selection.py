@@ -1,19 +1,16 @@
-"""Number selection for one draw: rankings, weighted blends, seeded random, parity.
+"""Number selection for one draw: rankings, weighted blends, parity.
 
 Every selector produces a full ordering of the 100 numbers; a strategy with
 coverage ``k`` bets on the first ``k``. Orderings never read the draw they are
 used for, so no future information can leak into a bet.
 """
 
-import hashlib
 from collections.abc import Mapping, Sequence
 
 import numpy as np
 
 NUMBERS = 100
-RANDOM_ALGORITHM = "blake2b64-sort-v1"
 PARITY_ALGORITHM = "legacy-markov-27-votes-v1"
-BLEND_ALGORITHM = "rank-points-100-to-1-weighted-v1"
 _EVEN = np.arange(0, NUMBERS, 2, dtype=np.uint8)
 _ODD = np.arange(1, NUMBERS, 2, dtype=np.uint8)
 
@@ -41,21 +38,6 @@ def blend_order(rankings: Mapping[str, np.ndarray], weights: Mapping[str, int]):
         score[ranking] += weight * points
     # lexsort sorts by the last key first: highest score, then lowest number.
     return np.lexsort((np.arange(NUMBERS), -score)).astype(np.uint8)
-
-
-def random_order(seed: int, draw_label: str):
-    """Seeded ordering keyed by (seed, draw), independent of evaluation order.
-
-    Each number gets the 64-bit BLAKE2b digest of ``"{seed}|{draw}|{number}"``;
-    numbers are sorted by digest (then number). Prefixes are nested by design.
-    """
-    keys = [
-        int.from_bytes(
-            hashlib.blake2b(f"{seed}|{draw_label}|{n:02d}".encode(), digest_size=8).digest(), "big"
-        )
-        for n in range(NUMBERS)
-    ]
-    return np.asarray(sorted(range(NUMBERS), key=lambda n: (keys[n], n)), dtype=np.uint8)
 
 
 def parity_numbers(vote):

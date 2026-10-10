@@ -1,24 +1,18 @@
 """Effective quota preference and read-only local storage measurements."""
 
-import os
 import re
 from dataclasses import asdict
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import field_validator
 
 from laboratorio.api import StrictBody, repo
 from laboratorio.api.backtests import router as backtests_router
-from laboratorio.domain import contracts
-from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256, game_source_from
+from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256
 from laboratorio.storage.repository import QuotaBelowUsage, QuotaReadOnly
 
 router = APIRouter()
 _QUOTA_DECIMAL = re.compile(r"[1-9][0-9]{0,18}\Z")
-
-
-class CredentialRequest(StrictBody):
-    pass
 
 
 class QuotaPreference(StrictBody):
@@ -32,14 +26,6 @@ class QuotaPreference(StrictBody):
         if int(value) > 2**63 - 1:
             raise ValueError("quota_bytes exceeds the SQLite signed 64-bit maximum")
         return value
-
-
-@router.post("/settings/agent-credential")
-def read_agent_credential(_body: CredentialRequest, request: Request, response: Response):
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Referrer-Policy"] = "no-referrer"
-    return {"token": request.app.state.agent_token}
 
 
 @router.get("/settings")
@@ -97,57 +83,6 @@ def update_settings(body: QuotaPreference, request: Request):
     except QuotaBelowUsage as exc:
         raise HTTPException(409, "quota cannot be below current logical usage") from exc
     return read_settings(request)
-
-
-class GameSettingsBody(StrictBody):
-    name: str
-    numbers: int
-    positions: int
-    prizes: list[int]
-    allows_repeats: bool
-    minimum_stake: int
-
-
-def _game_payload(game, source):
-    return {
-        "name": game.name,
-        "numbers": game.numbers,
-        "positions": game.positions,
-        "prizes": list(game.prizes),
-        "allows_repeats": game.allows_repeats,
-        "minimum_stake": game.minimum_stake,
-        "source": source,
-    }
-
-
-@router.get("/settings/game")
-def read_game_settings(request: Request):
-    stored = repo(request).get_game_settings()
-    if stored is not None:
-        return _game_payload(stored, "stored")
-    return _game_payload(contracts.GAME, game_source_from(os.environ))
-
-
-@router.put("/settings/game")
-def update_game_settings(body: GameSettingsBody, request: Request):
-    name = body.name.strip()
-    if not 0 < len(name) <= 80:
-        raise HTTPException(422, "name must have between 1 and 80 characters")
-    try:
-        game = contracts.make_game(
-            name,
-            body.numbers,
-            body.positions,
-            body.prizes,
-            body.allows_repeats,
-            body.minimum_stake,
-        )
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-    repo(request).save_game_settings(game)
-    # Future simulations only: stored experiments keep the rules they were created with.
-    contracts.configure_game(game)
-    return _game_payload(game, "stored")
 
 
 router.include_router(backtests_router, prefix="/backtests")
