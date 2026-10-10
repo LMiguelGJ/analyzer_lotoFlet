@@ -17,7 +17,6 @@ from laboratorio.storage.database import initialize_database
 from laboratorio.storage.repository import Repository
 
 _HOST = re.compile(r"(localhost|127\.0\.0\.1)(?::([0-9]{1,5}))?\Z")
-_SPA_PATH = re.compile(r"/(?:corridas|ajustes)?\Z")
 
 
 def _valid_host(value: str, port: int) -> bool:
@@ -92,9 +91,13 @@ def create_app(
             url_path = "/" + path
             if url_path.startswith("/api"):
                 return JSONResponse({"detail": "not found"}, status_code=404)
-            if _SPA_PATH.fullmatch(url_path):
+            if not path.startswith("assets/"):
+                # History fallback: the router owns every page path, including retired
+                # ones that redirect. Anything that looks like a file is a real 404.
+                if "." in path.rsplit("/", 1)[-1]:
+                    return JSONResponse({"detail": "not found"}, status_code=404)
                 return FileResponse(index)
-            if not path.startswith("assets/") or path.endswith("/"):
+            if path.endswith("/"):
                 return JSONResponse({"detail": "not found"}, status_code=404)
             asset = (dist / path).resolve()
             if not asset.is_relative_to(dist) or not asset.is_file():
