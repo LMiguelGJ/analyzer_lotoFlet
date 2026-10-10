@@ -11,6 +11,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from laboratorio.api import settings as settings_api
+from laboratorio.api.history import router as history_router
+from laboratorio.engine.active_history import HistoryCatalog
 from laboratorio.engine.adapter import open_lab_data
 from laboratorio.settings import Settings
 from laboratorio.storage.database import initialize_database
@@ -52,6 +54,7 @@ def create_app(
         data = catalog_loader(settings)  # fail startup rather than fabricate catalog data
         app.state.repo = repo
         app.state.data = data
+        app.state.history = HistoryCatalog(repo, data, settings)
         app.state.settings = settings
         yield
 
@@ -70,9 +73,27 @@ def create_app(
             return JSONResponse({"detail": "same-origin required"}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS") and not origins:
             return JSONResponse({"detail": "Origin required for mutation"}, status_code=403)
+        if request.method == "POST" and request.url.path == "/api/v1/history":
+            byte_limit = 32 * 1024 * 1024
+            lengths = request.headers.getlist("content-length")
+            if any(value.isdecimal() and int(value) > byte_limit for value in lengths):
+                return JSONResponse(
+                    {"detail": "El archivo supera el límite de 32 MiB."}, status_code=413
+                )
+            chunks = []
+            size = 0
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > byte_limit:
+                    return JSONResponse(
+                        {"detail": "El archivo supera el límite de 32 MiB."}, status_code=413
+                    )
+                chunks.append(chunk)
+            request._body = b"".join(chunks)
         return await call_next(request)
 
     app.include_router(settings_api.router, prefix="/api/v1")
+    app.include_router(history_router, prefix="/api/v1")
 
     if serve_frontend:
 

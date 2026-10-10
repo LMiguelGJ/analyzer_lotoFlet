@@ -10,3 +10,7 @@ class StrictBody(BaseModel):
 
 def repo(request: Request):
     return request.app.state.repo
+
+
+def history(request: Request):
+    return request.app.state.history
