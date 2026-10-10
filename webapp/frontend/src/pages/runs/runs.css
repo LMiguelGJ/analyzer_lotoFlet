@@ -57,3 +57,50 @@
   .runs-block { padding: 16px; }
   .runs-submit { align-items: start; flex-direction: column; }
 }
+
+.result-page, .result-page * { min-width: 0; }
+.result-heading { align-items: end; }
+.result-heading h2 { overflow-wrap: anywhere; }
+.result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.result-actions a { justify-content: center; }
+.result-ledger, .result-config, .result-sessions { min-width: 0; }
+.result-ledger h3, .result-config h3, .result-sessions h3 { margin: 0 0 16px; font: 600 1.5rem/1.15 var(--font-display); }
+.result-summary { width: 100%; background: var(--paper-sheet); }
+.result-summary th { width: 42%; color: var(--ink-muted); font-weight: 500; }
+.result-summary td { text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.result-summary .result-net-row th, .result-summary .result-net-row td { background: var(--highlighter-yellow); color: var(--ink); font-weight: 700; }
+.result-summary .result-net-row td.is-negative { color: var(--pencil-red); }
+.result-word { font-weight: 600; }
+.result-incomplete-note, .result-storage-cap { max-width: 75ch; margin: 12px 0 0; color: var(--ink-muted); }
+.result-config { padding-top: 24px; border-top: 1px solid var(--line); }
+.result-config dl { display: grid; margin: 0; }
+.result-config dl > div { display: grid; grid-template-columns: minmax(11rem, .7fr) minmax(0, 2fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.result-config dt { color: var(--ink-muted); font-weight: 600; }
+.result-config dd { margin: 0; overflow-wrap: anywhere; }
+.result-config .runs-sha { display: inline; }
+.result-detail-status { margin: 24px 0 0; font-weight: 600; }
+.result-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+.result-section-heading h3, .result-selected-session h4 { margin: 0 0 8px; font: 600 1.5rem/1.15 var(--font-display); }
+.result-section-heading p { margin: 0; color: var(--ink-muted); }
+.result-filter { display: grid; gap: 8px; min-width: min(100%, 15rem); color: var(--ink-muted); font: 600 .875rem/1.4 var(--font-display); }
+.result-filter select { min-height: 48px; }
+.result-table-wrap { min-width: 0; max-width: 100%; overscroll-behavior-inline: contain; }
+.result-session-table { min-width: 1120px; }
+.result-bet-table { min-width: 900px; }
+.result-session-table th[scope="row"] { min-width: 100px; }
+.result-session-table td, .result-bet-table td { white-space: nowrap; }
+.result-session-table .result-select-session { min-width: 48px; min-height: 48px; padding: 8px 12px; }
+.result-pagination { align-items: center; }
+.result-empty { margin: 0; padding: 16px; border: 1px solid var(--line); background: var(--paper-sheet); }
+.result-selected-session { display: grid; gap: 12px; padding-top: 24px; border-top: 1px solid var(--line); }
+.result-selected-session h4 { margin: 0; }
+.result-bets { display: grid; gap: 16px; min-width: 0; }
+@media (max-width: 640px) {
+  .result-actions { width: 100%; }
+  .result-actions a { flex: 1 1 100%; }
+  .result-section-heading { align-items: start; flex-direction: column; }
+  .result-filter { width: 100%; }
+  .result-config dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .result-summary th { width: auto; }
+  .result-pagination { align-items: start; flex-direction: column; }
+}
