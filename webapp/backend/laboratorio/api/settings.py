@@ -7,7 +7,6 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import field_validator
 
 from laboratorio.api import StrictBody, repo
-from laboratorio.api.backtests import router as backtests_router
 from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256
 from laboratorio.storage.repository import QuotaBelowUsage, QuotaReadOnly
 
@@ -85,6 +84,3 @@ def update_settings(body: QuotaPreference, request: Request):
     except QuotaBelowUsage as exc:
         raise HTTPException(409, "quota cannot be below current logical usage") from exc
     return read_settings(request)
-
-
-router.include_router(backtests_router, prefix="/backtests")
