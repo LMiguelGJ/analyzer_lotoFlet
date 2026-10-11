@@ -2,7 +2,7 @@
 .runs-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
 .runs-heading h2 { margin: 0 0 8px; }
 .runs-heading p { margin: 0; color: var(--ink-muted); }
-.runs-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); background: var(--paper-sheet); }
+.runs-table-wrap { position: relative; width: 100%; overflow-x: auto; border: 1px solid var(--line); background: var(--paper-sheet); }
 .runs-table { width: 100%; min-width: 850px; background: var(--paper-sheet); }
 .runs-table th, .runs-table td { vertical-align: top; }
 .runs-table th[scope="row"] { min-width: 230px; font-weight: 600; }
@@ -21,7 +21,8 @@
 .runs-block { min-width: 0; margin: 0; padding: 24px; border: 1px solid var(--line); background: var(--paper-sheet); }
 .runs-block legend { padding: 0 8px; font: 600 1.5rem/1.15 var(--font-display); }
 .runs-fields-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
-.runs-field { display: grid; align-content: start; gap: 8px; margin-bottom: 20px; min-width: 0; }
+.runs-field { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 8px; margin-bottom: 20px; min-width: 0; }
+.runs-field input:not([type="checkbox"]):not([type="radio"]) { width: 100%; min-width: 0; }
 .runs-field > span, .runs-label { color: var(--ink-muted); font: 600 .875rem/1.4 var(--font-display); }
 .runs-field small { font-weight: 400; }
 .runs-field-error { color: var(--pencil-red); font-size: .875rem; }

@@ -19,6 +19,26 @@ describe("run pages local touch targets and long-text containment", () => {
     expect(css).toMatch(/\.result-bet-table\s*\{[^}]*min-width:\s*900px/s);
   });
 
+  it("establishes a containing block for absolutely positioned sr-only descendants in scroll regions", () => {
+    // jsdom does not measure layout, so this guards the CSS contract. Tailwind's sr-only is
+    // position:absolute; without a positioned scroll wrapper its containing block becomes the
+    // shell and it escapes the overflow clip, widening the document on narrow viewports.
+    expect(css).toMatch(/\.runs-table-wrap\s*\{[^}]*overflow-x:\s*auto/s);
+    expect(css).toMatch(/\.runs-table-wrap\s*\{[^}]*position:\s*relative/s);
+  });
+
+  it("keeps text and number inputs inside their grid label on narrow viewports", () => {
+    // jsdom does not measure layout. Without an explicit column, the implicit `auto` track takes the
+    // input's intrinsic width (size=20) and pushes the form past a 390px viewport.
+    expect(css).toMatch(/\.runs-field\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s);
+    const inputRule = css.match(/\.runs-field\s+input([^{,]*)\s*\{([^}]*)\}/s);
+    expect(inputRule).not.toBeNull();
+    expect(inputRule![2]).toMatch(/width:\s*100%/);
+    expect(inputRule![2]).toMatch(/min-width:\s*0/);
+    expect(inputRule![1]).toContain(':not([type="checkbox"])');
+    expect(inputRule![1]).toContain(':not([type="radio"])');
+  });
+
   it("allows the complete SHA-256 value to wrap within the history metadata", () => {
     expect(css).toMatch(/\.runs-history-meta\s*\{[^}]*min-width:\s*0/s);
     expect(css).toMatch(/\.runs-sha\s*\{[^}]*min-width:\s*0/s);
