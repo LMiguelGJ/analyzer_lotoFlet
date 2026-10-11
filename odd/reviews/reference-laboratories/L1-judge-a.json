@@ -1,0 +1,13 @@
+{
+  "rows": [
+    {
+      "id": "JD-A-001",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/engine/reference_labs.py:120-121",
+      "severity": "MEDIUM",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Ranking laboratories crash when no archived rows fall within the configured window: np.asarray([]) produces floating-point positions, and family[positions] raises IndexError instead of returning empty totals. Reproduced using adapter.parse_history with two 2024-01-01 draws, real Rankings containing row_ids=[1] and a valid transition permutation, and catalog transicion_1_audaz. Reference replay('bold', 1, empty payments, empty first_hits) returns []; the parity candidate also returns empty totals. Verify with a regression test covering zero eligible rows for ranking laboratories."
+    }
+  ]
+}

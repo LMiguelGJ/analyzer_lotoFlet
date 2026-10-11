@@ -1,0 +1,54 @@
+{
+  "target_identity": "6bd2c6a97aca6f66919fdfcdd7021791d1fd0aa688cacbdd25749daa5a60f816",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [
+    {
+      "id": "JD-L1-INFO-001",
+      "severity": "MEDIUM",
+      "status": "verified",
+      "judges": [
+        "mv3a05gg-2d-7i7r",
+        "mv3a06dl-2e-170b"
+      ]
+    }
+  ],
+  "fix_work_units": [
+    {
+      "kind": "human-authorized ordinary TDD correction, not JD severe fix",
+      "writer": "mv39ur63-2c-8wrj",
+      "files": [
+        "webapp/backend/laboratorio/engine/reference_labs.py",
+        "webapp/backend/tests/test_reference_labs.py"
+      ],
+      "red": "22 failures, 3 existing passes",
+      "green": "25 passes in 6.21s"
+    }
+  ],
+  "scoped_rejudgment": "approved",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "independent_verification": {
+    "task": "mv3a0kds-2f-jwv5",
+    "tests": 25,
+    "duration_seconds": 5.97,
+    "manifested_files": 104,
+    "hashes_and_exact_file_set": "pass before and after",
+    "first_historical_golden": "unchanged"
+  },
+  "artifacts": [
+    "L1-initial.md",
+    "L1-judge-a.json",
+    "L1-judge-b.json",
+    "L1-fix1.md",
+    "L1-fix1-judge-a.json",
+    "L1-fix1-judge-b.json"
+  ],
+  "limitations": [
+    "Actor wrappers rows/resolutions differ from requested findings/evidence; exact outputs preserved and no extra inspection proof invented.",
+    "Approval covers L1 isolated engine/first historical lab and empty-window fix, not all fourteen full replays, API or UI.",
+    "Native assessment unassessable, RDD off, independent functional verification completed; no review receipt/delivery grant."
+  ]
+}

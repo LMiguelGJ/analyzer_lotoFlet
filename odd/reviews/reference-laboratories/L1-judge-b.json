@@ -1,0 +1,13 @@
+{
+  "rows": [
+    {
+      "id": "JD-B-001",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/engine/reference_labs.py:120-121",
+      "severity": "MEDIUM",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Ranking laboratories crash when no archived rows fall inside the laboratory window instead of returning an empty replay. With labels=('2025-01-01 00:00',), nums=[[0,1,2,3,4]], row_ids=int64([0]), and family returning a valid (1,100) permutation, transicion_1_audaz raises IndexError: arrays used as indices must be of integer (or boolean) type. The empty positions array defaults to float64. The same input succeeds for paridad_50_plana with zero eligible draws and zero totals. Verify with an empty-window regression test for each ranking laboratory. Manifest identity 2ab66b03f4c21b6a62292baae89937fd2af39ad190d1179dd5c6458767b2438e and all 100 file hashes were verified before inspection; the three supplied tests and synthetic differential replay probes for all fourteen laboratories passed."
+    }
+  ]
+}
