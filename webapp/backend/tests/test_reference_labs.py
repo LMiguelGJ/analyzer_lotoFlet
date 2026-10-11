@@ -54,9 +54,7 @@ def test_catalog_is_immutable_and_has_the_fourteen_archived_scenarios():
     assert get_reference_lab("transicion_1_audaz") is REFERENCE_LABS[0]
 
 
-@pytest.mark.parametrize(
-    "lab", [lab for lab in REFERENCE_LABS if lab.selection_kind == "ranking"]
-)
+@pytest.mark.parametrize("lab", [lab for lab in REFERENCE_LABS if lab.selection_kind == "ranking"])
 @pytest.mark.parametrize("has_archived_row", [True, False])
 def test_ranking_lab_with_no_eligible_draws_returns_empty_result(lab, has_archived_row):
     label = "2025-09-02 05:10" if not has_archived_row else "2025-09-01 05:10"
@@ -64,9 +62,7 @@ def test_ranking_lab_with_no_eligible_draws_returns_empty_result(lab, has_archiv
     row_ids = np.asarray([0]) if has_archived_row else np.asarray([], dtype=np.int64)
     rankings = SimpleNamespace(
         row_ids=row_ids,
-        family=lambda system: np.tile(
-            np.arange(100, dtype=np.uint8), (len(row_ids), 1)
-        ),
+        family=lambda system: np.tile(np.arange(100, dtype=np.uint8), (len(row_ids), 1)),
     )
 
     result = run_reference_lab(lab, history, rankings)

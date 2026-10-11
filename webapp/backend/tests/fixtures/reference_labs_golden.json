@@ -1,0 +1,1395 @@
+{
+  "provenance": {
+    "history": {
+      "relative_path": "chance_express_history.json",
+      "sha256": "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711"
+    },
+    "rankings": {
+      "relative_path": "repo_ref/reports/chance_rank_v1/predictions/pos1.npz",
+      "sha256": "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d"
+    },
+    "sources": {
+      "repo_ref/quiniela_compare.py": "adde5572c8e0e6d44da71e4bfaaf1f1851ad2689d53af11a614c1d97e8c90acf",
+      "repo_ref/quiniela_sim.py": "c0dca164a84b79a6fedbd24c1a4cb8e958e5ebb5efa1f8b5059a6d42501b67ac",
+      "repo_ref/strategy_tests/rules.py": "6cabf441d99c58e71be0dbc1b570bb39a65b9743d688814e6ca4c830da671ed7",
+      "repo_ref/simuladores/runner.py": "d1a544c849d02655115bc4b0a0d9b669d9ec0d854b99ca4a534fcaea96c82c0a",
+      "repo_ref/chance_rank/data.py": "2b0feb5d715aab99b8d3d3d53e1be51ca88edc66df2f7a8c08e5f1b78c50850b",
+      "repo_ref/simuladores/transicion_1_audaz/ejecutar.py": "60df6331aef21128393726231d52799c8b315cce97faa402c340dacacc18c88f",
+      "repo_ref/simuladores/frios_1_audaz/ejecutar.py": "bf1a4c1f2d97eba82db089a9202ef79e8f964b981cbbd77a84f193a9543f78dc",
+      "repo_ref/simuladores/selector_1_audaz/ejecutar.py": "ae897385bc92cb8468a340c15d041b98baad1cce95a5fdb420599bcb2ce1ad61",
+      "repo_ref/simuladores/mezclas_1_audaz/ejecutar.py": "d663098d2c441db32835cb889a433556049053f95c75f0d06a25c3845d851882",
+      "repo_ref/simuladores/ensemble_5_audaz/ejecutar.py": "3a3da786f89439160cc536d550b6ecc7a3f8124e9174302e40738a064fbf843f",
+      "repo_ref/simuladores/ensemble_10_audaz/ejecutar.py": "015bacb0283498b0783d19fa0d1caeb897c2ffeb1b3f5afb0f1a3f5aa49e9e01",
+      "repo_ref/simuladores/ensemble_20_audaz/ejecutar.py": "05c6f52b416de291b65c3ec43ea5acaef02f647a1b56522530f9c5c8cf4659e0",
+      "repo_ref/simuladores/frios_25_escalera/ejecutar.py": "65678cdffc5ff9d0f549e5cc4928711b8d7797c9a2fe4d664e5a512f6385d869",
+      "repo_ref/simuladores/mezclas_50_audaz/ejecutar.py": "3dcba4d311cfb0e1131acfb5645d7898890c540d52cf29309a86fe2532fc8f99",
+      "repo_ref/simuladores/transicion_50_audaz/ejecutar.py": "81ff3c77817662bcd005d499a8ed1c9dd4bb1ebdf57ebaa733492fc89e0eb18a",
+      "repo_ref/simuladores/paridad_50_audaz/ejecutar.py": "cecf4a7a1268971f171c03c96d81d421b4421134103a8aa2a02e6c0380f23322",
+      "repo_ref/simuladores/frios_50_escalera/ejecutar.py": "0dd84e2755e158dd129c136f7c6aee3a85dee167348a30ac1e476ce0dcca7f18",
+      "repo_ref/simuladores/paridad_50_escalera/ejecutar.py": "5a45e96e7a7c2de9e107b18f52c91ee648ccf61bb9b17acbf603edc0454708b1",
+      "repo_ref/simuladores/paridad_50_plana/ejecutar.py": "e47084ddb4799514efeda160afc950154cd10a60b4f70fb37cf5482411009066"
+    },
+    "oracle_functions": [
+      "quiniela_compare.ranking_context",
+      "quiniela_compare.ranking_family",
+      "quiniela_compare.selected_payments",
+      "quiniela_compare.replay",
+      "quiniela_sim.consensus_parity",
+      "simuladores.runner.verify_input"
+    ]
+  },
+  "reference_contract": {
+    "capital": 2000,
+    "goal": 2800,
+    "prizes": [
+      80,
+      8,
+      4,
+      2,
+      1
+    ],
+    "window_start": "2025-09-02 05:10",
+    "window_end": "2026-09-25 18:20",
+    "ranked_draws": 65235,
+    "gaps": 6543,
+    "history_draws": 105426,
+    "ranked_first": "2025-09-02 05:10",
+    "ranked_last": "2026-09-25 18:20"
+  },
+  "laboratories": [
+    {
+      "lab_id": "transicion_1_audaz",
+      "system": "transition",
+      "coverage": 1,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 963,
+        "incomplete": 1,
+        "goals": 681,
+        "ruins": 282,
+        "sessions_total": 964,
+        "total_wagered": 1182452,
+        "total_paid": 1190701,
+        "total_net": 8249,
+        "total_steps": 65235,
+        "mean_net_closed": 10.28348909657321
+      },
+      "session_sha256": "e7e9d68a1ac0078b4e5a42366f6e989f8b4871f95cb6673717c17839ba69fbc4",
+      "session_count": 964,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            59,
+            60,
+            2802,
+            822,
+            1624
+          ]
+        },
+        "ruin": {
+          "index": 8,
+          "session": [
+            "ruin",
+            422,
+            519,
+            98,
+            0,
+            2013,
+            13
+          ]
+        },
+        "incomplete": {
+          "index": 963,
+          "session": [
+            "incomplete",
+            65130,
+            65234,
+            105,
+            346,
+            2163,
+            509
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            59,
+            60,
+            2802,
+            822,
+            1624
+          ]
+        },
+        "last": {
+          "index": 963,
+          "session": [
+            "incomplete",
+            65130,
+            65234,
+            105,
+            346,
+            2163,
+            509
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "frios_1_audaz",
+      "system": "cold",
+      "coverage": 1,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 974,
+        "incomplete": 1,
+        "goals": 684,
+        "ruins": 290,
+        "sessions_total": 975,
+        "total_wagered": 1184678,
+        "total_paid": 1179675,
+        "total_net": -5003,
+        "total_steps": 65235,
+        "mean_net_closed": -3.3603696098562628
+      },
+      "session_sha256": "810c00e2e9cb08caeb7d83468eef3141a4b0bd8a76e15d6eeed2a61dcd3db04e",
+      "session_count": 975,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            2,
+            3,
+            2847,
+            33,
+            880
+          ]
+        },
+        "ruin": {
+          "index": 4,
+          "session": [
+            "ruin",
+            198,
+            309,
+            112,
+            0,
+            2258,
+            258
+          ]
+        },
+        "incomplete": {
+          "index": 974,
+          "session": [
+            "incomplete",
+            65141,
+            65234,
+            94,
+            270,
+            1831,
+            101
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            2,
+            3,
+            2847,
+            33,
+            880
+          ]
+        },
+        "last": {
+          "index": 974,
+          "session": [
+            "incomplete",
+            65141,
+            65234,
+            94,
+            270,
+            1831,
+            101
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "selector_1_audaz",
+      "system": "select_interpretable",
+      "coverage": 1,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 946,
+        "incomplete": 1,
+        "goals": 663,
+        "ruins": 283,
+        "sessions_total": 947,
+        "total_wagered": 1187152,
+        "total_paid": 1179112,
+        "total_net": -8040,
+        "total_steps": 65235,
+        "mean_net_closed": -8.186046511627907
+      },
+      "session_sha256": "03053efb17bfb7ccf1ed643c7741b9b0f32ce0e3136a043b5b1307c143b05e30",
+      "session_count": 947,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            10,
+            11,
+            2854,
+            114,
+            968
+          ]
+        },
+        "ruin": {
+          "index": 2,
+          "session": [
+            "ruin",
+            88,
+            216,
+            129,
+            0,
+            2563,
+            563
+          ]
+        },
+        "incomplete": {
+          "index": 946,
+          "session": [
+            "incomplete",
+            65208,
+            65234,
+            27,
+            1704,
+            331,
+            35
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            10,
+            11,
+            2854,
+            114,
+            968
+          ]
+        },
+        "last": {
+          "index": 946,
+          "session": [
+            "incomplete",
+            65208,
+            65234,
+            27,
+            1704,
+            331,
+            35
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "mezclas_1_audaz",
+      "system": "mix",
+      "coverage": 1,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 968,
+        "incomplete": 1,
+        "goals": 676,
+        "ruins": 292,
+        "sessions_total": 969,
+        "total_wagered": 1190119,
+        "total_paid": 1174698,
+        "total_net": -15421,
+        "total_steps": 65235,
+        "mean_net_closed": -15.625
+      },
+      "session_sha256": "6950c204c1f07b79202e973bf7c6bfaf8026de496ece6b1d395fe7f30678dad4",
+      "session_count": 969,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            10,
+            11,
+            2854,
+            114,
+            968
+          ]
+        },
+        "ruin": {
+          "index": 2,
+          "session": [
+            "ruin",
+            88,
+            216,
+            129,
+            0,
+            2563,
+            563
+          ]
+        },
+        "incomplete": {
+          "index": 968,
+          "session": [
+            "incomplete",
+            65208,
+            65234,
+            27,
+            1704,
+            331,
+            35
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            10,
+            11,
+            2854,
+            114,
+            968
+          ]
+        },
+        "last": {
+          "index": 968,
+          "session": [
+            "incomplete",
+            65208,
+            65234,
+            27,
+            1704,
+            331,
+            35
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "ensemble_5_audaz",
+      "system": "ensemble",
+      "coverage": 5,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 4720,
+        "incomplete": 1,
+        "goals": 3226,
+        "ruins": 1494,
+        "sessions_total": 4721,
+        "total_wagered": 6046445,
+        "total_paid": 5803772,
+        "total_net": -242673,
+        "total_steps": 65235,
+        "mean_net_closed": -51.22330508474576
+      },
+      "session_sha256": "738c97f7abb095b7c1cb4f51f6909e4f6a4184800e540529bd4075a0fb1fb111",
+      "session_count": 4721,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            10,
+            11,
+            2843,
+            850,
+            1693
+          ]
+        },
+        "ruin": {
+          "index": 1,
+          "session": [
+            "ruin",
+            11,
+            30,
+            20,
+            2,
+            2055,
+            57
+          ]
+        },
+        "incomplete": {
+          "index": 4720,
+          "session": [
+            "incomplete",
+            65223,
+            65234,
+            12,
+            1101,
+            945,
+            46
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            10,
+            11,
+            2843,
+            850,
+            1693
+          ]
+        },
+        "last": {
+          "index": 4720,
+          "session": [
+            "incomplete",
+            65223,
+            65234,
+            12,
+            1101,
+            945,
+            46
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "ensemble_10_audaz",
+      "system": "ensemble",
+      "coverage": 10,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 9061,
+        "incomplete": 1,
+        "goals": 6140,
+        "ruins": 2921,
+        "sessions_total": 9062,
+        "total_wagered": 12289310,
+        "total_paid": 11772947,
+        "total_net": -516363,
+        "total_steps": 65235,
+        "mean_net_closed": -56.93996247654784
+      },
+      "session_sha256": "566ba6f5e0b950edeef28db98316a5ce9926217342c7feb0c369720dd7ff4ead",
+      "session_count": 9062,
+      "boundary_sessions": {
+        "ruin": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            12,
+            13,
+            8,
+            2520,
+            528
+          ]
+        },
+        "goal": {
+          "index": 3,
+          "session": [
+            "goal",
+            36,
+            42,
+            7,
+            2856,
+            1210,
+            2066
+          ]
+        },
+        "incomplete": {
+          "index": 9061,
+          "session": [
+            "incomplete",
+            65231,
+            65234,
+            4,
+            1570,
+            540,
+            110
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            12,
+            13,
+            8,
+            2520,
+            528
+          ]
+        },
+        "last": {
+          "index": 9061,
+          "session": [
+            "incomplete",
+            65231,
+            65234,
+            4,
+            1570,
+            540,
+            110
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "ensemble_20_audaz",
+      "system": "ensemble",
+      "coverage": 20,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 16086,
+        "incomplete": 1,
+        "goals": 10785,
+        "ruins": 5301,
+        "sessions_total": 16087,
+        "total_wagered": 24603180,
+        "total_paid": 23649594,
+        "total_net": -953586,
+        "total_steps": 65235,
+        "mean_net_closed": -59.241576526171826
+      },
+      "session_sha256": "67610405b2081dfb2b817e91e18b23b076f8ecdbdf0a7e7831616d75958c85b0",
+      "session_count": 16087,
+      "boundary_sessions": {
+        "ruin": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            6,
+            7,
+            2,
+            2220,
+            222
+          ]
+        },
+        "goal": {
+          "index": 1,
+          "session": [
+            "goal",
+            7,
+            10,
+            4,
+            2822,
+            1660,
+            2482
+          ]
+        },
+        "incomplete": {
+          "index": 16086,
+          "session": [
+            "incomplete",
+            65233,
+            65234,
+            2,
+            1374,
+            640,
+            14
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            6,
+            7,
+            2,
+            2220,
+            222
+          ]
+        },
+        "last": {
+          "index": 16086,
+          "session": [
+            "incomplete",
+            65233,
+            65234,
+            2,
+            1374,
+            640,
+            14
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "frios_25_escalera",
+      "system": "cold",
+      "coverage": 25,
+      "stake_style": "ladder",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 1105,
+        "incomplete": 1,
+        "goals": 677,
+        "ruins": 428,
+        "sessions_total": 1106,
+        "total_wagered": 4738200,
+        "total_paid": 4559206,
+        "total_net": -178994,
+        "total_steps": 65235,
+        "mean_net_closed": -162.15384615384616
+      },
+      "session_sha256": "0cd28f1bbccfe4491403e4b9b736ae2984b0c82fbff674c925afc85da04fb0b8",
+      "session_count": 1106,
+      "boundary_sessions": {
+        "ruin": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            36,
+            37,
+            191,
+            3300,
+            1491
+          ]
+        },
+        "goal": {
+          "index": 2,
+          "session": [
+            "goal",
+            74,
+            113,
+            40,
+            2915,
+            3150,
+            4065
+          ]
+        },
+        "incomplete": {
+          "index": 1105,
+          "session": [
+            "incomplete",
+            65223,
+            65234,
+            12,
+            2186,
+            350,
+            536
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            36,
+            37,
+            191,
+            3300,
+            1491
+          ]
+        },
+        "last": {
+          "index": 1105,
+          "session": [
+            "incomplete",
+            65223,
+            65234,
+            12,
+            2186,
+            350,
+            536
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "mezclas_50_audaz",
+      "system": "mix",
+      "coverage": 50,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 20605,
+        "incomplete": 0,
+        "goals": 12845,
+        "ruins": 7760,
+        "sessions_total": 20605,
+        "total_wagered": 53708100,
+        "total_paid": 51296800,
+        "total_net": -2411300,
+        "total_steps": 65235,
+        "mean_net_closed": -117.02499393351128
+      },
+      "session_sha256": "55c11aa70196f16f57427112b79e3e262475a9cfb4a89b8ba6a796c6e9c91b75",
+      "session_count": 20605,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            0,
+            1,
+            3188,
+            1350,
+            2538
+          ]
+        },
+        "ruin": {
+          "index": 1,
+          "session": [
+            "ruin",
+            1,
+            3,
+            3,
+            32,
+            3100,
+            1132
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            0,
+            1,
+            3188,
+            1350,
+            2538
+          ]
+        },
+        "last": {
+          "index": 20604,
+          "session": [
+            "goal",
+            65231,
+            65234,
+            4,
+            2861,
+            4250,
+            5111
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "transicion_50_audaz",
+      "system": "transition",
+      "coverage": 50,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 20682,
+        "incomplete": 1,
+        "goals": 12890,
+        "ruins": 7792,
+        "sessions_total": 20683,
+        "total_wagered": 53901950,
+        "total_paid": 51502385,
+        "total_net": -2399565,
+        "total_steps": 65235,
+        "mean_net_closed": -115.99506817522483
+      },
+      "session_sha256": "108a1384d206af746f7c5834ffd1209c2a180589616f81016eb9ffeb7bca1c9e",
+      "session_count": 20683,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            0,
+            1,
+            3161,
+            1350,
+            2511
+          ]
+        },
+        "ruin": {
+          "index": 1,
+          "session": [
+            "ruin",
+            1,
+            5,
+            5,
+            12,
+            2350,
+            362
+          ]
+        },
+        "incomplete": {
+          "index": 20682,
+          "session": [
+            "incomplete",
+            65233,
+            65234,
+            2,
+            1445,
+            2100,
+            1545
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            0,
+            1,
+            3161,
+            1350,
+            2511
+          ]
+        },
+        "last": {
+          "index": 20682,
+          "session": [
+            "incomplete",
+            65233,
+            65234,
+            2,
+            1445,
+            2100,
+            1545
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "paridad_50_audaz",
+      "system": "parity",
+      "coverage": 50,
+      "stake_style": "bold",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 20404,
+        "incomplete": 0,
+        "goals": 12698,
+        "ruins": 7706,
+        "sessions_total": 20404,
+        "total_wagered": 53446750,
+        "total_paid": 50982492,
+        "total_net": -2464258,
+        "total_steps": 65235,
+        "mean_net_closed": -120.7732797490688
+      },
+      "session_sha256": "7b8b639c3b8d0833cf24408c10b11290f54ff40b19d392d95a4fc7add94e0fd6",
+      "session_count": 20404,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            0,
+            1,
+            3188,
+            1350,
+            2538
+          ]
+        },
+        "ruin": {
+          "index": 3,
+          "session": [
+            "ruin",
+            3,
+            12,
+            10,
+            45,
+            6950,
+            4995
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            0,
+            1,
+            3188,
+            1350,
+            2538
+          ]
+        },
+        "last": {
+          "index": 20403,
+          "session": [
+            "ruin",
+            65231,
+            65234,
+            4,
+            44,
+            2250,
+            294
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "frios_50_escalera",
+      "system": "cold",
+      "coverage": 50,
+      "stake_style": "ladder",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 3502,
+        "incomplete": 1,
+        "goals": 1429,
+        "ruins": 2073,
+        "sessions_total": 3503,
+        "total_wagered": 9555650,
+        "total_paid": 9210573,
+        "total_net": -345077,
+        "total_steps": 65235,
+        "mean_net_closed": -98.71159337521416
+      },
+      "session_sha256": "491af6652e9b55fe8b098d922e71f4cb9596877528b8e7e4246701bcbee1c470",
+      "session_count": 3503,
+      "boundary_sessions": {
+        "ruin": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            24,
+            25,
+            1506,
+            2850,
+            2356
+          ]
+        },
+        "goal": {
+          "index": 6,
+          "session": [
+            "goal",
+            72,
+            95,
+            24,
+            2852,
+            3400,
+            4252
+          ]
+        },
+        "incomplete": {
+          "index": 3502,
+          "session": [
+            "incomplete",
+            65214,
+            65234,
+            21,
+            2611,
+            2600,
+            3211
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            24,
+            25,
+            1506,
+            2850,
+            2356
+          ]
+        },
+        "last": {
+          "index": 3502,
+          "session": [
+            "incomplete",
+            65214,
+            65234,
+            21,
+            2611,
+            2600,
+            3211
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "paridad_50_escalera",
+      "system": "parity",
+      "coverage": 50,
+      "stake_style": "ladder",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 3496,
+        "incomplete": 1,
+        "goals": 1368,
+        "ruins": 2128,
+        "sessions_total": 3497,
+        "total_wagered": 9485250,
+        "total_paid": 9050564,
+        "total_net": -434686,
+        "total_steps": 65235,
+        "mean_net_closed": -124.37242562929062
+      },
+      "session_sha256": "a0e838f324b13570b323da5fbcaa548e257daf782d4baaab0f67d4ce19f5302b",
+      "session_count": 3497,
+      "boundary_sessions": {
+        "goal": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            29,
+            30,
+            2894,
+            4150,
+            5044
+          ]
+        },
+        "ruin": {
+          "index": 1,
+          "session": [
+            "ruin",
+            30,
+            59,
+            30,
+            1790,
+            4750,
+            4540
+          ]
+        },
+        "incomplete": {
+          "index": 3496,
+          "session": [
+            "incomplete",
+            65228,
+            65234,
+            7,
+            2120,
+            700,
+            820
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "goal",
+            0,
+            29,
+            30,
+            2894,
+            4150,
+            5044
+          ]
+        },
+        "last": {
+          "index": 3496,
+          "session": [
+            "incomplete",
+            65228,
+            65234,
+            7,
+            2120,
+            700,
+            820
+          ]
+        }
+      }
+    },
+    {
+      "lab_id": "paridad_50_plana",
+      "system": "parity",
+      "coverage": 50,
+      "stake_style": "flat",
+      "capital": 2000,
+      "goal": 2800,
+      "prizes": [
+        80,
+        8,
+        4,
+        2,
+        1
+      ],
+      "window_start": "2025-09-02 05:10",
+      "window_end": "2026-09-25 18:20",
+      "eligible_draws": 65235,
+      "gaps": 6543,
+      "first": "2025-09-02 05:10",
+      "last": "2026-09-25 18:20",
+      "totals": {
+        "completed": 91,
+        "incomplete": 1,
+        "goals": 13,
+        "ruins": 78,
+        "sessions_total": 92,
+        "total_wagered": 3261750,
+        "total_paid": 3118481,
+        "total_net": -143269,
+        "total_steps": 65235,
+        "mean_net_closed": -1572.7692307692307
+      },
+      "session_sha256": "23fb088c348900c7a56dacedaa97597c6ad6e76da22a4d767716e4022d9c83fb",
+      "session_count": 92,
+      "boundary_sessions": {
+        "ruin": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            344,
+            345,
+            27,
+            17250,
+            15277
+          ]
+        },
+        "goal": {
+          "index": 25,
+          "session": [
+            "goal",
+            21631,
+            21901,
+            271,
+            2805,
+            13550,
+            14355
+          ]
+        },
+        "incomplete": {
+          "index": 91,
+          "session": [
+            "incomplete",
+            65211,
+            65234,
+            24,
+            1853,
+            1200,
+            1053
+          ]
+        },
+        "first": {
+          "index": 0,
+          "session": [
+            "ruin",
+            0,
+            344,
+            345,
+            27,
+            17250,
+            15277
+          ]
+        },
+        "last": {
+          "index": 91,
+          "session": [
+            "incomplete",
+            65211,
+            65234,
+            24,
+            1853,
+            1200,
+            1053
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "target_identity": "d39d8fc796fbfe8a23099d7eff197a74f5956f35d3e1b4a7865a19f322100d3f",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "judges": [
+    {
+      "task": "mv3apmwr-2h-hcmq",
+      "result": {
+        "rows": []
+      }
+    },
+    {
+      "task": "mv3apnpp-2i-o1o1",
+      "result": {
+        "rows": []
+      }
+    }
+  ],
+  "independent_verification": {
+    "task": "mv3aq1zt-2j-0gg4",
+    "tests": 32,
+    "duration_seconds": 28.19,
+    "manifested_files": 102,
+    "hashes_and_exact_file_set": "pass before/after, no extra files",
+    "scenarios_replayed": 14
+  },
+  "artifacts": [
+    "L2-initial.md",
+    "L2-judge-a.json",
+    "L2-judge-b.json"
+  ],
+  "limitations": [
+    "Parity replay oracle and production receive the same generated votes; standalone vote algorithm not independently verified by matrix.",
+    "Minimal rows wrappers preserved; no extra judge inspection/runtime evidence fabricated or native capture admission claimed.",
+    "No API/UI/browser/build/full suite verification; scope historical replay/tests only.",
+    "Native ASSESS unassessable, RDD off; high-risk independent functional checks completed, no delivery authority."
+  ]
+}
