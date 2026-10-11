@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from laboratorio.api import settings as settings_api
 from laboratorio.api.history import router as history_router
+from laboratorio.api.reference_labs import router as reference_labs_router
 from laboratorio.api.runs import router as runs_router
 from laboratorio.engine.active_history import HistoryCatalog
 from laboratorio.engine.adapter import open_lab_data
@@ -119,6 +120,7 @@ def create_app(
     app.include_router(settings_api.router, prefix="/api/v1")
     app.include_router(history_router, prefix="/api/v1")
     app.include_router(runs_router, prefix="/api/v1")
+    app.include_router(reference_labs_router, prefix="/api/v1")
 
     if serve_frontend:
 

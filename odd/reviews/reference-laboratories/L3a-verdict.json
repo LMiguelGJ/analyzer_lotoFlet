@@ -1,0 +1,29 @@
+{
+  "target_identity": "314557d2e14fab3f1f1af69d23aa327a82544fec9b1e1639b5f83a9872f1398b",
+  "round": "initial",
+  "confirmed": 0,
+  "suspect": 0,
+  "contradiction": 0,
+  "info": 0,
+  "correction_work_units": [],
+  "fix_rounds_used": 0,
+  "scoped_rejudgments_used": 0,
+  "scoped_rejudgment_result": "not_required",
+  "functional_verification": {
+    "task": "mv3bnlha-2r-wika",
+    "passed": 46,
+    "seconds": 59.07,
+    "manifest_files": 133,
+    "hashes_and_exact_file_set_before_after": "PASS"
+  },
+  "artifact_references": [
+    "L3a-initial.md",
+    "L3a-judge-a.json",
+    "L3a-judge-b.json",
+    "parity-verification.md"
+  ],
+  "skill_resolution": "paths-injected: identical Judgment Day skill/prompts and work-unit skill to both judges; no UI candidate",
+  "payload_disclosure": "Both actors returned rows:[] rather than requested findings/evidence. Exact payloads preserved; no additional inspection proof invented.",
+  "judgment": "APPROVED",
+  "scope": "Six-file catalog GET, strict internal service and durable independent parity regression only. No public execution/persistence/UI or application-readiness approval; no native receipt or publishing authority."
+}
