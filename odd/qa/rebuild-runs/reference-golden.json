@@ -1,0 +1,273 @@
+{
+  "provenance": {
+    "frozen_on": "2026-10-10",
+    "base_commit": "704a02d9a6eb590cb81036d0f1bf5bcc2faaa463",
+    "note": "frozen from the legacy flat engine before its retirement",
+    "source": "laboratorio.domain.backtest.run_backtest and laboratorio.api.backtests._selection_rows, via the previous odd/qa/rebuild-runs/reference.py",
+    "frozen_history_sha256": "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711",
+    "rankings_sha256": "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d",
+    "reference_json_sha256": "b25843c274836139b261e7124de2f5bf643a27eb67a00e2f63a7115dec880af4",
+    "reference_json_byte_identical_to": "reference.json of the last passing real acceptance run (rebuild-runs-acceptance-SvXyok)"
+  },
+  "reference": {
+    "frozen_history_sha256": "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711",
+    "rankings_sha256": "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d",
+    "draws": 105426,
+    "ranked_draws": 65235,
+    "last_label": "2026-09-25 18:20",
+    "new_label": "2026-09-26 10:00",
+    "legacy_mix_three_position_unlimited": {
+      "totals": {
+        "sessions": 81,
+        "goal": 0,
+        "ruin": 80,
+        "limit": 0,
+        "incomplete": 1,
+        "bets": 65235,
+        "wagered": 652350,
+        "paid": 492580,
+        "net": -159770,
+        "return_pct": -24.5,
+        "mean_net_closed": -1997.3
+      },
+      "accounting": {
+        "session_bets": 65235,
+        "session_wagered": 652350,
+        "session_paid": 492580,
+        "session_final_balances": 2230,
+        "first_session": {
+          "outcome": "quiebre",
+          "bets": 607,
+          "final_balance": 0,
+          "first_bet": {
+            "label": "2025-09-02 05:10",
+            "numbers": [
+              17,
+              70,
+              30,
+              81,
+              65,
+              72,
+              75,
+              55,
+              23,
+              90
+            ],
+            "results": [
+              90,
+              66,
+              90
+            ],
+            "wagered": 10,
+            "paid": 65,
+            "balance": 2055
+          }
+        }
+      }
+    },
+    "legacy_parity_five_position_flat_golden": {
+      "scope": "ranked historical rows only; retained 65,235-row golden",
+      "totals": {
+        "sessions": 92,
+        "goal": 13,
+        "ruin": 78,
+        "limit": 0,
+        "incomplete": 1,
+        "bets": 65235,
+        "wagered": 3261750,
+        "paid": 3118481,
+        "net": -143269,
+        "return_pct": -4.4,
+        "mean_net_closed": -1572.8
+      },
+      "mean_net_closed_scope": {
+        "closed_sessions": 91,
+        "total_sessions": 92,
+        "excludes_incomplete_sessions": 1
+      },
+      "accounting": {
+        "session_bets": 65235,
+        "session_wagered": 3261750,
+        "session_paid": 3118481,
+        "session_final_balances": 40731,
+        "first_session": {
+          "outcome": "quiebre",
+          "bets": 345,
+          "final_balance": 27,
+          "first_bet": {
+            "label": "2025-09-02 05:10",
+            "numbers": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+              12,
+              14,
+              16,
+              18,
+              20,
+              22,
+              24,
+              26,
+              28,
+              30,
+              32,
+              34,
+              36,
+              38,
+              40,
+              42,
+              44,
+              46,
+              48,
+              50,
+              52,
+              54,
+              56,
+              58,
+              60,
+              62,
+              64,
+              66,
+              68,
+              70,
+              72,
+              74,
+              76,
+              78,
+              80,
+              82,
+              84,
+              86,
+              88,
+              90,
+              92,
+              94,
+              96,
+              98
+            ],
+            "results": [
+              90,
+              66,
+              90,
+              32,
+              31
+            ],
+            "wagered": 50,
+            "paid": 94,
+            "balance": 2044
+          }
+        }
+      }
+    },
+    "legacy_parity_five_position_flat_all_history_unlimited": {
+      "scope": "all chronological history labels, including unranked rows",
+      "draws": 105426,
+      "ranked_draws": 65235,
+      "totals": {
+        "sessions": 147,
+        "goal": 12,
+        "ruin": 134,
+        "limit": 0,
+        "incomplete": 1,
+        "bets": 105426,
+        "wagered": 5271300,
+        "paid": 5015599,
+        "net": -255701,
+        "return_pct": -4.9,
+        "mean_net_closed": -1739.4
+      },
+      "mean_net_closed_scope": {
+        "closed_sessions": 146,
+        "total_sessions": 147,
+        "excludes_incomplete_sessions": 1
+      },
+      "accounting": {
+        "session_bets": 105426,
+        "session_wagered": 5271300,
+        "session_paid": 5015599,
+        "session_final_balances": 38299,
+        "first_session": {
+          "outcome": "quiebre",
+          "bets": 322,
+          "final_balance": 17,
+          "first_bet": {
+            "label": "2025-03-05 05:05",
+            "numbers": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10,
+              12,
+              14,
+              16,
+              18,
+              20,
+              22,
+              24,
+              26,
+              28,
+              30,
+              32,
+              34,
+              36,
+              38,
+              40,
+              42,
+              44,
+              46,
+              48,
+              50,
+              52,
+              54,
+              56,
+              58,
+              60,
+              62,
+              64,
+              66,
+              68,
+              70,
+              72,
+              74,
+              76,
+              78,
+              80,
+              82,
+              84,
+              86,
+              88,
+              90,
+              92,
+              94,
+              96,
+              98
+            ],
+            "results": [
+              15,
+              54,
+              37,
+              72,
+              72
+            ],
+            "wagered": 50,
+            "paid": 11,
+            "balance": 1961
+          }
+        }
+      }
+    },
+    "claimed_limited_mix_fixture": {
+      "totals": {
+        "sessions": 5932,
+        "limit": 5931,
+        "bets": 65235
+      },
+      "source": "prior worker report; API result must be checked against these exact claims"
+    }
+  }
+}

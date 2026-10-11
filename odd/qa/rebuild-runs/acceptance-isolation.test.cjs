@@ -84,3 +84,12 @@ test('browserEvidence and every report branch carry aborted_after_response', () 
   const helper = source.match(/const browserEvidence = \(\) => \(\{([\s\S]*?)\}\);/);
   assert.ok(helper && helper[1].includes('aborted_after_response: abortedAfterResponse'));
 });
+
+test('acceptance oracle is frozen data: reference.py never imports the retired legacy engine', () => {
+  const oracle = fs.readFileSync(path.join(__dirname, 'reference.py'), 'utf8');
+  for (const retired of ['laboratorio.domain.backtest', 'laboratorio.api.backtests', 'laboratorio.storage.backtest_trace']) {
+    assert.ok(!oracle.includes(retired), `reference.py must not import ${retired}`);
+  }
+  assert.ok(oracle.includes('reference-golden.json'), 'reference.py must read the frozen golden');
+  assert.ok(source.includes("'reference.py'"), 'acceptance still invokes reference.py');
+});
