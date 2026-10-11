@@ -21,6 +21,7 @@ from laboratorio.settings import Settings
 from laboratorio.storage.database import initialize_database
 from laboratorio.storage.repository import Repository
 
+_REFERENCE_RUNS_PATH = re.compile(r"/api/v1/reference-labs/[^/]+/runs")
 _HOST = re.compile(r"(localhost|127\.0\.0\.1)(?::([0-9]{1,5}))?\Z")
 
 
@@ -61,6 +62,7 @@ def create_app(
         app.state.settings = settings
         app.state.rankings_cache = {}
         app.state.rankings_lock = threading.Lock()
+        app.state.reference_lab_lock = threading.RLock()
         yield
 
     app = FastAPI(title="Laboratorio Quiniela 80", version="0.1.0", lifespan=lifespan)
@@ -78,7 +80,10 @@ def create_app(
             return JSONResponse({"detail": "same-origin required"}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS") and not origins:
             return JSONResponse({"detail": "Origin required for mutation"}, status_code=403)
-        if request.method == "POST" and request.url.path == "/api/v1/runs":
+        run_post = request.url.path == "/api/v1/runs" or _REFERENCE_RUNS_PATH.fullmatch(
+            request.url.path
+        )
+        if request.method == "POST" and run_post:
             byte_limit = 64 * 1024
             lengths = request.headers.getlist("content-length")
             invalid_length = len(lengths) > 1 or (

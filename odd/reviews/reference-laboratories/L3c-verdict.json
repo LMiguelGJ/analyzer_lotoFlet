@@ -1,0 +1,43 @@
+{
+  "target_identity": "8d4cc29f7beb3f3015e5a9bd5a6682cef71e29cceae2435ec0ec7132184b969e",
+  "round": "initial",
+  "judgment": "APPROVED",
+  "scope": "Four-file strict laboratory HTTP unit and all-fourteen persisted golden replay/page flows only; no frontend/browser/application readiness.",
+  "confirmed_severe": 0,
+  "suspect": 0,
+  "contradiction": 0,
+  "info": 2,
+  "correction_rounds_used": 0,
+  "scoped_rejudgments_used": 0,
+  "initial_claim_clarifications": 1,
+  "informational": [
+    {
+      "id": "JD-B-001",
+      "original_severity": "CRITICAL",
+      "current_author_severity": "SUGGESTION",
+      "status": "Original author withdrew unsupported current-defect/client-traceback assertions; current three-kind Literal fully mapped. Future-proofing only, no source edit."
+    },
+    {
+      "id": "JD-B-002",
+      "severity": "WARNING",
+      "status": "Potential future DELETE-body protocol change; original author explicitly says not a current bug."
+    }
+  ],
+  "functional_verification": {
+    "task": "mv44s3jq-37-jy4v",
+    "passed": 218,
+    "seconds": 695.59,
+    "exit_code": 0,
+    "manifest_files": 140,
+    "all_hashes_and_exact_set_before_after": "PASS",
+    "observed_source_readback": "New two test modules/conftest; API95-253/App55-130 only. No SQL16/store/full-five-old-tests coverage claim."
+  },
+  "artifacts": [
+    "L3c-http-initial.md",
+    "L3c-judge-a.md",
+    "L3c-judge-b.md",
+    "L3c-judge-b-clarification.md"
+  ],
+  "skill_resolution": "paths-injected: same Judgment Day skill/prompts and work-unit skill to both blind judges; backend only UI N/A",
+  "disclosure": "Raw actor wrappers/prose preserved. No native receipt/delivery authority. No unsupported severity promotion, autofix, refuter or extra full review."
+}
