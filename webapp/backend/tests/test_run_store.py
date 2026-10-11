@@ -63,7 +63,7 @@ def test_run_migration_fresh_and_v14_upgrade_preserves_legacy_runs(tmp_path):
     fresh = tmp_path / "fresh.db"
     initialize_database(fresh)
     with connection(fresh) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 16
         assert db.execute(
             "SELECT name FROM sqlite_master WHERE name='saved_run_sessions'"
         ).fetchone()
@@ -82,7 +82,7 @@ def test_run_migration_fresh_and_v14_upgrade_preserves_legacy_runs(tmp_path):
         db.execute("PRAGMA user_version=14")
     initialize_database(old)
     with connection(old) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 16
         assert db.execute("SELECT experiment_id,ordinal,status FROM runs").fetchall() == [
             ("legacy", 0, "pending")
         ]

@@ -1,0 +1,87 @@
+{
+  "target_identity": "5fdc1604d2888d7fa46f930a5bb9094c224f5776c14b78a339f3acda0319f45d",
+  "round": "initial",
+  "state": "human_decision_required",
+  "counts": {
+    "confirmed_severe": 1,
+    "suspect": 2,
+    "contradiction": 1,
+    "info": 1
+  },
+  "fix_rounds_used": 0,
+  "scoped_rejudgments_used": 0,
+  "findings": [
+    {
+      "id": "JD-L3b-001",
+      "judge_ids": [
+        "JD-A-001",
+        "JD-B-001"
+      ],
+      "severity": "HIGH",
+      "classification": "confirmed_severe",
+      "claim": "Run listing materializes full sessions/results for every selected run, allowing gigabytes of transitive payload despite bounded item count.",
+      "correction_route": "jd-fix-agent only after human round-one authorization"
+    },
+    {
+      "id": "JD-L3b-002",
+      "judge_ids": [
+        "JD-A-002",
+        "JD-B-003"
+      ],
+      "severities": {
+        "A": "HIGH",
+        "B": "MEDIUM"
+      },
+      "classification": "contradiction",
+      "factual_claim_agreed": true,
+      "claim": "Digest shape accepted without canonical agreement with sessions.",
+      "contradiction_scope": "Severity differs; do not upgrade MEDIUM to create severe correction authority.",
+      "correction_route": "Human decision; proposal separate ordinary test-first correction, not JD corroborated-severe fix"
+    },
+    {
+      "id": "JD-L3b-003",
+      "judge_ids": [
+        "JD-A-003"
+      ],
+      "severity": "HIGH",
+      "classification": "suspect",
+      "claim": "Final balance and closed mean not reconciled with stored capital/wager/payment accounting.",
+      "correction_route": "No automatic fix; proposal explicit ordinary authorization plus deterministic regression proof"
+    },
+    {
+      "id": "JD-L3b-004",
+      "judge_ids": [
+        "JD-B-002"
+      ],
+      "severity": "MEDIUM",
+      "classification": "suspect",
+      "claim": "Session-row numeric bool/float corruption can bypass validation through Python equality with separately validated result copy.",
+      "correction_route": "No automatic fix; proposal explicit ordinary authorization plus deterministic regression proof"
+    },
+    {
+      "id": "JD-L3b-005",
+      "judge_ids": [
+        "JD-A-004",
+        "JD-B-004"
+      ],
+      "severity": "WARNING",
+      "classification": "info",
+      "claim": "Header/session split reads can report false corruption on supported concurrent cascade deletion.",
+      "correction_route": "Informational follow-up, not severe fix actor scope"
+    }
+  ],
+  "functional_verification": {
+    "passed": 52,
+    "seconds": 43.78,
+    "files": 140,
+    "hashes_and_exact_set_before_after": "PASS",
+    "not_application_readiness": true
+  },
+  "artifacts": [
+    "L3b-storage-initial.md",
+    "L3b-storage-judge-a.json",
+    "L3b-storage-judge-b.json"
+  ],
+  "payload_disclosure": "Exact rows-wrapper payloads preserved; no added reviewer inspection evidence.",
+  "terminal_judgment": null
+}

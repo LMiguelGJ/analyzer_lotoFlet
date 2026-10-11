@@ -1,0 +1,40 @@
+{
+  "rows": [
+    {
+      "id": "JD-B-001",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/storage/reference_lab_store.py:368",
+      "severity": "HIGH",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Run listing materializes every selected run's complete result and session payload rather than bounded summaries. Frozen-code reproduction with limit=1 returned all 1,000 sessions. At limit=100, permitted 32 MiB records can require gigabytes of decoding and retained data, risking memory exhaustion. Verify with maximum-size records and assert listing does not load their sessions."
+    },
+    {
+      "id": "JD-B-002",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/storage/reference_lab_store.py:238-243",
+      "severity": "MEDIUM",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Stored session validation uses Python equality, which treats true as equal to 1, then validates only the result-envelope copy. Frozen-code reproduction changed session_json.draws from 1 to true; session paging returned true without ReferenceLabStoreError. Corrupt numeric types therefore escape fail-closed validation. Verify boolean and floating-point substitutions in each integer session field."
+    },
+    {
+      "id": "JD-B-003",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/storage/reference_lab_store.py:146-153",
+      "severity": "MEDIUM",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "session_sha256 is checked only for hexadecimal shape, never reconciled with the stored sessions. Frozen-code reproduction admitted and retrieved a digest differing from the engine's SHA-256 calculation. Consumers receive an apparently validated record whose integrity identifier does not describe its sessions. Verify admission and retrieval reject a well-formed but mismatching digest using the engine's serialization."
+    },
+    {
+      "id": "JD-B-004",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/storage/reference_lab_store.py:344-348",
+      "severity": "WARNING",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Get and session paging read the header and sessions without a shared read transaction. Frozen-code reproduction interleaved a supported cascade delete between those SELECTs; get raised 'stored reference-laboratory run is corrupt' for an intact record being deleted. Verify concurrent deletion yields a consistent record or missing result rather than false corruption; session paging has the same read pattern."
+    }
+  ]
+}

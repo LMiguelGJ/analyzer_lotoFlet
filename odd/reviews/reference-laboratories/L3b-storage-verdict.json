@@ -1,0 +1,64 @@
+{
+  "target_identity": "d29856c94c22d510c117d23141bd5ee61b59d72b6066d6437a67fad98869ced4",
+  "initial_target_identity": "5fdc1604d2888d7fa46f930a5bb9094c224f5776c14b78a339f3acda0319f45d",
+  "judgment": "APPROVED",
+  "scope": "Corrected seven-file reference storage unit only; no public HTTP/UI/application readiness.",
+  "round": 1,
+  "effective_correction_rounds_used": 1,
+  "native_jd_fix_actor_runs": 0,
+  "ordinary_correction_batches": 1,
+  "scoped_rejudgments_used": 1,
+  "resolutions": [
+    {
+      "id": "JD-L3b-001",
+      "A": "verified",
+      "B": "verified"
+    },
+    {
+      "id": "JD-L3b-002",
+      "A": "verified",
+      "B": "verified"
+    },
+    {
+      "id": "JD-L3b-003",
+      "A": "verified",
+      "B": "verified"
+    },
+    {
+      "id": "JD-L3b-004",
+      "A": "verified",
+      "B": "verified"
+    }
+  ],
+  "open_counts": {
+    "confirmed_severe": 0,
+    "suspect": 0,
+    "contradiction": 0,
+    "info": 1
+  },
+  "informational_followups": [
+    {
+      "id": "JD-L3b-005",
+      "severity": "WARNING",
+      "claim": "Header/session split read vs concurrent deletion can yield false corruption.",
+      "state": "unchanged"
+    }
+  ],
+  "functional_verification": {
+    "tests_passed": 166,
+    "seconds": 76.66,
+    "files": 143,
+    "before_after_hash_and_exact_set": "PASS",
+    "verifier_source_readback": false
+  },
+  "method_disclosure": "Ordinary human-authorized TDD correction after unavailable native JD fix dispatch; original HIGH/MEDIUM severities unchanged; no native receipt.",
+  "artifacts": [
+    "L3b-storage-ledger.json",
+    "L3b-storage-judge-a.json",
+    "L3b-storage-judge-b.json",
+    "L3b-correction1.md",
+    "L3b-correction1-judge-a.md",
+    "L3b-correction1-judge-b.md"
+  ],
+  "skill_resolution": "paths-injected, identical Judgment Day skill/prompts and work-unit skill to both scoped judges; UI N/A"
+}

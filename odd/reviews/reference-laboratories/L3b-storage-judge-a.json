@@ -1,0 +1,40 @@
+{
+  "rows": [
+    {
+      "id": "JD-A-001",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/storage/reference_lab_store.py:368",
+      "severity": "HIGH",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Run listing materializes every session and full result payload for every selected run through _read_run, despite its paging limit. A 100-item page can load approximately 3.2 GiB of admitted serialized artifacts, plus substantially larger decoded Python objects, risking memory exhaustion. Frozen-source inspection and an instrumented temporary-database probe confirmed listing invokes full session decoding. Verify with multiple maximum-sized runs and assert listing does not fetch or decode their complete session payloads."
+    },
+    {
+      "id": "JD-A-002",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/storage/reference_lab_store.py:146",
+      "severity": "HIGH",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Session digest validation checks only hexadecimal syntax, never agreement with stored sessions, so incorrect integrity evidence is admitted and returned as valid. A frozen-code temporary-database probe persisted and retrieved digest cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc although the engine-defined digest of those sessions was c8c40ffb7a230e8ff90f6e719cafe44d2802cda8a8e89bb4e863f2399e5ef432. Verify admission and retrieval reject a syntactically valid digest that differs from the engine's canonical session digest."
+    },
+    {
+      "id": "JD-A-003",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/storage/reference_lab_store.py:172",
+      "severity": "HIGH",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Final balances are validated only as nonnegative integers, not reconciled with stored bankroll, wagered and paid amounts; mean_net_closed likewise receives no accounting reconciliation. Consequently materially false financial results pass fail-closed retrieval. A temporary-database probe changed final_balance to 999999 in both session copies while leaving wagered=1, paid=0 and total_net=-1 unchanged; get_reference_lab_run returned the altered balance without error. Verify coherent structural tampering is rejected using the immutable stored configuration and engine accounting identities."
+    },
+    {
+      "id": "JD-A-004",
+      "lens": "judgment-day",
+      "location": "webapp/backend/laboratorio/storage/reference_lab_store.py:268",
+      "severity": "WARNING",
+      "status_at_freeze": "open",
+      "evidence_class": "deterministic",
+      "evidence_claim": "Get and session-page operations issue their header and session SELECTs without an explicit read transaction. A legitimate concurrent cascade deletion between those SELECTs produces a false corruption error instead of a consistent record or missing-record result. A deterministic temporary-database interleaving reproduced ReferenceLabStoreError('stored reference-laboratory run is corrupt'). Verify both operations against a deletion interleaved between header and session reads."
+    }
+  ]
+}

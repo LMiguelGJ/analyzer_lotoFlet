@@ -160,7 +160,12 @@ def _run_artifact_bytes(db) -> int:
         "(SELECT coalesce(sum(length(CAST(run_id AS BLOB)) + 8 + length(CAST(outcome AS BLOB)) + "
         "8 + 8 + length(CAST(start_label AS BLOB)) + length(CAST(end_label AS BLOB)) + "
         "8 + 8 + 8 + 8 + 8 + coalesce(length(CAST(bets_json AS BLOB)), 0)), 0) "
-        "FROM saved_run_sessions)"
+        "FROM saved_run_sessions) + "
+        "(SELECT coalesce(sum(length(CAST(id AS BLOB)) + length(CAST(lab_id AS BLOB)) + "
+        "8 + length(CAST(created_at AS BLOB)) + length(CAST(metadata_json AS BLOB)) + "
+        "length(CAST(result_json AS BLOB))), 0) FROM reference_lab_runs) + "
+        "(SELECT coalesce(sum(length(CAST(run_id AS BLOB)) + 8 + "
+        "length(CAST(session_json AS BLOB))), 0) FROM reference_lab_sessions)"
     ).fetchone()[0]
 
 
@@ -430,3 +435,39 @@ class Repository:
         from laboratorio.storage.run_store import delete_run
 
         return delete_run(self, run_id)
+
+    def create_reference_lab_run(
+        self, run_id, lab_id, config, provenance, result, *, quota_bytes, quota_explicit
+    ):
+        from laboratorio.storage.reference_lab_store import create_reference_lab_run
+
+        return create_reference_lab_run(
+            self,
+            run_id,
+            lab_id,
+            config,
+            provenance,
+            result,
+            quota_bytes=quota_bytes,
+            quota_explicit=quota_explicit,
+        )
+
+    def get_reference_lab_run(self, run_id):
+        from laboratorio.storage.reference_lab_store import get_reference_lab_run
+
+        return get_reference_lab_run(self, run_id)
+
+    def list_reference_lab_runs(self, *, lab_id=None, offset=0, limit=20):
+        from laboratorio.storage.reference_lab_store import list_reference_lab_runs
+
+        return list_reference_lab_runs(self, lab_id=lab_id, offset=offset, limit=limit)
+
+    def list_reference_lab_sessions(self, run_id, *, offset=0, limit=50):
+        from laboratorio.storage.reference_lab_store import list_reference_lab_sessions
+
+        return list_reference_lab_sessions(self, run_id, offset=offset, limit=limit)
+
+    def delete_reference_lab_run(self, run_id):
+        from laboratorio.storage.reference_lab_store import delete_reference_lab_run
+
+        return delete_reference_lab_run(self, run_id)

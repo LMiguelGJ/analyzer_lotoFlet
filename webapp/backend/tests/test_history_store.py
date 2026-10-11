@@ -63,6 +63,8 @@ def test_v13_database_upgrades_in_place(tmp_path):
         "history_active",
         "saved_runs",
         "saved_run_sessions",
+        "reference_lab_runs",
+        "reference_lab_sessions",
     }
     with closing(sqlite3.connect(path)) as db:
         assert db.execute("SELECT count(*) FROM game_profiles").fetchone()[0] == profiles_before
