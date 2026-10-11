@@ -99,7 +99,7 @@ components:
 
 La interfaz es una libreta de hojas claras y cuadriculadas: cada corrida es una hoja de trabajo y sus cifras descansan sobre una retícula precisa. El mundo sugiere apuntar, sumar y volver a probar; la interfaz hace las cuentas sin disfrazarse de una libreta física ni convertir la expresión en ruido.
 
-Es una superficie de operación, no de promoción. La cuadrícula y la tinta ordenan la información; cifras legibles y palabras explícitas llevan el significado. El sistema visual y la navegación están implementados como base; las páginas de Corridas y Ajustes siguen pendientes y no se deben inferir como pantallas ya resueltas.
+Es una superficie de operación, no de promoción. La cuadrícula y la tinta ordenan la información; cifras legibles y palabras explícitas llevan el significado. La aplicación implementa dos destinos: **Corridas** (crear, consultar, repetir y borrar corridas) y **Ajustes** (cuota de almacenamiento e importación de historial). La ejecución se limita a mezcla de rankings y paridad con apuesta fija; este contrato no describe estrategias históricas adicionales como funciones disponibles.
 
 **Key Characteristics:**
 - Papel blanco frío y cuadrícula cian tenue de 24 px.
@@ -155,7 +155,7 @@ Paleta restringida de papel, tinta y dos acentos funcionales. Los tokens del fro
 
 Una cuadrícula de 24 px sostiene la composición; filas, grupos y pausas principales siguen ese ritmo. Los espacios reutilizables son 8, 16, 24, 32 y 48 px. Los campos y controles interactivos miden al menos 48 px de alto.
 
-La navegación tiene dos destinos: Corridas y Ajustes. En móvil se fija abajo; desde 900 px se integra en la barra superior. Conserva el enlace para saltar al contenido, el foco de teclado y el área segura inferior del dispositivo. El contenido se centra en una columna de hasta 1440 px; las páginas aún no están implementadas.
+La navegación tiene dos destinos: Corridas y Ajustes. En móvil se fija abajo con el área segura inferior; desde 900 px se integra en la barra superior adhesiva. Conserva el enlace para saltar al contenido y el foco de teclado. El contenido se centra en una columna de hasta 1440 px. Corridas organiza el formulario en grupos planos; la lista y los detalles usan tablas desplazables horizontalmente cuando hace falta. Ajustes presenta métricas de almacenamiento, fuentes de historial y formularios de cuota e importación.
 
 ## Elevation & Depth
 
@@ -170,13 +170,13 @@ Esquinas vivas en controles, hojas y grupos (0 px). Las superficies pueden tener
 
 ## Components
 
-Los componentes compartidos están implementados; son una base, no una especificación de páginas de negocio.
+Los componentes compartidos y las dos pantallas de la aplicación están implementados. La descripción de abajo documenta patrones visuales presentes en los estilos actuales, no una promesa de métricas o capacidades adicionales.
 
 ### Buttons
 - **Shape:** esquinas vivas (0 px), borde de tinta de 2 px, alto mínimo de 48 px.
 - **Primary:** bloque de tinta con texto de papel; padding vertical 12 px y horizontal 24 px.
-- **Hover / Focus:** el primario invierte a hoja clara y tinta; el foco visible usa contorno de tinta de 3 px con separación.
-- **Secondary / Ghost:** fondo de hoja o transparente, borde de tinta; estados hover y active permanecen sobrios.
+- **Hover / Focus:** el primario invierte a hoja clara y tinta; las transiciones actuales duran 120 ms. El foco visible usa contorno de tinta de 3 px con separación.
+- **Secondary / Ghost:** fondo de hoja o transparente, borde de tinta; hover usa cuadrícula tenue en el secundario y active puede usar amarillo de marcador.
 - **Disabled / Loading:** deshabilitado conserva texto legible sobre hoja clara, sin opacidad; loading comunica `aria-busy` y deshabilita el envío repetido.
 
 ### Chips
@@ -191,10 +191,10 @@ Los componentes compartidos están implementados; son una base, no una especific
 
 ### Inputs / Fields
 - **Style:** campo blanco, tinta azul-negra, borde de 2 px y esquinas vivas; cada campo tiene etiqueta asociada.
-- **Focus:** contorno de teclado de 3 px, desplazado del borde.
+- **Focus:** contorno de teclado de 3 px, desplazado 2 px en campos y 3 px en botones.
 - **Error / Disabled:** error en lápiz rojo y asociado al campo; disabled conserva texto legible sobre hoja clara, sin opacidad, y no finge interactividad.
 - **Choice Fields:** checkbox y radio conservan un glifo de 24 px dentro de una etiqueta clicable de al menos 48 × 48 px.
-- **Loading:** usa un estado anunciado y filas skeleton; no un spinner decorativo central.
+- **Loading:** usa un estado anunciado y filas skeleton; no un spinner decorativo central. Los esqueletos acompañan cargas de pantallas y listados.
 
 ### Navigation
 - Barra superior en escritorio y barra inferior fija en móvil; enlaces de texto de al menos 48 px de alto. El destino actual se indica con tinta y subrayado, además del estado semántico del enlace.
@@ -210,7 +210,7 @@ Estados vacíos, de error y carga usan hojas planas con texto claro. Los esquele
 - **Do** dar al texto contraste mínimo 4.5:1 y a los límites de controles al menos 3:1.
 - **Do** mantener foco visible, navegación por teclado y `prefers-reduced-motion`.
 - **Do** tratar el grid como textura y ofrecer palabras/signos además de color.
-- **Do** reconocer que las pantallas Corridas y Ajustes aún están pendientes; este documento solo fija la base.
+- **Do** conservar la implementación actual de Corridas y Ajustes dentro de esta dirección visual; este documento no amplía sus capacidades funcionales.
 
 ### Don't:
 - **Don't** reintroducir la identidad, los tokens `--bf-*` ni el tema de BossFarmer.
