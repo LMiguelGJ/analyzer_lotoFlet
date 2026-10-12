@@ -486,3 +486,24 @@ class Repository:
         from laboratorio.storage.reference_lab_store import delete_reference_lab_run
 
         return delete_reference_lab_run(self, run_id)
+
+    def create_laboratory_definition(self, name, config, *, quota_bytes=None, quota_explicit=None):
+        from laboratorio.storage.laboratory_store import create_laboratory_definition
+
+        return create_laboratory_definition(
+            self,
+            name,
+            config,
+            quota_bytes=quota_bytes,
+            quota_explicit=quota_explicit,
+        )
+
+    def get_laboratory_definition(self, identifier):
+        from laboratorio.storage.laboratory_store import get_laboratory_definition
+
+        return get_laboratory_definition(self, identifier)
+
+    def list_laboratory_definitions(self, *, offset=0, limit=20):
+        from laboratorio.storage.laboratory_store import list_laboratory_definitions
+
+        return list_laboratory_definitions(self, offset=offset, limit=limit)

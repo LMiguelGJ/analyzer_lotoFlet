@@ -1,0 +1,66 @@
+{
+  "target_identity": "608a6da2b33b6f9bbd37fd5f0dc97b15c35336443224438b0e634ed178c4ebdc",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "scope": [
+    "webapp/backend/laboratorio/storage/repository.py",
+    "webapp/backend/laboratorio/storage/laboratory_store.py",
+    "webapp/backend/tests/test_laboratory_store.py"
+  ],
+  "base_ref": "ed2cc05a646b011b5966f9043d94c884b8ac86d7",
+  "frozen_root": "C:/Users/luism/AppData/Local/Temp/reference-labs-jd-l5b1-sglpkr6f",
+  "judges": [
+    {
+      "task": "mv4twnhp-q-9u74",
+      "raw": "L5b1-judge-a.json",
+      "findings": 0,
+      "evidence_entries": 7
+    },
+    {
+      "task": "mv4twnwe-r-8m0a",
+      "raw": "L5b1-judge-b.json",
+      "findings": 0,
+      "evidence_entries": 7
+    }
+  ],
+  "functional_evidence": {
+    "focused": {
+      "passed": 213,
+      "seconds": 71.25
+    },
+    "remaining_backend": {
+      "passed": 500,
+      "seconds": 790.33,
+      "excluded": [
+        "tests/test_reference_labs_api.py"
+      ]
+    },
+    "ruff": "3 files check/format passed",
+    "concurrency_repeats": "two actual nodes three repetitions: 2 passed each",
+    "live_guard_files": 146,
+    "frozen_guard_files": 290
+  },
+  "diagnostics": {
+    "raw_outcomes": {
+      "clean": 1,
+      "findings": 2,
+      "auxiliary_diagnostics": 3,
+      "inconclusive": 0
+    },
+    "classification": "Both judges prove repository SQL helper identical to base with fixed internal table/column callers; JSON parser failures are caught by strict _decode in both get/list. No introduced blocker established. Raw tool diagnostics remain recorded, not deleted."
+  },
+  "limits": [
+    "Judges inspected sources and authored/manifest/patch bindings; no tests/lint/runtime probes or source imports run.",
+    "Dependency/context hashes not independently recomputed by judges.",
+    "Only three authored paths reviewed; delete/count/API/replay/UI remain absent future units.",
+    "21 lines over source/test review target disclosed; proof retained.",
+    "No native receipt, authority burn or delivery authorization; commit follows separate user standing scope permission."
+  ]
+}
