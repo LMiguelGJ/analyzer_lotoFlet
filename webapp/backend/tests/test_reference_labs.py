@@ -87,6 +87,122 @@ def test_ranking_lab_with_no_eligible_draws_returns_empty_result(lab, has_archiv
     )
 
 
+def test_custom_bold_lab_uses_its_capital_goal_and_first_prize():
+    lab = get_reference_lab("transicion_1_audaz")
+    custom = type(lab)(
+        "custom-bold",
+        lab.system,
+        1,
+        "bold",
+        capital=100,
+        goal=120,
+        prizes=(20, 8, 4, 2, 1),
+    )
+    history = SimpleNamespace(labels=("2025-09-02 05:10",), nums=np.asarray([[0, 1, 2, 3, 4]]))
+    rankings = SimpleNamespace(
+        row_ids=np.asarray([0]),
+        family=lambda system: np.tile(np.arange(100, dtype=np.uint8), (1, 1)),
+    )
+
+    result = run_reference_lab(custom, history, rankings)
+
+    # ceil((120 - 100 + 20 - 1) / (20 - 1)) = 2; one hit pays 2 * 20.
+    assert len(result.sessions) == 1
+    assert (result.sessions[0].outcome, result.sessions[0].final_balance) == ("goal", 138)
+    assert (result.sessions[0].wagered, result.sessions[0].paid) == (2, 40)
+
+
+def test_custom_ladder_uses_its_first_prize_and_keeps_ten_profit_recovery():
+    lab = get_reference_lab("frios_25_escalera")
+    custom = type(lab)(
+        "custom-ladder",
+        lab.system,
+        1,
+        "ladder",
+        capital=30,
+        goal=50,
+        prizes=(4, 2, 1, 1, 1),
+    )
+    history = SimpleNamespace(
+        labels=("2025-09-02 05:10",) * 3,
+        nums=np.asarray([[1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [0, 2, 3, 4, 5]]),
+    )
+    rankings = SimpleNamespace(
+        row_ids=np.asarray([0, 1, 2]),
+        family=lambda system: np.tile(np.arange(100, dtype=np.uint8), (3, 1)),
+    )
+
+    result = run_reference_lab(custom, history, rankings)
+
+    # TEN-profit recovery gives stakes ceil(10/3), ceil(14/3), ceil(19/3).
+    assert (result.sessions[0].outcome, result.sessions[0].final_balance) == ("incomplete", 42)
+    assert (result.sessions[0].draws, result.sessions[0].wagered, result.sessions[0].paid) == (
+        3,
+        16,
+        28,
+    )
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"capital": True}, "capital must be a positive integer"),
+        ({"goal": 50.0}, "goal must be a positive integer"),
+        ({"prizes": (80, 8, 4, 2)}, "prizes must be a tuple of exactly five"),
+        ({"prizes": (1, 8, 4, 2, 1)}, "first prize greater than coverage"),
+        ({"capital": 0}, "capital must be a positive integer"),
+    ],
+)
+def test_engine_rejects_invalid_financial_dto_before_execution(changes, message):
+    from dataclasses import replace
+
+    lab = replace(get_reference_lab("transicion_1_audaz"), **changes)
+    history = SimpleNamespace(labels=(), nums=np.empty((0, 5), dtype=np.uint8))
+    rankings = SimpleNamespace(row_ids=np.asarray([], dtype=np.int64))
+
+    with pytest.raises(ValueError, match=message):
+        run_reference_lab(lab, history, rankings)
+
+
+def test_engine_rejects_non_exact_string_system_before_comparison_or_data_access():
+    from dataclasses import replace
+
+    class ParityString(str):
+        def __new__(cls):
+            value = super().__new__(cls, "parity")
+            value.eq_calls = 0
+            return value
+
+        def __eq__(self, other):
+            self.eq_calls += 1
+            return super().__eq__(other)
+
+        __hash__ = str.__hash__
+
+    class EqualitySpoof:
+        def __init__(self):
+            self.eq_calls = 0
+
+        def __eq__(self, other):
+            self.eq_calls += 1
+            return other == "parity"
+
+    class UnreadableData:
+        def __getattr__(self, name):
+            raise AssertionError(f"invalid system reached data access: {name}")
+
+    for system in (ParityString(), EqualitySpoof()):
+        lab = replace(
+            get_reference_lab("paridad_50_audaz"),
+            system=system,
+            capital=100,
+            goal=120,
+        )
+        with pytest.raises(ValueError, match="system is not supported"):
+            run_reference_lab(lab, UnreadableData(), UnreadableData())
+        assert system.eq_calls == 0
+
+
 def test_parity_lab_requires_aligned_binary_causal_votes():
     history = SimpleNamespace(labels=("2025-09-02 05:10",), nums=np.asarray([[0, 1, 2, 3, 4]]))
     rankings = SimpleNamespace(row_ids=np.asarray([0]))

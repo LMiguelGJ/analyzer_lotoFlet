@@ -6,11 +6,8 @@ from hashlib import sha256
 
 import numpy as np
 
+from laboratorio.domain.laboratories import LaboratoryConfig
 from laboratorio.domain.reference_labs import ReferenceLab
-
-_CAPITAL = 2000
-_GOAL = 2800
-_PRIZES = (80, 8, 4, 2, 1)
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,9 +47,9 @@ class ReferenceResult:
     session_sha256: str
 
 
-def _ladder(coverage: int) -> tuple[int, ...]:
+def _ladder(coverage: int, first_prize: int) -> tuple[int, ...]:
     """Reference first-prize recovery ladder; ceiling division per round."""
-    gain_per_number = _PRIZES[0] - coverage
+    gain_per_number = first_prize - coverage
     if gain_per_number <= 0:
         raise ValueError("first prize must exceed coverage for ladder recovery")
     stakes = []
@@ -65,13 +62,22 @@ def _ladder(coverage: int) -> tuple[int, ...]:
 
 
 def _bet_per_number(
-    style: str, coverage: int, balance: int, round_index: int, goal: int, ladder: tuple[int, ...]
+    style: str,
+    coverage: int,
+    first_prize: int,
+    balance: int,
+    round_index: int,
+    goal: int,
+    ladder: tuple[int, ...],
 ) -> int:
     if style == "flat":
         return 1
     if style == "ladder":
         return ladder[round_index]
-    return min((goal - balance + 80 - coverage - 1) // (80 - coverage), balance // coverage)
+    return min(
+        (goal - balance + first_prize - coverage - 1) // (first_prize - coverage),
+        balance // coverage,
+    )
 
 
 def _selected_payments(
@@ -94,8 +100,23 @@ def run_reference_lab(
     ``row_ids`` and ``family(system)``. Parity labs require causal votes supplied
     by the caller, preserving the adapter's cached parity implementation.
     """
-    if (lab.capital, lab.goal, lab.prizes) != (_CAPITAL, _GOAL, _PRIZES):
-        raise ValueError("unsupported reference laboratory bankroll contract")
+    if type(lab.system) is not str:
+        raise ValueError("system is not supported by the archived reference family")
+    # The isolated engine also supports parity fixtures with partial coverage;
+    # user-created domain configs separately enforce all-50 parity selection.
+    config = LaboratoryConfig(
+        system="cold" if lab.system == "parity" else lab.system,
+        coverage=lab.coverage,
+        stake_style=lab.stake_style,
+        capital=lab.capital,
+        goal=lab.goal,
+        prizes=lab.prizes,
+        window_start=lab.window_start,
+        window_end=lab.window_end,
+    )
+    expected_selection = "parity" if lab.system == "parity" else config.selection_kind
+    if lab.selection_kind != expected_selection:
+        raise ValueError("selection kind does not match the laboratory system")
     labels = history.labels
     row_ids = np.asarray(rankings.row_ids, dtype=np.int64)
     timestamps = np.asarray(labels, dtype=str)
@@ -123,7 +144,8 @@ def run_reference_lab(
     payments, first_hits = _selected_payments(
         np.asarray(history.nums)[eligible], orders, lab.coverage, lab.prizes
     )
-    ladder = _ladder(lab.coverage) if lab.stake_style == "ladder" else ()
+    first_prize = lab.prizes[0]
+    ladder = _ladder(lab.coverage, first_prize) if lab.stake_style == "ladder" else ()
     sessions: list[ReferenceSession] = []
     balance, round_index = lab.capital, 0
     start = 0
@@ -131,7 +153,13 @@ def run_reference_lab(
     outcomes = zip(payments.tolist(), first_hits.tolist(), strict=True)
     for index, (payment, first_hit) in enumerate(outcomes):
         per_number = _bet_per_number(
-            lab.stake_style, lab.coverage, balance, round_index, lab.goal, ladder
+            lab.stake_style,
+            lab.coverage,
+            first_prize,
+            balance,
+            round_index,
+            lab.goal,
+            ladder,
         )
         stake = lab.coverage * per_number
         if balance < stake:
@@ -143,7 +171,13 @@ def run_reference_lab(
             start = index
             draws = wagered = paid = 0
             per_number = _bet_per_number(
-                lab.stake_style, lab.coverage, balance, round_index, lab.goal, ladder
+                lab.stake_style,
+                lab.coverage,
+                first_prize,
+                balance,
+                round_index,
+                lab.goal,
+                ladder,
             )
             stake = lab.coverage * per_number
             if balance < stake:
@@ -158,7 +192,13 @@ def run_reference_lab(
         outcome = "goal" if balance >= lab.goal else None
         if outcome is None:
             next_per_number = _bet_per_number(
-                lab.stake_style, lab.coverage, balance, round_index, lab.goal, ladder
+                lab.stake_style,
+                lab.coverage,
+                first_prize,
+                balance,
+                round_index,
+                lab.goal,
+                ladder,
             )
             if balance < lab.coverage or balance < lab.coverage * next_per_number:
                 outcome = "ruin"

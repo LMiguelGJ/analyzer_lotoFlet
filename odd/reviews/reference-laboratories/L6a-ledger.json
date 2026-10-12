@@ -1,0 +1,30 @@
+{
+  "target_identity": "cb5e95e77146226eaf9586bcb374072218ef5874b21d1d90a46e2d70cb417cf3",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "judges": [
+    {
+      "judge": "A",
+      "task_id": "mv5gs5d2-8-cwge",
+      "artifact": "odd/reviews/reference-laboratories/L6a-judge-a.json",
+      "findings": 0,
+      "evidence_items": 8
+    },
+    {
+      "judge": "B",
+      "task_id": "mv5gs5o8-9-zjnh",
+      "artifact": "odd/reviews/reference-laboratories/L6a-judge-b.json",
+      "findings": 0,
+      "evidence_items": 8
+    }
+  ],
+  "correction_rounds_used": 0,
+  "rejudgment_rounds_used": 0
+}
