@@ -1,0 +1,35 @@
+{
+  "target_identity": "2befcda13869eabc592b4ad28de594a8c014f65290ba7125868a27165157772e",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "info": [
+    "INFO-1",
+    "INFO-2",
+    "INFO-3"
+  ],
+  "judges": [
+    {
+      "judge": "A",
+      "task_id": "mv5imktk-d-nlvp",
+      "artifact": "odd/reviews/reference-laboratories/L6b1-judge-a.json",
+      "findings": 2,
+      "evidence_items": 11
+    },
+    {
+      "judge": "B",
+      "task_id": "mv5iml7d-e-vg24",
+      "artifact": "odd/reviews/reference-laboratories/L6b1-judge-b.json",
+      "findings": 2,
+      "evidence_items": 9
+    }
+  ],
+  "ledger": "odd/reviews/reference-laboratories/L6b1-ledger.json",
+  "native_authority": false,
+  "delivery_authorization": false
+}

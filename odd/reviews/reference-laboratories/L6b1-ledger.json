@@ -1,0 +1,61 @@
+{
+  "target_identity": "2befcda13869eabc592b4ad28de594a8c014f65290ba7125868a27165157772e",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "info": [
+    {
+      "id": "INFO-1",
+      "severity": "SUGGESTION",
+      "claim": "Permanent tests could cover non-dict definition/provenance, missing digest keys and precise rejection exception types more directly. Existing implementation rejects them correctly.",
+      "finding_refs": [
+        "L6b1-judge-a.json#/findings/1",
+        "L6b1-judge-b.json#/findings/0"
+      ],
+      "disposition": "nonblocking_not_fixed"
+    },
+    {
+      "id": "INFO-2",
+      "severity": "SUGGESTION",
+      "claim": "Permanent digest tests could include whitespace, trailing newline and over-long values. Exact-string fullmatch currently rejects them correctly.",
+      "finding_refs": [
+        "L6b1-judge-b.json#/findings/1"
+      ],
+      "disposition": "nonblocking_not_fixed"
+    },
+    {
+      "id": "INFO-3",
+      "severity": "SUGGESTION",
+      "claim": "The first alias-mutation assertion constructs a fresh snapshot and is redundant; the subsequent assertion does test the original model.",
+      "finding_refs": [
+        "L6b1-judge-a.json#/findings/0"
+      ],
+      "disposition": "nonblocking_not_fixed"
+    }
+  ],
+  "judges": [
+    {
+      "judge": "A",
+      "task_id": "mv5imktk-d-nlvp",
+      "artifact": "odd/reviews/reference-laboratories/L6b1-judge-a.json",
+      "findings": 2,
+      "evidence_items": 11
+    },
+    {
+      "judge": "B",
+      "task_id": "mv5iml7d-e-vg24",
+      "artifact": "odd/reviews/reference-laboratories/L6b1-judge-b.json",
+      "findings": 2,
+      "evidence_items": 9
+    }
+  ],
+  "raw_suggestion_count": 4,
+  "merged_info_count": 3,
+  "correction_rounds_used": 0,
+  "rejudgment_rounds_used": 0
+}
