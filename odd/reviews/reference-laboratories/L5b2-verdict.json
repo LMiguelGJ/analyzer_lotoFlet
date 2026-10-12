@@ -1,0 +1,12 @@
+{
+  "target_identity": "9948ac660391ddae380c59517e4049d45d32df93c3dddda517f3624b224136d6",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected"
+}

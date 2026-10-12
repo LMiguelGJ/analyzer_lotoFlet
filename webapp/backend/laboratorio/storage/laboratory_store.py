@@ -181,3 +181,69 @@ def list_laboratory_definitions(repo, *, offset=0, limit=20):
         "limit": limit,
         "items": [_decode(row) for row in rows],
     }
+
+
+def _canonical_identifier(identifier):
+    if type(identifier) is not str:
+        raise ValueError("id must be a canonical UUID")
+    try:
+        if str(uuid.UUID(identifier)) != identifier:
+            raise ValueError
+    except (ValueError, AttributeError) as exc:
+        raise ValueError("id must be a canonical UUID") from exc
+
+
+def _owned_counts(db, identifier):
+    runs = db.execute(
+        "SELECT count(*) FROM reference_lab_runs WHERE owner_laboratory_id=?",
+        (identifier,),
+    ).fetchone()[0]
+    sessions = db.execute(
+        "SELECT count(*) FROM reference_lab_sessions AS s "
+        "JOIN reference_lab_runs AS r ON r.id=s.run_id "
+        "WHERE r.owner_laboratory_id=?",
+        (identifier,),
+    ).fetchone()[0]
+    return {"owned_run_count": runs, "owned_session_count": sessions}
+
+
+def get_laboratory_owned_counts(repo, identifier):
+    _canonical_identifier(identifier)
+    with connection(repo.path) as db:
+        db.execute("BEGIN")
+        row = _row(db, identifier)
+        if row is None:
+            return None
+        _decode(row)
+        return _owned_counts(db, identifier)
+
+
+def delete_laboratory_definition(repo, identifier, *, confirmed_run_count):
+    from laboratorio.storage.repository import _transaction
+
+    _canonical_identifier(identifier)
+    if type(confirmed_run_count) is not int or not 0 <= confirmed_run_count <= _MAX_I64:
+        raise ValueError("confirmed_run_count must be a non-negative safe integer")
+
+    try:
+        with _transaction(repo.path) as db:
+            row = _row(db, identifier)
+            if row is None:
+                return None
+            definition = _decode(row)
+            counts = _owned_counts(db, identifier)
+            if counts["owned_run_count"] != confirmed_run_count:
+                raise LaboratoryDefinitionConflict(
+                    "owned run count changed; reload before deleting the laboratory"
+                )
+            db.execute("DELETE FROM laboratory_definitions WHERE id=?", (identifier,))
+            if db.execute("SELECT changes()").fetchone()[0] != 1:
+                raise LaboratoryStoreError("could not delete laboratory definition")
+    except sqlite3.IntegrityError as exc:
+        raise LaboratoryStoreError("could not delete laboratory definition") from exc
+    return {
+        "id": definition.id,
+        "name": definition.name,
+        "definition_bytes": row[4],
+        **counts,
+    }

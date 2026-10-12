@@ -1,0 +1,53 @@
+{
+  "target_identity": "9948ac660391ddae380c59517e4049d45d32df93c3dddda517f3624b224136d6",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "scope": [
+    "webapp/backend/laboratorio/storage/repository.py",
+    "webapp/backend/laboratorio/storage/laboratory_store.py",
+    "webapp/backend/tests/test_laboratory_store.py"
+  ],
+  "frozen_root": "C:/Users/luism/AppData/Local/Temp/reference-labs-jd-l5b2-b34908ac",
+  "base_ref": "1429089b52d822ec88e8dd346da1ed4fce744a84",
+  "judges": [
+    {
+      "task": "mv4vv2xl-w-q2mx",
+      "raw": "L5b2-judge-a.json",
+      "findings": 0,
+      "evidence_entries": 7
+    },
+    {
+      "task": "mv4vv2kq-v-wh9l",
+      "raw": "L5b2-judge-b.json",
+      "findings": 0,
+      "evidence_entries": 6
+    }
+  ],
+  "functional": {
+    "focused_passed": 226,
+    "focused_seconds": 45.1,
+    "remaining_passed": 513,
+    "remaining_seconds": 743.96,
+    "excluded": [
+      "tests/test_reference_labs_api.py"
+    ],
+    "ruff": "check/format three files passed",
+    "initial_guard_files": 73,
+    "frozen_recorded_hashes": 291
+  },
+  "limits": [
+    "Functional suites overlap; not739distinct.",
+    "Initial73before-after live guard does not retroactively cover142additionalfrozencontextfiles capturedaftertests.",
+    "Bothjudges inspected bodies/source tests and verifiedall291frozenhashes; no tests/runtime/SQL/import/lint/LSP executed.",
+    "ParentLSPoneclean/onefinding/onetimeout—notallclean.",
+    "Only storage count/delete reviewed; HTTP/configured execution/UI still pending.",
+    "No native authority receipt, burn or delivery grant."
+  ]
+}

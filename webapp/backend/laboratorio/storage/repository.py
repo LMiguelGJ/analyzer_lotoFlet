@@ -507,3 +507,15 @@ class Repository:
         from laboratorio.storage.laboratory_store import list_laboratory_definitions
 
         return list_laboratory_definitions(self, offset=offset, limit=limit)
+
+    def get_laboratory_owned_counts(self, identifier):
+        from laboratorio.storage.laboratory_store import get_laboratory_owned_counts
+
+        return get_laboratory_owned_counts(self, identifier)
+
+    def delete_laboratory_definition(self, identifier, *, confirmed_run_count):
+        from laboratorio.storage.laboratory_store import delete_laboratory_definition
+
+        return delete_laboratory_definition(
+            self, identifier, confirmed_run_count=confirmed_run_count
+        )
