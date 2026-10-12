@@ -305,7 +305,7 @@ def _decode_run(row, session_rows):
 def _read_run(db, run_id):
     row = db.execute(
         "SELECT id,lab_id,contract_version,created_at,metadata_json,result_json "
-        "FROM reference_lab_runs WHERE id=?",
+        "FROM reference_lab_runs WHERE id=? AND owner_laboratory_id IS NULL",
         (run_id,),
     ).fetchone()
     if row is None:
@@ -427,7 +427,8 @@ def list_reference_lab_runs(repo, *, lab_id=None, offset=0, limit=20):
     with connection(repo.path) as db:
         db.execute("BEGIN")
         total = db.execute(
-            "SELECT count(*) FROM reference_lab_runs WHERE (? IS NULL OR lab_id=?)",
+            "SELECT count(*) FROM reference_lab_runs "
+            "WHERE owner_laboratory_id IS NULL AND (? IS NULL OR lab_id=?)",
             (lab_id, lab_id),
         ).fetchone()[0]
         try:
@@ -436,7 +437,8 @@ def list_reference_lab_runs(repo, *, lab_id=None, offset=0, limit=20):
                 "SELECT id,lab_id,contract_version,created_at,"
                 "json_extract(result_json,'$.result.totals','$.result.eligible_draws',"
                 "'$.result.gaps') AS summary "
-                "FROM reference_lab_runs WHERE (? IS NULL OR lab_id=?) "
+                "FROM reference_lab_runs "
+                "WHERE owner_laboratory_id IS NULL AND (? IS NULL OR lab_id=?) "
                 "ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?) "
                 "SELECT id,lab_id,contract_version,created_at,"
                 "CASE WHEN length(summary)<=? THEN summary END "
@@ -458,7 +460,7 @@ def list_reference_lab_sessions(repo, run_id, *, offset=0, limit=50):
     with connection(repo.path) as db:
         head = db.execute(
             "SELECT id,lab_id,contract_version,created_at,metadata_json,result_json "
-            "FROM reference_lab_runs WHERE id=?",
+            "FROM reference_lab_runs WHERE id=? AND owner_laboratory_id IS NULL",
             (run_id,),
         ).fetchone()
         if head is None:
@@ -486,5 +488,8 @@ def delete_reference_lab_run(repo, run_id):
     from laboratorio.storage.repository import _transaction
 
     with _transaction(repo.path) as db:
-        cursor = db.execute("DELETE FROM reference_lab_runs WHERE id=?", (run_id,))
+        cursor = db.execute(
+            "DELETE FROM reference_lab_runs WHERE id=? AND owner_laboratory_id IS NULL",
+            (run_id,),
+        )
         return cursor.rowcount > 0
