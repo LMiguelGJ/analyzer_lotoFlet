@@ -1,0 +1,38 @@
+{
+  "target_identity": "bb08fd13e6e844215e9cef44ae743792b92fdda993068394f961e5df747e6662",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "judges": {
+    "a": "mv4n9bsn-9-37ry",
+    "b": "mv4n9c43-a-pkh0"
+  },
+  "raw_outputs": [
+    "L4-domain-judge-a.json",
+    "L4-domain-judge-b.json"
+  ],
+  "authored_paths": [
+    "webapp/backend/laboratorio/domain/laboratories.py",
+    "webapp/backend/tests/test_laboratory_definitions.py"
+  ],
+  "independent_checks": {
+    "tests": 64,
+    "duration_seconds": 17.19,
+    "ruff_check": "passed",
+    "ruff_format": "passed",
+    "scope_hashes": "unchanged"
+  },
+  "limits": [
+    "Both actual actor outputs were minimal {rows: []}; no inspection narrative was emitted or inferred.",
+    "Approval covers only immutable definition domain and tests, not persistence, API, configurable replay, UI or browser acceptance.",
+    "RDD off; not a native receipt or delivery authority. LSP unavailable to verifier.",
+    "449 authored lines above usual400; one coherent domain-and-tests unit, no proof removal."
+  ],
+  "snapshot": "C:/Users/luism/AppData/Local/Temp/reference-labs-jd-l4-domain-gyeiezrb/candidate"
+}
