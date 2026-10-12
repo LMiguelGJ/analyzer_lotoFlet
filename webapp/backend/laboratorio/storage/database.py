@@ -1,12 +1,15 @@
 """Versioned SQLite bootstrap and short-lived, foreign-key-enabled connections."""
 
+import json
 import sqlite3
 from contextlib import closing, contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from laboratorio.domain.contracts import legacy_quiniela_80_profile
+from laboratorio.domain.laboratories import initial_laboratory_definitions
 
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 _MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 # Ordered, sequential migration scripts; each key is the schema version it produces.
 _MIGRATIONS = {
@@ -26,6 +29,7 @@ _MIGRATIONS = {
     14: _MIGRATIONS_DIR / "0014_history_sources.sql",
     15: _MIGRATIONS_DIR / "0015_runs.sql",
     16: _MIGRATIONS_DIR / "0016_reference_labs.sql",
+    17: _MIGRATIONS_DIR / "0017_laboratories.sql",
 }
 
 
@@ -87,6 +91,8 @@ def _run_migrations(db, expected_prior: int, versions: list[int]):
                 "SELECT id, ?, ?, ? FROM experiments",
                 (profile.profile_id, profile.revision, snapshot),
             )
+        if target == 17:
+            _seed_initial_laboratory_definitions(db)
         db.execute(f"PRAGMA user_version = {target}")
         db.commit()
     except sqlite3.IntegrityError:
@@ -98,6 +104,42 @@ def _run_migrations(db, expected_prior: int, versions: list[int]):
     except BaseException:
         db.rollback()
         raise
+
+
+def _seed_initial_laboratory_definitions(db):
+    """Seed deterministic starter definitions once, inside the schema transaction."""
+    marker = "initial_laboratory_definitions_v1"
+    if db.execute(
+        "SELECT 1 FROM storage_bootstrap_state WHERE state_key = ?", (marker,)
+    ).fetchone():
+        return
+
+    created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    for definition in initial_laboratory_definitions():
+        snapshot = json.dumps(
+            definition.to_mapping(),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        db.execute(
+            "INSERT INTO laboratory_definitions "
+            "(id, name, name_key, definition_json, definition_bytes, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                definition.id,
+                definition.name,
+                definition.name.casefold(),
+                snapshot,
+                len(snapshot.encode("utf-8")),
+                created_at,
+            ),
+        )
+    db.execute(
+        "INSERT INTO storage_bootstrap_state (state_key, state_value) VALUES (?, ?)",
+        (marker, "complete"),
+    )
 
 
 def initialize_database(path: Path):

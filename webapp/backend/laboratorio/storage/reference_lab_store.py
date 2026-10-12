@@ -355,6 +355,7 @@ def create_reference_lab_run(
         RepositoryQuotaStatus,
         _dataset_artifact_bytes,
         _history_artifact_bytes,
+        _laboratory_definition_bytes,
         _logical_experiment_bytes,
         _now_iso,
         _profile_artifact_bytes,
@@ -394,10 +395,13 @@ def create_reference_lab_run(
             **{field.name: getattr(base, field.name) for field in fields(QuotaStatus)},
             history_artifact_bytes=_history_artifact_bytes(db),
             run_artifact_bytes=_run_artifact_bytes(db),
+            laboratory_definition_bytes=_laboratory_definition_bytes(db),
         )
         status.require_capacity(payload_bytes)
         db.execute(
-            "INSERT INTO reference_lab_runs VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO reference_lab_runs "
+            "(id, lab_id, contract_version, created_at, metadata_json, result_json) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             (run_id, lab_id, SCHEMA_VERSION, created_at, metadata_json, result_json),
         )
         db.executemany(

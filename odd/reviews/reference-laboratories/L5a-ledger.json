@@ -1,0 +1,22 @@
+{
+  "target_identity": "5d5e5ff106bf203df523b5f4aeff98b7b0acf87a446b201c47f63ba1bda508d6",
+  "scope": "L5a schema17/bootstrap/shared-quota nine-path unit",
+  "judge_a": "mv4rh9wv-m-ujnm",
+  "judge_b": "mv4rh9bj-l-wgv5",
+  "runtime_mapping": "generic read-only verifier pair; global legacy judge profiles unchanged",
+  "raw_artifacts": [
+    "L5a-judge-a.json",
+    "L5a-judge-b.json"
+  ],
+  "legacy_artifacts_excluded_from_verdict": [
+    "L5a-judge-a-initial-legacy.json",
+    "L5a-judge-b-initial-legacy.json"
+  ],
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "source_correction_rounds": 0,
+  "scoped_rejudgment_rounds": 0,
+  "native_authority": false
+}

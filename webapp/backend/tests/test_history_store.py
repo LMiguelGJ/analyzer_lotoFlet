@@ -65,6 +65,8 @@ def test_v13_database_upgrades_in_place(tmp_path):
         "saved_run_sessions",
         "reference_lab_runs",
         "reference_lab_sessions",
+        "laboratory_definitions",
+        "storage_bootstrap_state",
     }
     with closing(sqlite3.connect(path)) as db:
         assert db.execute("SELECT count(*) FROM game_profiles").fetchone()[0] == profiles_before
@@ -103,12 +105,14 @@ def test_repository_import_activate_and_list(repo):
 def test_quota_unchanged_without_history_rows(repo):
     status = repo.quota_status(QUOTA)
     assert status.history_artifact_bytes == 0
+    assert status.run_artifact_bytes == 0
     assert repo.history_artifact_bytes() == 0
     assert repo.admission_logical_bytes() == (
         repo.logical_experiment_bytes()
         + repo.profile_artifact_bytes()
         + repo.dataset_artifact_bytes()
         + repo.strategy_artifact_bytes()
+        + status.laboratory_definition_bytes
     )
     assert status.admission_logical_bytes == repo.admission_logical_bytes()
 

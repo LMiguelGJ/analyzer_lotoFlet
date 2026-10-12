@@ -271,6 +271,7 @@ def _quota(db, path, quota_bytes, quota_explicit, disk_usage):
         RepositoryQuotaStatus,
         _dataset_artifact_bytes,
         _history_artifact_bytes,
+        _laboratory_definition_bytes,
         _logical_experiment_bytes,
         _profile_artifact_bytes,
         _run_artifact_bytes,
@@ -291,6 +292,7 @@ def _quota(db, path, quota_bytes, quota_explicit, disk_usage):
         **{item.name: getattr(status, item.name) for item in fields(QuotaStatus)},
         history_artifact_bytes=_history_artifact_bytes(db),
         run_artifact_bytes=_run_artifact_bytes(db),
+        laboratory_definition_bytes=_laboratory_definition_bytes(db),
     )
 
 

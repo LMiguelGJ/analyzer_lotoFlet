@@ -140,16 +140,27 @@ def _history_artifact_bytes(db) -> int:
 
 @dataclass(frozen=True)
 class RepositoryQuotaStatus(QuotaStatus):
-    """``QuotaStatus`` plus persisted history and run bytes admitted by this repository."""
+    """Quota status plus persisted history, run and laboratory-definition bytes."""
 
     history_artifact_bytes: int = 0
     run_artifact_bytes: int = 0
+    laboratory_definition_bytes: int = 0
 
     @property
     def admission_logical_bytes(self) -> int:
         return (
-            super().admission_logical_bytes + self.history_artifact_bytes + self.run_artifact_bytes
+            super().admission_logical_bytes
+            + self.history_artifact_bytes
+            + self.run_artifact_bytes
+            + self.laboratory_definition_bytes
         )
+
+
+def _laboratory_definition_bytes(db) -> int:
+    """Count canonical definition JSON bytes once, without folding them into run bytes."""
+    return db.execute(
+        "SELECT coalesce(sum(definition_bytes), 0) FROM laboratory_definitions"
+    ).fetchone()[0]
 
 
 def _run_artifact_bytes(db) -> int:
@@ -177,6 +188,7 @@ def _admission_logical_bytes(db) -> int:
         + _strategy_artifact_bytes(db)
         + _history_artifact_bytes(db)
         + _run_artifact_bytes(db)
+        + _laboratory_definition_bytes(db)
     )
 
 
@@ -298,6 +310,7 @@ class Repository:
                     **{f.name: getattr(status, f.name) for f in fields(QuotaStatus)},
                     history_artifact_bytes=_history_artifact_bytes(db),
                     run_artifact_bytes=_run_artifact_bytes(db),
+                    laboratory_definition_bytes=_laboratory_definition_bytes(db),
                 )
                 status.require_capacity(len(raw_bytes) + len(sha256) + 128)
                 db.execute(
@@ -367,6 +380,7 @@ class Repository:
             strategy_bytes = _strategy_artifact_bytes(db)
             history_bytes = _history_artifact_bytes(db)
             run_bytes = _run_artifact_bytes(db)
+            laboratory_definition_bytes = _laboratory_definition_bytes(db)
         status = measure(
             self.path,
             limit,
@@ -380,6 +394,7 @@ class Repository:
             **{f.name: getattr(status, f.name) for f in fields(QuotaStatus)},
             history_artifact_bytes=history_bytes,
             run_artifact_bytes=run_bytes,
+            laboratory_definition_bytes=laboratory_definition_bytes,
         )
 
     def require_capacity(

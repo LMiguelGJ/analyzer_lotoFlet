@@ -4,7 +4,7 @@ import sqlite3
 import pytest
 
 from laboratorio.storage.database import connection
-from laboratorio.storage.quota import QuotaExceeded
+from laboratorio.storage.quota import LOGICAL_MARGIN_BYTES, QuotaExceeded
 
 
 def _valid_run_data():
@@ -63,7 +63,7 @@ def test_run_migration_fresh_and_v14_upgrade_preserves_legacy_runs(tmp_path):
     fresh = tmp_path / "fresh.db"
     initialize_database(fresh)
     with connection(fresh) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 16
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
         assert db.execute(
             "SELECT name FROM sqlite_master WHERE name='saved_run_sessions'"
         ).fetchone()
@@ -82,7 +82,7 @@ def test_run_migration_fresh_and_v14_upgrade_preserves_legacy_runs(tmp_path):
         db.execute("PRAGMA user_version=14")
     initialize_database(old)
     with connection(old) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 16
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
         assert db.execute("SELECT experiment_id,ordinal,status FROM runs").fetchall() == [
             ("legacy", 0, "pending")
         ]
@@ -329,7 +329,20 @@ def test_concurrent_run_admission_is_atomic_at_quota(repo):
             + len(row[5].encode())
             + len(row[11].encode())
         )
-    quota = projected * 2
+    baseline = repo.admission_logical_bytes()
+    assert repo.quota_status().run_artifact_bytes == 0
+    quota = baseline + projected + 1
+    for _ in range(10):
+        margin = min(LOGICAL_MARGIN_BYTES, max(1, quota // 20))
+        calibrated = baseline + projected + margin + 1
+        if calibrated == quota:
+            break
+        quota = calibrated
+    else:
+        raise AssertionError("quota calibration did not converge")
+    margin = min(LOGICAL_MARGIN_BYTES, max(1, quota // 20))
+    assert baseline + projected + margin < quota
+    assert baseline + 2 * projected + margin >= quota
     barrier = Barrier(2)
 
     def create(run_id):
