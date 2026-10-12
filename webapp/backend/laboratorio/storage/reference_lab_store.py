@@ -137,6 +137,75 @@ def _session_digest(rows):
     return hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
 
 
+def _validate_result(lab_id, capital, result):
+    _text(lab_id)
+    capital = _integer(capital, minimum=1)
+    if type(result) is not dict or result.get("lab_id") != lab_id:
+        raise ValueError("invalid result")
+    _validate_json_values(result)
+    sessions, totals = result.get("sessions"), result.get("totals")
+    if type(sessions) is tuple:
+        result = {**result, "sessions": list(sessions)}
+        sessions = result["sessions"]
+    if type(sessions) is not list or len(sessions) > MAX_SESSIONS or type(totals) is not dict:
+        raise ValueError("invalid session summaries")
+    _check_totals(totals)
+    if totals["sessions_total"] != len(sessions):
+        raise ValueError("inconsistent result totals")
+    if set(result) != {
+        "lab_id",
+        "sessions",
+        "totals",
+        "eligible_draws",
+        "gaps",
+        "first",
+        "last",
+        "session_sha256",
+    }:
+        raise ValueError("unknown result fields")
+    _integer(result["eligible_draws"], minimum=0)
+    _integer(result["gaps"], minimum=0)
+    _text(result["first"], optional=True)
+    _text(result["last"], optional=True)
+    digest = result["session_sha256"]
+    if (
+        type(digest) is not str
+        or len(digest) != 64
+        or any(char not in "0123456789abcdef" for char in digest)
+    ):
+        raise ValueError("invalid session digest")
+    session_totals = {"goal": 0, "ruin": 0, "incomplete": 0}
+    session_wagered = session_paid = session_steps = closed_count = closed_net = 0
+    digest_rows = []
+    for session in sessions:
+        row = _check_session(session, capital)
+        digest_rows.append(row)
+        outcome, _start, _end, draws, final, wagered, paid = row
+        session_totals[outcome] += 1
+        if outcome != "incomplete":
+            closed_count += 1
+            closed_net += final - capital
+        session_wagered += wagered
+        session_paid += paid
+        session_steps += draws
+    if (
+        session_totals["goal"] != totals["goals"]
+        or session_totals["ruin"] != totals["ruins"]
+        or session_totals["incomplete"] != totals["incomplete"]
+        or session_wagered != totals["total_wagered"]
+        or session_paid != totals["total_paid"]
+        or session_steps != totals["total_steps"]
+    ):
+        raise ValueError("session summaries disagree with totals")
+    if totals["mean_net_closed"] != (closed_net / closed_count if closed_count else None):
+        raise ValueError("mean net disagrees with completed sessions")
+    if digest != _session_digest(digest_rows):
+        raise ValueError("session digest disagrees with the sessions")
+    result_json = _canonical({"schema_version": SCHEMA_VERSION, "result": result})
+    sessions_json = [_canonical(session) for session in sessions]
+    return result_json, sessions_json
+
+
 def _validate_input(run_id, lab_id, config, provenance, result):
     try:
         if type(run_id) is not str or str(uuid.UUID(run_id)) != run_id:
@@ -161,75 +230,28 @@ def _validate_input(run_id, lab_id, config, provenance, result):
             or provenance.get("history_origin") != "frozen"
         ):
             raise ValueError("invalid provenance")
-        if type(result) is not dict or result.get("lab_id") != lab_id:
-            raise ValueError("invalid result")
-        _validate_json_values(result)
-        sessions, totals = result.get("sessions"), result.get("totals")
-        if type(sessions) is tuple:
-            result = {**result, "sessions": list(sessions)}
-            sessions = result["sessions"]
-        if type(sessions) is not list or len(sessions) > MAX_SESSIONS or type(totals) is not dict:
-            raise ValueError("invalid session summaries")
-        _check_totals(totals)
-        if totals["sessions_total"] != len(sessions):
-            raise ValueError("inconsistent result totals")
-        if set(result) != {
-            "lab_id",
-            "sessions",
-            "totals",
-            "eligible_draws",
-            "gaps",
-            "first",
-            "last",
-            "session_sha256",
-        }:
-            raise ValueError("unknown result fields")
-        _integer(result["eligible_draws"], minimum=0)
-        _integer(result["gaps"], minimum=0)
-        _text(result["first"], optional=True)
-        _text(result["last"], optional=True)
-        digest = result["session_sha256"]
-        if (
-            type(digest) is not str
-            or len(digest) != 64
-            or any(char not in "0123456789abcdef" for char in digest)
-        ):
-            raise ValueError("invalid session digest")
-        session_totals = {"goal": 0, "ruin": 0, "incomplete": 0}
-        session_wagered = session_paid = session_steps = closed_count = closed_net = 0
-        digest_rows = []
-        for session in sessions:
-            row = _check_session(session, capital)
-            digest_rows.append(row)
-            outcome, _start, _end, draws, final, wagered, paid = row
-            session_totals[outcome] += 1
-            if outcome != "incomplete":
-                closed_count += 1
-                closed_net += final - capital
-            session_wagered += wagered
-            session_paid += paid
-            session_steps += draws
-        if (
-            session_totals["goal"] != totals["goals"]
-            or session_totals["ruin"] != totals["ruins"]
-            or session_totals["incomplete"] != totals["incomplete"]
-            or session_wagered != totals["total_wagered"]
-            or session_paid != totals["total_paid"]
-            or session_steps != totals["total_steps"]
-        ):
-            raise ValueError("session summaries disagree with totals")
-        if totals["mean_net_closed"] != (closed_net / closed_count if closed_count else None):
-            raise ValueError("mean net disagrees with completed sessions")
-        if digest != _session_digest(digest_rows):
-            raise ValueError("session digest disagrees with the sessions")
+        result_json, sessions_json = _validate_result(lab_id, capital, result)
         metadata = _canonical(
             {"schema_version": SCHEMA_VERSION, "config": config, "provenance": provenance}
         )
-        result_json = _canonical({"schema_version": SCHEMA_VERSION, "result": result})
-        sessions_json = [_canonical(session) for session in sessions]
         return metadata, result_json, sessions_json
     except (TypeError, ValueError, OverflowError, RecursionError) as exc:
         raise ReferenceLabStoreError("invalid reference-laboratory run") from exc
+
+
+def _validate_session_rows(sessions, session_rows, capital):
+    capital = _integer(capital, minimum=1)
+    if type(sessions) is not list or len(sessions) != len(session_rows):
+        raise ValueError("invalid stored session rows")
+    for index, (ordinal, session_json) in enumerate(session_rows):
+        copy = _loads(session_json)
+        _check_session(copy, capital)
+        if (
+            type(ordinal) is not int
+            or ordinal != index
+            or _canonical(copy) != _canonical(sessions[index])
+        ):
+            raise ValueError("stored session copy disagrees with result")
 
 
 def _created_at_valid(value):
@@ -275,18 +297,8 @@ def _decode_run(row, session_rows):
             raise ValueError
         result = result_envelope["result"]
         sessions = result.get("sessions") if type(result) is dict else None
-        if type(sessions) is not list or len(sessions) != len(session_rows):
-            raise ValueError
         capital = _integer(metadata["config"].get("capital"), minimum=1)
-        for index, (ordinal, session_json) in enumerate(session_rows):
-            copy = _loads(session_json)
-            _check_session(copy, capital)
-            if (
-                type(ordinal) is not int
-                or ordinal != index
-                or _canonical(copy) != _canonical(sessions[index])
-            ):
-                raise ValueError
+        _validate_session_rows(sessions, session_rows, capital)
         _validate_input(identifier, lab_id, metadata["config"], metadata["provenance"], result)
         return {
             "id": identifier,
