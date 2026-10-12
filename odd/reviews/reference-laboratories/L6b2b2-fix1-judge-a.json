@@ -1,0 +1,32 @@
+{
+  "findings": [
+    {
+      "location": "webapp/backend/tests/test_owned_laboratory_run_store.py:265-266",
+      "severity": "WARNING",
+      "claim": "Envelope coverage is only partially resolved: unsupported integer version and extra-key cases contain result={}, which independently fails identity validation. Removing the version-value or exact-envelope-key checks would still reject these fixtures. These are informational test-strength gaps, not production defects or severe findings.",
+      "evidence_class": "deterministic",
+      "causal_disposition": "introduced",
+      "proof_refs": [
+        "fix1.patch adds schema_version=2 and extra-envelope-key fixtures with result={}.",
+        "owned_laboratory_run_store.py:35-42 checks envelope keys and version.",
+        "owned_laboratory_run_store.py:46-52 independently rejects result={} because result.get('lab_id') != lab_id."
+      ]
+    }
+  ],
+  "evidence": [
+    "Fresh standalone inspection of the frozen candidate, base HEAD280205b, and tests-only fix round1; no inherited execution state or other judge report used.",
+    "Loaded C:/Users/luism/.agents/skills/judgment-day/SKILL.md and references/prompts-and-formats.md completely. Prior WARNING/SUGGESTION improvements remain informational; the skill does not mandate their correction.",
+    "Fully read fix1.patch, replacement current/test_owned_laboratory_run_store.py (410 lines), original unit_scoped.patch, current owned_laboratory_run_store.py, both base/current repository.py, current tests/conftest.py, test_reference_lab_ownership_scope.py, and test_reference_lab_result_validation.py. Fully read targeted support reference_lab_store.py and laboratory_run_snapshots.py. This inspection completes the initial report's missing base/current repository and ownership/result-validation support coverage.",
+    "Ran exactly the supplied py -3.14 -B - <<'PY' stdout-only guard command, unchanged, once BEFORE and once AFTER inspection. Both observed outputs were {\"contexts\":101,\"copies\":200,\"fix_added\":45,\"fix_deleted\":1,\"guards\":\"PASS\"}. All supplied manifest, patch and file hash assertions passed. No guard blocker or unexpected mutation observed.",
+    "Fix delta is +45/-1 exclusively in the test file; production remains unchanged. The superseded 366-line test was inspected within unit_scoped.patch, not treated as the final test candidate.",
+    "Initial defensive-copy WARNING resolved: replacement test lines 350-366 mutates run['sessions'][0]['wagered'] and checks the same DTO's result session remains unchanged. Removing deepcopy or replacing it with a shallow list copy would share the session dict and fail this assertion. This pins nested isolation behavior, not a particular copying implementation; mutation reasoning only, no probe executed.",
+    "Initial capital WARNING resolved at reader-behavior level: lines 369-388 increment only snapshot capital, explicitly decode the altered snapshot before insertion, preserve owner/lab/definition/result identities, and insert matching result/session copies using original capital. _check_session then rejects final_balance=original_capital+10 against altered_capital+paid-wagered=original_capital+11. Snapshot validity is outside pytest.raises, preventing invalid snapshot setup from satisfying the expected rejection. The test does not independently pin each validator's capital argument because either validator can reject the mismatch.",
+    "Envelope disposition: extra-key and integer-2 cases added but remain weak independent-check protection as reported. Non-dict result=[] exercises normalized rejection without the insertion helper indexing the invalid payload. Existing boolean-version case also uses result={} and is not independent version-check protection.",
+    "Noncontiguous ordinal coverage resolved: lines 315 and 333 add one otherwise-valid matching session row at ordinal 1. Cardinality matches; _validate_session_rows requires ordinal==enumerated index 0, isolating ordinal rejection.",
+    "Initial legacy SUGGESTION remains informational, not a defect requiring correction. Fully inspected ownership-scope tests cover legacy UUID collision, exclusion of owned corrupt rows before projection, legacy pagination/read/session/delete behavior, and preservation of owned rows after legacy deletion.",
+    "Historic read behavior is preserved by inspection: the owned reader uses the persisted snapshot definition and its capital, with no live definition/history lookup or writes. Repository's sole production addition delegates to that reader; existing legacy methods remain unchanged and reference_lab_store queries retain owner_laboratory_id IS NULL. No runtime test of changing a live definition after saving a run was executed.",
+    "No new fix-caused production defect or severe finding identified. The remaining envelope warning concerns newly added test discrimination, not incorrect current reader behavior.",
+    "Only guards were executed; no tests, project imports, lint, mutation probes, services, credentials, edits, artifacts, Git operations, delegation, CodeGraph or LSP checks. User-supplied prior results—focused 29 PASS/2.17s, compatibility 213 PASS/27.23s, Ruff lint/format PASS—were not independently executed or verified; earlier full 635 predates this tests-only change.",
+    "Required frozen-file reads completed without truncation or read blockers. Runtime verification and mutation testing remain unverified. Memory tools were unavailable. This report issues no native approval, receipt or delivery authority."
+  ]
+}

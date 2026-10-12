@@ -1,0 +1,78 @@
+{
+  "target_identity": "9471d2801dbb93c0407e79b577b03c55824315244d7cd5c5296a878315f0b7f8",
+  "original_target_identity": "769511eb231077cf423edbc4cecb9e03184755c665c09d347103f2320efec07e",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [
+    {
+      "id": "INFO-envelope-isolation",
+      "location": "webapp/backend/tests/test_owned_laboratory_run_store.py:265-266",
+      "claim": "Version-2 and extra-key cases have result={}, so identity rejection can mask removal of their envelope checks. Non-dict and ordinal coverage resolved. No production defect.",
+      "judges": {
+        "A": "WARNING",
+        "B": "SUGGESTION"
+      },
+      "disposition": "Accepted informational coverage limitation; no automatic second correction."
+    },
+    {
+      "id": "INFO-legacy-collision-coverage",
+      "claim": "Legacy UUID collision is covered by existing ownership-scope tests rather than duplicated in the owned reader tests.",
+      "judges": {
+        "A": "SUGGESTION"
+      },
+      "disposition": "Existing support coverage inspected completely in recovered reviews; harmless informational organization note."
+    }
+  ],
+  "fix_work_units": [
+    {
+      "surface": "webapp/backend/tests/test_owned_laboratory_run_store.py",
+      "added": 45,
+      "deleted": 1,
+      "kind": "optional test strengthening",
+      "production_changed": false,
+      "disposition": "Copy isolation and snapshot-capital rejection resolved; envelope isolation partial; ordinal resolved.",
+      "protocol_deviation": "Parent changed informational WARNING/SUGGESTION rows rather than only corroborated severe findings; parent authored tests outside normal writer routing."
+    }
+  ],
+  "scoped_rejudgment": "approved",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "judges": [
+    {
+      "judge": "A",
+      "task_id": "mv5rslwg-7-ulja",
+      "artifact": "odd/reviews/reference-laboratories/L6b2b2-fix1-judge-a.json",
+      "findings": 1,
+      "evidence_items": 14
+    },
+    {
+      "judge": "B",
+      "task_id": "mv5rsmbn-8-ahke",
+      "artifact": "odd/reviews/reference-laboratories/L6b2b2-fix1-judge-b.json",
+      "findings": 1,
+      "evidence_items": 13
+    }
+  ],
+  "correction_rounds_used": 1,
+  "rejudgment_rounds_used": 1,
+  "failed_handoffs": [
+    {
+      "task_id": "mv5rcgcf-4-xqob",
+      "reason": "assistant returned no final report"
+    },
+    {
+      "task_id": "mv5rche4-5-myqq",
+      "reason": "assistant returned no final report"
+    }
+  ],
+  "recovery": "Fresh self-contained pair completed the same fix1 and initial missing support coverage; tooling root cause unknown.",
+  "runtime_limits": [
+    "Mutation probes reasoned, not executed.",
+    "29 focused and 213 compatibility PASS with Ruff apply to strengthened tests; full635 predates tests-only delta.",
+    "No clean LSP or CodeGraph claim."
+  ],
+  "native_authority": false,
+  "delivery_authorization": false
+}

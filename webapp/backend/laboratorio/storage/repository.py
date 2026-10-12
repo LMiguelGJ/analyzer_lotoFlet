@@ -487,6 +487,13 @@ class Repository:
 
         return delete_reference_lab_run(self, run_id)
 
+    def get_owned_laboratory_run(self, owner_laboratory_id, run_id):
+        from laboratorio.storage.database import connection
+        from laboratorio.storage.owned_laboratory_run_store import get_run
+
+        with connection(self.path) as db:
+            return get_run(db, owner_laboratory_id, run_id)
+
     def create_laboratory_definition(self, name, config, *, quota_bytes=None, quota_explicit=None):
         from laboratorio.storage.laboratory_store import create_laboratory_definition
 

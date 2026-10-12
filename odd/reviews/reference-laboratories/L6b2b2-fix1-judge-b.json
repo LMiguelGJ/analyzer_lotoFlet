@@ -1,0 +1,31 @@
+{
+  "findings": [
+    {
+      "location": "fix1/current/test_owned_laboratory_run_store.py:265-266",
+      "severity": "SUGGESTION",
+      "claim": "The integer-2 and extra-envelope-key cases now exist, but do not independently pin those envelope checks: both contain result={}, which still triggers identity rejection if the corresponding envelope check is removed. The original informational coverage finding is therefore partially resolved, not a severe defect.",
+      "evidence_class": "deterministic",
+      "causal_disposition": "introduced",
+      "proof_refs": [
+        "newreference-labs-jd-l6b2b2-fix1-e2d8048d/current/test_owned_laboratory_run_store.py:265-266: both new envelopes contain result={}",
+        "newreference-labs-jd-l6b2b2-f2322fa1/current/webapp/backend/laboratorio/storage/owned_laboratory_run_store.py:35-43: exact envelope/version rejection",
+        "newreference-labs-jd-l6b2b2-f2322fa1/current/webapp/backend/laboratorio/storage/owned_laboratory_run_store.py:46-52: result.get('lab_id') != lab_id independently rejects {}"
+      ]
+    }
+  ],
+  "evidence": [
+    "Fresh standalone inspection of original capture newreference-labs-jd-l6b2b2-f2322fa1 (base HEAD280205b) and tests-only fix1 newreference-labs-jd-l6b2b2-fix1-e2d8048d. Used only the supplied initial report; no other judge report or inherited state.",
+    "Loaded completely C:/Users/luism/.agents/skills/judgment-day/SKILL.md and references/prompts-and-formats.md. WARNING/SUGGESTION improvements are informational parent changes, not corroborated severe findings or mandatory corrections.",
+    "Executed exactly the supplied py -3.14 -B - heredoc guard once before and once after inspection, without alteration. Both observed outputs were {\"contexts\":101,\"copies\":200,\"fix_added\":45,\"fix_deleted\":1,\"guards\":\"PASS\"}. Frozen-copy integrity checks passed; no unexpected mutation was observed within that guard's scope.",
+    "Read completely fix1.patch and the superseding 410-line fix1/current/test_owned_laboratory_run_store.py; original unit_scoped.patch; current owned_laboratory_run_store.py; both base/current repository.py; current tests/conftest.py, test_reference_lab_ownership_scope.py and test_reference_lab_result_validation.py. Also read completely current reference_lab_store.py and laboratory_run_snapshots.py. All requested frozen-file inspection coverage was completed.",
+    "Initial support gaps explicitly covered here: full base repository.py comparison, full patch, conftest.py fixture setup, ownership-scope compatibility tests, and shared result-validation tests. No assumption was made that earlier reviewers inspected them.",
+    "Fix delta is +45/-1 solely in the test file; original production remains unchanged. Base/current repository comparison shows only the seven-line get_owned_laboratory_run delegation addition. No new fix-caused production defect or severe finding was identified.",
+    "Isolation resolved by test_get_run_returns_sessions_that_do_not_alias_the_result: mutating sessions[0]['wagered'] and checking result['sessions'][0]['wagered'] within the same DTO distinguishes deepcopy from direct aliasing and a shallow list copy. This pins nested session isolation, not use of a particular copying API. Source returns copy.deepcopy(sessions).",
+    "Snapshot-capital test explicitly calls OwnedLaboratoryRunSnapshot.from_mapping after increasing capital and before inserting the row. Thus invalid snapshot decoding cannot satisfy the subsequent raises assertion. Result/session copies remain based on original capital; _check_session requires final_balance == capital + paid - wagered, so reading the matched row rejects that disagreement. Runtime validity was not independently executed here.",
+    "Capital coverage limit: the new test pins overall rejection, not independent use of snapshot capital in both helper calls; _validate_result rejects before _validate_session_rows is reached. Source inspection confirms both receive definition.config.capital.",
+    "Original suggestion disposition: missing cases are added; wrong/noncontiguous ordinal is resolved with one otherwise-matching session row at ordinal 1, independently violating ordinal == index. Non-dict result=[] explicitly exercises controlled rejection with an otherwise valid envelope. Integer-2 and extra-key branch isolation remains partial as detailed in the informational finding.",
+    "Historic reads remain based solely on stored metadata via OwnedLaboratoryRunSnapshot.from_mapping, not a lookup of the mutable current laboratory definition. Snapshot mapping is freshly constructed and result JSON freshly decoded. Existing reread test checks defensive values across calls; no explicit mutable-definition-update historic-read test was executed.",
+    "Ownership behavior preserved by inspection: owned SELECT binds both run id and owner id before decoding, so wrong-owner and NULL-owner malformed rows stay hidden. Legacy get/list/session/delete SQL retains owner_laboratory_id IS NULL. Read ownership tests cover corrupt owned rows, pagination/filtering, legacy UUID collision and preservation of owned rows after legacy deletion; these were inspected, not run.",
+    "Execution limits: only the two authorized guards ran. No tests, application imports, mutation probes, lint, format, LSP, CodeGraph, services, saved scripts, edits or delegation. User-reported focused 29 PASS/2.17s, compatibility 213 PASS/27.23s and Ruff lint/format PASS were not independently verified; earlier 635 full-suite result predates the tests-only delta. No runtime-pass or delivery-approval authority is claimed."
+  ]
+}
