@@ -4,6 +4,7 @@ import re
 import socket
 import sys
 import threading
+import unicodedata
 import webbrowser
 from contextlib import asynccontextmanager
 
@@ -13,6 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from laboratorio.api import settings as settings_api
 from laboratorio.api.history import router as history_router
+from laboratorio.api.laboratories import router as laboratories_router
 from laboratorio.api.reference_labs import router as reference_labs_router
 from laboratorio.api.runs import router as runs_router
 from laboratorio.engine.active_history import HistoryCatalog
@@ -22,6 +24,7 @@ from laboratorio.storage.database import initialize_database
 from laboratorio.storage.repository import Repository
 
 _REFERENCE_RUNS_PATH = re.compile(r"/api/v1/reference-labs/[^/]+/runs")
+_LABORATORIES_COLLECTION_PATH = re.compile(r"/api/v1/laboratories/?")
 _HOST = re.compile(r"(localhost|127\.0\.0\.1)(?::([0-9]{1,5}))?\Z")
 
 
@@ -32,6 +35,12 @@ def _valid_host(value: str, port: int) -> bool:
 
 def _valid_origin(value: str, host: str) -> bool:
     return value == f"http://{host}"
+
+
+def _decimal_exceeds(value: str, limit: int) -> bool:
+    normalized = "".join(str(unicodedata.decimal(char)) for char in value).lstrip("0") or "0"
+    bound = str(limit)
+    return len(normalized) > len(bound) or (len(normalized) == len(bound) and normalized > bound)
 
 
 def create_app(
@@ -83,11 +92,17 @@ def create_app(
         run_post = request.url.path == "/api/v1/runs" or _REFERENCE_RUNS_PATH.fullmatch(
             request.url.path
         )
-        if request.method == "POST" and run_post:
+        bounded_post = run_post or _LABORATORIES_COLLECTION_PATH.fullmatch(request.url.path)
+        if request.method == "POST" and bounded_post:
             byte_limit = 64 * 1024
             lengths = request.headers.getlist("content-length")
             invalid_length = len(lengths) > 1 or (
-                lengths and (not lengths[0].isdecimal() or int(lengths[0]) > byte_limit)
+                lengths
+                and (
+                    not lengths[0].isascii()
+                    or not lengths[0].isdecimal()
+                    or _decimal_exceeds(lengths[0], byte_limit)
+                )
             )
             if invalid_length:
                 return JSONResponse(
@@ -106,7 +121,7 @@ def create_app(
         if request.method == "POST" and request.url.path == "/api/v1/history":
             byte_limit = 32 * 1024 * 1024
             lengths = request.headers.getlist("content-length")
-            if any(value.isdecimal() and int(value) > byte_limit for value in lengths):
+            if any(value.isdecimal() and _decimal_exceeds(value, byte_limit) for value in lengths):
                 return JSONResponse(
                     {"detail": "El archivo supera el límite de 32 MiB."}, status_code=413
                 )
@@ -126,6 +141,7 @@ def create_app(
     app.include_router(history_router, prefix="/api/v1")
     app.include_router(runs_router, prefix="/api/v1")
     app.include_router(reference_labs_router, prefix="/api/v1")
+    app.include_router(laboratories_router, prefix="/api/v1")
 
     if serve_frontend:
 

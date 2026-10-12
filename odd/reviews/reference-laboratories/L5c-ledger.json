@@ -1,0 +1,31 @@
+{
+  "target_identity": "f712023e5e2aa8055e2df0d1f573a37b657889a1a052e535b331517a83c644b4",
+  "round": 1,
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "skill_resolution": "paths-injected",
+  "judges": {
+    "a": {
+      "task": "mv5cff1s-3-ifxi",
+      "findings": 0,
+      "evidence": 7,
+      "artifact": "L5c-judge-a.json"
+    },
+    "b": {
+      "task": "mv5cfcvf-2-nwnq",
+      "findings": 0,
+      "evidence": 5,
+      "artifact": "L5c-judge-b.json"
+    }
+  },
+  "correction_rounds": 0,
+  "rejudgment_rounds": 0,
+  "standalone": true,
+  "native_review_authority": false,
+  "delivery_authorized_by_review": false
+}
