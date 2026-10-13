@@ -1,0 +1,24 @@
+{
+  "target_identity": "68b2c5cd3aebf1307299beb4dcb48b1be2c345bb19cce570b3ab07a2c86904a3",
+  "frozen_from_commit": "b5ec69ac559cf2804038fbc857c20cd35f988905",
+  "scope": "L7 unified workspace (frontend), L9 fourteen recreations, backend contract files read-only",
+  "round": 0,
+  "judges": {
+    "A": "mv6cb9x5-5-bz72",
+    "B": "mv6cb9x9-6-q4yx"
+  },
+  "confirmed": [],
+  "suspect": [],
+  "contradictions": [],
+  "info": [],
+  "fix_work_units": [],
+  "scoped_rejudgment": "not_run",
+  "terminal_state": "approved",
+  "quality_notes": [
+    "Both judges returned zero findings in one read-only sweep each.",
+    "Judge A emitted prose before the JSON (protocol asked for JSON only) and its evidence contains checkable inaccuracies: it cites 3 form-model tests (there are 4) and a workspace pagination test that does not exist.",
+    "Judge B asserted that all frozen hashes were verified without any recorded hash computation.",
+    "An empty result from two blind judges is not proof of absence of defects; the browser session found four real defects before this review (digest path, narrow-screen order, plurals, mean decimals), which unit tests and typing had missed.",
+    "Approval here is a review state only. It is not a functional check, a native review receipt or delivery authority."
+  ]
+}
