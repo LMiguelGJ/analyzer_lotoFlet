@@ -1,0 +1,57 @@
+.reference-page, .reference-page * { min-width: 0; }
+.reference-page { display: grid; gap: 24px; }
+.reference-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+.reference-heading h2 { margin: 0 0 8px; }
+.reference-heading p, .reference-section-heading p { margin: 0; color: var(--ink-muted); }
+.reference-source, .reference-contract, .reference-result { padding: 24px; border: 1px solid var(--line); background: var(--paper-sheet); }
+.reference-source h3, .reference-contract h3, .reference-runs h3, .reference-result h3, .reference-result h4 { margin: 0 0 12px; font: 600 1.5rem/1.15 var(--font-display); }
+.reference-source p { margin: 4px 0; }
+.reference-sha { max-width: 100%; overflow-wrap: anywhere; word-break: break-word; color: var(--ink-muted); font-size: .875rem; }
+.reference-sha span { font-weight: 600; }
+.reference-catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: var(--paper-sheet); }
+.reference-lab-link { position: relative; display: grid; align-content: start; gap: 8px; min-height: 112px; padding: 20px 24px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.reference-lab-link:hover { background: var(--paper); text-decoration: underline; }
+.reference-lab-link:focus-visible { outline: 3px solid var(--ink); outline-offset: -4px; z-index: 1; }
+.reference-lab-name { font: 600 1.25rem/1.2 var(--font-display); }
+.reference-lab-meta, .reference-count { color: var(--ink-muted); font-size: .875rem; overflow-wrap: anywhere; }
+.reference-lab-open { position: absolute; top: 18px; right: 20px; font-weight: 600; }
+.reference-count { margin: 0; }
+.reference-back a { display: inline-flex; min-height: 48px; align-items: center; color: var(--ink); }
+.reference-contract-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; margin: 0; }
+.reference-contract-grid > div { display: grid; grid-template-columns: minmax(9rem, .8fr) minmax(0, 1.4fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.reference-contract-grid dt { color: var(--ink-muted); font-weight: 600; }
+.reference-contract-grid dd { margin: 0; overflow-wrap: anywhere; }
+.reference-note { max-width: 75ch; margin: 16px 0 0; padding: 12px 16px; border: 1px solid var(--line); background: var(--paper); }
+.reference-contract > .reference-sha { margin: 20px 0 0; }
+.reference-run-action { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 24px; }
+.reference-run-action > span { color: var(--ink-muted); }
+.reference-action-error { display: grid; justify-items: start; gap: 12px; padding: 16px; border: 2px solid var(--pencil-red); background: var(--paper-sheet); }
+.reference-action-error p { margin: 0; }
+.reference-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 16px; }
+.reference-section-heading h3, .reference-section-heading h4 { margin-bottom: 8px; }
+.reference-table-wrap { position: relative; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; border: 1px solid var(--line); background: var(--paper-sheet); }
+.reference-table { width: 100%; min-width: 760px; }
+.reference-table th, .reference-table td { vertical-align: top; }
+.reference-table td { font-variant-numeric: tabular-nums; }
+.reference-row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.reference-empty { margin: 0; padding: 16px; border: 1px solid var(--line); background: var(--paper-sheet); }
+.reference-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
+.reference-pagination > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.reference-pagination button, .reference-row-actions button { min-height: 48px; }
+.reference-result > p { overflow-wrap: anywhere; }
+.reference-result-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.reference-result-stats > div { display: grid; align-content: start; gap: 8px; min-height: 96px; padding: 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.reference-result-stats span { color: var(--ink-muted); }
+.reference-result-stats strong { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .reference-catalog { grid-template-columns: minmax(0, 1fr); }
+  .reference-contract-grid { grid-template-columns: minmax(0, 1fr); }
+  .reference-result-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .reference-source, .reference-contract, .reference-result { padding: 16px; }
+  .reference-contract-grid > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .reference-section-heading, .reference-pagination { align-items: start; flex-direction: column; }
+  .reference-lab-link { padding-right: 84px; }
+  .reference-lab-open { right: 12px; font-size: .875rem; }
+}
