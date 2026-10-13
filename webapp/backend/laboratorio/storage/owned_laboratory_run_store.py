@@ -17,6 +17,7 @@ from laboratorio.storage.reference_lab_store import (
     _canonical,
     _check_header,
     _loads,
+    _paging,
     _validate_result,
     _validate_session_rows,
 )
@@ -191,3 +192,50 @@ def get_run(conn, owner_laboratory_id, run_id):
         (run_id,),
     ).fetchall()
     return _decode_run(row, session_rows)
+
+
+def list_runs(repo, owner_laboratory_id, *, offset=0, limit=20):
+    """Return only the selected owner's validated run summaries in one read view."""
+    from laboratorio.storage.database import connection
+
+    if not _canonical_uuid(owner_laboratory_id):
+        raise OwnedLaboratoryRunStoreError("invalid owned-laboratory owner identifier")
+    try:
+        _paging(offset, limit)
+    except ValueError as exc:
+        raise OwnedLaboratoryRunStoreError("invalid owned-laboratory run pagination") from exc
+
+    with connection(repo.path) as db:
+        db.execute("BEGIN")
+        total = db.execute(
+            "SELECT count(*) FROM reference_lab_runs WHERE owner_laboratory_id=?",
+            (owner_laboratory_id,),
+        ).fetchone()[0]
+        identifiers = db.execute(
+            "SELECT id FROM reference_lab_runs WHERE owner_laboratory_id=? "
+            "ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",
+            (owner_laboratory_id, limit, offset),
+        ).fetchall()
+        items = []
+        for (identifier,) in identifiers:
+            run = get_run(db, owner_laboratory_id, identifier)
+            if run is None:
+                raise OwnedLaboratoryRunStoreError("corrupt owned-laboratory run")
+            items.append(
+                {
+                    **{
+                        key: run[key]
+                        for key in (
+                            "id",
+                            "owner_laboratory_id",
+                            "lab_id",
+                            "contract_version",
+                            "created_at",
+                        )
+                    },
+                    "summary": {
+                        key: run["result"][key] for key in ("totals", "eligible_draws", "gaps")
+                    },
+                }
+            )
+    return {"total": total, "offset": offset, "limit": limit, "items": items}

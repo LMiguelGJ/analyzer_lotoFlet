@@ -1,0 +1,125 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6b2d-independent-focused-68df43b2",
+        "tests/test_owned_laboratory_run_list.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\webapp\\backend",
+      "exit": 0,
+      "stdout": "============================= test session starts =============================\nplatform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.6.0\nrootdir: C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\webapp\\backend\nconfigfile: pyproject.toml\ncollected 17 items\n\ntests\\test_owned_laboratory_run_list.py .................                [100%]\n\n============================= 17 passed in 1.71s ==============================\n",
+      "stderr": "",
+      "wall_seconds": 2.488
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp",
+        "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6b2d-independent-compat-68df43b2",
+        "tests/test_laboratories_api.py",
+        "tests/test_laboratory_definitions.py",
+        "tests/test_laboratory_migrations.py",
+        "tests/test_laboratory_run_snapshots.py",
+        "tests/test_laboratory_store.py",
+        "tests/test_owned_laboratory_run_insert.py",
+        "tests/test_owned_laboratory_run_list.py",
+        "tests/test_owned_laboratory_run_store.py",
+        "tests/test_reference_lab_ownership_scope.py",
+        "tests/test_reference_lab_result_validation.py",
+        "tests/test_reference_lab_store.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\webapp\\backend",
+      "exit": 0,
+      "stdout": "============================= test session starts =============================\nplatform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.6.0\nrootdir: C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\webapp\\backend\nconfigfile: pyproject.toml\ncollected 360 items\n\ntests\\test_laboratories_api.py ..............................            [  8%]\ntests\\test_laboratory_definitions.py ................................    [ 17%]\ntests\\test_laboratory_migrations.py ........                             [ 19%]\ntests\\test_laboratory_run_snapshots.py ................................  [ 28%]\ntests\\test_laboratory_store.py ................................          [ 37%]\ntests\\test_owned_laboratory_run_insert.py ............................   [ 45%]\ntests\\test_owned_laboratory_run_list.py .................                [ 49%]\ntests\\test_owned_laboratory_run_store.py .............................   [ 57%]\ntests\\test_reference_lab_ownership_scope.py ..                           [ 58%]\ntests\\test_reference_lab_result_validation.py .........................  [ 65%]\ntests\\test_reference_lab_store.py ...................................... [ 75%]\n........................................................................ [ 95%]\n...............                                                          [100%]\n\n============================ 360 passed in 14.25s =============================\n",
+      "stderr": "",
+      "wall_seconds": 14.994
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "ruff",
+        "check",
+        "--no-cache",
+        "laboratorio/storage/owned_laboratory_run_store.py",
+        "laboratorio/storage/repository.py",
+        "tests/test_owned_laboratory_run_list.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\webapp\\backend",
+      "exit": 0,
+      "stdout": "All checks passed!\n",
+      "stderr": "",
+      "wall_seconds": 0.118
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "--no-cache",
+        "laboratorio/storage/owned_laboratory_run_store.py",
+        "laboratorio/storage/repository.py",
+        "tests/test_owned_laboratory_run_list.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\webapp\\backend",
+      "exit": 0,
+      "stdout": "3 files already formatted\n",
+      "stderr": "",
+      "wall_seconds": 0.106
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "webapp/backend/laboratorio/storage/owned_laboratory_run_store.py",
+        "webapp/backend/laboratorio/storage/repository.py",
+        "webapp/backend/tests/test_owned_laboratory_run_list.py",
+        "odd/tasks/reference-laboratories.md"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "warning: in the working copy of 'odd/tasks/reference-laboratories.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'webapp/backend/laboratorio/storage/owned_laboratory_run_store.py', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'webapp/backend/laboratorio/storage/repository.py', LF will be replaced by CRLF the next time Git touches it\n",
+      "wall_seconds": 0.03
+    }
+  ],
+  "guard": {
+    "before_count": 150,
+    "after_count": 150,
+    "differences": [],
+    "pins": {
+      "webapp/backend/laboratorio/storage/owned_laboratory_run_store.py": "7904c62fc43d7facfa2c5361b57d8fe57fdb797957ac4272c3352d33d9adeaea",
+      "webapp/backend/laboratorio/storage/repository.py": "734638d713961a4ef0edd212386807520e91c6d2d46e87caf5b218372b21c9c4",
+      "webapp/backend/tests/test_owned_laboratory_run_list.py": "84e18d72376e4ea73bb155c8c599e59e1d688f46547478b7da97822cb2b9adfd",
+      "odd/tasks/reference-laboratories.md": "bcf6154c4c785a122ca11aaa48258f9b4285235d2b8e0457ee734ca124fd8e7d"
+    },
+    "head": "92a8b8fbfcf05bfe8cecdf5951a27ddeb0189b1a",
+    "branch": "feat/reference-laboratories",
+    "cached_bytes": 87352,
+    "cached_sha256": "26315d4a5004133f338b126535285ed13b4b2c117d3d55695f3e84798a4870d9",
+    "regular_digest": "94a6431ae72c5c21a1111a1162d4033e4262ae5d7260916ae4263c50278c885e",
+    "path_count": 470
+  }
+}

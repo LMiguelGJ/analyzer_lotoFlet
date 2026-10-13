@@ -502,6 +502,11 @@ class Repository:
             quota_explicit=quota_explicit,
         )
 
+    def list_owned_laboratory_runs(self, owner_laboratory_id, *, offset=0, limit=20):
+        from laboratorio.storage.owned_laboratory_run_store import list_runs
+
+        return list_runs(self, owner_laboratory_id, offset=offset, limit=limit)
+
     def get_owned_laboratory_run(self, owner_laboratory_id, run_id):
         from laboratorio.storage.database import connection
         from laboratorio.storage.owned_laboratory_run_store import get_run
