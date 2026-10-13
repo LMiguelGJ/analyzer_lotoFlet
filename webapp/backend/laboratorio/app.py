@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from laboratorio.api import settings as settings_api
 from laboratorio.api.history import router as history_router
 from laboratorio.api.laboratories import router as laboratories_router
+from laboratorio.api.laboratory_runs import router as laboratory_runs_router
 from laboratorio.api.reference_labs import router as reference_labs_router
 from laboratorio.api.runs import router as runs_router
 from laboratorio.engine.active_history import HistoryCatalog
@@ -24,6 +25,7 @@ from laboratorio.storage.database import initialize_database
 from laboratorio.storage.repository import Repository
 
 _REFERENCE_RUNS_PATH = re.compile(r"/api/v1/reference-labs/[^/]+/runs")
+_OWNED_RUNS_PATH = re.compile(r"/api/v1/laboratories/[^/]+/runs")
 _LABORATORIES_COLLECTION_PATH = re.compile(r"/api/v1/laboratories/?")
 _HOST = re.compile(r"(localhost|127\.0\.0\.1)(?::([0-9]{1,5}))?\Z")
 
@@ -89,8 +91,10 @@ def create_app(
             return JSONResponse({"detail": "same-origin required"}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS") and not origins:
             return JSONResponse({"detail": "Origin required for mutation"}, status_code=403)
-        run_post = request.url.path == "/api/v1/runs" or _REFERENCE_RUNS_PATH.fullmatch(
-            request.url.path
+        run_post = (
+            request.url.path == "/api/v1/runs"
+            or _REFERENCE_RUNS_PATH.fullmatch(request.url.path)
+            or _OWNED_RUNS_PATH.fullmatch(request.url.path)
         )
         bounded_post = run_post or _LABORATORIES_COLLECTION_PATH.fullmatch(request.url.path)
         if request.method == "POST" and bounded_post:
@@ -142,6 +146,7 @@ def create_app(
     app.include_router(runs_router, prefix="/api/v1")
     app.include_router(reference_labs_router, prefix="/api/v1")
     app.include_router(laboratories_router, prefix="/api/v1")
+    app.include_router(laboratory_runs_router, prefix="/api/v1")
 
     if serve_frontend:
 

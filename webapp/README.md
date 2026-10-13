@@ -38,14 +38,30 @@ Todas las rutas viven bajo `/api/v1` y el servidor acepta solicitudes solo desde
 | `DELETE /runs/{id}` | Borra una corrida guardada. |
 | `GET /runs/{id}/sessions?offset=0&limit=50&outcome=…` | Lista sesiones; filtro opcional: `goal`, `ruin`, `limit` o `incomplete`. |
 | `GET /runs/{id}/sessions/{ordinal}/bets?offset=0&limit=20` | Consulta apuestas de una sesión. |
+| `GET /laboratories?offset=0&limit=20` | Lista definiciones administrables; `limit` entre 1 y 100. |
+| `POST /laboratories` | Crea un UUID nuevo con `name` y `config` versionada; cuerpo máximo 64 KiB. |
+| `GET /laboratories/{id}` | Definición y contadores de corridas/sesiones owned. |
+| `DELETE /laboratories/{id}` | Confirma `confirmed_run_count`; elimina definición y sus resultados, sin borrar corridas heredadas. |
+| `POST /laboratories/{id}/runs` | Ejecuta la configuración guardada contra la referencia fija; requiere `required_history_sha256`, máximo 64 KiB. |
+| `GET /laboratories/{id}/runs?offset=0&limit=20` | Lista resúmenes por owner explícito; `limit` entre 1 y 100. |
+| `GET /laboratories/{id}/runs/{run_id}` | Snapshot histórico, resumen y capacidades; no devuelve sesiones completas. |
+| `GET /laboratories/{id}/runs/{run_id}/sessions?offset=0&limit=50` | Página estable de sesiones con ordinal; `limit` entre 1 y 100. |
 
 Los informes fijan la huella y el origen del historial usados al ejecutar; una importación posterior no reescribe corridas anteriores. El detalle de sesiones y apuestas se guarda sujeto a límites de 50.000 sesiones, 250.000 apuestas y 32 MiB; el informe indica si el detalle quedó completo, parcial o truncado.
+
+### Laboratorios administrables
+
+La configuración manual v1 incluye sistema, cobertura, estilo (`bold`, `ladder`, `flat`), capital, meta, cinco premios y ventana `YYYY-MM-DD HH:MM`. El replay usa esos valores y el UUID real, no sustituye la definición por un nombre del catálogo. Los resultados guardan la definición y huellas originales; no inventan trazas por apuesta (`per_bet_trace: false`).
+
+Estas corridas usan únicamente la historia congelada: importar otra historia en Ajustes no cambia esta fuente ni reescribe resultados. POST/detalle devuelven un resumen y `snapshot`, mientras las sesiones se consultan aparte. Una huella distinta, cuota insuficiente, cambio/borrado de definición durante el replay o datos dañados producen conflicto 409 y no se guarda una corrida parcial. Datos/cuerpo inválidos responden 422; IDs inexistentes, 404.
+
+Las catorce definiciones iniciales se insertan una sola vez. Podés eliminarlas; reiniciar no las repone. Recrear manualmente un nombre/configuración genera otro UUID sin recuperar resultados de la identidad eliminada. El DELETE exige el contador owned leído recientemente; si cambió, responde 409 para volver a confirmar.
 
 ## Datos y migraciones
 
 - Entradas congeladas de solo lectura: `chance_express_history.json` y `repo_ref/reports/chance_rank_v1/predictions/pos1.npz`. El servidor verifica sus SHA-256 al iniciar; si no coinciden, no inicia.
 - Los datos generados se guardan fuera del repositorio y de OneDrive, en `%LOCALAPPDATA%\LaboratorioQuiniela` por defecto; `LABORATORIO_DATA_DIR` permite cambiar esa ubicación.
-- El esquema actual de SQLite es la versión 15. El arranque inicializa una base nueva o aplica, en orden, las migraciones conocidas hasta la versión actual; una versión desconocida se rechaza. **No edites ni reemplaces las migraciones SQL.**
+- El esquema actual de SQLite es la versión 17. El arranque inicializa una base nueva o aplica, en orden, las migraciones conocidas hasta la versión actual; una versión desconocida se rechaza. **No edites ni reemplaces las migraciones SQL.**
 - Antes de copiar la base, detené la aplicación con Ctrl+C. No copies un archivo SQLite mientras el servidor está ejecutándose.
 
 ## Estructura actual

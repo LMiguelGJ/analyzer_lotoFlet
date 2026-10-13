@@ -1,0 +1,422 @@
+{
+  "previous_commands": [
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/test_owned_laboratory_runs_api.py",
+        "--basetemp",
+        "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-independent-focused-f016a9ec",
+        "-q"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\webapp\\backend",
+      "exit": 0,
+      "stdout": ".................                                                        [100%]\n17 passed in 3.62s\n",
+      "stderr": "",
+      "seconds": 4.3358012000007875
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/test_history_api.py",
+        "--basetemp",
+        "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-independent-chunk0-f016a9ec\\test_history_api.py",
+        "-q"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\webapp\\backend",
+      "exit": 1,
+      "stdout": "EEEEEE                                                                   [100%]\n=================================== ERRORS ====================================\n_______ ERROR at setup of test_get_fresh_history_reports_frozen_catalog _______\n\ntmp_path_factory = TempPathFactory(_given_basetemp=WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent...luggy._tracing.TagTracerSub object at 0x0000021DFCA0D810>, _basetemp=None, _retention_count=3, _retention_policy='all')\n\n    @pytest.fixture(scope=\"session\")\n    def lab_data(tmp_path_factory):\n        from laboratorio.engine.adapter import open_lab_data\n        from laboratorio.settings import Settings\n    \n>       data_dir = tmp_path_factory.mktemp(\"lab-data\")\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\conftest.py:13: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent-chunk0-f016a9ec/test_history_api.py')\nmode = 448, parents = False, exist_ok = False\n\n    def mkdir(self, mode=0o777, parents=False, exist_ok=False):\n        \"\"\"\n        Create a new directory at this given path.\n        \"\"\"\n        try:\n>           os.mkdir(self, mode)\nE           FileNotFoundError: [WinError 3] El sistema no puede encontrar la ruta especificada: 'C:\\\\Users\\\\luism\\\\OneDrive\\\\Escritorio\\\\analyzer_lotoFlet\\\\.tmp\\\\l6c-independent-chunk0-f016a9ec\\\\test_history_api.py'\n\nC:\\Python314\\Lib\\pathlib\\__init__.py:1011: FileNotFoundError\n_ ERROR at setup of test_import_is_active_idempotent_persistent_and_updates_settings _\n\ntmp_path_factory = TempPathFactory(_given_basetemp=WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent...luggy._tracing.TagTracerSub object at 0x0000021DFCA0D810>, _basetemp=None, _retention_count=3, _retention_policy='all')\n\n    @pytest.fixture(scope=\"session\")\n    def lab_data(tmp_path_factory):\n        from laboratorio.engine.adapter import open_lab_data\n        from laboratorio.settings import Settings\n    \n>       data_dir = tmp_path_factory.mktemp(\"lab-data\")\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\conftest.py:13: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent-chunk0-f016a9ec/test_history_api.py')\nmode = 448, parents = False, exist_ok = False\n\n    def mkdir(self, mode=0o777, parents=False, exist_ok=False):\n        \"\"\"\n        Create a new directory at this given path.\n        \"\"\"\n        try:\n>           os.mkdir(self, mode)\nE           FileNotFoundError: [WinError 3] El sistema no puede encontrar la ruta especificada: 'C:\\\\Users\\\\luism\\\\OneDrive\\\\Escritorio\\\\analyzer_lotoFlet\\\\.tmp\\\\l6c-independent-chunk0-f016a9ec\\\\test_history_api.py'\n\nC:\\Python314\\Lib\\pathlib\\__init__.py:1011: FileNotFoundError\n_______ ERROR at setup of test_history_import_errors_and_origin_policy ________\n\ntmp_path_factory = TempPathFactory(_given_basetemp=WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent...luggy._tracing.TagTracerSub object at 0x0000021DFCA0D810>, _basetemp=None, _retention_count=3, _retention_policy='all')\n\n    @pytest.fixture(scope=\"session\")\n    def lab_data(tmp_path_factory):\n        from laboratorio.engine.adapter import open_lab_data\n        from laboratorio.settings import Settings\n    \n>       data_dir = tmp_path_factory.mktemp(\"lab-data\")\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\conftest.py:13: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent-chunk0-f016a9ec/test_history_api.py')\nmode = 448, parents = False, exist_ok = False\n\n    def mkdir(self, mode=0o777, parents=False, exist_ok=False):\n        \"\"\"\n        Create a new directory at this given path.\n        \"\"\"\n        try:\n>           os.mkdir(self, mode)\nE           FileNotFoundError: [WinError 3] El sistema no puede encontrar la ruta especificada: 'C:\\\\Users\\\\luism\\\\OneDrive\\\\Escritorio\\\\analyzer_lotoFlet\\\\.tmp\\\\l6c-independent-chunk0-f016a9ec\\\\test_history_api.py'\n\nC:\\Python314\\Lib\\pathlib\\__init__.py:1011: FileNotFoundError\n___ ERROR at setup of test_history_import_rejects_oversized_content_length ____\n\ntmp_path_factory = TempPathFactory(_given_basetemp=WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent...luggy._tracing.TagTracerSub object at 0x0000021DFCA0D810>, _basetemp=None, _retention_count=3, _retention_policy='all')\n\n    @pytest.fixture(scope=\"session\")\n    def lab_data(tmp_path_factory):\n        from laboratorio.engine.adapter import open_lab_data\n        from laboratorio.settings import Settings\n    \n>       data_dir = tmp_path_factory.mktemp(\"lab-data\")\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\conftest.py:13: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent-chunk0-f016a9ec/test_history_api.py')\nmode = 448, parents = False, exist_ok = False\n\n    def mkdir(self, mode=0o777, parents=False, exist_ok=False):\n        \"\"\"\n        Create a new directory at this given path.\n        \"\"\"\n        try:\n>           os.mkdir(self, mode)\nE           FileNotFoundError: [WinError 3] El sistema no puede encontrar la ruta especificada: 'C:\\\\Users\\\\luism\\\\OneDrive\\\\Escritorio\\\\analyzer_lotoFlet\\\\.tmp\\\\l6c-independent-chunk0-f016a9ec\\\\test_history_api.py'\n\nC:\\Python314\\Lib\\pathlib\\__init__.py:1011: FileNotFoundError\n_ ERROR at setup of test_history_import_rejects_oversized_stream_without_content_length _\n\ntmp_path_factory = TempPathFactory(_given_basetemp=WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent...luggy._tracing.TagTracerSub object at 0x0000021DFCA0D810>, _basetemp=None, _retention_count=3, _retention_policy='all')\n\n    @pytest.fixture(scope=\"session\")\n    def lab_data(tmp_path_factory):\n        from laboratorio.engine.adapter import open_lab_data\n        from laboratorio.settings import Settings\n    \n>       data_dir = tmp_path_factory.mktemp(\"lab-data\")\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\conftest.py:13: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent-chunk0-f016a9ec/test_history_api.py')\nmode = 448, parents = False, exist_ok = False\n\n    def mkdir(self, mode=0o777, parents=False, exist_ok=False):\n        \"\"\"\n        Create a new directory at this given path.\n        \"\"\"\n        try:\n>           os.mkdir(self, mode)\nE           FileNotFoundError: [WinError 3] El sistema no puede encontrar la ruta especificada: 'C:\\\\Users\\\\luism\\\\OneDrive\\\\Escritorio\\\\analyzer_lotoFlet\\\\.tmp\\\\l6c-independent-chunk0-f016a9ec\\\\test_history_api.py'\n\nC:\\Python314\\Lib\\pathlib\\__init__.py:1011: FileNotFoundError\n____________ ERROR at setup of test_history_import_quota_exceeded _____________\n\ntmp_path_factory = TempPathFactory(_given_basetemp=WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent...luggy._tracing.TagTracerSub object at 0x0000021DFCA0D810>, _basetemp=None, _retention_count=3, _retention_policy='all')\n\n    @pytest.fixture(scope=\"session\")\n    def lab_data(tmp_path_factory):\n        from laboratorio.engine.adapter import open_lab_data\n        from laboratorio.settings import Settings\n    \n>       data_dir = tmp_path_factory.mktemp(\"lab-data\")\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests\\conftest.py:13: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _\n\nself = WindowsPath('C:/Users/luism/OneDrive/Escritorio/analyzer_lotoFlet/.tmp/l6c-independent-chunk0-f016a9ec/test_history_api.py')\nmode = 448, parents = False, exist_ok = False\n\n    def mkdir(self, mode=0o777, parents=False, exist_ok=False):\n        \"\"\"\n        Create a new directory at this given path.\n        \"\"\"\n        try:\n>           os.mkdir(self, mode)\nE           FileNotFoundError: [WinError 3] El sistema no puede encontrar la ruta especificada: 'C:\\\\Users\\\\luism\\\\OneDrive\\\\Escritorio\\\\analyzer_lotoFlet\\\\.tmp\\\\l6c-independent-chunk0-f016a9ec\\\\test_history_api.py'\n\nC:\\Python314\\Lib\\pathlib\\__init__.py:1011: FileNotFoundError\n=========================== short test summary info ===========================\nERROR tests/test_history_api.py::test_get_fresh_history_reports_frozen_catalog\nERROR tests/test_history_api.py::test_import_is_active_idempotent_persistent_and_updates_settings\nERROR tests/test_history_api.py::test_history_import_errors_and_origin_policy\nERROR tests/test_history_api.py::test_history_import_rejects_oversized_content_length\nERROR tests/test_history_api.py::test_history_import_rejects_oversized_stream_without_content_length\nERROR tests/test_history_api.py::test_history_import_quota_exceeded - FileNot...\n6 errors in 0.87s\n",
+      "stderr": "",
+      "seconds": 1.473348100000294
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "ruff",
+        "check",
+        "--no-cache",
+        "webapp/backend/laboratorio/engine/owned_laboratory_service.py",
+        "webapp/backend/laboratorio/api/laboratory_runs.py",
+        "webapp/backend/laboratorio/app.py",
+        "webapp/backend/tests/test_owned_laboratory_runs_api.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "All checks passed!\n",
+      "stderr": "",
+      "seconds": 0.5516045000003942
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "--no-cache",
+        "webapp/backend/laboratorio/engine/owned_laboratory_service.py",
+        "webapp/backend/laboratorio/api/laboratory_runs.py",
+        "webapp/backend/laboratorio/app.py",
+        "webapp/backend/tests/test_owned_laboratory_runs_api.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "4 files already formatted\n",
+      "stderr": "",
+      "seconds": 0.23528090000036173
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "webapp/backend/laboratorio/engine/owned_laboratory_service.py",
+        "webapp/backend/laboratorio/api/laboratory_runs.py",
+        "webapp/backend/laboratorio/app.py",
+        "webapp/backend/tests/test_owned_laboratory_runs_api.py",
+        "webapp/README.md",
+        "odd/tasks/reference-laboratories.md"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "warning: in the working copy of 'odd/tasks/reference-laboratories.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'webapp/README.md', LF will be replaced by CRLF the next time Git touches it\n",
+      "seconds": 0.07187659999999596
+    }
+  ],
+  "fresh_compatibility_commands": [
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case00",
+        "webapp\\backend\\tests\\test_history_api.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "......                                                                   [100%]\n6 passed in 16.13s\n",
+      "stderr": "",
+      "seconds": 17.767508299999463
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case01",
+        "webapp\\backend\\tests\\test_laboratories_api.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "..............................                                           [100%]\n30 passed in 3.91s\n",
+      "stderr": "",
+      "seconds": 4.705806099999791
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case02",
+        "webapp\\backend\\tests\\test_laboratory_definitions.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "................................                                         [100%]\n32 passed in 0.07s\n",
+      "stderr": "",
+      "seconds": 0.5609407000001738
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case03",
+        "webapp\\backend\\tests\\test_laboratory_migrations.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "........                                                                 [100%]\n8 passed in 0.54s\n",
+      "stderr": "",
+      "seconds": 1.1113842000004297
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case04",
+        "webapp\\backend\\tests\\test_laboratory_run_snapshots.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "................................                                         [100%]\n32 passed in 0.08s\n",
+      "stderr": "",
+      "seconds": 0.5705676999996285
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case05",
+        "webapp\\backend\\tests\\test_laboratory_store.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "................................                                         [100%]\n32 passed in 1.43s\n",
+      "stderr": "",
+      "seconds": 1.9650114000005487
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case06",
+        "webapp\\backend\\tests\\test_owned_laboratory_run_insert.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "............................                                             [100%]\n28 passed in 1.28s\n",
+      "stderr": "",
+      "seconds": 1.7946276999991824
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case07",
+        "webapp\\backend\\tests\\test_owned_laboratory_run_list.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": ".................                                                        [100%]\n17 passed in 1.71s\n",
+      "stderr": "",
+      "seconds": 2.200372399999651
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case08",
+        "webapp\\backend\\tests\\test_owned_laboratory_run_store.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": ".............................                                            [100%]\n29 passed in 2.37s\n",
+      "stderr": "",
+      "seconds": 2.9034395999997287
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case09",
+        "webapp\\backend\\tests\\test_reference_lab_ownership_scope.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "..                                                                       [100%]\n2 passed in 0.47s\n",
+      "stderr": "",
+      "seconds": 0.972940199999357
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case10",
+        "webapp\\backend\\tests\\test_reference_lab_result_validation.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": ".........................                                                [100%]\n25 passed in 0.05s\n",
+      "stderr": "",
+      "seconds": 0.5199683999999252
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case11",
+        "webapp\\backend\\tests\\test_reference_lab_runs_api.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": ".....................................                                    [100%]\n37 passed in 10.57s\n",
+      "stderr": "",
+      "seconds": 11.334403899999415
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case12",
+        "webapp\\backend\\tests\\test_reference_lab_store.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "........................................................................ [ 57%]\n.....................................................                    [100%]\n125 passed in 5.26s\n",
+      "stderr": "",
+      "seconds": 5.907849599999281
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case13",
+        "webapp\\backend\\tests\\test_reference_labs_api.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "..                                                                       [100%]\n2 passed in 2.04s\n",
+      "stderr": "",
+      "seconds": 2.729002000000037
+    },
+    {
+      "argv": [
+        "py",
+        "-3.14",
+        "-B",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet\\.tmp\\l6c-fresh-compat-47c98d02\\case14",
+        "webapp\\backend\\tests\\test_runs_api.py"
+      ],
+      "cwd": "C:\\Users\\luism\\OneDrive\\Escritorio\\analyzer_lotoFlet",
+      "exit": 0,
+      "stdout": "..........                                                               [100%]\n10 passed in 23.97s\n",
+      "stderr": "",
+      "seconds": 24.801493599999958
+    }
+  ],
+  "old_raw_report_sha256": "3b1c076f3ca083c94c90a1b7b079f897b41c2a6a5e0240f2d9698e73057c20b8",
+  "fresh_raw_report_sha256": "85f885ea01b3ade9970f3e031194b43b3f7b31b8f5e8142487354d3416ba14ef",
+  "guard_summary": {
+    "files": 153,
+    "pins": 6,
+    "unchanged": true,
+    "head": "b838ea7f73d7428d46c65c14b77371f78f3a0768",
+    "branch": "feat/reference-laboratories",
+    "cached_diff_bytes": 87352,
+    "cached_diff_sha256": "26315d4a5004133f338b126535285ed13b4b2c117d3d55695f3e84798a4870d9"
+  },
+  "limits": [
+    "scoped432=17previous+415fresh, not full703",
+    "two Pyright imports unresolved; causeUNKNOWN",
+    "no native/JD approval"
+  ]
+}
