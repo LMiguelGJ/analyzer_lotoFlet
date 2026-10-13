@@ -5,14 +5,15 @@ import { describe, expect, it } from "vitest";
 import { Shell } from "./Shell";
 
 describe("Shell navigation foundation", () => {
-  it("keeps the skip link, main landmark, and two active page links", () => {
+  it("keeps the skip link, main landmark, and three navigation links", () => {
     render(<MemoryRouter initialEntries={["/corridas"]}><Routes><Route path="*" element={<Shell title="Corridas"><p>Contenido</p></Shell>} /></Routes></MemoryRouter>);
     expect(screen.getByRole("link", { name: "Saltar al contenido principal" })).toHaveAttribute("href", "#main-content");
     expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
     expect(screen.getByRole("navigation", { name: "Navegación principal" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Corridas" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Laboratorios" })).toHaveAttribute("href", "/laboratorios");
     expect(screen.getByRole("link", { name: "Ajustes" })).toHaveAttribute("href", "/ajustes");
-    expect(screen.getAllByRole("link")).toHaveLength(3);
+    expect(screen.getAllByRole("link")).toHaveLength(4);
   });
 
   it("moves keyboard focus from the skip link to main content", async () => {

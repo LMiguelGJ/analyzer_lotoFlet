@@ -5,6 +5,7 @@ import { App } from "./App";
 vi.mock("./pages/runs/NewRunPage", () => ({ NewRunPage: () => <p>Formulario de corrida</p> }));
 vi.mock("./pages/runs/ListPage", () => ({ ListPage: () => <p>Lista de corridas</p> }));
 vi.mock("./pages/runs/ResultPage", () => ({ ResultPage: () => <p>Informe de corrida cargado</p> }));
+vi.mock("./pages/laboratories/Workspace", () => ({ Workspace: () => <h2>Espacio de laboratorios</h2> }));
 
 describe("run routes", () => {
   it("routes root and unknown paths back to Corridas", async () => {
@@ -17,6 +18,13 @@ describe("run routes", () => {
   it("gives /corridas/nueva precedence over the result route", async () => {
     render(<MemoryRouter initialEntries={["/corridas/nueva"]}><App /></MemoryRouter>);
     expect(await screen.findByText("Formulario de corrida")).toBeInTheDocument();
+  });
+  it("routes the list, creation and every laboratory id to the single workspace", async () => {
+    for (const path of ["/laboratorios", "/laboratorios/nuevo", "/laboratorios/3f2b8c4e-1a2b-4c3d-8e9f-0a1b2c3d4e5f"]) {
+      const { unmount } = render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>);
+      expect(await screen.findByRole("heading", { name: "Espacio de laboratorios" })).toBeInTheDocument();
+      unmount();
+    }
   });
   it("loads settings and routes result IDs to the report", async () => {
     const { unmount } = render(<MemoryRouter initialEntries={["/ajustes"]}><App /></MemoryRouter>);
