@@ -4,13 +4,14 @@ Aplicación local para probar estrategias sobre el historial de Quiniela 80 y co
 
 ## Qué está implementado
 
-La aplicación tiene tres pantallas:
+El inicio abre **Laboratorios**. El menú principal contiene **Laboratorios** y **Ajustes**:
 
-- **Corridas:** crear una corrida histórica con mezcla de rankings o paridad, consultar informes y detalle disponible, repetir una configuración con cambios y borrar corridas guardadas.
 - **Laboratorios:** una sola pantalla con los laboratorios guardados a un lado y, en el centro, su configuración, la ejecución, las corridas guardadas y sus resultados. Cada laboratorio tiene su propia ruta (`/laboratorios/<id>`); `/laboratorios/nuevo` abre el formulario de creación manual.
 - **Ajustes:** revisar el uso y la cuota de almacenamiento; importar un historial JSON que se valida y fusiona con el historial activo.
 
-Una corrida usa apuesta fija: la apuesta mínima indicada por cada número de la cobertura. Cada sesión empieza con el capital configurado; se cierra al alcanzar la meta, no poder financiar la apuesta siguiente o llegar al límite opcional de sorteos. La sesión que queda abierta al terminar los datos se informa como incompleta. Las mezclas usan rankings disponibles de pos1; la paridad es la otra estrategia ejecutable. El inventario más amplio de estrategias y presets es referencia histórica, no una lista de funciones actuales: [catálogo de referencia](../docs/catalogo-estrategias.md).
+**Corridas anteriores:** se conserva el acceso directo a `/corridas`, `/corridas/nueva` y `/corridas/<id>` para consultar, crear, repetir o borrar pruebas sobre el historial activo. Se retiró esta sección del menú principal para evitar dos entradas que parecen equivalentes. No se borraron datos ni se modificó su motor.
+
+Una corrida de esa sección usa apuesta fija: la apuesta mínima indicada por cada número de la cobertura. Cada sesión empieza con el capital configurado; se cierra al alcanzar la meta, no poder financiar la apuesta siguiente o llegar al límite opcional de sorteos. La sesión que queda abierta al terminar los datos se informa como incompleta. Las mezclas usan rankings disponibles de pos1; la paridad es la otra estrategia ejecutable. El inventario más amplio de estrategias y presets es referencia histórica, no una lista de funciones actuales: [catálogo de referencia](../docs/catalogo-estrategias.md).
 
 La interfaz usa la dirección visual de la libreta cuadriculada descrita en [DESIGN.md](../DESIGN.md).
 

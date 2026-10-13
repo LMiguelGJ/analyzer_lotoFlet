@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
-  { to: "/corridas", label: "Corridas" },
   { to: "/laboratorios", label: "Laboratorios" },
   { to: "/ajustes", label: "Ajustes" },
 ] as const;

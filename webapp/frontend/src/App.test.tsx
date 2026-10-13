@@ -8,12 +8,17 @@ vi.mock("./pages/runs/ResultPage", () => ({ ResultPage: () => <p>Informe de corr
 vi.mock("./pages/laboratories/Workspace", () => ({ Workspace: () => <h2>Espacio de laboratorios</h2> }));
 
 describe("run routes", () => {
-  it("routes root and unknown paths back to Corridas", async () => {
+  it("routes root and unknown paths to Laboratorios", async () => {
     const { unmount } = render(<MemoryRouter initialEntries={["/"]}><App /></MemoryRouter>);
-    expect(await screen.findByText("Lista de corridas")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Espacio de laboratorios" })).toBeInTheDocument();
     unmount();
     render(<MemoryRouter initialEntries={["/unknown"]}><App /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: "Espacio de laboratorios" })).toBeInTheDocument();
+  });
+  it("preserves direct access to the legacy run list without a primary navigation link", async () => {
+    render(<MemoryRouter initialEntries={["/corridas"]}><App /></MemoryRouter>);
     expect(await screen.findByText("Lista de corridas")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Corridas" })).not.toBeInTheDocument();
   });
   it("gives /corridas/nueva precedence over the result route", async () => {
     render(<MemoryRouter initialEntries={["/corridas/nueva"]}><App /></MemoryRouter>);
