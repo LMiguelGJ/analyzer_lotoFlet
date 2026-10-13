@@ -4,9 +4,10 @@ Aplicación local para probar estrategias sobre el historial de Quiniela 80 y co
 
 ## Qué está implementado
 
-La aplicación tiene dos pantallas:
+La aplicación tiene tres pantallas:
 
 - **Corridas:** crear una corrida histórica con mezcla de rankings o paridad, consultar informes y detalle disponible, repetir una configuración con cambios y borrar corridas guardadas.
+- **Laboratorios:** una sola pantalla con los laboratorios guardados a un lado y, en el centro, su configuración, la ejecución, las corridas guardadas y sus resultados. Cada laboratorio tiene su propia ruta (`/laboratorios/<id>`); `/laboratorios/nuevo` abre el formulario de creación manual.
 - **Ajustes:** revisar el uso y la cuota de almacenamiento; importar un historial JSON que se valida y fusiona con el historial activo.
 
 Una corrida usa apuesta fija: la apuesta mínima indicada por cada número de la cobertura. Cada sesión empieza con el capital configurado; se cierra al alcanzar la meta, no poder financiar la apuesta siguiente o llegar al límite opcional de sorteos. La sesión que queda abierta al terminar los datos se informa como incompleta. Las mezclas usan rankings disponibles de pos1; la paridad es la otra estrategia ejecutable. El inventario más amplio de estrategias y presets es referencia histórica, no una lista de funciones actuales: [catálogo de referencia](../docs/catalogo-estrategias.md).
@@ -56,6 +57,14 @@ La configuración manual v1 incluye sistema, cobertura, estilo (`bold`, `ladder`
 Estas corridas usan únicamente la historia congelada: importar otra historia en Ajustes no cambia esta fuente ni reescribe resultados. POST/detalle devuelven un resumen y `snapshot`, mientras las sesiones se consultan aparte. Una huella distinta, cuota insuficiente, cambio/borrado de definición durante el replay o datos dañados producen conflicto 409 y no se guarda una corrida parcial. Datos/cuerpo inválidos responden 422; IDs inexistentes, 404.
 
 Las catorce definiciones iniciales se insertan una sola vez. Podés eliminarlas; reiniciar no las repone. Recrear manualmente un nombre/configuración genera otro UUID sin recuperar resultados de la identidad eliminada. El DELETE exige el contador owned leído recientemente; si cambió, responde 409 para volver a confirmar.
+
+### Pantalla de laboratorios
+
+- **Crear:** el formulario valida en el cliente las mismas reglas que el servidor (el servidor sigue siendo la autoridad) y solo guarda las reglas; no ejecuta nada. Los valores iniciales copian la configuración de referencia, pero todos los campos se pueden editar. Las reglas de un laboratorio no se editan: para cambiarlas se crea otro.
+- **Ejecutar:** usa el resumen SHA-256 de la fuente congelada que informa el servidor. Si la respuesta se pierde por un fallo de red, la pantalla no reenvía la ejecución: pide actualizar las corridas guardadas antes de intentar otra.
+- **Resultados:** totales, media neta de las sesiones cerradas y una página de resúmenes de sesión. No hay detalle por apuesta.
+- **Eliminar:** el diálogo indica cuántas corridas y sesiones se perderán y envía ese conteo al servidor. Si cambió mientras tanto, el servidor responde 409 y la pantalla recarga los datos para volver a confirmar. No existe borrado individual de corridas.
+- Los montos en DOP se muestran siempre con signo explícito (convención de toda la aplicación), por lo que el capital aparece como `+RD$2.000`.
 
 ## Datos y migraciones
 
