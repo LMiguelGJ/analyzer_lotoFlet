@@ -1,0 +1,156 @@
+[
+ {
+  "lab": "transicion_1_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "7cd244e6-9111-49b5-86fe-6b1836179cda",
+  "run_id": "eee3dd47-99c3-48d6-8fbb-8154f343d25b",
+  "session_sha256": "e7e9d68a1ac0078b4e5a42366f6e989f8b4871f95cb6673717c17839ba69fbc4",
+  "net": 8249,
+  "seconds": 0.7
+ },
+ {
+  "lab": "frios_1_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "a7d86868-d726-4b72-89c6-10a9f3a8e7f4",
+  "run_id": "168417d8-0cdf-48a5-b471-9fe1fd04be32",
+  "session_sha256": "810c00e2e9cb08caeb7d83468eef3141a4b0bd8a76e15d6eeed2a61dcd3db04e",
+  "net": -5003,
+  "seconds": 0.6
+ },
+ {
+  "lab": "selector_1_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "b27264c1-4c98-43b0-8829-c0f3e5008e3d",
+  "run_id": "be9c029d-9473-4a0e-a758-ba4b338f205a",
+  "session_sha256": "03053efb17bfb7ccf1ed643c7741b9b0f32ce0e3136a043b5b1307c143b05e30",
+  "net": -8040,
+  "seconds": 0.6
+ },
+ {
+  "lab": "mezclas_1_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "5041feae-e7ea-4c82-979c-2422880c1a1c",
+  "run_id": "cd567d25-23dd-4e46-8337-7abf085a23d6",
+  "session_sha256": "6950c204c1f07b79202e973bf7c6bfaf8026de496ece6b1d395fe7f30678dad4",
+  "net": -15421,
+  "seconds": 0.7
+ },
+ {
+  "lab": "ensemble_5_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "3393e9c8-dc8f-4969-ad65-4840e8d69107",
+  "run_id": "3084d22d-67cb-4991-b887-aad7d2cafa21",
+  "session_sha256": "738c97f7abb095b7c1cb4f51f6909e4f6a4184800e540529bd4075a0fb1fb111",
+  "net": -242673,
+  "seconds": 1.6
+ },
+ {
+  "lab": "ensemble_10_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "6810fc7d-6dae-4a5c-b928-7ee0b38be7f8",
+  "run_id": "d81848e8-63f5-44ea-b83f-a6e7d751cd24",
+  "session_sha256": "566ba6f5e0b950edeef28db98316a5ce9926217342c7feb0c369720dd7ff4ead",
+  "net": -516363,
+  "seconds": 2.8
+ },
+ {
+  "lab": "ensemble_20_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "4b2a8fb6-42ee-470f-9870-7cb9911c4fa9",
+  "run_id": "a4ceda69-e306-4956-ac76-e81de435f0a9",
+  "session_sha256": "67610405b2081dfb2b817e91e18b23b076f8ecdbdf0a7e7831616d75958c85b0",
+  "net": -953586,
+  "seconds": 5.0
+ },
+ {
+  "lab": "frios_25_escalera",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "439fc40c-3166-4f30-9eb2-d03ef677baa5",
+  "run_id": "f53fa7db-b0b8-4423-890a-d92cb15d64c7",
+  "session_sha256": "0cd28f1bbccfe4491403e4b9b736ae2984b0c82fbff674c925afc85da04fb0b8",
+  "net": -178994,
+  "seconds": 0.8
+ },
+ {
+  "lab": "mezclas_50_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "0a4fdf0a-8c4a-410d-8e5f-2410abd8bf20",
+  "run_id": "93573d7d-6555-4d68-bb19-43cdbe749987",
+  "session_sha256": "55c11aa70196f16f57427112b79e3e262475a9cfb4a89b8ba6a796c6e9c91b75",
+  "net": -2411300,
+  "seconds": 5.4
+ },
+ {
+  "lab": "transicion_50_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "dd81ef10-1c24-4bcc-9a40-4a5a27b6c0a5",
+  "run_id": "b7fff41c-97b8-49b3-9f38-1ad398ad956c",
+  "session_sha256": "108a1384d206af746f7c5834ffd1209c2a180589616f81016eb9ffeb7bca1c9e",
+  "net": -2399565,
+  "seconds": 6.2
+ },
+ {
+  "lab": "paridad_50_audaz",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "12396f12-3104-44b1-b790-52cfaf4c557f",
+  "run_id": "2427878d-58b7-4cb3-87a8-535316fb52d0",
+  "session_sha256": "7b8b639c3b8d0833cf24408c10b11290f54ff40b19d392d95a4fc7add94e0fd6",
+  "net": -2464258,
+  "seconds": 10.3
+ },
+ {
+  "lab": "frios_50_escalera",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "210958d2-3ece-489c-937b-857c767d4713",
+  "run_id": "d1f0d08b-0918-4838-af0d-a5f08835d990",
+  "session_sha256": "491af6652e9b55fe8b098d922e71f4cb9596877528b8e7e4246701bcbee1c470",
+  "net": -345077,
+  "seconds": 1.7
+ },
+ {
+  "lab": "paridad_50_escalera",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "a770437c-7315-4cd6-ac35-842b332a4cea",
+  "run_id": "9188f415-d107-403e-b7bd-925101103766",
+  "session_sha256": "a0e838f324b13570b323da5fbcaa548e257daf782d4baaab0f67d4ce19f5302b",
+  "net": -434686,
+  "seconds": 1.4
+ },
+ {
+  "lab": "paridad_50_plana",
+  "pass": true,
+  "failures": [],
+  "fresh_uuid": true,
+  "uuid": "2bb42241-3dd3-47f9-a057-0f07b70e309f",
+  "run_id": "54f1ca58-bff5-4aaa-9c0c-14c8e3a23bd8",
+  "session_sha256": "23fb088c348900c7a56dacedaa97597c6ad6e76da22a4d767716e4022d9c83fb",
+  "net": -143269,
+  "seconds": 0.4
+ }
+]
