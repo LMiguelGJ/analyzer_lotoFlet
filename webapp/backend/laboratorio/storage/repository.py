@@ -96,13 +96,26 @@ def _logical_experiment_bytes(db):
 
 
 def _profile_artifact_bytes(db) -> int:
-    """Count each stored profile JSON copy, including immutable experiment snapshots."""
+    """Count every v1/v2 profile JSON copy, including experiment snapshots."""
     row = db.execute(
         "SELECT (SELECT coalesce(sum(length(CAST(profile_json AS BLOB))), 0) "
         "FROM game_profiles) + (SELECT coalesce(sum(length(CAST(profile_json AS BLOB))), 0) "
         "FROM experiment_profiles)"
     ).fetchone()
-    return row[0]
+    # Preserve the reader on explicitly prepared historical schemas; normal
+    # Repository instances are bootstrapped to the current schema before use.
+    has_v2 = db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='quiniela_game_profiles'"
+    ).fetchone()
+    v2_bytes = (
+        db.execute(
+            "SELECT coalesce(sum(length(CAST(profile_json AS BLOB))), 0) "
+            "FROM quiniela_game_profiles"
+        ).fetchone()[0]
+        if has_v2
+        else 0
+    )
+    return row[0] + v2_bytes
 
 
 def _dataset_artifact_bytes(db) -> int:

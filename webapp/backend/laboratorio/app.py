@@ -1,5 +1,6 @@
 """Local-only API factory; no database is created at import time."""
 
+import json
 import re
 import socket
 import sys
@@ -13,6 +14,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from laboratorio.api import settings as settings_api
+from laboratorio.api.game_profiles import router as game_profiles_router
 from laboratorio.api.history import router as history_router
 from laboratorio.api.laboratories import router as laboratories_router
 from laboratorio.api.laboratory_runs import router as laboratory_runs_router
@@ -27,6 +29,7 @@ from laboratorio.storage.repository import Repository
 _REFERENCE_RUNS_PATH = re.compile(r"/api/v1/reference-labs/[^/]+/runs")
 _OWNED_RUNS_PATH = re.compile(r"/api/v1/laboratories/[^/]+/runs")
 _LABORATORIES_COLLECTION_PATH = re.compile(r"/api/v1/laboratories/?")
+_V2_PROFILES_COLLECTION_PATH = re.compile(r"/api/v2/game-profiles/?")
 _HOST = re.compile(r"(localhost|127\.0\.0\.1)(?::([0-9]{1,5}))?\Z")
 
 
@@ -43,6 +46,23 @@ def _decimal_exceeds(value: str, limit: int) -> bool:
     normalized = "".join(str(unicodedata.decimal(char)) for char in value).lstrip("0") or "0"
     bound = str(limit)
     return len(normalized) > len(bound) or (len(normalized) == len(bound) and normalized > bound)
+
+
+class _DuplicateJSONKey(ValueError):
+    """A bounded v2 request has ambiguous duplicate object keys."""
+
+
+def _unique_json_pairs(items):
+    result = {}
+    for key, value in items:
+        if key in result:
+            raise _DuplicateJSONKey
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(_value):
+    raise ValueError("nonfinite JSON number")
 
 
 def create_app(
@@ -96,7 +116,10 @@ def create_app(
             or _REFERENCE_RUNS_PATH.fullmatch(request.url.path)
             or _OWNED_RUNS_PATH.fullmatch(request.url.path)
         )
-        bounded_post = run_post or _LABORATORIES_COLLECTION_PATH.fullmatch(request.url.path)
+        profile_post = bool(_V2_PROFILES_COLLECTION_PATH.fullmatch(request.url.path))
+        bounded_post = (
+            run_post or _LABORATORIES_COLLECTION_PATH.fullmatch(request.url.path) or profile_post
+        )
         if request.method == "POST" and bounded_post:
             byte_limit = 64 * 1024
             lengths = request.headers.getlist("content-length")
@@ -122,6 +145,21 @@ def create_app(
                     )
                 chunks.append(chunk)
             request._body = b"".join(chunks)
+            if profile_post:
+                try:
+                    json.loads(
+                        request._body,
+                        object_pairs_hook=_unique_json_pairs,
+                        parse_constant=_reject_json_constant,
+                    )
+                except _DuplicateJSONKey:
+                    return JSONResponse(
+                        {"detail": "La solicitud contiene claves JSON duplicadas."}, status_code=422
+                    )
+                except (ValueError, RecursionError):
+                    return JSONResponse(
+                        {"detail": "La solicitud JSON no es válida."}, status_code=422
+                    )
         if request.method == "POST" and request.url.path == "/api/v1/history":
             byte_limit = 32 * 1024 * 1024
             lengths = request.headers.getlist("content-length")
@@ -147,6 +185,7 @@ def create_app(
     app.include_router(reference_labs_router, prefix="/api/v1")
     app.include_router(laboratories_router, prefix="/api/v1")
     app.include_router(laboratory_runs_router, prefix="/api/v1")
+    app.include_router(game_profiles_router, prefix="/api/v2")
 
     if serve_frontend:
 

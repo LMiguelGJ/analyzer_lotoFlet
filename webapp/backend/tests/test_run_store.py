@@ -3,7 +3,7 @@ import sqlite3
 
 import pytest
 
-from laboratorio.storage.database import connection
+from laboratorio.storage.database import SCHEMA_VERSION, connection
 from laboratorio.storage.quota import LOGICAL_MARGIN_BYTES, QuotaExceeded
 
 
@@ -63,7 +63,7 @@ def test_run_migration_fresh_and_v14_upgrade_preserves_legacy_runs(tmp_path):
     fresh = tmp_path / "fresh.db"
     initialize_database(fresh)
     with connection(fresh) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         assert db.execute(
             "SELECT name FROM sqlite_master WHERE name='saved_run_sessions'"
         ).fetchone()
@@ -82,7 +82,7 @@ def test_run_migration_fresh_and_v14_upgrade_preserves_legacy_runs(tmp_path):
         db.execute("PRAGMA user_version=14")
     initialize_database(old)
     with connection(old) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         assert db.execute("SELECT experiment_id,ordinal,status FROM runs").fetchall() == [
             ("legacy", 0, "pending")
         ]

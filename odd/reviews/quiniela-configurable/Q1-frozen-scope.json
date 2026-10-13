@@ -1,0 +1,116 @@
+{
+  "baseline": "1c5e44142319e4608feb4c61ba51f27bc09c3312",
+  "foreign_index_sha256": "26315d4a5004133f338b126535285ed13b4b2c117d3d55695f3e84798a4870d9",
+  "files": [
+    {
+      "path": "webapp/backend/laboratorio/domain/quiniela_profiles.py",
+      "sha256": "4fb64c18917dc51a32143db44c6acc2accf7280f02b8364c7ac69492014411d6",
+      "lines": 227
+    },
+    {
+      "path": "webapp/backend/laboratorio/domain/configurable_runs.py",
+      "sha256": "a87e5115713e80b5debfc54216b38f7c0186f7b9d0bb78a490142b3239c9bcbe",
+      "lines": 319
+    },
+    {
+      "path": "webapp/backend/laboratorio/domain/configurable_laboratories.py",
+      "sha256": "569a45a479675427efd2112224e691330aca6e603bb7542ba56bc854ebb8ea29",
+      "lines": 322
+    },
+    {
+      "path": "webapp/backend/laboratorio/api/game_profiles.py",
+      "sha256": "784604fefb2765060bc411d8566f632d3d8f5069d10b1bb9df702dad6c1807f9",
+      "lines": 76
+    },
+    {
+      "path": "webapp/backend/laboratorio/storage/game_profile_store.py",
+      "sha256": "ecd2d065a201121c4c5ddf7ba5b5a728bece5d84f79189580c0e692a357d9574",
+      "lines": 188
+    },
+    {
+      "path": "webapp/backend/laboratorio/storage/migrations/0018_quiniela_game_profiles.sql",
+      "sha256": "aeacafc63e8278836eb3dd42e0ff097f57aa7dc15ce18ef4810d05139fdd8255",
+      "lines": 14
+    },
+    {
+      "path": "webapp/backend/laboratorio/storage/database.py",
+      "sha256": "2c02e1670639baf3212cb9aa8dc5f66a1a05613515cb95bafda56f2e4a7f6d78",
+      "lines": 175
+    },
+    {
+      "path": "webapp/backend/laboratorio/storage/repository.py",
+      "sha256": "08c2ae03d727ecad9564d9320aa7b1d6dbf358bad5903d8ee56bc70dc54a25a4",
+      "lines": 561
+    },
+    {
+      "path": "webapp/backend/laboratorio/app.py",
+      "sha256": "0e9c3f79c0f8b61de9812d9879044a6c4acbf472f56d2be2cd809c00d6abdd65",
+      "lines": 278
+    },
+    {
+      "path": "webapp/backend/tests/test_quiniela_profiles.py",
+      "sha256": "23344bae73c263559804ee4cbd6977dd2975516764e48f7388fe9b124106db04",
+      "lines": 233
+    },
+    {
+      "path": "webapp/backend/tests/test_configurable_run_values.py",
+      "sha256": "24b7ab9ddbe1a5968f628b5f4e9e9c08d8aedd94cc24ea9b058355e887cbb733",
+      "lines": 222
+    },
+    {
+      "path": "webapp/backend/tests/test_configurable_laboratory_values.py",
+      "sha256": "22b9942c72c166b37d85b138c17ada7ddca582ce2fc651516bb897e1164dc757",
+      "lines": 165
+    },
+    {
+      "path": "webapp/backend/tests/test_game_profiles_v2_api.py",
+      "sha256": "1632f8297ca20c0b1b73cb77dc01ac6a089112a9872252832f9119d71df27ed6",
+      "lines": 328
+    },
+    {
+      "path": "webapp/backend/tests/test_laboratory_migrations.py",
+      "sha256": "5a91f2b7b08fade1a0103a269eccc372673156a778e598f78336b491fc210568",
+      "lines": 377
+    },
+    {
+      "path": "docs/quiniela-profiles-v2.md",
+      "sha256": "4e19ba6727ef2ba4112d785c1814e9cce81417526557c63d8c327734359e2e21",
+      "lines": 93
+    },
+    {
+      "path": "docs/quiniela-run-values-v2.md",
+      "sha256": "a597993f3d15b60a5dd1545d7b4550279a416a5e8b39b5ec0d8415c8dbdf95e1",
+      "lines": 28
+    },
+    {
+      "path": "docs/quiniela-profiles-v2-api.md",
+      "sha256": "9b4a1643321828c12fa63856ea3d67939c495d850801c9c2f0c94a455914c02f",
+      "lines": 74
+    },
+    {
+      "path": "docs/quiniela-snapshots-v2.md",
+      "sha256": "c1e5fc8628f1418c5395110db591b6658c32d2dc6295f46b1a9607f712a7527b",
+      "lines": 46
+    },
+    {
+      "path": "webapp/backend/tests/test_run_store.py",
+      "sha256": "fdb03ccdf1ae3e57619a14f58bb1e30b9104125f0e0a4dfbeb607e74b72ac798",
+      "lines": 369
+    },
+    {
+      "path": "webapp/backend/tests/test_reference_lab_store.py",
+      "sha256": "43f474b36e75fe081316a45957d24229252bac9ee04a7fee15c84d69995016b9",
+      "lines": 774
+    },
+    {
+      "path": "webapp/backend/tests/test_owned_laboratory_run_insert.py",
+      "sha256": "d9af165a47a30cc092a2f0e7fb9a5f905f72ca745516b8cfc54af7013e66ce33",
+      "lines": 430
+    }
+  ],
+  "post_verification_test_extension": {
+    "path": "webapp/backend/tests/test_quiniela_admission_boundaries.py",
+    "sha256": "197c7c610a5071cbaad38906f2caaf913476505a61585944b9b22fe349c0e48c",
+    "observed": "8 PASS; Ruff/check/format PASS; no production correction"
+  }
+}

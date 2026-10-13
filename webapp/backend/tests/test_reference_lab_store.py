@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from laboratorio.storage.database import connection, initialize_database
+from laboratorio.storage.database import SCHEMA_VERSION, connection, initialize_database
 from laboratorio.storage.quota import QuotaExceeded
 from laboratorio.storage.reference_lab_store import ReferenceLabStoreError
 
@@ -99,13 +99,13 @@ def _create(repo, run_id=None, **kwargs):
     )
 
 
-def test_schema17_fresh_and_v15_upgrade_preserve_old_saved_run_and_history(tmp_path):
+def test_current_schema_fresh_and_v15_upgrade_preserve_old_saved_run_and_history(tmp_path):
     from laboratorio.storage.database import _run_migrations
 
     fresh = tmp_path / "fresh.db"
     initialize_database(fresh)
     with connection(fresh) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         for table in ("reference_lab_runs", "reference_lab_sessions"):
             assert db.execute("SELECT name FROM sqlite_master WHERE name=?", (table,)).fetchone()
 
@@ -119,7 +119,7 @@ def test_schema17_fresh_and_v15_upgrade_preserve_old_saved_run_and_history(tmp_p
         db.execute("PRAGMA user_version=15")
     initialize_database(old)
     with connection(old) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         assert db.execute("SELECT id FROM saved_runs").fetchall() == [("old",)]
         assert db.execute("SELECT sha256 FROM history_sources").fetchall() == [("sha",)]
         assert db.execute("SELECT sha256 FROM history_active").fetchall() == [("sha",)]

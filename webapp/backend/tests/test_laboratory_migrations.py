@@ -8,7 +8,7 @@ from laboratorio.domain.laboratories import (
     create_laboratory_definition,
     initial_laboratory_definitions,
 )
-from laboratorio.storage.database import connection, initialize_database
+from laboratorio.storage.database import SCHEMA_VERSION, connection, initialize_database
 from laboratorio.storage.quota import QuotaExceeded
 
 _BOOTSTRAP_MARKER = "initial_laboratory_definitions_v1"
@@ -71,12 +71,12 @@ def _limited_quota(usage):
     return usage + max(1, usage // 19)
 
 
-def test_fresh_database_bootstraps_version_17_and_fourteen_exact_seed_definitions(tmp_path):
+def test_fresh_database_bootstraps_current_version_and_fourteen_exact_seed_definitions(tmp_path):
     path = tmp_path / "fresh.db"
     initialize_database(path)
 
     with connection(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         rows = db.execute(
             "SELECT id, definition_json FROM laboratory_definitions ORDER BY rowid"
         ).fetchall()
@@ -115,7 +115,7 @@ def test_v16_upgrade_preserves_legacy_reference_run_session_and_null_owner(tmp_p
     initialize_database(path)
 
     with connection(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 17
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         assert db.execute(
             "SELECT id, lab_id, contract_version, created_at, metadata_json, result_json, "
             "owner_laboratory_id FROM reference_lab_runs"

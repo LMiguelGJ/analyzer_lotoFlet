@@ -9,7 +9,7 @@ from pathlib import Path
 from laboratorio.domain.contracts import legacy_quiniela_80_profile
 from laboratorio.domain.laboratories import initial_laboratory_definitions
 
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 _MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 # Ordered, sequential migration scripts; each key is the schema version it produces.
 _MIGRATIONS = {
@@ -30,6 +30,7 @@ _MIGRATIONS = {
     15: _MIGRATIONS_DIR / "0015_runs.sql",
     16: _MIGRATIONS_DIR / "0016_reference_labs.sql",
     17: _MIGRATIONS_DIR / "0017_laboratories.sql",
+    18: _MIGRATIONS_DIR / "0018_quiniela_game_profiles.sql",
 }
 
 
@@ -91,7 +92,7 @@ def _run_migrations(db, expected_prior: int, versions: list[int]):
                 "SELECT id, ?, ?, ? FROM experiments",
                 (profile.profile_id, profile.revision, snapshot),
             )
-        if target == 17:
+        if 17 in versions:
             _seed_initial_laboratory_definitions(db)
         db.execute(f"PRAGMA user_version = {target}")
         db.commit()

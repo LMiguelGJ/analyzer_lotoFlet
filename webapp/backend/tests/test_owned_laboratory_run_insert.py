@@ -10,7 +10,7 @@ import pytest
 import laboratorio.storage.owned_laboratory_run_store as owned_run_store
 from laboratorio.domain.laboratories import initial_laboratory_definitions
 from laboratorio.domain.laboratory_run_snapshots import OwnedLaboratoryRunSnapshot
-from laboratorio.storage.database import connection
+from laboratorio.storage.database import SCHEMA_VERSION, connection
 from laboratorio.storage.owned_laboratory_run_store import (
     OwnedLaboratoryRunStoreError,
     create_run,
@@ -138,7 +138,7 @@ def test_repository_owned_insert_round_trips_canonical_owned_run_without_mutatio
     assert row[5] == _canonical({"schema_version": 1, "result": result})
     assert row[6] == definition.id
     assert session_rows == [(0, _canonical(expected_sessions[0]))]
-    assert version == 17
+    assert version == SCHEMA_VERSION
     assert repo.get_owned_laboratory_run(definition.id, run_id) == {
         "id": run_id,
         "owner_laboratory_id": definition.id,
