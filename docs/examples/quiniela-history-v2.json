@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "timezone": "America/Santo_Domingo",
+  "draws": [
+    {
+      "schema_version": 2,
+      "draw_id": "demo-2026-06-10-1",
+      "timestamp": "2026-06-10T12:00:00-04:00",
+      "results": [7, 3, 9, 1, 0]
+    },
+    {
+      "schema_version": 2,
+      "draw_id": "demo-2026-06-10-2",
+      "timestamp": "2026-06-10T18:00:00-04:00",
+      "results": [0, 1, 2, 3, 4]
+    }
+  ]
+}

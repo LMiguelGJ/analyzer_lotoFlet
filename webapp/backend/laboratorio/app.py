@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from laboratorio.api import settings as settings_api
 from laboratorio.api.game_profiles import router as game_profiles_router
 from laboratorio.api.history import router as history_router
+from laboratorio.api.history_sources import router as history_sources_router
 from laboratorio.api.laboratories import router as laboratories_router
 from laboratorio.api.laboratory_runs import router as laboratory_runs_router
 from laboratorio.api.reference_labs import router as reference_labs_router
@@ -30,6 +31,9 @@ _REFERENCE_RUNS_PATH = re.compile(r"/api/v1/reference-labs/[^/]+/runs")
 _OWNED_RUNS_PATH = re.compile(r"/api/v1/laboratories/[^/]+/runs")
 _LABORATORIES_COLLECTION_PATH = re.compile(r"/api/v1/laboratories/?")
 _V2_PROFILES_COLLECTION_PATH = re.compile(r"/api/v2/game-profiles/?")
+_V2_HISTORY_SOURCES_POST_PATH = re.compile(
+    r"/api/v2/history-sources(?:/(?:preview|included/(?:preview|confirm)))?/?"
+)
 _HOST = re.compile(r"(localhost|127\.0\.0\.1)(?::([0-9]{1,5}))?\Z")
 
 
@@ -117,11 +121,16 @@ def create_app(
             or _OWNED_RUNS_PATH.fullmatch(request.url.path)
         )
         profile_post = bool(_V2_PROFILES_COLLECTION_PATH.fullmatch(request.url.path))
+        history_source_post = bool(_V2_HISTORY_SOURCES_POST_PATH.fullmatch(request.url.path))
+        strict_json_post = profile_post or history_source_post
         bounded_post = (
-            run_post or _LABORATORIES_COLLECTION_PATH.fullmatch(request.url.path) or profile_post
+            run_post
+            or _LABORATORIES_COLLECTION_PATH.fullmatch(request.url.path)
+            or profile_post
+            or history_source_post
         )
         if request.method == "POST" and bounded_post:
-            byte_limit = 64 * 1024
+            byte_limit = 64 * 1024 * 1024 + 64 * 1024 if history_source_post else 64 * 1024
             lengths = request.headers.getlist("content-length")
             invalid_length = len(lengths) > 1 or (
                 lengths
@@ -145,7 +154,7 @@ def create_app(
                     )
                 chunks.append(chunk)
             request._body = b"".join(chunks)
-            if profile_post:
+            if strict_json_post:
                 try:
                     json.loads(
                         request._body,
@@ -186,6 +195,7 @@ def create_app(
     app.include_router(laboratories_router, prefix="/api/v1")
     app.include_router(laboratory_runs_router, prefix="/api/v1")
     app.include_router(game_profiles_router, prefix="/api/v2")
+    app.include_router(history_sources_router, prefix="/api/v2")
 
     if serve_frontend:
 

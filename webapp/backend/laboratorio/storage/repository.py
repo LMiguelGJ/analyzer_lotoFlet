@@ -141,14 +141,31 @@ def _strategy_artifact_bytes(db) -> int:
 
 
 def _history_artifact_bytes(db) -> int:
-    """Every persisted history column byte, each column exactly once."""
-    return db.execute(
+    """Every persisted v1/v2 history column byte, each column exactly once."""
+    legacy = db.execute(
         "SELECT "
         "(SELECT coalesce(sum(length(CAST(sha256 AS BLOB)) + length(CAST(created_at AS BLOB)) + "
         "8 + 8 + length(CAST(first_label AS BLOB)) + length(CAST(last_label AS BLOB)) + "
         "length(raw_bytes)), 0) FROM history_sources) + "
         "(SELECT coalesce(sum(8 + length(CAST(sha256 AS BLOB))), 0) FROM history_active)"
     ).fetchone()[0]
+    has_v2 = db.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='quiniela_history_sources'"
+    ).fetchone()
+    if not has_v2:
+        return legacy
+    v2 = db.execute(
+        "SELECT coalesce(sum(length(CAST(id AS BLOB)) + length(CAST(profile_id AS BLOB)) + "
+        "length(CAST(profile_sha256 AS BLOB)) + length(CAST(origin AS BLOB)) + "
+        "length(CAST(name AS BLOB)) + length(CAST(raw_sha256 AS BLOB)) + "
+        "length(CAST(canonical_sha256 AS BLOB)) + length(CAST(preview_sha256 AS BLOB)) + "
+        "length(raw_bytes) + length(CAST(canonical_json AS BLOB)) + 8 + "
+        "length(CAST(timezone AS BLOB)) + 1 + 8 + 8 + "
+        "coalesce(length(CAST(first_timestamp AS BLOB)), 0) + "
+        "coalesce(length(CAST(last_timestamp AS BLOB)), 0) + "
+        "length(CAST(created_at AS BLOB))), 0) FROM quiniela_history_sources"
+    ).fetchone()[0]
+    return legacy + v2
 
 
 @dataclass(frozen=True)
