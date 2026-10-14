@@ -1,5 +1,5 @@
 # Configurable and auditable quiniela — ODD feature
-Branch: `feat/reference-laboratories`; approved plan: `.pi/plans/quiniela-configurable.md`; baseline: `1c5e441`.
+Branch: `master` after S15-authorized delivery (former `feat/reference-laboratories` removed); approved plan: `.pi/plans/quiniela-configurable.md`; baseline: `1c5e441`.
 Local work-unit commits only; Python checks use `py -3.14 -B`, disabled pytest autoload/cache and fresh project-local basetemps; never normal user data.
 
 ## Specs
@@ -96,7 +96,7 @@ Approved technical assumptions, scope exclusions and acceptance examples are in 
 ## Tasks
 
 - T1 / Q1 — Profiles and versioned contracts; S3,S4,S9,S14; route: parallel bounded workers for independent profile rules and variable draw/bet DTOs, then parent persistence/API integration; status: done; commit: ce16f92/16c7418/1304f61/33aaf8c; evidence: independent259 PASS, parent3+8 PASS, Ruff17 PASS, frozen21 unchanged.
-- T2 / Q2 — Compatible immutable history library; S4,S5,S14; route: bounded Q2 worker (context backstop after long Q1/incident proof); parent owns final included-history/independent proof and commits; status: blocked; commit: pending; waits for decision on unavailable independent functional verification and unproven static concerns.
+- T2 / Q2 — Compatible immutable history library; S4,S5,S14; route: bounded Q2 worker (context backstop after long Q1/incident proof); parent owns final included-history/independent proof and commits; status: blocked; commit: 3340b88171f70365b0d9940dd0cf1eb018362078; awaits user manual acceptance per S15, not independent PASS. Two unproven static concerns remain declared.
 - T3 / Q3 — Verified strategy-block catalog and compilation; S6,S14; route: inline unless a named writer trigger fires; status: pending; commit: pending.
 - T4 / Q4 — Configurable replay and complete traces; S6,S9,S14; route: inline unless a named writer trigger fires; status: pending; commit: pending.
 - T5 / Q5 — Owned laboratories, templates and integrated API; S7,S8,S9,S14; route: inline unless a named writer trigger fires; status: pending; commit: pending.
@@ -105,7 +105,7 @@ Approved technical assumptions, scope exclusions and acceptance examples are in 
 - T8 / Q8 — Mandatory wizard and analysis experience; S4,S5,S6,S7,S8,S9,S11,S12,S14; route: bounded wizard/results/comparison/settings work units with disjoint writers only when independent; status: pending; commit: pending.
 - T9 / Q9 — Integration, documentation and final acceptance; S1,S2,S3,S10,S13,S14 and complete feature; route: parent integration plus independent high-risk verifier/browser evidence; status: pending; commit: pending.
 
-- T10 / D1 — Commit approved pending changes, publish to origin/master, then remove confirmed other branches; S15; route: parent Git operations with fresh remote ancestry checks and no force push; status: in_progress; commit: pending. Q2 functional acceptance and Q3–Q9 implementation are not part of this delivery proof.
+- T10 / D1 — Commit approved pending changes, publish to origin/master, then remove confirmed other branches; S15; route: parent Git operations with fresh remote ancestry checks and no force push; status: done; commit: 3340b88171f70365b0d9940dd0cf1eb018362078; evidence: observed non-force origin/master push and13local/2remote removal,10stale registrations only. Q2 functional acceptance and Q3–Q9 implementation are not part of this delivery proof.
 
 ## Log
 
@@ -204,3 +204,12 @@ Tracking and full mirror8398 created/read back; TODO now has nine tasks, only Q1
 - Baseline read-only inventory: HEAD33aaf8c on feat/reference-laboratories, no local master; cached origin/master445abf8 is an ancestor (215 commits ahead,0 behind). Every other local head is already an ancestor of the current branch. Fresh origin fetch must confirm master and every deletion target before publishing/removal; new divergence requires a decision, not forcing.
 - Authorized local removal set after creating/publishing master: feat/bossfarmer-design, feat/rebuild-corridas, feat/reference-laboratories, odd/reestructura-profile-batches, odd/reestructura-profile-sessions, stage, wt/editor, wt/rewrite-be, wt/rw-api, wt/rw-dom, wt/rw-fe, wt/rw-que, wt/rw-sto. Authorized remote removal set: stage and feat/bossfarmer-design only. User also approved pruning metadata records for nonexistent worktrees, not deleting actual worktree directories or detached native candidate views.
 - T10 delivery in_progress. Preparation, observed local commit, non-force push and final branch list must be recorded separately. Q2 remains blocked on independent/manual acceptance; Q3–Q9 remain pending and are not represented as delivered features.
+
+### L14 — Current work published and confirmed branch cleanup completed
+- Fresh `git fetch origin` exit0 confirmed origin/master445abf835b6a52d03dd13bb15d99a6314e5ff32b is an ancestor and both confirmed remote deletion targets remain ancestors. Original thirteen Q2 source hashes matched the frozen manifest. Whitespace checks passed; no additional functional tests or verifier runs were performed after the user's manual-testing decision.
+- Approved twenty-path commit3340b88171f70365b0d9940dd0cf1eb018362078 (`feat(quiniela): add immutable history sources and consolidate pending work`) observed exit0,2428 insertions/712 deletions. Includes all explicitly approved pending additions/modifications and three document removals; secrets, protected histories/reference inputs, normal data and ignored scratch excluded.
+- Created localmaster at that commit without checkout of old source, reset or rebase. `git push --set-upstream origin master` observed exit0/6s:445abf8..3340b88, upstreamorigin/master configured. All earlier215 feature commits are retained in master ancestry.
+- Live remote read reconfirmed master3340b88 and unchanged/ancestorstage andfeat/bossfarmer-design before `git push --atomic origin --delete stage feat/bossfarmer-design`; observed exit0/4s, both remote branches deleted. No force push/history rewrite.
+- Exact prune dry-run identified ten nonexistent worktree registrations only: base-check, profile-batches, profile-sessions, wt-editor, wt-rw-api, wt-rw-be, wt-rw-dom, wt-rw-fe, wt-rw-que, wt-rw-sto. Pruned those Git metadata records, not actual directories or detached native candidate views. All thirteen confirmed local branches then removed with ordinary `git branch --delete`, not force deletion; every head already an ancestor of master. Observed exit0/2.8s; only master local and origin/master (plus symbolic origin HEAD) remained; working tree clean.
+- Retained preparation incidents: initial Git128/Python1 pathspec failure on already staged deletions left the index unchanged; stage only existing approved paths and retain/assert staged deletions resolved it. Initial local cleanup guard Python1 captured onlystdout while Git prune dry-run emitsstderr; independent incident read established all tenexpectedrecords and unchanged14heads, then corrected collection before any mutation. Neither failed command was silently retried unchanged; no proof fabricated.
+- T10 delivery done with actual work-unit commit and observed push/cleanup. This tracking acknowledgment is a follow-up documentation commit on master. Q2 manual acceptance remains the user's next action; two static concerns remain unproven. Q3–Q9 remain unimplemented/pending. No full-feature completion, clean LSP, automated acceptance, publication-ready UI, deployment or packaging claim.
