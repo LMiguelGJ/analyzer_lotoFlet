@@ -45,15 +45,21 @@ Runner: isolated `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 py -3.14 -B -m pytest -p no:c
 - RED a través de `request()` y del workspace, sin sustituir el problema por un mock de createLaboratoryRun: respuesta HTTP 201 con `json()` rechazado. Deben ocurrir un solo POST, aviso de incertidumbre y botón bloqueado, incluso ante otro clic.
 
 
-### S5 — Approved Gate JD — cerrar primero los dos severos, sin ampliar la corrección
+### S5 — Explicitly amended correction and verification route
 
+User selected, verbatim:
+> Cambiar la ruta de corrección — recomendada
 
-- La aprobación explícita de este plan habilita la primera ronda correctiva SOLO de JD-001/JD-002; no autoriza corregir INFO dentro del actor JD ni publicar cambios.
-- U1A/U1B pueden ejecutarse en paralelo mediante dos `jd-fix-agent` con superficies disjuntas backend/frontend; cada uno recibe el documento ODD, IDs y pruebas. No comparten archivos de documentación.
-- Congelar el delta correctivo respecto de U0 y usar ambos jueces ciegos con el ledger original y ese delta solamente. No sumar U2–U6 al delta JD ni hacer una nueva revisión general disfrazada.
-- Como máximo dos rondas de corrección y dos rejuzgamientos acotados. Si quedan severos, contradicciones o prueba insuficiente, ESCALATED y decisión humana; sin reintentos ilimitados ni refuter.
-- Una aprobación JD cubre ese delta, no futuras mejoras ni entrega. No ejecutar 4R ordinario sobre el mismo objetivo; RDD continúa bajo el interruptor humano, sin inventar recibos.
+Selected option, verbatim:
+> Mantener intactos los informes originales.
+> Corregir los dos errores con workers normales, pruebas RED/GREEN y verificación independiente.
+> Continuar después con las demás mejoras.
+> Registrar que **el gate JD no se completó**, sin inventar una aprobación.
 
+- This explicit amendment supersedes the original plan's jd-fix-agent and scoped re-judgment requirement. Use two normal gentle-ai-worker instances for U1A/U1B with disjoint allowed surfaces. Preserve all functional requirements in S3/S4 and all data/compatibility protections.
+- After self-checks, assess each work-unit diff and perform required independent functional verification; the parent checks the seam. Continue U2–U6 only after the functional gate passes.
+- Preserve the original frozen judge reports, ledger, ERROR severities and zero corrective/rejudgment counters unchanged. Original JD remains ESCALATED / not completed, never APPROVED.
+- No JD actor, new blind re-review, ordinary4R substitute, harness repair or schema/severity conversion is requested by this amendment. RDD remains off. Delivery and normal-data protections remain unchanged.
 
 ### S6 — Approved U2 — Reconciliar antes de volver a habilitar ejecución
 
@@ -126,7 +132,7 @@ Runner: isolated `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 py -3.14 -B -m pytest -p no:c
 - Readback de cada requisito, evidencia por unidad y estado real en ODD/Engram/TODO. No declarar completada una prueba visual, móvil, de teclado o regresión no observada.
 
 
-### S11 — Approved constraints, verification and exclusions (verbatim)
+### S11 — Approved constraints, verification and exclusions (original text except route amended by S5)
 
 #### Assumptions & Decisions
 
@@ -137,7 +143,7 @@ Runner: isolated `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 py -3.14 -B -m pytest -p no:c
 5. ROI es presentación derivada, no nuevo resultado persistido. Cierres/metas no se presentan como probabilidades futuras.
 6. No hay preguntas de producto pendientes: las decisiones conservan comportamiento, estética y datos; la fase Clarify quedó resuelta con exploración y un contraste técnico de solo lectura.
 7. El plan prevé más de 400 líneas totales: dividir en slices revisables, idealmente ≤400 líneas de diff cada una, con tests/docs junto a su comportamiento. Si luego se piden PR, usar PR encadenados; no crear un PR gigante ni publicar sin decisión de entrega.
-8. Orden: U0 → U1A/U1B en paralelo → gate JD → U2 → U3 → U4 → U5 → U6. Cada unidad tiene commit propio; dividir U3 en migración, lector/cache y endpoints si supera el tamaño revisable, manteniendo dependencias compatibles.
+8. Orden actualizado por S5: U0 → U1A/U1B en paralelo con workers normales → verificación funcional independiente → U2 → U3 → U4 → U5 → U6. Cada unidad tiene commit propio; dividir U3 en migración, lector/cache y endpoints si supera el tamaño revisable, manteniendo dependencias compatibles.
 9. Tras aprobar se crean los artefactos ODD de implementación; ahora solo existe este plan. Workers con superficies permitidas disjuntas; parent actualiza tracking y conserva autoridad de integración.
 10. No ejecutar migraciones, bootstrap, fixtures ni nuevas corridas sobre `%LOCALAPPDATA%/LaboratorioQuiniela`. El permiso previo de arranque no equivale a autorizar una nueva migración de usuario. Probar con datos aislados; pedir autorización específica antes de aplicar 20 a la base normal o reiniciar contra ella.
 
@@ -196,8 +202,9 @@ npm run build
 ## Tasks
 
 - T0 — U0 recoverable baseline and ODD; S1–S2,S11; route: inline (existing narrow copy changes, no new behavior); status: done; commits: e9fd0513a895ad01bf1f04cc9dd0e4827ce43da7 (preserved UI baseline), a60cb3dded529cdeb5f5bd98295229b9bab6a4ab (approved plan/tracking); focused23PASS/job14exit0.
-- T1 — U1A/U1B confirmed severe corrections in parallel; S3–S4,S11; route: two jd-fix-agent workers, disjoint backend/frontend; status: blocked; commits: none; RED/GREEN: not run; waiting for JD dispatch compatibility resolution or an explicit authorized route change: frozen ERROR rows cannot pass the host BLOCKER/CRITICAL-only guard.
-- T2 — Functional independent verification and scoped JD gate; S3–S5,S11; route: gentle-ai-verify then two blind judges; status: pending; commit: pending.
+- T1 — U1A/U1B confirmed logic corrections in parallel; S3–S5,S11; route: two normal gentle-ai-worker instances, disjoint backend/frontend; status: in_progress; commits: pending; RED/GREEN: not run; explicitly unblocked by L7 route choice.
+- T2 — Original scoped JD gate; S5; route: retired by explicit user amendment; status: dropped; not completed/approved; original artifacts preserved; no correction/rejudgment budget consumed.
+- T2B — Independent functional verification of U1A/U1B; S3–S5,S11; route: assess per work unit, required gentle-ai-verify and parent seam check; status: pending; commit: pending.
 - T3 — U2 reconcile and separate immutable detail/session loading; S6,S11; route: inline (dependent frontend unit); status: pending; commit: pending.
 - T4 — U3 additive migration20 integrity epoch; S7,S11; route: inline (ordered schema dependency); status: pending; commit: pending.
 - T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11; route: inline (dependent reader); status: pending; commit: pending.
@@ -249,3 +256,11 @@ User, verbatim:
 - Guard states that frozen open rows must be BLOCKER/CRITICAL and the supplied SHA256 must match the canonical exact-row section. Original judge rows JD-A-001/JD-B-001/JD-A-002/JD-B-002 have severity ERROR. Original complete ledger file hash remains0226bcdb567ebb1874b33ae605473c4262ef897a7a928adf2a1cffd81a4cf69f, not a per-subset row-section hash. Neither severity promotion nor invented canonical replacement is authorized.
 - No further submissions, new general review, generic fix-writer substitution, review-tool repair, source changes or normal-data operation. Preserve the two original reports/ledger unchanged. The approved plan requires this gate before U2–U6, so do not skip it under unattended YOLO.
 - Evidence: .tmp/mejoras-quiniela/jd-dispatch/{u1a-prompt.md,u1b-prompt.md,errors.json}. T1 blocked on external guard/protocol compatibility or explicit human route decision; T2–T8 remain pending. This is not a request for another routine implementation approval.
+
+### L7 — Explicit correction-route amendment
+User, verbatim:
+> Cambiar la ruta de corrección — recomendada
+- User chose offered option1: normal workers, RED/GREEN and independent functional verification, then the remaining improvements. Only S5 and its ordering dependencies change; S3/S4 behaviors and the rest of the approved plan remain intact. Original plan stays an unchanged historical record.
+- T1 returns to in_progress, ordinary disjoint workers. Original T2 JD gate is dropped, not done; new T2B functional gate is pending. Do not label JD approved or modify its frozen artifacts/counters.
+- Baseline remains23PASS/job14exit0; commits e9fd051,a60cb3d,60a65d0 on feat/mejoras-quiniela; working tree clean before this amendment. No new source edits or tests have occurred yet.
+- TODO reviewed against observed work as requested: only U0 done; corrections in progress, replacement verification and later units pending; retired gate dropped.
