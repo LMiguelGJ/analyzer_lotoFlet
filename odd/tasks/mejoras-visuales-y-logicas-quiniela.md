@@ -195,8 +195,8 @@ npm run build
 
 ## Tasks
 
-- T0 — U0 recoverable baseline and ODD; S1–S2,S11; route: inline (existing narrow copy changes, no new behavior); status: done; baseline commit: e9fd0513a895ad01bf1f04cc9dd0e4827ce43da7; focused23PASS/job14exit0; tracking commit follows.
-- T1 — U1A/U1B confirmed severe corrections in parallel; S3–S4,S11; route: two jd-fix-agent workers, disjoint backend/frontend; status: in_progress; commits: pending; RED/GREEN: pending.
+- T0 — U0 recoverable baseline and ODD; S1–S2,S11; route: inline (existing narrow copy changes, no new behavior); status: done; commits: e9fd0513a895ad01bf1f04cc9dd0e4827ce43da7 (preserved UI baseline), a60cb3dded529cdeb5f5bd98295229b9bab6a4ab (approved plan/tracking); focused23PASS/job14exit0.
+- T1 — U1A/U1B confirmed severe corrections in parallel; S3–S4,S11; route: two jd-fix-agent workers, disjoint backend/frontend; status: blocked; commits: none; RED/GREEN: not run; waiting for JD dispatch compatibility resolution or an explicit authorized route change: frozen ERROR rows cannot pass the host BLOCKER/CRITICAL-only guard.
 - T2 — Functional independent verification and scoped JD gate; S3–S5,S11; route: gentle-ai-verify then two blind judges; status: pending; commit: pending.
 - T3 — U2 reconcile and separate immutable detail/session loading; S6,S11; route: inline (dependent frontend unit); status: pending; commit: pending.
 - T4 — U3 additive migration20 integrity epoch; S7,S11; route: inline (ordered schema dependency); status: pending; commit: pending.
@@ -241,4 +241,11 @@ User, verbatim:
 - First staged diff check caught an extra blank line at EOF in the historical task file (exit2); removed only redundant trailing whitespace, then staged check and commit succeeded. No historical factual text rewritten.
 - U0 rollback boundary: six baseline paths only; reverting does not affect new corrections/data. Risk:none for the preserved copy changes. Full frontend161PASS/types/build proof remains historical; fresh check is23PASS only.
 - Approved plan plus current feature tracking are a separate passive docs commit. Their naturally >400line documentation scope is disclosed; preserve full approved requirements rather than deleting evidence to fit a heuristic.
-- T1 route reason: two independently substantial confirmed corrections have disjoint backend/frontend surfaces and launch together. Only causal JD-001/JD-002, round1of2; original ledger remains immutable. Subsequent INFO work waits for gate.
+- T1 route reason: two independently substantial confirmed corrections have disjoint backend/frontend surfaces and were submitted together. Only causal JD-001/JD-002, round1of2; original ledger remains immutable. Subsequent INFO work waits for gate.
+
+### L6 — Pre-allocation JD guard incompatibility; not a permission prompt
+- U0 tracking/plan commit succeeded as a60cb3dded529cdeb5f5bd98295229b9bab6a4ab; this is the intended corrective-delta baseline. Its staged guard first caught empty-quote trailing spaces/EOF in the new Markdown; formatting-only correction succeeded, with the verbatim text and requirements intact.
+- Both scoped jd-fix-agent submissions were rejected before allocation. First Promise.allSettled rendering hid Error.message as an empty object. One task-inventory read confirmed no new tasks; a single diagnostic resubmission of the exact unchanged envelopes captured the guard error. No actor ran, no corrective source write happened, no correction/rejudgment budget was consumed.
+- Guard states that frozen open rows must be BLOCKER/CRITICAL and the supplied SHA256 must match the canonical exact-row section. Original judge rows JD-A-001/JD-B-001/JD-A-002/JD-B-002 have severity ERROR. Original complete ledger file hash remains0226bcdb567ebb1874b33ae605473c4262ef897a7a928adf2a1cffd81a4cf69f, not a per-subset row-section hash. Neither severity promotion nor invented canonical replacement is authorized.
+- No further submissions, new general review, generic fix-writer substitution, review-tool repair, source changes or normal-data operation. Preserve the two original reports/ledger unchanged. The approved plan requires this gate before U2–U6, so do not skip it under unattended YOLO.
+- Evidence: .tmp/mejoras-quiniela/jd-dispatch/{u1a-prompt.md,u1b-prompt.md,errors.json}. T1 blocked on external guard/protocol compatibility or explicit human route decision; T2–T8 remain pending. This is not a request for another routine implementation approval.
