@@ -145,17 +145,16 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
         <div><dt>Ventana</dt><dd>{config.window_start} – {config.window_end}</dd></div>
         <div><dt>Corridas guardadas</dt><dd>{formatNumber(detail.owned_run_count)}</dd></div>
       </dl>
-      <p className="reference-note">Las reglas no se editan: para cambiarlas, creá otro laboratorio. Es una reproducción histórica sobre una fuente congelada, no una predicción.</p>
     </section>
 
     <div className="reference-run-action">
       <Button variant="primary" onClick={() => void execute()} loading={running} disabled={!historySha || uncertain || !runs || !!runsError}>Ejecutar laboratorio</Button>
-      <span>{historyError ? `No se pudo leer la fuente congelada: ${historyError}` : "Se guardará una corrida nueva con estas reglas."}</span>
+      {historyError && <span>{`No se pudo leer la fuente congelada: ${historyError}`}</span>}
     </div>
     {actionError && <div className="reference-action-error" role="alert"><p>{actionError}</p>{uncertain && <Button onClick={() => { setUncertain(false); setActionError(null); setSelectedId(null); setRunOffset(0); reloadRuns(); setDetailReload((value) => value + 1); }}>Actualizar corridas guardadas</Button>}</div>}
 
     <section className="reference-runs" aria-labelledby="lab-runs-title">
-      <div className="reference-section-heading"><div><h3 id="lab-runs-title">Corridas guardadas</h3><p>Seleccioná una corrida para abrir su resultado.</p></div><Button onClick={reloadRuns}>Actualizar</Button></div>
+      <div className="reference-section-heading"><div><h3 id="lab-runs-title">Corridas guardadas</h3></div><Button onClick={reloadRuns}>Actualizar</Button></div>
       {runsError ? <ErrorBanner cause="No pudimos cargar las corridas guardadas." recovery={runsError} actionLabel="Reintentar" onAction={reloadRuns} />
         : !runs ? <Loading label="Cargando corridas guardadas…" rows={3} />
         : runs.items.length === 0 ? <p className="reference-empty">Todavía no hay corridas guardadas para este laboratorio.</p>
@@ -182,9 +181,7 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
         <div><span>Apostado</span><strong>{money(totals.total_wagered)}</strong></div>
         <div><span>Pagado</span><strong>{money(totals.total_paid)}</strong></div>
       </div>
-      {totals.incomplete > 0 && <p className="reference-note">Las sesiones incompletas aportan a los totales de dinero, pero no al promedio neto de sesiones cerradas.</p>}
-      {!selected.capabilities.per_bet_trace && <p className="reference-note">Este contrato guarda resúmenes de sesión; no incluye el detalle de cada apuesta.</p>}
-      <div className="reference-section-heading"><div><h4>Sesiones {formatNumber(sessions.offset + 1)}–{formatNumber(Math.min(sessions.offset + sessions.items.length, sessions.total))} de {formatNumber(sessions.total)}</h4><p>Se consulta solo esta página de resúmenes.</p></div></div>
+      <div className="reference-section-heading"><div><h4>Sesiones {formatNumber(sessions.offset + 1)}–{formatNumber(Math.min(sessions.offset + sessions.items.length, sessions.total))} de {formatNumber(sessions.total)}</h4></div></div>
       {sessions.items.length === 0 ? <p className="reference-empty">Esta corrida no tiene sesiones en esta página.</p> : <div className="reference-table-wrap" role="region" aria-label="Resúmenes de sesiones" tabIndex={0}><table className="reference-table"><thead><tr><th scope="col">Sesión</th><th scope="col">Cierre</th><th scope="col">Sorteos</th><th scope="col">Saldo final</th><th scope="col">Apostado</th><th scope="col">Pagado</th></tr></thead><tbody>
         {sessions.items.map(({ ordinal, summary }) => <tr key={ordinal}><th scope="row">{formatNumber(ordinal + 1)}</th><td>{outcomeLabel(summary.outcome)}</td><td>{formatNumber(summary.draws)}</td><td>{money(summary.final_balance)}</td><td>{money(summary.wagered)}</td><td>{money(summary.paid)}</td></tr>)}
       </tbody></table></div>}

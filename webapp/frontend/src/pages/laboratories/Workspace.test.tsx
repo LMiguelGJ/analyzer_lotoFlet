@@ -83,6 +83,36 @@ describe("laboratory workspace", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("conflicto o límite de cuota");
   });
 
+  it("shows fixed rules without redundant editing guidance", async () => {
+    renderAt(`/laboratorios/${ID}`);
+    const rules = await screen.findByRole("region", { name: "Reglas del laboratorio" });
+    expect(within(rules).getByRole("heading", { name: "Reglas fijadas" })).toBeInTheDocument();
+    expect(within(rules).queryByText(/Las reglas no se editan:/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the execute action without redundant save guidance", async () => {
+    renderAt(`/laboratorios/${ID}`);
+    const execute = await screen.findByRole("button", { name: "Ejecutar laboratorio" });
+    await waitFor(() => expect(execute).toBeEnabled());
+    expect(screen.queryByText("Se guardará una corrida nueva con estas reglas.")).not.toBeInTheDocument();
+    expect(m.createLaboratoryRun).not.toHaveBeenCalled();
+  });
+
+  it("shows saved runs without redundant selection guidance", async () => {
+    renderAt(`/laboratorios/${ID}`);
+    expect(await screen.findByRole("button", { name: "Ver resultado" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Corridas guardadas" })).toBeInTheDocument();
+    expect(screen.queryByText("Seleccioná una corrida para abrir su resultado.")).not.toBeInTheDocument();
+  });
+
+  it("preserves source-loading errors and disables execution", async () => {
+    vi.mocked(getReferenceLabs).mockRejectedValue(new NetworkError());
+    renderAt(`/laboratorios/${ID}`);
+    expect(await screen.findByText("No se pudo leer la fuente congelada: No se pudo contactar al servidor local.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ejecutar laboratorio" })).toBeDisabled();
+    expect(m.createLaboratoryRun).not.toHaveBeenCalled();
+  });
+
   it("executes with the frozen history digest and opens the stored result", async () => {
     m.createLaboratoryRun.mockResolvedValue(run);
     const user = userEvent.setup();
@@ -95,6 +125,40 @@ describe("laboratory workspace", () => {
     expect(await screen.findByRole("heading", { name: "Resultado guardado" })).toBeInTheDocument();
     expect(screen.getByText(SHA, { selector: ".reference-sha" })).toBeInTheDocument();
     expect(screen.getByText("+RD$50,00")).toBeInTheDocument();
+  });
+
+  it("removes incomplete-session guidance without changing financial summaries", async () => {
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    expect(within(result).getByText("Neto total").parentElement).toHaveTextContent("+RD$100");
+    expect(within(result).getByText("Incompletas").parentElement).toHaveTextContent("1");
+    expect(within(result).getByText("Media neta de cerradas").parentElement).toHaveTextContent("+RD$50,00");
+    expect(within(result).queryByText("Las sesiones incompletas aportan a los totales de dinero, pero no al promedio neto de sesiones cerradas.")).not.toBeInTheDocument();
+  });
+
+  it("removes per-bet limitation guidance without inventing detail controls", async () => {
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    expect(within(result).getByRole("region", { name: "Resúmenes de sesiones" })).toBeInTheDocument();
+    expect(within(result).queryByRole("button", { name: /apuestas/i })).not.toBeInTheDocument();
+    expect(within(result).queryByText("Este contrato guarda resúmenes de sesión; no incluye el detalle de cada apuesta.")).not.toBeInTheDocument();
+  });
+
+  it("removes page-only guidance while preserving session pagination", async () => {
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    expect(within(result).getByRole("heading", { name: "Sesiones 1–1 de 1" })).toBeInTheDocument();
+    const pagination = within(result).getByRole("navigation", { name: "Paginación de sesiones" });
+    expect(within(pagination).getByRole("button", { name: "Anterior" })).toBeDisabled();
+    expect(within(pagination).getByRole("button", { name: "Siguiente" })).toBeDisabled();
+    expect(m.listLaboratorySessions.mock.calls[0].slice(0, 3)).toEqual([ID, "run-1", { offset: 0, limit: 50 }]);
+    expect(within(result).queryByText("Se consulta solo esta página de resúmenes.")).not.toBeInTheDocument();
   });
 
   it("never retries an ambiguous network failure and asks the user to reconcile", async () => {

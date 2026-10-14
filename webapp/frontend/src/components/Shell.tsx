@@ -25,7 +25,7 @@ export function Shell({ title, children }: ShellProps) {
       <div data-testid="shell-layout" className="shell-layout">
         <header className="shell-app-bar">
           <div className="shell-app-bar-title">
-            <span className="shell-brand legend">LABORATORIO / QUINIELA 80</span>
+            <span className="shell-brand legend">Quiniela</span>
             <h1 className="break-normal">{title}</h1>
           </div>
           <nav id="primary-navigation" aria-label="Navegación principal" className="shell-navigation">
