@@ -18,13 +18,21 @@ export class ApiError extends Error {
   readonly detail: string;
   /** Present only for a 422 whose `detail` was a pydantic field-error array. */
   readonly fieldErrors: ApiFieldError[] | null;
+  /** A successful write may have committed even though its response body was unreadable. */
+  readonly uncertainWrite: boolean;
 
-  constructor(status: number, detail: string, fieldErrors: ApiFieldError[] | null = null) {
+  constructor(
+    status: number,
+    detail: string,
+    fieldErrors: ApiFieldError[] | null = null,
+    uncertainWrite = false,
+  ) {
     super(detail);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
     this.fieldErrors = fieldErrors;
+    this.uncertainWrite = uncertainWrite;
   }
 }
 
@@ -100,6 +108,10 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return (await response.json()) as T;
   } catch (error) {
     if (isAbortError(error)) throw error;
-    throw new ApiError(response.status, UNEXPECTED_RESPONSE_DETAIL);
+    const method = init?.method?.toUpperCase() ?? "GET";
+    const uncertainWrite = method !== "GET" && method !== "HEAD";
+    // A successful write response can mean persistence happened even when its body could not be read.
+    // Keep this additive to ApiError so callers still receive the original status and detail.
+    throw new ApiError(response.status, UNEXPECTED_RESPONSE_DETAIL, null, uncertainWrite);
   }
 }

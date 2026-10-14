@@ -99,7 +99,7 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
       setSelectedId(run.id); setSessionOffset(0); setRunOffset(0); reloadRuns(); setDetailReload((value) => value + 1);
     } catch (error) {
       if (controller.signal.aborted) return;
-      if (error instanceof NetworkError || isAbort(error)) {
+      if (error instanceof NetworkError || isAbort(error) || (error instanceof ApiError && error.uncertainWrite)) {
         setUncertain(true);
         setActionError("No hay confirmación de si el servidor guardó esta ejecución. No la enviaremos de nuevo automáticamente. Actualizá las corridas guardadas para comprobarlo antes de iniciar otra.");
       } else setActionError(errorText(error));

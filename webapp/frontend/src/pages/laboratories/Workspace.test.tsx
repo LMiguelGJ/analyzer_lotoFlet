@@ -7,7 +7,20 @@ import * as api from "../../api/laboratories";
 import { getReferenceLabs } from "../../api/referenceLabs";
 import { Workspace } from "./Workspace";
 
-vi.mock("../../api/laboratories");
+vi.mock("../../api/laboratories", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/laboratories")>();
+  return {
+    ...actual,
+    listLaboratories: vi.fn(),
+    createLaboratory: vi.fn(),
+    getLaboratory: vi.fn(),
+    deleteLaboratory: vi.fn(),
+    listLaboratoryRuns: vi.fn(),
+    createLaboratoryRun: vi.fn(actual.createLaboratoryRun),
+    getLaboratoryRun: vi.fn(),
+    listLaboratorySessions: vi.fn(),
+  };
+});
 vi.mock("../../api/referenceLabs", () => ({ getReferenceLabs: vi.fn() }));
 
 const SHA = "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711";
@@ -171,6 +184,25 @@ describe("laboratory workspace", () => {
     expect(await screen.findByText(/No hay confirmación de si el servidor guardó/)).toBeInTheDocument();
     expect(m.createLaboratoryRun).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Ejecutar laboratorio" })).toBeDisabled();
+  });
+
+  it("blocks a second POST when the actual request receives unreadable HTTP 201", async () => {
+    const response = new Response("{}", { status: 201 });
+    vi.spyOn(response, "json").mockRejectedValueOnce(new SyntaxError("cannot decode body"));
+    const fetchMock = vi.fn().mockResolvedValue(response);
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    const execute = await screen.findByRole("button", { name: "Ejecutar laboratorio" });
+    await waitFor(() => expect(execute).toBeEnabled());
+
+    await user.click(execute);
+
+    expect(await screen.findByText(/No hay confirmación de si el servidor guardó esta ejecución/)).toBeInTheDocument();
+    expect(execute).toBeDisabled();
+    await user.click(execute);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
   });
 
   it("names the runs that will be lost and deletes with the confirmed count", async () => {
