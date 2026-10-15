@@ -67,6 +67,50 @@ async function makeUncertain(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("laboratory workspace", () => {
+  it.each([
+    [-1482496, 30303350, "−4,89 %"],
+    [50, 100, "+50,00 %"],
+    [0, 100, "+0,00 %"],
+    [0, 0, "No disponible"],
+    [-1, 1000000, "+0,00 %"],
+  ])("U4 presents ROI without changing totals (%s/%s)", async (net, wagered, expected) => {
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, totals: { ...totals, total_net: net, total_wagered: wagered } } });
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    expect(within(result).getByText("Retorno sobre apostado").parentElement).toHaveTextContent(expected);
+    expect(within(result).getByText("Media neta de cerradas").parentElement).toHaveTextContent("+RD$50,00");
+    expect(within(result).getByText("Incompletas").parentElement).toHaveTextContent("1");
+  });
+
+  it("U4 shows selected coverage and complete reproduction provenance", async () => {
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    expect(await screen.findByText("1 número seleccionado")).toBeInTheDocument();
+    expect(screen.queryByText("1 de 50 números")).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    expect(within(result).getByText("Sorteos evaluados").parentElement).toHaveTextContent("10");
+    expect(within(result).getByText("Sin ranking entre extremos").parentElement).toHaveTextContent("1");
+    const disclosure = within(result).getByText("Datos de la reproducción").closest("details")!;
+    expect(disclosure).toHaveTextContent(SHA);
+    expect(disclosure).toHaveTextContent("b".repeat(64));
+    expect(disclosure).toHaveTextContent("c".repeat(64));
+    expect(disclosure).toHaveTextContent(config.window_start);
+  });
+
+  it("U4 renders empty sessions without an inverted range", async () => {
+    m.listLaboratorySessions.mockResolvedValue({ run_id: "run-1", total: 0, offset: 0, limit: 50, items: [] });
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, eligible_draws: 0, first: null, last: null, session_count: 0, totals: { ...totals, completed: 0, incomplete: 0, goals: 0, ruins: 0, sessions_total: 0, total_wagered: 0, total_paid: 0, total_net: 0, mean_net_closed: null } } });
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    expect(await screen.findByRole("heading", { name: "Sesiones 0 de 0" })).toBeInTheDocument();
+    expect(screen.getByText("Sin sorteos elegibles")).toBeInTheDocument();
+    expect(screen.queryByText(/Sesiones 1–0/)).not.toBeInTheDocument();
+  });
+
   it.each(["success", "failure", "abort"])("U2 reconciles only after the current fresh list succeeds: %s", async (outcome) => {
     const user = userEvent.setup();
     renderAt(`/laboratorios/${ID}`);
