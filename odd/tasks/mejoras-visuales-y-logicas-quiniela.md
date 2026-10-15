@@ -199,18 +199,23 @@ npm run build
 - Reparar Orca/las herramientas de revisión como parte del producto.
 
 
+### S12 — Explicit request to reactivate the app and explain manual checks
+> vamos levanta todo otra vez dime que tipo de pruebas pues la mayoria la puedo hacer yo manual
+
 ## Tasks
 
 - T0 — U0 recoverable baseline and ODD; S1–S2,S11; route: inline (existing narrow copy changes, no new behavior); status: done; commits: e9fd0513a895ad01bf1f04cc9dd0e4827ce43da7 (preserved UI baseline), a60cb3dded529cdeb5f5bd98295229b9bab6a4ab (approved plan/tracking); focused23PASS/job14exit0.
-- T1 — U1A/U1B confirmed logic corrections in parallel; S3–S5,S11; route: two normal gentle-ai-worker instances, disjoint backend/frontend; status: in_progress; commits: pending; RED/GREEN: not run; explicitly unblocked by L7 route choice.
+- T1 — U1A/U1B logic corrections with normal workers; S3–S5,S11; route: disjoint normal workers; status: blocked; U1B commit fbe48a7450f5fdd68d82b8646f0d2feec7c7cb93 with writer25focused/163fullPASS/types0 and parent readback, independent proof unavailable; U1A task mv8np9vu-5-aney is now absent from runtime inventory, backend partial edits preserved; waiting for restored worker control/usable independent verification; no blind replacement.
+- T1R — Recover U1A's own checks on an isolated immutable copy; S3,S11; route: parent inline test recovery; status: blocked; 263tests collected, partial PASS output only, no result.json/final exit/source-hash proof; job-1 missing from current session inventory; waiting for external runtime/job-result recovery, do not duplicate or infer process termination. Acceptance still depends on blocked T2B.
 - T2 — Original scoped JD gate; S5; route: retired by explicit user amendment; status: dropped; not completed/approved; original artifacts preserved; no correction/rejudgment budget consumed.
-- T2B — Independent functional verification of U1A/U1B; S3–S5,S11; route: assess per work unit, required gentle-ai-verify and parent seam check; status: pending; commit: pending.
+- T2B — Independent functional verification of U1A/U1B; S3–S5,S11; route: per-unit assess, independent verifier and seam check; status: blocked; verifier mv8uc1jf-1-b8ls failed without usable report/logs, parent job15 outcome unconfirmed; waiting for runtime/proof recovery; not passed.
 - T3 — U2 reconcile and separate immutable detail/session loading; S6,S11; route: inline (dependent frontend unit); status: pending; commit: pending.
 - T4 — U3 additive migration20 integrity epoch; S7,S11; route: inline (ordered schema dependency); status: pending; commit: pending.
 - T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11; route: inline (dependent reader); status: pending; commit: pending.
 - T6 — U4 financial hierarchy/ROI/coverage/provenance; S8,S11; route: inline (dependent panel); status: pending; commit: pending.
 - T7 — U5 semantic responsive order and accessible validation; S9,S11; route: inline (dependent workspace); status: pending; commit: pending.
 - T8 — U6 docs, full regression, independent acceptance and isolated same-tab browser QA; S1–S11; route: inline docs + gentle-ai-verify, browser via Orca; status: pending; commit: pending.
+- T9 — Reactivate current app for manual QA and identify checks; S12; route: parent operational startup, no product code edits or test/verifier retries; status: in_progress; backend/frontend/proxy HTTP200 observed; tracking-only work-unit commit: pending under approved local feature-branch-chain; no push/PR.
 
 ## Log
 
@@ -264,3 +269,55 @@ User, verbatim:
 - T1 returns to in_progress, ordinary disjoint workers. Original T2 JD gate is dropped, not done; new T2B functional gate is pending. Do not label JD approved or modify its frozen artifacts/counters.
 - Baseline remains23PASS/job14exit0; commits e9fd051,a60cb3d,60a65d0 on feat/mejoras-quiniela; working tree clean before this amendment. No new source edits or tests have occurred yet.
 - TODO reviewed against observed work as requested: only U0 done; corrections in progress, replacement verification and later units pending; retired gate dropped.
+
+### L8 — Normal workers allocated in parallel
+- Both launches succeeded: U1A mv8np9vu-5-aney (backend/README), U1B mv8np9zq-6-78ql (client/panel/tests); normal gentle-ai-worker, disjoint surfaces and isolated scratch subtrees. Both received T1, relevant S3/S4/S5/S11, strict TDD, exact focused/regression commands and self-review. No actor has returned evidence yet.
+- One local codemode preparation exceeded its1MiB state store before any tool call; cleared redundant copied recovery/source values, then resubmitted identical prepared handoffs. No duplicate workers, failed source edit or test retry.
+- Route amendment committed5af0a37. T1 stays in_progress; wait for pushed settled results, do not poll or duplicate work. Assess actual per-unit diffs only after return; T2B independent functional gate stays pending. JD remains unchanged/uncompleted.
+
+### L9 — U1B delivered, inspected and committed; not yet accepted
+- U1B worker reports completed S4/S5/applicableS11. Genuine pre-fix RED:7failures/25cases, including2behavior failures plus5incomplete-mock failures corrected in the harness; preserve this distinction. GREEN25PASS/2files; full163PASS/25files; typecheck0. No U2 refresh/reconciliation change.
+- Parent inspected actual request() body and four-file diff. Workspace test uses real createLaboratoryRun/request and checks onePOST plus disabledexecute after unreadable201. No source changes outside assigned frontend surfaces. The advertised scratch directory does not exist; worker results are command-report evidence, not invented saved log artifacts.
+- Source commit fbe48a7450f5fdd68d82b8646f0d2feec7c7cb93 contains only4frontendfiles,+76/−9. Backend worker edits and tracking were not staged. Rollback boundary is these4files only.
+- Native read-only assess of that committed unit: native medium, raised high for shared request/ApiError consumer compatibility (item3); large runtime writer; independentVerifier:true, RDDoff/reviewDuefalse. No ordinary review started. Required independent check and parent spot check remain pending.
+- U1A remains active; do not poll it. T1 is NOT done. T2B functional seam gate and U2–U6 remain pending; retired JD gate stays dropped. Visible TODO reviewed against this exact evidence after the user's reminder.
+
+### L10 — Repeated route choice already applied; new runtime proof blocker
+- User repeated `Cambiar la ruta de corrección — recomendada`; preserve L7, do not relaunch correction workers or treat this as a different plan. The method change is already committed and JD remains uncompleted.
+- Prepared isolated U1B copy from commit fbe48a7450f5fdd68d82b8646f0d2feec7c7cb93 at .tmp/mejoras-quiniela/u1b-verify/candidate-zzhfzsta. Existing dependencies linked in-project; exact parent runner preserves raw command outputs and source hashes. No install or normal-data change.
+- Independent gentle-ai-verify mv8uc1jf-1-b8ls failed: `assistant reported an error`. One result retrieval confirmed no usable details; verification-logs directory is empty. Do not invent test execution or infer candidate failure from this runtime failure. No retry/replacement verifier launched.
+- Parent spot-check job15 had been launched, but current job_list reports no jobs and no completion proof was received. Its outcome is unconfirmed, not PASS; no new test run.
+- At this real incident boundary, U1A status lookup reports no task mv8np9vu-5-aney. The previous active-worker assertion is no longer supportable. Backend source/tests/README are partially modified; preserve them untouched. Do not assume its process stopped, duplicate its work or kill unidentified processes.
+- T1 and T2B now blocked on external runtime/control and independent-proof recovery. U0 remains the only completed unit; original JD gate dropped; U2–U6 pending. TODO reconciled to observed outcomes, not the stale injected projection. No new feature is declared complete.
+
+### L11 — User requests continued ODD; recover U1A without duplicating actors
+User, verbatim:
+> continua conel todo odd
+- Authoritative file/mirror and live Git reconciled: HEADfbe48a7, eight pending backend/README paths preserved, original worker still absent from runtime registry; verifier record confirms4turns/0toolcalls, no usable independent execution proof.
+- Incident-only process lookup initially failed due shell variable expansion, then a regex escaping error emitted nonterminating PowerShell errors (exit0 was NOT accepted as clean). Final literal-filter query with ErrorActionPreference=Stop succeeded:0matching known-check/task-marker processes. No process was killed. This does not invent a recovered worker completion.
+- The only retained U1A scratch evidence is a RED pytest temporary directory and command-setup note; no raw RED/GREEN exit/output report. Do not fabricate original TDD chronology. Existing implementation/tests were inspected, but not accepted.
+- Add T1R before any new recovery artifact: freeze current backend plus its verified inputs in a fresh project-local copy, then run U1A's first parent-observed own regression check there. Hash the source before/after; never run against normal data or relaunch the lost writer. A test on an isolated snapshot cannot race its live edits.
+- This recovers missing U1A own-check evidence, not a substitute for the failed independent verifier. T1/T2B remain blocked on final acceptance; U2–U6 are not started. Only T1R is in_progress. No verifier retry, alternative reviewer or new source changes.
+- Recovery candidate prepared successfully (exit0): `.tmp/mejoras-quiniela/u1a-recovery/candidate-ktp89qa8`, HEAD`fbe48a7450f5fdd68d82b8646f0d2feec7c7cb93` plus precisely8pending U1A backend/README files. Git archive excludes credentials; both frozen inputs copied only after exactSHA validation. All snapshot source/input hashes recorded in `u1a-recovery/context.json`; live overlay stability checked while freezing.
+- Started job-1: `py -3.14 -B .tmp/mejoras-quiniela/u1a-recovery/run.py`. One own-check command covers6owned/reference store/API testfiles, including both realcounterexamples and everypublicsessionpage. Candidate-local data/basetemp/input overrides, no normaldatabase access; pluginautoload/cache/bytecode disabled. One-hour bounded childprocess; timeout is failure, no automatic rerun. Rawargv/stdout/stderr/result and before/aftersourcehashcheck live under candidate `check-logs/`. At launch, result is PENDING, not PASS. Do not poll; await pushed completion.
+
+### L12 — Continued ODD: reconcile interrupted recovery proof
+User, verbatim:
+> continua conel todo odd
+- Current session job inventory reports no background jobs. This does not prove that the original test process stopped. No re-launch, cleanup or process termination was performed.
+- Recovered candidate `candidate-ktp89qa8/check-logs/` contains command.json, stdout.log and empty stderr.log, but no result.json. Stdout confirms pytest collected263tests and several early tests PASSED. Its last available line names `test_full_frozen_owned_result_is_saved_and_publicly_paginated[full-coverage-flat]`, without its result. There is no final suite outcome/exit or after-run immutable-source proof. Do not count the263collected cases as passed.
+- Git HEAD remainsfbe48a7 and the same8pendingbackend/READMEpaths plus this trackingfile. No new source edits, test retries, independent reviewer or commits.
+- T1R transitions to blocked on external job/runtime/result recovery. T1/T2B remain blocked; U2–U6 remain pending, not started. Valid stop: Needs your decision, missing final own-check and independent-verification proof. Do not compensate with additional checks or declare U1 accepted.
+
+### L13 — Reactivate the app for human validation
+User, verbatim:
+> vamos levanta todo otra vez dime que tipo de pruebas pues la mayoria la puedo hacer yo manual
+- Scope: reactivate app, explain actionable manual cases, preserve existing incomplete evidence. No authorization inferred to mark a missing test/verifier as PASS or start another copy of pytest.
+- Initial one-shot socket probe: both127.0.0.1:8765and:5173closed (exit0). Existing appfactory and Viteproxy inspected; startup can run without opening a new browser. No dependency installation or production database migration.
+- Operational choice: fresh project-local QA data directory, current working-tree backend and Vitefrontend, verified frozen read-only input paths. No copying or touching normal user database; application startup may initialize only the fresh QA database. Explain clearly that this is an empty test environment, not the user's saved data.
+- Manual checks are supplemental: ordinary UI/create/results/paging/validation and responsive/keyboard checks can be human-owned; malformed successful write responses, transactional quota/byte atomicity, corruption, and exhaustive parity/digests still need controlled automated evidence. U2–U6 not implemented and must not be presented as available.
+- Startup succeeded: backend job-1 on8765, frontend job-2 on5173 (new host IDs; do not confuse with earlier lost pytest job-1). QA data/logs/context: `.tmp/mejoras-quiniela/manual-qa-a063bbnr/`. No browser opened, no dependencies installed, no test/verifier retried, no normal database opened.
+- One-shot readiness command exit0; `readiness.json`: backend `/api/v1/laboratories` HTTP200JSON4599bytes; Vite `/` HTTP200HTML706bytes; proxied `/api/v1/laboratories` HTTP200JSON4599bytes. This establishes HTTP readiness and the proxy, not visual/functional acceptance. User entry: `http://127.0.0.1:5173/`.
+- Human checklist (NOT executed, no PASS claimed): M1create a distinct QA laboratory and verify creation alone does not execute it; M2execute a short valid historical window once, inspect results and disabled in-flight Execute, check paid-minus-wagered equals net and closed-plus-incomplete equals total; M3reload/reopen and verify saved result persists; M4next/previous sessions pages, check consistent ordinals and no visible duplicate/omitted boundaries; M5empty name/coverage0or51/reversed dates show validation and create no new laboratory; M6full-window Transición/flat/coverage50/capital50/goal51/prizes[1,1,1,1,1]; M7full-window Transición/flat/coverage1/capital1/goal2/prizes[2,2,2,2,2]. M6/M7expect65235sessions if real capacity permits, otherwise exact specific storage-capacity409, not truncation or generic execution failure. A human spot check of paging is not exhaustive integrity proof. M8keyboard/mobile readability: record observed issues, not pretend planned U5accessibility improvements already exist.
+- Automated controlled evidence still missing: successful write persisted but successful response body unreadable (U1B fault injection, not merely turning off the network); full sessions/digest consistency and shared reference/legacy50000contract; quota/byte rejection atomicity and corruption detection. No human screen tour substitutes for these. Ask user to report checklist IDs with observed values/error text/screenshot.
+- Scope reminder for human QA: U2reconciliation and efficient paging, U3epoch/cache, U4ROI/financial redesign and U5new accessibility remain unimplemented. Do not ask user to accept them as delivered. T1/T1R/T2B remain blocked; manual results pending user.
