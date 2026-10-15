@@ -1,6 +1,7 @@
 """Persist and read validated runs owned by an explicit laboratory identifier."""
 
 import copy
+import hashlib
 import json
 import shutil
 import uuid
@@ -10,12 +11,14 @@ from laboratorio.domain.laboratory_run_snapshots import OwnedLaboratoryRunSnapsh
 from laboratorio.storage.laboratory_store import LaboratoryStoreError
 from laboratorio.storage.laboratory_store import _decode as _decode_definition
 from laboratorio.storage.laboratory_store import _row as _definition_row
+from laboratorio.storage.owned_laboratory_read_cache import OwnedLaboratoryReadCertificate
 from laboratorio.storage.quota import QuotaStatus, measure, validate_quota_bytes
 from laboratorio.storage.reference_lab_store import (
     MAX_PAYLOAD_BYTES,
     SCHEMA_VERSION,
     _canonical,
     _check_header,
+    _check_session,
     _loads,
     _paging,
     _validate_result,
@@ -259,3 +262,224 @@ def list_runs(repo, owner_laboratory_id, *, offset=0, limit=20):
                 }
             )
     return {"total": total, "offset": offset, "limit": limit, "items": items}
+
+
+def _read_epoch(db):
+    row = db.execute("SELECT epoch FROM owned_run_integrity_epoch WHERE singleton=1").fetchone()
+    if row is None or type(row[0]) is not int or row[0] < 0:
+        raise OwnedLaboratoryRunStoreError("corrupt owned-run integrity epoch")
+    return row[0]
+
+
+def _compact_record(record):
+    result = record["result"]
+    return {
+        **{
+            key: record[key]
+            for key in ("id", "owner_laboratory_id", "lab_id", "contract_version", "created_at")
+        },
+        "snapshot": record["snapshot"],
+        "summary": {
+            **{
+                key: result[key]
+                for key in ("eligible_draws", "gaps", "first", "last", "session_sha256")
+            },
+            "session_count": result["totals"]["sessions_total"],
+            "totals": result["totals"],
+        },
+    }
+
+
+def _certificate_for(record):
+    compact = _compact_record(record)
+    metadata = _canonical(compact).encode("utf-8")
+    digests = b"".join(
+        hashlib.sha256(_canonical(session).encode("utf-8")).digest()
+        for session in record["sessions"]
+    )
+    return OwnedLaboratoryReadCertificate(metadata, digests)
+
+
+def _decode_certificate(certificate, owner_id, run_id):
+    try:
+        value = json.loads(certificate.metadata)
+        if (
+            type(value) is not dict
+            or set(value)
+            != {
+                "id",
+                "owner_laboratory_id",
+                "lab_id",
+                "contract_version",
+                "created_at",
+                "snapshot",
+                "summary",
+            }
+            or value["id"] != run_id
+            or value["owner_laboratory_id"] != owner_id
+            or value["lab_id"] != owner_id
+        ):
+            raise ValueError("invalid compact run metadata")
+        _check_header(value["id"], value["lab_id"], value["contract_version"], value["created_at"])
+        value["snapshot"] = OwnedLaboratoryRunSnapshot.from_mapping(value["snapshot"]).to_mapping()
+        summary = value["summary"]
+        if (
+            type(summary) is not dict
+            or set(summary)
+            != {
+                "eligible_draws",
+                "gaps",
+                "first",
+                "last",
+                "session_sha256",
+                "session_count",
+                "totals",
+            }
+            or type(summary["totals"]) is not dict
+            or type(summary["session_count"]) is not int
+            or summary["session_count"] < 0
+            or len(certificate.session_digests) != summary["session_count"] * 32
+        ):
+            raise ValueError("invalid compact run summary")
+        return value
+    except (
+        TypeError,
+        ValueError,
+        KeyError,
+        OverflowError,
+        RecursionError,
+        json.JSONDecodeError,
+    ) as exc:
+        raise OwnedLaboratoryRunStoreError("corrupt owned-laboratory run certificate") from exc
+
+
+def _load_certificate(db, repo, owner_id, run_id, epoch):
+    cache = repo._owned_laboratory_read_cache
+    certificate = cache.get(repo._owned_laboratory_database_id, epoch, owner_id, run_id)
+    if certificate is not None:
+        return _decode_certificate(certificate, owner_id, run_id), certificate
+
+    row = db.execute(
+        "SELECT id,owner_laboratory_id,lab_id,contract_version,created_at,metadata_json,"
+        "result_json "
+        "FROM reference_lab_runs WHERE id=? AND owner_laboratory_id=?",
+        (run_id, owner_id),
+    ).fetchone()
+    if row is None:
+        return None, None
+    session_rows = db.execute(
+        "SELECT ordinal,session_json FROM reference_lab_sessions WHERE run_id=? ORDER BY ordinal",
+        (run_id,),
+    ).fetchall()
+    record = _decode_run(row, session_rows)
+    certificate = _certificate_for(record)
+    cache.put(repo._owned_laboratory_database_id, epoch, owner_id, run_id, certificate)
+    return _compact_record(record), certificate
+
+
+def list_run_summaries(repo, owner_laboratory_id, *, offset=0, limit=20):
+    """Return page summaries with cold validation and bounded warm reads."""
+    from laboratorio.storage.database import connection
+
+    if not _canonical_uuid(owner_laboratory_id):
+        raise OwnedLaboratoryRunStoreError("invalid owned-laboratory owner identifier")
+    try:
+        _paging(offset, limit)
+    except ValueError as exc:
+        raise OwnedLaboratoryRunStoreError("invalid owned-laboratory run pagination") from exc
+
+    with connection(repo.path) as db:
+        db.execute("BEGIN")
+        epoch = _read_epoch(db)
+        total = db.execute(
+            "SELECT count(*) FROM reference_lab_runs WHERE owner_laboratory_id=?",
+            (owner_laboratory_id,),
+        ).fetchone()[0]
+        identifiers = db.execute(
+            "SELECT id FROM reference_lab_runs WHERE owner_laboratory_id=? "
+            "ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",
+            (owner_laboratory_id, limit, offset),
+        ).fetchall()
+        items = []
+        for (identifier,) in identifiers:
+            record, _certificate = _load_certificate(
+                db, repo, owner_laboratory_id, identifier, epoch
+            )
+            if record is None:
+                raise OwnedLaboratoryRunStoreError("corrupt owned-laboratory run")
+            items.append(
+                {
+                    **{
+                        key: record[key]
+                        for key in (
+                            "id",
+                            "owner_laboratory_id",
+                            "lab_id",
+                            "contract_version",
+                            "created_at",
+                        )
+                    },
+                    "summary": {
+                        key: record["summary"][key] for key in ("totals", "eligible_draws", "gaps")
+                    },
+                }
+            )
+    return {"total": total, "offset": offset, "limit": limit, "items": items}
+
+
+def get_run_summary(repo, owner_id, run_id):
+    """Read the public compact detail projection without retaining full results."""
+    from laboratorio.storage.database import connection
+
+    if not _canonical_uuid(owner_id) or not _canonical_uuid(run_id):
+        raise OwnedLaboratoryRunStoreError("invalid owned-laboratory run identifiers")
+    with connection(repo.path) as db:
+        db.execute("BEGIN")
+        epoch = _read_epoch(db)
+        record, _certificate = _load_certificate(db, repo, owner_id, run_id, epoch)
+    return record
+
+
+def list_run_sessions(repo, owner_id, run_id, *, offset=0, limit=50):
+    """Fetch and validate only the requested session page against its certificate."""
+    from laboratorio.storage.database import connection
+
+    if not _canonical_uuid(owner_id) or not _canonical_uuid(run_id):
+        raise OwnedLaboratoryRunStoreError("invalid owned-laboratory run identifiers")
+    try:
+        _paging(offset, limit)
+    except ValueError as exc:
+        raise OwnedLaboratoryRunStoreError("invalid owned-laboratory run pagination") from exc
+
+    with connection(repo.path) as db:
+        db.execute("BEGIN")
+        epoch = _read_epoch(db)
+        record, certificate = _load_certificate(db, repo, owner_id, run_id, epoch)
+        if record is None:
+            return None
+        if certificate is None:
+            raise OwnedLaboratoryRunStoreError("missing owned-laboratory run certificate")
+        total = record["summary"]["session_count"]
+        page_rows = db.execute(
+            "SELECT ordinal,session_json FROM reference_lab_sessions WHERE run_id=? "
+            "ORDER BY ordinal LIMIT ? OFFSET ?",
+            (run_id, limit, offset),
+        ).fetchall()
+        items = []
+        capital = OwnedLaboratoryRunSnapshot.from_mapping(
+            record["snapshot"]
+        ).definition.config.capital
+        for index, (ordinal, session_json) in enumerate(page_rows):
+            try:
+                if type(ordinal) is not int or ordinal != offset + index:
+                    raise ValueError("invalid session ordinal")
+                session = _loads(session_json)
+                _check_session(session, capital)
+                expected = certificate.session_digests[ordinal * 32 : (ordinal + 1) * 32]
+                actual = hashlib.sha256(_canonical(session).encode("utf-8")).digest()
+                if actual != expected:
+                    raise ValueError("session digest mismatch")
+            except (TypeError, ValueError, KeyError, OverflowError, RecursionError) as exc:
+                raise OwnedLaboratoryRunStoreError("corrupt owned-laboratory session") from exc
+            items.append({"ordinal": ordinal, "summary": session})
+    return {"run_id": run_id, "total": total, "offset": offset, "limit": limit, "items": items}

@@ -252,8 +252,12 @@ def _effective_quota(db, quota_bytes: int | None, quota_explicit: bool | None) -
 
 class Repository:
     def __init__(self, path: Path):
+        from laboratorio.storage.owned_laboratory_read_cache import OwnedLaboratoryReadCache
+
         self.path = Path(path)
         require_database(self.path)
+        self._owned_laboratory_database_id = self.path.resolve().as_uri()
+        self._owned_laboratory_read_cache = OwnedLaboratoryReadCache()
 
     def logical_experiment_bytes(self) -> int:
         with connection(self.path) as db:
@@ -543,6 +547,23 @@ class Repository:
 
         with connection(self.path) as db:
             return get_run(db, owner_laboratory_id, run_id)
+
+    def list_owned_laboratory_run_summaries(self, owner_laboratory_id, *, offset=0, limit=20):
+        from laboratorio.storage.owned_laboratory_run_store import list_run_summaries
+
+        return list_run_summaries(self, owner_laboratory_id, offset=offset, limit=limit)
+
+    def get_owned_laboratory_run_summary(self, owner_laboratory_id, run_id):
+        from laboratorio.storage.owned_laboratory_run_store import get_run_summary
+
+        return get_run_summary(self, owner_laboratory_id, run_id)
+
+    def list_owned_laboratory_run_sessions(
+        self, owner_laboratory_id, run_id, *, offset=0, limit=50
+    ):
+        from laboratorio.storage.owned_laboratory_run_store import list_run_sessions
+
+        return list_run_sessions(self, owner_laboratory_id, run_id, offset=offset, limit=limit)
 
     def create_laboratory_definition(self, name, config, *, quota_bytes=None, quota_explicit=None):
         from laboratorio.storage.laboratory_store import create_laboratory_definition
