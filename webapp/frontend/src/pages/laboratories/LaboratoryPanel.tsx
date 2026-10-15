@@ -40,12 +40,16 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
   const [runReload, setRunReload] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selected, setSelected] = useState<LaboratoryRun | null>(null);
+  const [selectedError, setSelectedError] = useState<string | null>(null);
+  const [selectedReload, setSelectedReload] = useState(0);
   const [sessions, setSessions] = useState<ReferenceSessionPage | null>(null);
   const [sessionOffset, setSessionOffset] = useState(0);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [sessionReload, setSessionReload] = useState(0);
   const [running, setRunning] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const reconciliation = useRef<symbol | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -72,25 +76,55 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
     if (!detail) return;
     const controller = new AbortController(); let current = true;
     setRunsError(null);
-    listLaboratoryRuns(labId, { offset: runOffset, limit: RUN_PAGE }, { signal: controller.signal }).then((page) => { if (current) setRuns(page); })
-      .catch((error: unknown) => { if (current && !isAbort(error)) setRunsError(errorText(error)); });
+    const token = reconciliation.current;
+    const finishReconciliation = (success: boolean) => {
+      if (!current || token === null || reconciliation.current !== token) return;
+      reconciliation.current = null;
+      setReconciling(false);
+      if (success) { setUncertain(false); setActionError(null); }
+    };
+    listLaboratoryRuns(labId, { offset: runOffset, limit: RUN_PAGE }, { signal: controller.signal }).then((page) => {
+      if (!current) return;
+      setRuns(page);
+      finishReconciliation(true);
+    }).catch((error: unknown) => {
+      if (!current) return;
+      if (!isAbort(error)) setRunsError(errorText(error));
+      finishReconciliation(false);
+    });
     return () => { current = false; controller.abort(); };
   }, [detail, labId, runOffset, runReload]);
 
   useEffect(() => {
-    if (!selectedId) { setSelected(null); setSessions(null); return; }
+    setSelected(null); setSelectedError(null);
+    if (!selectedId) return;
     const controller = new AbortController(); let current = true;
-    setSelected(null); setSessions(null); setSessionError(null);
-    Promise.all([
-      getLaboratoryRun(labId, selectedId, { signal: controller.signal }),
-      listLaboratorySessions(labId, selectedId, { offset: sessionOffset, limit: SESSION_PAGE }, { signal: controller.signal }),
-    ]).then(([run, page]) => { if (current) { setSelected(run); setSessions(page); } })
+    getLaboratoryRun(labId, selectedId, { signal: controller.signal })
+      .then((run) => { if (current) setSelected(run); })
+      .catch((error: unknown) => { if (current && !isAbort(error)) setSelectedError(errorText(error)); });
+    return () => { current = false; controller.abort(); };
+  }, [labId, selectedId, selectedReload]);
+
+  useEffect(() => {
+    setSessions(null); setSessionError(null);
+    if (!selectedId) return;
+    const controller = new AbortController(); let current = true;
+    listLaboratorySessions(labId, selectedId, { offset: sessionOffset, limit: SESSION_PAGE }, { signal: controller.signal })
+      .then((page) => { if (current) setSessions(page); })
       .catch((error: unknown) => { if (current && !isAbort(error)) setSessionError(errorText(error)); });
     return () => { current = false; controller.abort(); };
   }, [labId, selectedId, sessionOffset, sessionReload]);
 
+  function reconcileRuns() {
+    if (!uncertain || reconciliation.current !== null) return;
+    reconciliation.current = Symbol("fresh run list");
+    setReconciling(true);
+    setRunOffset(0);
+    reloadRuns();
+  }
+
   async function execute() {
-    if (!historySha || running || uncertain) return;
+    if (!historySha || running || uncertain || reconciling) return;
     setRunning(true); setActionError(null);
     const controller = new AbortController(); runAbort.current = controller;
     try {
@@ -148,13 +182,13 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
     </section>
 
     <div className="reference-run-action">
-      <Button variant="primary" onClick={() => void execute()} loading={running} disabled={!historySha || uncertain || !runs || !!runsError}>Ejecutar laboratorio</Button>
+      <Button variant="primary" onClick={() => void execute()} loading={running} disabled={!historySha || uncertain || reconciling || !runs || !!runsError}>Ejecutar laboratorio</Button>
       {historyError && <span>{`No se pudo leer la fuente congelada: ${historyError}`}</span>}
     </div>
-    {actionError && <div className="reference-action-error" role="alert"><p>{actionError}</p>{uncertain && <Button onClick={() => { setUncertain(false); setActionError(null); setSelectedId(null); setRunOffset(0); reloadRuns(); setDetailReload((value) => value + 1); }}>Actualizar corridas guardadas</Button>}</div>}
+    {actionError && <div className="reference-action-error" role="alert"><p>{actionError}</p>{uncertain && <Button disabled={reconciling} onClick={reconcileRuns}>Actualizar corridas guardadas</Button>}</div>}
 
     <section className="reference-runs" aria-labelledby="lab-runs-title">
-      <div className="reference-section-heading"><div><h3 id="lab-runs-title">Corridas guardadas</h3></div><Button onClick={reloadRuns}>Actualizar</Button></div>
+      <div className="reference-section-heading"><div><h3 id="lab-runs-title">Corridas guardadas</h3></div><Button disabled={reconciling} onClick={reloadRuns}>Actualizar</Button></div>
       {runsError ? <ErrorBanner cause="No pudimos cargar las corridas guardadas." recovery={runsError} actionLabel="Reintentar" onAction={reloadRuns} />
         : !runs ? <Loading label="Cargando corridas guardadas…" rows={3} />
         : runs.items.length === 0 ? <p className="reference-empty">Todavía no hay corridas guardadas para este laboratorio.</p>
@@ -162,13 +196,13 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
           <div className="reference-table-wrap" role="region" aria-label="Corridas guardadas" tabIndex={0}><table className="reference-table"><thead><tr><th scope="col">Creada</th><th scope="col">Sesiones</th><th scope="col">Neto total</th><th scope="col">Acciones</th></tr></thead><tbody>
             {runs.items.map((run) => <tr key={run.id}><td>{new Date(run.created_at).toLocaleString("es-DO")}</td><td>{formatNumber(run.summary.totals.sessions_total)} · {count(run.summary.totals.incomplete, "incompleta", "incompletas")}</td><td>{money(run.summary.totals.total_net)}</td><td><Button aria-pressed={selectedId === run.id} onClick={() => { setSelectedId(run.id); setSessionOffset(0); setSessionReload((value) => value + 1); }}>Ver resultado</Button></td></tr>)}
           </tbody></table></div>
-          <nav className="reference-pagination" aria-label="Paginación de corridas"><span>{count(runs.total, "corrida", "corridas")}</span><div><Button disabled={runOffset === 0} onClick={() => setRunOffset(Math.max(0, runOffset - RUN_PAGE))}>Anterior</Button><Button disabled={runOffset + RUN_PAGE >= runs.total} onClick={() => setRunOffset(runOffset + RUN_PAGE)}>Siguiente</Button></div></nav>
+          <nav className="reference-pagination" aria-label="Paginación de corridas"><span>{count(runs.total, "corrida", "corridas")}</span><div><Button disabled={reconciling || runOffset === 0} onClick={() => setRunOffset(Math.max(0, runOffset - RUN_PAGE))}>Anterior</Button><Button disabled={reconciling || runOffset + RUN_PAGE >= runs.total} onClick={() => setRunOffset(runOffset + RUN_PAGE)}>Siguiente</Button></div></nav>
         </>}
     </section>
 
-    {sessionError && <ErrorBanner cause="No pudimos cargar el resultado guardado." recovery={sessionError} actionLabel="Reintentar" onAction={() => setSessionReload((value) => value + 1)} />}
-    {selectedId && !sessionError && (!selected || !sessions) && <Loading label="Cargando resultado guardado…" rows={4} />}
-    {selected && sessions && totals && <section className="reference-result" aria-labelledby="lab-result-title">
+    {selectedError && <ErrorBanner cause="No pudimos cargar el resultado guardado." recovery={selectedError} actionLabel="Reintentar" onAction={() => setSelectedReload((value) => value + 1)} />}
+    {selectedId && !selectedError && !selected && <Loading label="Cargando resultado guardado…" rows={4} />}
+    {selected && totals && <section className="reference-result" aria-labelledby="lab-result-title">
       <h3 id="lab-result-title">Resultado guardado</h3>
       <p>Fuente usada · SHA-256 <span className="reference-sha">{selected.snapshot.provenance.history_sha256}</span></p>
       <div className="reference-result-stats">
@@ -181,11 +215,14 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
         <div><span>Apostado</span><strong>{money(totals.total_wagered)}</strong></div>
         <div><span>Pagado</span><strong>{money(totals.total_paid)}</strong></div>
       </div>
+      {sessionError ? <ErrorBanner cause="No pudimos cargar las sesiones." recovery={sessionError} actionLabel="Reintentar" onAction={() => setSessionReload((value) => value + 1)} />
+        : !sessions ? <Loading label="Cargando sesiones…" rows={4} /> : <>
       <div className="reference-section-heading"><div><h4>Sesiones {formatNumber(sessions.offset + 1)}–{formatNumber(Math.min(sessions.offset + sessions.items.length, sessions.total))} de {formatNumber(sessions.total)}</h4></div></div>
       {sessions.items.length === 0 ? <p className="reference-empty">Esta corrida no tiene sesiones en esta página.</p> : <div className="reference-table-wrap" role="region" aria-label="Resúmenes de sesiones" tabIndex={0}><table className="reference-table"><thead><tr><th scope="col">Sesión</th><th scope="col">Cierre</th><th scope="col">Sorteos</th><th scope="col">Saldo final</th><th scope="col">Apostado</th><th scope="col">Pagado</th></tr></thead><tbody>
         {sessions.items.map(({ ordinal, summary }) => <tr key={ordinal}><th scope="row">{formatNumber(ordinal + 1)}</th><td>{outcomeLabel(summary.outcome)}</td><td>{formatNumber(summary.draws)}</td><td>{money(summary.final_balance)}</td><td>{money(summary.wagered)}</td><td>{money(summary.paid)}</td></tr>)}
       </tbody></table></div>}
       <nav className="reference-pagination" aria-label="Paginación de sesiones"><span>{count(sessions.total, "sesión", "sesiones")} · página de {SESSION_PAGE}</span><div><Button disabled={sessionOffset === 0} onClick={() => setSessionOffset(Math.max(0, sessionOffset - SESSION_PAGE))}>Anterior</Button><Button disabled={sessionOffset + SESSION_PAGE >= sessions.total} onClick={() => setSessionOffset(sessionOffset + SESSION_PAGE)}>Siguiente</Button></div></nav>
+      </>}
     </section>}
 
     <ConfirmDialog

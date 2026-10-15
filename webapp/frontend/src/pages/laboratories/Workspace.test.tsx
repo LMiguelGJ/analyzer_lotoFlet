@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -48,7 +48,109 @@ beforeEach(() => {
   vi.mocked(getReferenceLabs).mockResolvedValue({ contract_version: 1, reference_history: { sha256: SHA, origin: "frozen_reference", draws: 1, ranked_draws: 1, first_label: null, last_label: null }, capabilities: { session_summary: true, per_bet_trace: false }, items: [] });
 });
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+const savedRuns = { total: 1, offset: 0, limit: 20, items: [runItem] };
+
+async function makeUncertain(user: ReturnType<typeof userEvent.setup>) {
+  m.createLaboratoryRun.mockRejectedValue(new NetworkError());
+  const execute = await screen.findByRole("button", { name: "Ejecutar laboratorio" });
+  await waitFor(() => expect(execute).toBeEnabled());
+  await user.click(execute);
+  await screen.findByText(/No hay confirmación de si el servidor guardó/);
+  return execute;
+}
+
 describe("laboratory workspace", () => {
+  it.each(["success", "failure", "abort"])("U2 reconciles only after the current fresh list succeeds: %s", async (outcome) => {
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    const execute = await makeUncertain(user);
+    const fresh = deferred<typeof savedRuns>();
+    m.listLaboratoryRuns.mockImplementationOnce(() => fresh.promise);
+    await user.click(screen.getByRole("button", { name: "Actualizar corridas guardadas" }));
+    expect(execute).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Actualizar corridas guardadas" })).toBeDisabled();
+    expect(m.createLaboratoryRun).toHaveBeenCalledTimes(1);
+    expect(m.listLaboratoryRuns.mock.calls.at(-1)?.slice(0, 2)).toEqual([ID, { offset: 0, limit: 20 }]);
+    await act(async () => {
+      if (outcome === "success") fresh.resolve(savedRuns);
+      else fresh.reject(outcome === "abort" ? new DOMException("Aborted", "AbortError") : new NetworkError());
+    });
+    if (outcome !== "success") {
+      expect(execute).toBeDisabled();
+      expect(screen.getByText(/No hay confirmación de si el servidor guardó/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Actualizar corridas guardadas" })).toBeEnabled();
+      await user.click(screen.getByRole("button", { name: "Actualizar corridas guardadas" }));
+    }
+    await waitFor(() => expect(execute).toBeEnabled());
+    expect(m.createLaboratoryRun).toHaveBeenCalledTimes(1);
+    m.createLaboratoryRun.mockResolvedValue(run);
+    await user.click(execute);
+    await waitFor(() => expect(m.createLaboratoryRun).toHaveBeenCalledTimes(2));
+  });
+
+  it("U2 ignores a stale reconciliation after changing laboratories", async () => {
+    const other = { ...definition, id: "other-lab", name: "Otro laboratorio" };
+    m.listLaboratories.mockResolvedValue({ total: 2, offset: 0, limit: 20, items: [definition, other] });
+    m.getLaboratory.mockImplementation(async (id) => ({ definition: id === ID ? definition : other, owned_run_count: 1, owned_session_count: 4 }));
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await makeUncertain(user);
+    const stale = deferred<typeof savedRuns>();
+    m.listLaboratoryRuns.mockImplementationOnce(() => stale.promise);
+    await user.click(screen.getByRole("button", { name: "Actualizar corridas guardadas" }));
+    await user.click(screen.getByRole("link", { name: /Otro laboratorio/ }));
+    const execute = await makeUncertain(user);
+    const current = deferred<typeof savedRuns>();
+    m.listLaboratoryRuns.mockImplementationOnce(() => current.promise);
+    await user.click(screen.getByRole("button", { name: "Actualizar corridas guardadas" }));
+    await act(async () => stale.resolve(savedRuns));
+    expect(execute).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Actualizar corridas guardadas" })).toBeDisabled();
+    expect(m.createLaboratoryRun).toHaveBeenCalledTimes(2);
+    await act(async () => current.resolve(savedRuns));
+    await waitFor(() => expect(execute).toBeEnabled());
+  });
+
+  it("U2 keeps immutable details while paging and retries only failed sessions", async () => {
+    const first = { run_id: "run-1", total: 51, offset: 0, limit: 50, items: [{ ordinal: 0, summary: { outcome: "goal" as const, start_index: 0, end_index: 3, draws: 4, final_balance: 2800, wagered: 100, paid: 900 } }] };
+    m.listLaboratorySessions.mockResolvedValue(first);
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    await screen.findByRole("region", { name: "Resúmenes de sesiones" });
+    const pending = deferred<typeof first>();
+    m.listLaboratorySessions.mockImplementationOnce(() => pending.promise);
+    await user.click(within(screen.getByRole("navigation", { name: "Paginación de sesiones" })).getByRole("button", { name: "Siguiente" }));
+    expect(screen.getByRole("heading", { name: "Resultado guardado" })).toBeInTheDocument();
+    expect(m.getLaboratoryRun).toHaveBeenCalledTimes(1);
+    await act(async () => pending.reject(new NetworkError()));
+    const error = await screen.findByRole("alert");
+    expect(screen.getByRole("heading", { name: "Resultado guardado" })).toBeInTheDocument();
+    m.listLaboratorySessions.mockResolvedValue({ ...first, offset: 50, items: [{ ...first.items[0], ordinal: 50 }] });
+    await user.click(within(error).getByRole("button", { name: "Reintentar" }));
+    await screen.findByRole("heading", { name: "Sesiones 51–51 de 51" });
+    expect(m.getLaboratoryRun).toHaveBeenCalledTimes(1);
+    expect(m.listLaboratorySessions).toHaveBeenCalledTimes(3);
+  });
+
+  it("U2 retries only failed immutable details", async () => {
+    m.getLaboratoryRun.mockRejectedValueOnce(new NetworkError());
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const error = await screen.findByRole("alert");
+    await user.click(within(error).getByRole("button", { name: "Reintentar" }));
+    await screen.findByRole("heading", { name: "Resultado guardado" });
+    expect(m.getLaboratoryRun).toHaveBeenCalledTimes(2);
+    expect(m.listLaboratorySessions).toHaveBeenCalledTimes(1);
+  });
   it("lists saved laboratories at the side with a direct route each and an invitation when none are selected", async () => {
     renderAt("/laboratorios");
     const link = await screen.findByRole("link", { name: /Transición propia/ });

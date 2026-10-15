@@ -57,7 +57,7 @@ Selected option, verbatim:
 > Registrar que **el gate JD no se completó**, sin inventar una aprobación.
 
 - This explicit amendment supersedes the original plan's jd-fix-agent and scoped re-judgment requirement. Use two normal gentle-ai-worker instances for U1A/U1B with disjoint allowed surfaces. Preserve all functional requirements in S3/S4 and all data/compatibility protections.
-- After self-checks, assess each work-unit diff and perform required independent functional verification; the parent checks the seam. Continue U2–U6 only after the functional gate passes.
+- After self-checks, assess each work-unit diff and preserve required independent functional verification; the parent checks the seam. S13 explicitly supersedes the original ordering gate: U2→U4→U5 may proceed before U1 acceptance; U1/U3 and absent verification remain pending, never approved.
 - Preserve the original frozen judge reports, ledger, ERROR severities and zero corrective/rejudgment counters unchanged. Original JD remains ESCALATED / not completed, never APPROVED.
 - No JD actor, new blind re-review, ordinary4R substitute, harness repair or schema/severity conversion is requested by this amendment. RDD remains off. Delivery and normal-data protections remain unchanged.
 
@@ -143,7 +143,7 @@ Selected option, verbatim:
 5. ROI es presentación derivada, no nuevo resultado persistido. Cierres/metas no se presentan como probabilidades futuras.
 6. No hay preguntas de producto pendientes: las decisiones conservan comportamiento, estética y datos; la fase Clarify quedó resuelta con exploración y un contraste técnico de solo lectura.
 7. El plan prevé más de 400 líneas totales: dividir en slices revisables, idealmente ≤400 líneas de diff cada una, con tests/docs junto a su comportamiento. Si luego se piden PR, usar PR encadenados; no crear un PR gigante ni publicar sin decisión de entrega.
-8. Orden actualizado por S5: U0 → U1A/U1B en paralelo con workers normales → verificación funcional independiente → U2 → U3 → U4 → U5 → U6. Cada unidad tiene commit propio; dividir U3 en migración, lector/cache y endpoints si supera el tamaño revisable, manteniendo dependencias compatibles.
+8. Orden actualizado por S13: avanzar U2 → U4 → U5 sin declarar aceptado U1; U3 y la evidencia independiente faltante permanecen pendientes. Cada unidad conserva su commit local; no migrar datos normales ni publicar. S13 delega mayormente QA manual al usuario, sin convertir comprobaciones omitidas en PASS.
 9. Tras aprobar se crean los artefactos ODD de implementación; ahora solo existe este plan. Workers con superficies permitidas disjuntas; parent actualiza tracking y conserva autoridad de integración.
 10. No ejecutar migraciones, bootstrap, fixtures ni nuevas corridas sobre `%LOCALAPPDATA%/LaboratorioQuiniela`. El permiso previo de arranque no equivale a autorizar una nueva migración de usuario. Probar con datos aislados; pedir autorización específica antes de aplicar 20 a la base normal o reiniciar contra ella.
 
@@ -202,6 +202,14 @@ npm run build
 ### S12 — Explicit request to reactivate the app and explain manual checks
 > vamos levanta todo otra vez dime que tipo de pruebas pues la mayoria la puedo hacer yo manual
 
+### S13 — Explicit approval of reordered UI implementation and mostly manual QA
+Accepted proposal, verbatim:
+> ¿Autorizás cambiar el orden y seguir con **U2 → U4 → U5**, manteniendo explícitos los pendientes de verificación?
+User, verbatim:
+> hazlo asi pues esta bien ojo las prouebas las hare yo manuel en su mayoria asi que omitelas ya
+
+- Proceed in that order; defer U3 and retain unresolved U1 acceptance. User owns manual browser/visual QA. Do not rerun blocked/full suites or claim manual/skipped checks passed; retain only minimal required focused safety/type checks. No storage/backend changes or normal-data operations.
+
 ## Tasks
 
 - T0 — U0 recoverable baseline and ODD; S1–S2,S11; route: inline (existing narrow copy changes, no new behavior); status: done; commits: e9fd0513a895ad01bf1f04cc9dd0e4827ce43da7 (preserved UI baseline), a60cb3dded529cdeb5f5bd98295229b9bab6a4ab (approved plan/tracking); focused23PASS/job14exit0.
@@ -209,13 +217,13 @@ npm run build
 - T1R — Recover U1A's own checks on an isolated immutable copy; S3,S11; route: parent inline test recovery; status: blocked; 263tests collected, partial PASS output only, no result.json/final exit/source-hash proof; job-1 missing from current session inventory; waiting for external runtime/job-result recovery, do not duplicate or infer process termination. Acceptance still depends on blocked T2B.
 - T2 — Original scoped JD gate; S5; route: retired by explicit user amendment; status: dropped; not completed/approved; original artifacts preserved; no correction/rejudgment budget consumed.
 - T2B — Independent functional verification of U1A/U1B; S3–S5,S11; route: per-unit assess, independent verifier and seam check; status: blocked; verifier mv8uc1jf-1-b8ls failed without usable report/logs, parent job15 outcome unconfirmed; waiting for runtime/proof recovery; not passed.
-- T3 — U2 reconcile and separate immutable detail/session loading; S6,S11; route: inline (dependent frontend unit); status: pending; commit: pending.
+- T3 — U2 reconcile and separate immutable detail/session loading; S6,S11,S13; route: inline; status: blocked (implementation delivered, independent/manual acceptance pending); own RED6fail/exit1 then focused GREEN10PASS/exit0; local implementation commit: pending.
 - T4 — U3 additive migration20 integrity epoch; S7,S11; route: inline (ordered schema dependency); status: pending; commit: pending.
 - T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11; route: inline (dependent reader); status: pending; commit: pending.
 - T6 — U4 financial hierarchy/ROI/coverage/provenance; S8,S11; route: inline (dependent panel); status: pending; commit: pending.
 - T7 — U5 semantic responsive order and accessible validation; S9,S11; route: inline (dependent workspace); status: pending; commit: pending.
 - T8 — U6 docs, full regression, independent acceptance and isolated same-tab browser QA; S1–S11; route: inline docs + gentle-ai-verify, browser via Orca; status: pending; commit: pending.
-- T9 — Reactivate current app for manual QA and identify checks; S12; route: parent operational startup, no product code edits or test/verifier retries; status: in_progress; backend/frontend/proxy HTTP200 observed; tracking-only work-unit commit: pending under approved local feature-branch-chain; no push/PR.
+- T9 — Reactivate current app for manual QA and identify checks; S12; route: parent operational startup; status: done; backend/frontend/proxy HTTP200 observed, checklist M1–M8 delivered (human execution pending); tracking-only work-unit commit: d91629d87bb2db56aa6afc5562191c3e41fe2448; no product code edits, test/verifier retries or push/PR.
 
 ## Log
 
@@ -321,3 +329,14 @@ User, verbatim:
 - Human checklist (NOT executed, no PASS claimed): M1create a distinct QA laboratory and verify creation alone does not execute it; M2execute a short valid historical window once, inspect results and disabled in-flight Execute, check paid-minus-wagered equals net and closed-plus-incomplete equals total; M3reload/reopen and verify saved result persists; M4next/previous sessions pages, check consistent ordinals and no visible duplicate/omitted boundaries; M5empty name/coverage0or51/reversed dates show validation and create no new laboratory; M6full-window Transición/flat/coverage50/capital50/goal51/prizes[1,1,1,1,1]; M7full-window Transición/flat/coverage1/capital1/goal2/prizes[2,2,2,2,2]. M6/M7expect65235sessions if real capacity permits, otherwise exact specific storage-capacity409, not truncation or generic execution failure. A human spot check of paging is not exhaustive integrity proof. M8keyboard/mobile readability: record observed issues, not pretend planned U5accessibility improvements already exist.
 - Automated controlled evidence still missing: successful write persisted but successful response body unreadable (U1B fault injection, not merely turning off the network); full sessions/digest consistency and shared reference/legacy50000contract; quota/byte rejection atomicity and corruption detection. No human screen tour substitutes for these. Ask user to report checklist IDs with observed values/error text/screenshot.
 - Scope reminder for human QA: U2reconciliation and efficient paging, U3epoch/cache, U4ROI/financial redesign and U5new accessibility remain unimplemented. Do not ask user to accept them as delivered. T1/T1R/T2B remain blocked; manual results pending user.
+
+### L14 — Explicitly unblock UI implementation, mostly manual QA
+User, verbatim:
+> hazlo asi pues esta bien ojo las prouebas las hare yo manuel en su mayoria asi que omitelas ya
+- S13 changes only order and QA ownership; no missing proof becomes PASS. StartT3(U2), thenT6(U4), thenT7(U5). ExistingU1/T1R/T2Bremainblocked, U3notstarted. Backendpartialwork anduserdatapreserved. No blocked/fulltests/verifierretry. Parentdisclosedminimumfocused/typechecks stillrequired for code safety. UIunits are ordered around sharedpanel/tests/CSS, not disjoint parallelwriters. No new actor is needed for the first inline slice.
+
+### L15 — U2 implemented with minimum focused evidence
+- Onlypanel/workspacetests changed; valid current reconciliationtoken + currenteffectguard keep uncertaintyuntilfreshsuccess, includingdelay/failure/abort/stalelabresponse. Separate detail/sessioneffects, localerrors/retries andstableheaderduringpaging. No automaticPOST/retry.
+- RED:6new U2 cases failed beforebehaviorchange, exit1,25.97s; raw `ui-route/u2/red.{stdout.log,stderr.log,exit}`. Initialtestfixtureliteraltypingerror corrected beforeRED; no syntax/setup failure counted as behaviorRED.
+- GREEN: job-3pushedexit0 after8s; Vitest5.68s,10PASS/15notrun, empty stderr.6newrules +4existingexecute/ambiguity/delete/financialregressions selected. Raw `ui-route/u2/green.{stdout.log,stderr.log,exit}`. Nofullsuite or failedverifierretry. `git diff --check` exit0. No meaningful RED needed fortracking-onlyupdates.
+- Remainingrisk:item4(asyncresponseordering). Independent/manualacceptance unobserved, soT3implementationisdeliveredbutnotaccepted; T8finalQAandblockedU1proofstayopen. S13allowscontinuingU4/U5inthisstate. Newdiscovery: frontendtypeandfixturealreadycontainrankings_sha256, so U4mustnotinventanotherAPIchange.
