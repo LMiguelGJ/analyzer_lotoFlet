@@ -215,20 +215,31 @@ User, verbatim:
 
 - Continue the already-approved documentation portion of S10 for delivered U2/U4/U5 and give a concrete manual QA checklist. S13 still defers U3; no claim of schema20/cache, no normal-data changes, no blocked/full test or verifier retry. Preserve pending U1A source/README changes separately from this documentation commit.
 
+### S15 — Explicit visual acceptance and reopening of technical closure
+User, verbatim:
+> siii lo veo super bien perfecto continua termina con el odd
+
+Clarification selected by the user, verbatim:
+> Completar el plan técnico
+> Autorizar retomar U3 y recuperar la verificación de U1 con pruebas focalizadas en datos aislados, sin tocar tu base normal ni relanzar suites amplias.
+
+- General visual acceptance only, not claimed execution of M1–M7 or independent functional PASS. Reopen S7/U3 implementation and focused U1 recovery, superseding only S13/S14's deferral/backend exclusion. Keep normal-data, broad-suite, frozen-input, delivery and JD protections unchanged.
+- Before any fresh U1 execution, establish no old matching check process remains; no duplicate, process termination or inference from missing registry. Preserve old evidence and source changes. New focused isolated checks/independent verification are explicitly authorized, not automatic retries. ODD cannot close until actual evidence or a clearly reported unavailable blocker.
+
 ## Tasks
 
 - T0 — U0 recoverable baseline and ODD; S1–S2,S11; route: inline (existing narrow copy changes, no new behavior); status: done; commits: e9fd0513a895ad01bf1f04cc9dd0e4827ce43da7 (preserved UI baseline), a60cb3dded529cdeb5f5bd98295229b9bab6a4ab (approved plan/tracking); focused23PASS/job14exit0.
 - T1 — U1A/U1B logic corrections with normal workers; S3–S5,S11; route: disjoint normal workers; status: blocked; U1B commit fbe48a7450f5fdd68d82b8646f0d2feec7c7cb93 with writer25focused/163fullPASS/types0 and parent readback, independent proof unavailable; U1A task mv8np9vu-5-aney is now absent from runtime inventory, backend partial edits preserved; waiting for restored worker control/usable independent verification; no blind replacement.
-- T1R — Recover U1A's own checks on an isolated immutable copy; S3,S11; route: parent inline test recovery; status: blocked; 263tests collected, partial PASS output only, no result.json/final exit/source-hash proof; job-1 missing from current session inventory; waiting for external runtime/job-result recovery, do not duplicate or infer process termination. Acceptance still depends on blocked T2B.
+- T1R — Recover U1A's own checks on an isolated immutable copy; S3,S11,S15; route: bounded read-only map then focused isolated recovery; status: pending; current old-process exclusivity established0matches/exit0; full owned API counterexamples deferred until T5 read optimization avoids repeated full decoding per page. No old PASS inferred. User explicitly reopened focused recovery; acceptance still depends on T2B.
 - T2 — Original scoped JD gate; S5; route: retired by explicit user amendment; status: dropped; not completed/approved; original artifacts preserved; no correction/rejudgment budget consumed.
-- T2B — Independent functional verification of U1A/U1B; S3–S5,S11; route: per-unit assess, independent verifier and seam check; status: blocked; verifier mv8uc1jf-1-b8ls failed without usable report/logs, parent job15 outcome unconfirmed; waiting for runtime/proof recovery; not passed.
+- T2B — Independent functional verification of U1A/U1B; S3–S5,S11,S15; route: assess and newly authorized focused independent verification after own checks/exclusivity; status: pending; old verifier mv8uc1jf-1-b8ls failed without usable proof, job15 unconfirmed; old evidence retained, not passed.
 - T3 — U2 reconcile and separate immutable detail/session loading; S6,S11,S13; route: inline; status: blocked (implementation delivered, independent/manual acceptance pending); own RED6fail/exit1 then focused GREEN10PASS/exit0; local implementation commit: 84edcb7c5507df750aced727ba609a079dba10f3.
-- T4 — U3 additive migration20 integrity epoch; S7,S11; route: inline (ordered schema dependency); status: pending; commit: pending.
-- T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11; route: inline (dependent reader); status: pending; commit: pending.
+- T4 — U3 infrastructure: additive migration20 epoch and independent bounded-cache primitive; S7,S11,S15; route: disjoint bounded writers; status: in_progress; isolated epoch/migration tests and new cache-only module/tests, no owned-store/API/U1A changes; both writer own checks passed (epoch11/cache9), parent focused seam20PASS/exit0; separate commits/native assess/independent verification pending, not accepted.
+- T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11,S15; route: dependent bounded implementation + independent technical verification; status: pending (reopened by S15, isolated data only); commit: pending.
 - T6 — U4 financial hierarchy/ROI/coverage/provenance; S8,S11,S13; route: inline; status: blocked (implementation delivered, manual/independent acceptance pending); RED7fail/exit1 then focused GREEN/job4exit0; implementation commit: c45e0bfe015330727956e4b0f2e9a9485b9c5eb5.
 - T7 — U5 semantic responsive order and accessible validation; S9,S11,S13; route: inline; status: blocked (implementation delivered, manual/independent acceptance pending); RED5fail→first GREEN9PASS/1FAIL→semantic fix→10focusedPASS, typecheck0/build0; implementation commit: 351ed5821cc47ebe6d305c2b39c90409011d6a31.
 - T8 — U6 docs, full regression, independent acceptance and isolated same-tab browser QA; S1–S11; route: inline docs + gentle-ai-verify, browser via Orca; status: pending; commit: pending.
-- T8D — U6 documentation slice and manual QA guide for current UI; S10–S14; route: inline passive documentation; status: in_progress; readback/link/README-preservation checks passed, commit-scope check pending; no functional test applicable to prose; commit: pending. Full T8 acceptance remains pending.
+- T8D — U6 documentation slice and manual QA guide for current UI; S10–S14; route: inline passive documentation; status: done; readback/7links/README-preservation/staged-scope and final Git checks passed; no functional test applicable to prose; commit: 0480e0c021497b319ed9a3a61313d8276e10cadc. Full T8 acceptance remains pending.
 - T9 — Reactivate current app for manual QA and identify checks; S12; route: parent operational startup; status: done; backend/frontend/proxy HTTP200 observed, checklist M1–M8 delivered (human execution pending); tracking-only work-unit commit: d91629d87bb2db56aa6afc5562191c3e41fe2448; no product code edits, test/verifier retries or push/PR.
 
 ## Log
@@ -383,3 +394,27 @@ User, verbatim:
 - Initialstructuralcheckcommandfailedexit1withPythonquotingSyntaxError; correctedtofile-based.tmp/mejoras-quiniela/docs-slice/check_docs.pyandobservedexit0:5docs/7links/READMEpreservation/patchcheck0. No app-testfailureorbroadsuiteretry. ProxyGEThttp://127.0.0.1:5173/api/v1/laboratoriesreturnedHTTP200/JSON4599bytes.
 - .impeccable/surfaces/route-laboratorios.mdupdatedlocallybutgitignored(.gitignore:43); donotforce-add. MarkdownformatterreportedMarksmanincomplete/MD025warning; no globaldiagnostic-cleanclaim. Passiveprosehasno meaningfulRED; source-backedreadbackandGitchecksaretheapplicableverification.
 - Precommitgitdiffcheckreturnedexit2foranextraEOFblankinthistrackingfile; removedthatformattingerrorbeforecommit. No application/testresultaffected.
+
+### L21 — Documentation slice delivered without U1A contamination
+- Commit0480e0c021497b319ed9a3a61313d8276e10cadccontains5documentationpaths/114insertions/18deletions. check_index.pyprovedexact5pathscopeandHEAD-basedREADMEcontent; cachedGitdiffcheckexit0; commitexit0. Exactly8oldU1Asource/READMEpathsremainunstaged, no backendcodeincluded. Sidecarremainslocal/ignored. Finaltrackingstatus/hashupdateisaseparateuncommitteddelta.
+- T8Ddone; T8fullregression/independent/manualacceptanceremainspending. U1/T1R/T2BandU2/U4/U5acceptancegatesunchanged; U3deferred. No testsuites/verifierretry/newmigration/normaldatamutation/push/PR. Documentation-onlyrisk:none; existingasyncorderingriskitem4isnotcleared.
+- Usernextaction: openhttp://127.0.0.1:5173/laboratoriosandfollowdocs/quiniela-ui-manual-qa.md(M1–M7,optionalofflinecheck). Reportcase/expected/observed/browser-width/errororcapture; donotlaunchthenormaldatabaseiftheQAURLfails. ObservedonlyHTTP200,notbrowser/manualPASS.
+
+### L22 — Reopen technical closure by explicit interactive decision
+User, verbatim:
+> siii lo veo super bien perfecto continua termina con el odd
+Selected, verbatim:
+> Completar el plan técnico
+> Autorizar retomar U3 y recuperar la verificación de U1 con pruebas focalizadas en datos aislados, sin tocar tu base normal ni relanzar suites amplias.
+- Registergeneralvisualacceptance,notunobservedfunctionalsteps. S15reopensU3andfocusedU1recovery. T1Rstartswithold-process/candidateevidencebeforeanynewexecution; preserve8pendingU1Apathsandoldlogs. Independentnewfocusedproofauthorizedafterownchecks. No normaldatabase,broadsuite,push/PR,toolrepairorJDsubstitution.
+- Runtimepublicationattemptreturnedsessionmessagingnotreadyonce; no retry. Agentinventoryavailable; useoneboundedread-onlyexplorerformapping,notparentduplicatecodereads.
+- Explorermv9pf651-1-ype4returnedread-onlymap. Parentone-timespotcheckreadbotholdcontexts/command.jsonsuccessfully; explorer'sunreadablehelperclaimisnotabsenceproof. Get-CimInstancewithStopreturned0matchingprocesses/exit0,UTC2026-10-15T15:41:19Z; .tmp/mejoras-quiniela/s15-recovery/exclusivity.json. No processkilled, no oldresultrecovered.
+- RouteT4first(disjointmigration/database/migrationtests), thenT5, thenfocusedall-pagesU1counterexamples: currentownedAPIloadsandvalidatesallrowsperpage, so old263-test/fullpagingreplaywouldrepeatunboundedwork. T1Rpendingbydependency, notdone; T4inprogress. Parentwillnotduplicateworkerexplorationorclaimperformancewithoutinstrumentation.
+- Retainedsnapshotvalidationexit0:107U1Afiles/80U1BfilesmatchSHA; current7dirtyU1Abackendfilesmatcholdoverlay; READMEnewdocsintentionallyexcludedfromcurrentoverlaycomparison. .tmp/mejoras-quiniela/s15-recovery/snapshots.json. No checksuiteslaunched.
+- T4expandedonlyasreviewableinfrastructuregroupwithinS7: migration/epochandstandaloneLRUprimitiveareindependent,nontrivialanddisjoint; launchcachewriterinparallel, leaveT5integrationdependent. Migrationwriteralreadyallocatedmv9pm696-2-l5fb; cachewriterwilltouchonlynewmodule/newtestanditsownscratch. OnevisibleT4phaseinprogress; parentdoesnoteditworkersurfaces. No JSON/APIreadchangesuntilT5.
+
+### L23 — Infrastructure own checks observed, independent acceptance pending
+- Migrationworkermv9pm696-2-l5fbcompleted3sourcefiles: RED3fail/exit1, GREEN11PASS/exit0/.87s, parent11PASS/exit0/.91s. Epochtriggerscoverphysicalrun/sessionwrites; migrationpreservesJSON/identities/deletedseeds,rollbacktested. .tmp/mejoras-quiniela/s15-u3-epoch/logs/{red,final,parent}.*. Ruffunavailable127; no install/retry. ActiveLSP2paths0findings,but1clean/1inconclusive; notglobalcleanproof. ASTfoundonlyintendedrollbackversion19assert.
+- Cacheworkermv9pqd8c-3-rm2ucompletednewmodule137lines/newtest145lines. Initialcollection-onlyREDnotcounted; genuineRED6fail/3pass exit1, GREEN9PASS/.20s/exit0. Byte-onlyimmutablecertificates,64entries/16MiBpayload,LRU,keyseparation,epochinvalidations,lateoldputs/concurrency. APIhandoff:get/put(database_id,epoch,owner_id,run_id[,certificate]), certificate(metadata=compactbytes,session_digests=packedbytes). No SQLiteorintegrationclaim.
+- Parentfocusedseamcommand(test_laboratory_migrations.py+test_owned_laboratory_read_cache.py)exit0,20PASS; logs.tmp/mejoras-quiniela/s15-u3-cache/parent-seam.*. No broad/backendfullsuite. Automaticformatterchangedmigration/cachetests; parentre-readbeforestaging, no manualsourceedits. Nativeper-unitassessmentandindependentverificationstillrequired. T4inprogress, notdone.
+- Documentationupdatedforregistered20/isolatedepochproof, explicitlyleavingcache/SQLintegrationandacceptancepending; normaldatabasenotmigrated. READMEusesfreshHEAD-basedpatchtoexcludeoldU1Ahunks. Parentwillcommitmigrationandcacheasseparateworkunitsbeforerangeassessment.

@@ -348,6 +348,142 @@ def test_seed_bootstrap_ignores_below_seed_quota_but_saved_run_write_is_rejected
     assert repo.quota_status().run_artifact_bytes == 0
 
 
+def _v19_database(path):
+    from laboratorio.storage.database import _run_migrations
+
+    with sqlite3.connect(path) as db:
+        _run_migrations(db, 0, list(range(1, 20)))
+
+
+def _integrity_epoch(db):
+    return db.execute("SELECT epoch FROM owned_run_integrity_epoch WHERE singleton = 1").fetchone()[
+        0
+    ]
+
+
+def test_v19_upgrade_adds_integrity_epoch_and_preserves_saved_rows_and_deleted_seeds(tmp_path):
+    path = tmp_path / "v19-preservation.db"
+    _v19_database(path)
+    run_id = str(uuid.UUID(int=3001))
+    session_json = '{"saved":true}'
+    result_json = '{"summary":{"kept":true}}'
+    with connection(path) as db:
+        deleted_seed = db.execute("SELECT id FROM laboratory_definitions LIMIT 1").fetchone()[0]
+        db.execute("DELETE FROM laboratory_definitions WHERE id=?", (deleted_seed,))
+        owned_identity = initial_laboratory_definitions()[1].id
+        db.execute(
+            "INSERT INTO reference_lab_runs "
+            "(id, lab_id, contract_version, created_at, metadata_json, result_json, "
+            "owner_laboratory_id) "
+            "VALUES (?, ?, 1, '2025-01-01T00:00:00.000000Z', ?, ?, ?)",
+            (run_id, owned_identity, '{"metadata":1}', result_json, owned_identity),
+        )
+        db.execute("INSERT INTO reference_lab_sessions VALUES (?, 7, ?)", (run_id, session_json))
+        db.commit()
+
+    initialize_database(path)
+
+    with connection(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+        assert db.execute(
+            "SELECT id, lab_id, owner_laboratory_id, metadata_json, result_json "
+            "FROM reference_lab_runs WHERE id=?",
+            (run_id,),
+        ).fetchone() == (run_id, owned_identity, owned_identity, '{"metadata":1}', result_json)
+        assert db.execute(
+            "SELECT run_id, ordinal, session_json FROM reference_lab_sessions WHERE run_id=?",
+            (run_id,),
+        ).fetchone() == (run_id, 7, session_json)
+        assert db.execute(
+            "SELECT count(*) FROM laboratory_definitions WHERE id=?", (deleted_seed,)
+        ).fetchone() == (0,)
+        assert _integrity_epoch(db) == 0
+
+
+def test_integrity_epoch_tracks_run_session_mutations_cascades_and_external_connections(tmp_path):
+    path = tmp_path / "epoch-mutations.db"
+    initialize_database(path)
+    definitions = initial_laboratory_definitions()
+    owner_a, owner_b = definitions[:2]
+    run_a, run_b = (str(uuid.UUID(int=value)) for value in (3010, 3011))
+    with connection(path) as db:
+        epoch = _integrity_epoch(db)
+        _raw_reference_run(db, run_a, owner_a.id)
+        assert _integrity_epoch(db) > epoch
+        epoch = _integrity_epoch(db)
+        _raw_reference_run(db, run_b, owner_b.id)
+        assert _integrity_epoch(db) > epoch
+        epoch = _integrity_epoch(db)
+        db.execute("UPDATE reference_lab_runs SET owner_laboratory_id=NULL WHERE id=?", (run_a,))
+        assert _integrity_epoch(db) > epoch
+        epoch = _integrity_epoch(db)
+        db.execute(
+            "UPDATE reference_lab_runs SET owner_laboratory_id=? WHERE id=?",
+            (owner_a.id, run_a),
+        )
+        assert _integrity_epoch(db) > epoch
+        epoch = _integrity_epoch(db)
+        db.execute("UPDATE reference_lab_sessions SET ordinal=ordinal+1 WHERE run_id=?", (run_a,))
+        assert _integrity_epoch(db) > epoch
+        epoch = _integrity_epoch(db)
+        db.execute("UPDATE reference_lab_sessions SET run_id=? WHERE run_id=?", (run_b, run_a))
+        assert _integrity_epoch(db) > epoch
+        epoch = _integrity_epoch(db)
+        db.execute("DELETE FROM reference_lab_sessions WHERE run_id=?", (run_b,))
+        assert _integrity_epoch(db) > epoch
+        epoch = _integrity_epoch(db)
+        db.execute("DELETE FROM reference_lab_runs WHERE id=?", (run_b,))
+        assert _integrity_epoch(db) > epoch
+        db.commit()
+
+    with sqlite3.connect(path) as external:
+        external.execute("PRAGMA foreign_keys=ON")
+        prior = _integrity_epoch(external)
+        external.execute("DELETE FROM laboratory_definitions WHERE id=?", (owner_a.id,))
+        external.commit()
+        assert _integrity_epoch(external) > prior
+        assert external.execute(
+            "SELECT count(*) FROM reference_lab_runs WHERE id=?", (run_a,)
+        ).fetchone() == (0,)
+        assert external.execute(
+            "SELECT count(*) FROM reference_lab_sessions WHERE run_id=?", (run_a,)
+        ).fetchone() == (0,)
+
+
+def test_v19_migration_failure_rolls_back_epoch_objects_rows_and_version(tmp_path, monkeypatch):
+    import laboratorio.storage.database as database
+
+    path = tmp_path / "v19-rollback.db"
+    _v19_database(path)
+    run_id = str(uuid.UUID(int=3020))
+    with sqlite3.connect(path) as db:
+        db.execute(
+            "INSERT INTO reference_lab_runs "
+            "(id, lab_id, contract_version, created_at, metadata_json, result_json) "
+            "VALUES (?, 'legacy-static-id', 1, '2025-01-01T00:00:00.000000Z', '{}', '{}')",
+            (run_id,),
+        )
+        db.commit()
+
+    broken_migration = path.parent / "broken-migration.sql"
+    migration_sql = database._MIGRATIONS[20].read_text(encoding="utf-8")
+    broken_migration.write_text(migration_sql + "\nINVALID SQL;\n", encoding="utf-8")
+    monkeypatch.setitem(database._MIGRATIONS, 20, broken_migration)
+    with pytest.raises(sqlite3.OperationalError, match="near"):
+        initialize_database(path)
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 19
+        assert db.execute("SELECT id FROM reference_lab_runs WHERE id=?", (run_id,)).fetchone() == (
+            run_id,
+        )
+        assert (
+            db.execute(
+                "SELECT name FROM sqlite_master WHERE name='owned_run_integrity_epoch'"
+            ).fetchone()
+            is None
+        )
+
+
 def test_reference_run_write_charges_seed_json_without_charging_run_metric(repo, monkeypatch):
     import laboratorio.storage.reference_lab_store as store
     from laboratorio.storage.repository import _laboratory_definition_bytes

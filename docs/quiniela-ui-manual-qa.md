@@ -55,6 +55,6 @@ No compartas bases SQLite, credenciales ni archivos `.env`. Un caso no ejecutado
 - Atomicidad ante cuota/bytes: que no queden filas parciales ni cambie el uso al rechazar una escritura.
 - Corrupción, huellas y equivalencia de todas las sesiones; revisar dos páginas no acredita la totalidad.
 - Respuesta HTTP exitosa ilegible después de guardar y preservación de contratos históricos compartidos.
-- U3: migración 20, caché, invalidación y coste SQL. Sigue diferido, no implementado; el código registra esquema 19.
+- U3: la migración 20 de época está implementada y probada en bases temporales; caché y lecturas SQL paginadas siguen pendientes de integración y aceptación. No apliques la migración a tu base habitual.
 
 U1 sigue sin aceptación completa. Tampoco se ejecutó una regresión amplia ni se obtuvo la aceptación independiente de U2/U4/U5. Tus resultados manuales se agregan como evidencia concreta sin borrar esos pendientes.

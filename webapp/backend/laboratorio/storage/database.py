@@ -9,7 +9,7 @@ from pathlib import Path
 from laboratorio.domain.contracts import legacy_quiniela_80_profile
 from laboratorio.domain.laboratories import initial_laboratory_definitions
 
-SCHEMA_VERSION = 19
+SCHEMA_VERSION = 20
 _MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 # Ordered, sequential migration scripts; each key is the schema version it produces.
 _MIGRATIONS = {
@@ -32,6 +32,7 @@ _MIGRATIONS = {
     17: _MIGRATIONS_DIR / "0017_laboratories.sql",
     18: _MIGRATIONS_DIR / "0018_quiniela_game_profiles.sql",
     19: _MIGRATIONS_DIR / "0019_quiniela_history_sources.sql",
+    20: _MIGRATIONS_DIR / "0020_owned_run_integrity_epoch.sql",
 }
 
 

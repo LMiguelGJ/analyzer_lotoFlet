@@ -33,7 +33,7 @@ Resultados históricos con configuración y procedencia fijadas por corrida. Las
 - Procedencia: sorteos evaluados, huecos entre extremos elegibles y un desplegable con ventana y huellas completas. Sin gráficos, comparación de corridas ni nuevas predicciones.
 - Navegación: Laboratorios y Ajustes. Corridas anteriores mantiene acceso directo y sus capacidades históricas de detalle, sin aparecer en el menú principal.
 - Fuera de alcance: apuestas reales, predicción de sorteos, probabilidades futuras, Monte Carlo, exportación, generar rankings nuevos.
-- Código U2/U4/U5 entregado con comprobaciones focalizadas, tipos y compilación observados; aceptación manual e independiente pendiente. U1 sigue sin aceptación completa. U3 (migración 20/caché) no está implementado.
+- Código U2/U4/U5 entregado con comprobaciones focalizadas, tipos y compilación observados; aceptación manual e independiente pendiente. U1 sigue sin aceptación completa. U3: migración 20 implementada con pruebas focalizadas; caché y lecturas paginadas pendientes de integración y aceptación. No se migró la base habitual.
 - Dirección visual fijada: libreta cuadriculada fría, tinta, Archivo/Archivo Narrow y controles cuadrados; no es un rediseño. Guía de revisión: [QA manual](docs/quiniela-ui-manual-qa.md).
 
 ## Brand Commitments
