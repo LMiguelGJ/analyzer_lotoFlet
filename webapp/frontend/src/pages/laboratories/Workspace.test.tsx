@@ -39,6 +39,7 @@ function renderAt(path: string) {
   </Routes></MemoryRouter>);
 }
 beforeEach(() => {
+  vi.unstubAllGlobals();
   vi.resetAllMocks();
   m.listLaboratories.mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [definition] });
   m.getLaboratory.mockResolvedValue({ definition, owned_run_count: 1, owned_session_count: 4 });
@@ -66,7 +67,105 @@ async function makeUncertain(user: ReturnType<typeof userEvent.setup>) {
   return execute;
 }
 
+function viewport(width: number) {
+  let compact = width <= 860;
+  const listeners = new Set<(event: MediaQueryListEvent) => void>();
+  const media = {
+    get matches() { return compact; }, media: "(max-width: 860px)",
+    addEventListener: vi.fn((_name: string, listener: (event: MediaQueryListEvent) => void) => listeners.add(listener)),
+    removeEventListener: vi.fn((_name: string, listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener)),
+  };
+  vi.stubGlobal("matchMedia", vi.fn(() => media));
+  return { media, resize(next: number) { compact = next <= 860; listeners.forEach((listener) => listener({ matches: compact } as MediaQueryListEvent)); } };
+}
+
 describe("laboratory workspace", () => {
+  it("U5 reorders real DOM at 860/861 while preserving draft, focus and requests", async () => {
+    const screenSize = viewport(861);
+    const user = userEvent.setup();
+    const { container, unmount } = renderAt("/laboratorios/nuevo");
+    const input = await screen.findByLabelText("Nombre");
+    await user.type(input, "Borrador");
+    const workspace = container.querySelector(".lab-workspace")!;
+    expect(workspace.children[0]).toHaveClass("lab-sidebar");
+    await act(async () => screenSize.resize(860));
+    expect(workspace.children[0]).toHaveClass("lab-stage");
+    expect(screen.getByLabelText("Nombre")).toBe(input);
+    expect(input).toHaveValue("Borrador");
+    expect(input).toHaveFocus();
+    await act(async () => screenSize.resize(861));
+    expect(workspace.children[0]).toHaveClass("lab-sidebar");
+    expect(input).toHaveFocus();
+    expect(m.listLaboratories).toHaveBeenCalledTimes(1);
+    expect(m.createLaboratory).not.toHaveBeenCalled();
+    expect(m.createLaboratoryRun).not.toHaveBeenCalled();
+    unmount();
+    expect(screenSize.media.removeEventListener).toHaveBeenCalledWith("change", expect.any(Function));
+  });
+
+  it("U5 keeps the unselected mobile list first and focuses a user-selected panel", async () => {
+    viewport(860);
+    const user = userEvent.setup();
+    const { container } = renderAt("/laboratorios");
+    await screen.findByRole("link", { name: "Nuevo laboratorio" });
+    const workspace = container.querySelector(".lab-workspace")!;
+    expect(workspace.children[0]).toHaveClass("lab-sidebar");
+    await user.click(screen.getByRole("link", { name: "Nuevo laboratorio" }));
+    expect(workspace.children[0]).toHaveClass("lab-stage");
+    expect(workspace.children[0]).toHaveFocus();
+    expect(m.listLaboratories).toHaveBeenCalledTimes(1);
+  });
+
+  it("U5 focuses only after user navigation, not initial load or result refresh", async () => {
+    viewport(861);
+    const user = userEvent.setup();
+    const { container } = renderAt("/laboratorios");
+    const link = await screen.findByRole("link", { name: /Transición propia/ });
+    const stage = container.querySelector(".lab-stage")!;
+    expect(stage).not.toHaveFocus();
+    await user.click(link);
+    expect(stage).toHaveFocus();
+    const view = await screen.findByRole("button", { name: "Ver resultado" });
+    await user.click(view);
+    await screen.findByRole("heading", { name: "Resultado guardado" });
+    expect(view).toHaveFocus();
+  });
+
+  it("U5 announces invalid fields and focuses the first without submitting", async () => {
+    const user = userEvent.setup();
+    renderAt("/laboratorios/nuevo");
+    const coverage = await screen.findByLabelText("Cobertura (números)");
+    await user.clear(coverage);
+    await user.type(coverage, "0");
+    await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).getByRole("link", { name: "Nombre" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Nombre")).toHaveFocus();
+    expect(m.createLaboratory).not.toHaveBeenCalled();
+    await user.click(within(alert).getByRole("link", { name: "Cobertura (números)" }));
+    expect(coverage).toHaveFocus();
+    expect(coverage).toHaveAttribute("aria-describedby", expect.stringContaining("lab-coverage-error"));
+    expect(coverage).toHaveValue("0");
+  });
+
+  it("U5 preserves the selected run and page without refetching on resize", async () => {
+    const screenSize = viewport(861);
+    const user = userEvent.setup();
+    m.listLaboratorySessions.mockImplementation(async (_lab, _run, params) => ({ run_id: "run-1", total: 51, offset: params?.offset ?? 0, limit: 50, items: [{ ordinal: params?.offset ?? 0, summary: { outcome: "goal", start_index: 0, end_index: 3, draws: 4, final_balance: 2800, wagered: 100, paid: 900 } }] }));
+    const { container } = renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    await screen.findByRole("region", { name: "Resúmenes de sesiones" });
+    await user.click(within(screen.getByRole("navigation", { name: "Paginación de sesiones" })).getByRole("button", { name: "Siguiente" }));
+    await screen.findByRole("heading", { name: "Sesiones 51–51 de 51" });
+    await act(async () => screenSize.resize(860));
+    expect(container.querySelector(".lab-workspace")!.children[0]).toHaveClass("lab-stage");
+    expect(screen.getByRole("heading", { name: "Sesiones 51–51 de 51" })).toBeInTheDocument();
+    expect(m.getLaboratory).toHaveBeenCalledTimes(1);
+    expect(m.getLaboratoryRun).toHaveBeenCalledTimes(1);
+    expect(m.listLaboratorySessions).toHaveBeenCalledTimes(2);
+    expect(m.createLaboratoryRun).not.toHaveBeenCalled();
+  });
+
   it.each([
     [-1482496, 30303350, "−4,89 %"],
     [50, 100, "+50,00 %"],

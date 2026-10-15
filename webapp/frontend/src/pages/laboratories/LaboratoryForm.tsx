@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ApiError, NetworkError } from "../../api/client";
 import { createLaboratory } from "../../api/laboratories";
@@ -15,11 +15,27 @@ function failureText(error: unknown): string {
 
 interface Props { onCreated: (definition: LaboratoryDefinition) => void }
 
+const FIELD_LABELS: Record<FormField, string> = {
+  name: "Nombre", system: "Sistema de selección", stake_style: "Estilo de apuesta",
+  coverage: "Cobertura (números)", capital: "Capital inicial", goal: "Meta de saldo",
+  prize_1: "Premio 1.º", prize_2: "Premio 2.º", prize_3: "Premio 3.º", prize_4: "Premio 4.º", prize_5: "Premio 5.º",
+  window_start: "Ventana: inicio", window_end: "Ventana: fin",
+};
+const FIELD_ORDER: FormField[] = ["name", "system", "stake_style", "coverage", "capital", "goal", ...PRIZE_FIELDS, "window_start", "window_end"];
+
 export function LaboratoryForm({ onCreated }: Props) {
   const [values, setValues] = useState<FormValues>(DEFAULT_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const focusInvalid = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!focusInvalid.current) return;
+    focusInvalid.current = false;
+    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [errors]);
 
   const set = (field: FormField) => (value: string) => setValues((current) => ({ ...current, [field]: value }));
 
@@ -27,7 +43,7 @@ export function LaboratoryForm({ onCreated }: Props) {
     event.preventDefault();
     if (saving) return;
     const parsed = parseLaboratoryForm(values);
-    if (!parsed.ok) { setErrors(parsed.errors); setFailure(null); return; }
+    if (!parsed.ok) { focusInvalid.current = true; setErrors(parsed.errors); setFailure(null); return; }
     setErrors({}); setFailure(null); setSaving(true);
     try {
       onCreated(await createLaboratory(parsed.value.name, parsed.value.config));
@@ -36,8 +52,14 @@ export function LaboratoryForm({ onCreated }: Props) {
     } finally { setSaving(false); }
   }
 
-  return <form className="lab-form" onSubmit={(event) => void submit(event)} noValidate aria-labelledby="lab-form-title">
+  return <form ref={formRef} className="lab-form" onSubmit={(event) => void submit(event)} noValidate aria-labelledby="lab-form-title">
     <header className="reference-heading"><div><h2 id="lab-form-title">Nuevo laboratorio</h2><p>Definí las reglas una vez; quedan fijas y cada ejecución las reproduce sobre la fuente histórica congelada.</p></div></header>
+    {Object.keys(errors).length > 0 && <div className="reference-action-error lab-form-errors" role="alert">
+      <p>Revisá los campos señalados.</p>
+      <ul>{FIELD_ORDER.filter((field) => errors[field]).map((field) => <li key={field}>
+        <a href={`#lab-${field}`} onClick={(event) => { event.preventDefault(); formRef.current?.querySelector<HTMLElement>(`#lab-${field}`)?.focus(); }}>{FIELD_LABELS[field]}</a>
+      </li>)}</ul>
+    </div>}
     <Field id="lab-name" label="Nombre" value={values.name} onChange={(event) => set("name")(event.target.value)} error={errors.name} hint="Único; hasta 120 bytes." autoComplete="off" />
     <div className="lab-form-row">
       <div className="ledger-field"><label className="ledger-label" htmlFor="lab-system">Sistema de selección</label>

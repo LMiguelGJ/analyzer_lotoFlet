@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { MouseEvent } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ApiError, NetworkError } from "../../api/client";
 import { listLaboratories } from "../../api/laboratories";
 import type { LaboratoryDefinition } from "../../api/laboratories";
@@ -28,12 +29,49 @@ function summary(definition: LaboratoryDefinition): string {
 export function Workspace() {
   const { labId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [compact, setCompact] = useState(() => typeof window.matchMedia === "function" && window.matchMedia("(max-width: 860px)").matches);
+  const compactRef = useRef(compact);
+  const stageRef = useRef<HTMLElement>(null);
+  const restoreFocus = useRef<HTMLElement | null>(null);
+  const focusOnNavigation = useRef(false);
   const [page, setPage] = useState<ReferencePage<LaboratoryDefinition> | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [reload, setReload] = useState(0);
   const creating = labId === CREATE_SEGMENT;
   const refresh = useCallback(() => setReload((value) => value + 1), []);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(max-width: 860px)");
+    const update = () => {
+      if (media.matches === compactRef.current) return;
+      compactRef.current = media.matches;
+      restoreFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setCompact(media.matches);
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useLayoutEffect(() => {
+    const element = restoreFocus.current;
+    restoreFocus.current = null;
+    if (element?.isConnected && document.activeElement !== element) element.focus({ preventScroll: true });
+  }, [compact]);
+
+  useLayoutEffect(() => {
+    if (!focusOnNavigation.current) return;
+    focusOnNavigation.current = false;
+    stageRef.current?.focus({ preventScroll: true });
+  }, [labId, location.key]);
+
+  function requestPanelFocus(event: MouseEvent<HTMLAnchorElement>) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    focusOnNavigation.current = true;
+  }
 
   useEffect(() => {
     const controller = new AbortController(); let current = true;
@@ -46,11 +84,10 @@ export function Workspace() {
     return () => { current = false; controller.abort(); };
   }, [offset, reload]);
 
-  return <div className="lab-workspace" data-selected={labId ? "true" : "false"}>
-    <aside className="lab-sidebar" aria-label="Laboratorios guardados">
+  const sidebar = <aside key="sidebar" className="lab-sidebar" aria-label="Laboratorios guardados">
       <div className="lab-sidebar-head">
         <h2>Laboratorios</h2>
-        <Link className="ledger-button ledger-button-secondary" to={`/laboratorios/${CREATE_SEGMENT}`} aria-current={creating ? "page" : undefined}>Nuevo laboratorio</Link>
+        <Link className="ledger-button ledger-button-secondary" to={`/laboratorios/${CREATE_SEGMENT}`} onClick={requestPanelFocus} aria-current={creating ? "page" : undefined}>Nuevo laboratorio</Link>
       </div>
       {failure ? <ErrorBanner cause="No pudimos cargar los laboratorios." recovery={failure} actionLabel="Reintentar" onAction={refresh} />
         : !page ? <Loading label="Cargando laboratorios…" rows={4} />
@@ -58,7 +95,7 @@ export function Workspace() {
         : <>
           <ul className="lab-list">
             {page.items.map((definition) => <li key={definition.id}>
-              <Link to={`/laboratorios/${encodeURIComponent(definition.id)}`} aria-current={labId === definition.id ? "page" : undefined}>
+              <Link to={`/laboratorios/${encodeURIComponent(definition.id)}`} onClick={requestPanelFocus} aria-current={labId === definition.id ? "page" : undefined}>
                 <span className="lab-list-name">{definition.name}</span>
                 <span className="lab-list-meta">{summary(definition)}</span>
               </Link>
@@ -68,11 +105,14 @@ export function Workspace() {
             <div><button type="button" className="ledger-button ledger-button-secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Anterior</button>
               <button type="button" className="ledger-button ledger-button-secondary" disabled={offset + PAGE >= page.total} onClick={() => setOffset(offset + PAGE)}>Siguiente</button></div></nav>
         </>}
-    </aside>
-    <div className="lab-stage">
+    </aside>;
+  const stage = <section key="stage" className="lab-stage" ref={stageRef} tabIndex={-1} aria-label="Contenido del laboratorio">
       {creating ? <LaboratoryForm onCreated={(definition) => { setOffset(0); refresh(); navigate(`/laboratorios/${encodeURIComponent(definition.id)}`); }} />
         : labId ? <LaboratoryPanel key={labId} labId={labId} onDeleted={() => { refresh(); navigate("/laboratorios"); }} />
         : <section className="reference-page" aria-labelledby="lab-empty-title"><header className="reference-heading"><div><h2 id="lab-empty-title">Elegí un laboratorio</h2><p>Abrí uno de la lista para ejecutarlo y ver sus corridas, o definí uno nuevo con tus propias reglas. Describen el pasado; no predicen sorteos.</p></div></header></section>}
-    </div>
+    </section>;
+
+  return <div className="lab-workspace" data-selected={labId ? "true" : "false"}>
+    {compact && labId ? [stage, sidebar] : [sidebar, stage]}
   </div>;
 }

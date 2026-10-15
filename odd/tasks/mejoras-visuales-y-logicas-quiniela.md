@@ -220,8 +220,8 @@ User, verbatim:
 - T3 — U2 reconcile and separate immutable detail/session loading; S6,S11,S13; route: inline; status: blocked (implementation delivered, independent/manual acceptance pending); own RED6fail/exit1 then focused GREEN10PASS/exit0; local implementation commit: 84edcb7c5507df750aced727ba609a079dba10f3.
 - T4 — U3 additive migration20 integrity epoch; S7,S11; route: inline (ordered schema dependency); status: pending; commit: pending.
 - T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11; route: inline (dependent reader); status: pending; commit: pending.
-- T6 — U4 financial hierarchy/ROI/coverage/provenance; S8,S11,S13; route: inline; status: blocked (implementation delivered, manual/independent acceptance pending); RED7fail/exit1 then focused GREEN/job4exit0; implementation commit: pending.
-- T7 — U5 semantic responsive order and accessible validation; S9,S11; route: inline (dependent workspace); status: pending; commit: pending.
+- T6 — U4 financial hierarchy/ROI/coverage/provenance; S8,S11,S13; route: inline; status: blocked (implementation delivered, manual/independent acceptance pending); RED7fail/exit1 then focused GREEN/job4exit0; implementation commit: c45e0bfe015330727956e4b0f2e9a9485b9c5eb5.
+- T7 — U5 semantic responsive order and accessible validation; S9,S11,S13; route: inline (ordered dependent workspace); status: in_progress; status detail: implementation delivered, blocked on manual/independent acceptance; RED5fail→first GREEN9PASS/1FAIL→semantic fix→10focusedPASS, typecheck0/build0; implementation commit: pending.
 - T8 — U6 docs, full regression, independent acceptance and isolated same-tab browser QA; S1–S11; route: inline docs + gentle-ai-verify, browser via Orca; status: pending; commit: pending.
 - T9 — Reactivate current app for manual QA and identify checks; S12; route: parent operational startup; status: done; backend/frontend/proxy HTTP200 observed, checklist M1–M8 delivered (human execution pending); tracking-only work-unit commit: d91629d87bb2db56aa6afc5562191c3e41fe2448; no product code edits, test/verifier retries or push/PR.
 
@@ -345,3 +345,25 @@ User, verbatim:
 - ROI helper dividesnetbywageredbefore100, returnsnullfor0wagered andnormalizesnegativezero; Spanishsigned2decimalpresentation. Net/ROIprimary, threefinancialmetricsnext, fourclosurecounterssecondary:8originalmagnitudesunchanged +derivedROIonly. NoAPI/globalformatterchange.
 - Selectedcoveragecopy, compacteligible/gaps, nativeprovenancewithconfigured/effectivewindowand3completehashes, emptyheading0of0. Localcontainer-drivenCSS, nowrap/tabular/right-alignedmoney, nolegacyrouteorfont/tokenchanges. Sixremovedparagraphsstayabsent.
 - RED7behaviorcasesfailed/exit1beforeUIchanges; focusedGREENjob4pushedexit0after7s.7newUIcases+7purehelperchecks+4existingpresentationregressionsselected; othercasesnotrunbyfilter. Raw `ui-route/u4/{red,green}.{stdout.log,stderr.log,exit}`. `git diff --check`exit0. Noheavy/full/backendtests. Visual/mobile/keyboardchecksdelegatedtouser, notpassed. U1andU3statusunchanged.
+
+### L17 — TODO review during U5, no completion claim
+User, verbatim:
+> The todo plan has not been reviewed during several tool-use turns. Check whether it still matches the work performed and update tasks where needed. Do not mark work done without verification.
+- T3/U2implementationcommit84edcb7with10focusedPASS; T6/U4implementationcommitc45e0bfwith18focusedPASS. Both remainblockedonacceptance, notdone. No U3workorstoragechange.
+- T7/U5iscurrentlyin_progress: focusedREDwasobservedbeforebehaviorchanges; Workspace/Formeditsarewritten, butCSScleanup/GREEN/typecheckarepending. Do not callU5verifiedoraccepted. Minimumfocusedchecks only; no broadsuite/backend/verifierretry. UserownsmanualbrowserQA.
+- Pi-lensreportedonlyadvisories(high-fan-out/redundant-filter-map/typo), no redblocker. No unrelatedrefactor forstylewarnings.
+
+### L18 — TODO review after observed U5 regression
+User, verbatim:
+> The todo plan has not been reviewed during several tool-use turns. Check whether it still matches the work performed and update tasks where needed. Do not mark work done without verification.
+- Job5exit1after10s:9PASS/1FAIL/27notrun; existingaxecheckreportslandmark-banner-is-top-level onformheaderinside newgenericdivregion. U5notverified/done. Typecheck/builddidNOTrun because testsfailed.
+- KeepT7in_progress. Correctsemanticstagecontainer, preservefailedGREENlogs and runonefocusedconfirmationafteractualfixusingnewartifactnames. No unrelatedrefactor or verifier/full-suite retry.
+- ActiveLSPprobe7paths:0findings, only2confirmedclean/5inconclusive (3budgettimeouts,2silentpush-only). NOTglobalcleanproof; no repeatedprobe. CLItypecheckpending.
+- Tracking edit partially applied its first task-line change; a truncated whole-file read made the second tail anchor invalid. Re-readactualtail and appended only the missingLogblock; never resubmitted appliededit. Filepreserved. Mirror now readinboundedchunks toavoid50KBtruncation.
+- U2/U4codecommitsandfocusedproofunchanged; independent/humanacceptancestillblocked. U1/U3unchanged. No newcompletedtask.
+
+### L19 — U5 code delivered, focused checks observed; acceptance still pending
+- Job6pushedexit0after22s. Focusedpost-semantic-fixGREEN:10PASS/27notrun,4.87s. `tsc --noEmit`exit0, Viteproductionbuildexit0/73modules/3.72s; stderrfilesempty. Raw `ui-route/u5/green-correction1.*`, `typecheck.*`, `build.*`; preservefailedfirstGREENunchanged. No fullsuite/backend/failedverifierretry.
+- ActualDOMreordersstablekeyedstage/sidebarat860/861, matchMedialistenercleansup, drafts/selectedrun/page/focuspersistwithoutextraGET/POST. StagefocustriggersonlyuserLinknavigation; formalertslinkinvalidfieldsandfocusfirstafterDOMcommit. Semanticsectionstagefixesrealaxeregressionwithoutweakeningtest. Removedorder:-1,localfocus/errortargetstylesonly.
+- Gitdiffcheckinitiallyexit2foroneextratrackingEOFblankline. Formatting-onlytrailingblankremovedwhileappendingthisentry; sourcebehaviornotchangedforthis. No newcompletedtask; T7codewillbecommittedlocallybutacceptanceremainsblocked. U1/U3andotherpendingtasksunchanged.
+- Manualnextsteps: refreshQAapp, inspectNeto/ROIandprovenancedetails, resizeacross860pxwithadraft/selectedpage, submitinvalidformandcheckTab/focus. No manual/visual/mobilePASSobserved. Independentverificationremainsunavailable; no newactor/retry/substitute. Risk:item4asyncordering; no globalswitch/bypass or acceptanceclaim.

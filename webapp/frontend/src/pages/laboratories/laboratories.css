@@ -40,9 +40,11 @@
 .lab-prizes { margin: 0; padding: 0; border: 0; }
 .lab-prizes legend { margin-bottom: 8px; padding: 0; }
 .lab-form select.ledger-control { min-height: 48px; }
+.lab-stage:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+.lab-stage .lab-form-errors ul { margin: 0; padding-inline-start: 20px; }
+.lab-stage .lab-form-errors a { display: inline-flex; align-items: center; min-height: 48px; color: var(--ink); }
+.lab-stage .lab-form-errors a:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 @media (max-width: 860px) {
   .lab-workspace { grid-template-columns: minmax(0, 1fr); }
-  /* With a laboratory open or being created, its content must not sit below the whole list. */
-  .lab-workspace[data-selected="true"] .lab-stage { order: -1; }
   .lab-form { padding: 16px; }
 }
