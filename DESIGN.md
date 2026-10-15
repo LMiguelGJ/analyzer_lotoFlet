@@ -1,5 +1,5 @@
 ---
-name: Laboratorio Quiniela 80
+name: Quiniela
 description: Una libreta de papel cuadriculado para medir corridas históricas con claridad.
 colors:
   paper: "#F7FBFC"
@@ -91,7 +91,7 @@ components:
     height: "48px"
 ---
 
-# Design System: Laboratorio Quiniela 80
+# Design System: Quiniela
 
 ## Overview
 
@@ -99,7 +99,7 @@ components:
 
 La interfaz es una libreta de hojas claras y cuadriculadas: cada corrida es una hoja de trabajo y sus cifras descansan sobre una retícula precisa. El mundo sugiere apuntar, sumar y volver a probar; la interfaz hace las cuentas sin disfrazarse de una libreta física ni convertir la expresión en ruido.
 
-Es una superficie de operación, no de promoción. La cuadrícula y la tinta ordenan la información; cifras legibles y palabras explícitas llevan el significado. La aplicación implementa dos destinos: **Corridas** (crear, consultar, repetir y borrar corridas) y **Ajustes** (cuota de almacenamiento e importación de historial). La ejecución se limita a mezcla de rankings y paridad con apuesta fija; este contrato no describe estrategias históricas adicionales como funciones disponibles.
+Es una superficie de operación, no de promoción. La cuadrícula y la tinta ordenan la información; cifras legibles y palabras explícitas llevan el significado. Los destinos principales son **Laboratorios** (definir reglas fijas, ejecutar y leer resultados guardados) y **Ajustes** (cuota e historial). Corridas anteriores conserva sus rutas directas y su motor. Este documento no amplía estrategias, contratos ni promesas de verificación.
 
 **Key Characteristics:**
 - Papel blanco frío y cuadrícula cian tenue de 24 px.
@@ -155,7 +155,16 @@ Paleta restringida de papel, tinta y dos acentos funcionales. Los tokens del fro
 
 Una cuadrícula de 24 px sostiene la composición; filas, grupos y pausas principales siguen ese ritmo. Los espacios reutilizables son 8, 16, 24, 32 y 48 px. Los campos y controles interactivos miden al menos 48 px de alto.
 
-La navegación tiene dos destinos: Corridas y Ajustes. En móvil se fija abajo con el área segura inferior; desde 900 px se integra en la barra superior adhesiva. Conserva el enlace para saltar al contenido y el foco de teclado. El contenido se centra en una columna de hasta 1440 px. Corridas organiza el formulario en grupos planos; la lista y los detalles usan tablas desplazables horizontalmente cuando hace falta. Ajustes presenta métricas de almacenamiento, fuentes de historial y formularios de cuota e importación.
+La navegación principal tiene dos destinos: Laboratorios y Ajustes. En móvil se fija abajo con el área segura inferior; desde 900 px se integra en la barra superior adhesiva. Conserva el enlace para saltar al contenido y el foco de teclado. El contenido se centra en una columna de hasta 1440 px. Laboratorios usa lista lateral y panel; a 860 px o menos, un panel seleccionado precede a la lista en el DOM. Sin selección, la lista va primero. Las instancias estables conservan borrador, selección y página al redimensionar. Las tablas se desplazan horizontalmente sin ampliar la página; Ajustes conserva su presentación.
+
+### Resultado y corrección en Laboratorios
+
+- Neto y retorno sobre apostado primero; después apostado, pagado y media de cerradas, con contadores de cierre secundarios. Mantener signo, RD$, cifras tabulares y dinero sin cortes; alinear las columnas monetarias a la derecha.
+- La jerarquía se adapta al contenedor del panel, no a cuatro columnas fijas según el viewport. Los ajustes quedan limitados a Laboratorios, sin modificar rutas históricas ni tokens.
+- «Datos de la reproducción» es un desplegable nativo con ventana y huellas completas. No restaurar los seis párrafos explicativos retirados ni inventar trazas por apuesta.
+- El formulario inválido anuncia un resumen enlazado a sus campos y enfoca el primero. La navegación iniciada desde un enlace enfoca el panel, sin robar foco en carga inicial ni al consultar resultados.
+
+Estos comportamientos están implementados; la aceptación visual, móvil, de teclado e independiente sigue pendiente. El chequeo focalizado no acredita conformidad global WCAG. Ver [guía de QA manual](docs/quiniela-ui-manual-qa.md).
 
 ## Elevation & Depth
 
@@ -210,7 +219,7 @@ Estados vacíos, de error y carga usan hojas planas con texto claro. Los esquele
 - **Do** dar al texto contraste mínimo 4.5:1 y a los límites de controles al menos 3:1.
 - **Do** mantener foco visible, navegación por teclado y `prefers-reduced-motion`.
 - **Do** tratar el grid como textura y ofrecer palabras/signos además de color.
-- **Do** conservar la implementación actual de Corridas y Ajustes dentro de esta dirección visual; este documento no amplía sus capacidades funcionales.
+- **Do** preservar esta dirección en Laboratorios y mantener intactas las rutas históricas y Ajustes; este documento no amplía sus capacidades funcionales.
 
 ### Don't:
 - **Don't** reintroducir la identidad, los tokens `--bf-*` ni el tema de BossFarmer.

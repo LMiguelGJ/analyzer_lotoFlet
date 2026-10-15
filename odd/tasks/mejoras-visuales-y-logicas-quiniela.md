@@ -210,6 +210,11 @@ User, verbatim:
 
 - Proceed in that order; defer U3 and retain unresolved U1 acceptance. User owns manual browser/visual QA. Do not rerun blocked/full suites or claim manual/skipped checks passed; retain only minimal required focused safety/type checks. No storage/backend changes or normal-data operations.
 
+### S14 — Explicit continuation and human next steps
+> hazlo y dime que debo hacer yo continua con el odd y modo yolo
+
+- Continue the already-approved documentation portion of S10 for delivered U2/U4/U5 and give a concrete manual QA checklist. S13 still defers U3; no claim of schema20/cache, no normal-data changes, no blocked/full test or verifier retry. Preserve pending U1A source/README changes separately from this documentation commit.
+
 ## Tasks
 
 - T0 — U0 recoverable baseline and ODD; S1–S2,S11; route: inline (existing narrow copy changes, no new behavior); status: done; commits: e9fd0513a895ad01bf1f04cc9dd0e4827ce43da7 (preserved UI baseline), a60cb3dded529cdeb5f5bd98295229b9bab6a4ab (approved plan/tracking); focused23PASS/job14exit0.
@@ -221,8 +226,9 @@ User, verbatim:
 - T4 — U3 additive migration20 integrity epoch; S7,S11; route: inline (ordered schema dependency); status: pending; commit: pending.
 - T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11; route: inline (dependent reader); status: pending; commit: pending.
 - T6 — U4 financial hierarchy/ROI/coverage/provenance; S8,S11,S13; route: inline; status: blocked (implementation delivered, manual/independent acceptance pending); RED7fail/exit1 then focused GREEN/job4exit0; implementation commit: c45e0bfe015330727956e4b0f2e9a9485b9c5eb5.
-- T7 — U5 semantic responsive order and accessible validation; S9,S11,S13; route: inline (ordered dependent workspace); status: in_progress; status detail: implementation delivered, blocked on manual/independent acceptance; RED5fail→first GREEN9PASS/1FAIL→semantic fix→10focusedPASS, typecheck0/build0; implementation commit: pending.
+- T7 — U5 semantic responsive order and accessible validation; S9,S11,S13; route: inline; status: blocked (implementation delivered, manual/independent acceptance pending); RED5fail→first GREEN9PASS/1FAIL→semantic fix→10focusedPASS, typecheck0/build0; implementation commit: 351ed5821cc47ebe6d305c2b39c90409011d6a31.
 - T8 — U6 docs, full regression, independent acceptance and isolated same-tab browser QA; S1–S11; route: inline docs + gentle-ai-verify, browser via Orca; status: pending; commit: pending.
+- T8D — U6 documentation slice and manual QA guide for current UI; S10–S14; route: inline passive documentation; status: in_progress; readback/link/README-preservation checks passed, commit-scope check pending; no functional test applicable to prose; commit: pending. Full T8 acceptance remains pending.
 - T9 — Reactivate current app for manual QA and identify checks; S12; route: parent operational startup; status: done; backend/frontend/proxy HTTP200 observed, checklist M1–M8 delivered (human execution pending); tracking-only work-unit commit: d91629d87bb2db56aa6afc5562191c3e41fe2448; no product code edits, test/verifier retries or push/PR.
 
 ## Log
@@ -367,3 +373,13 @@ User, verbatim:
 - ActualDOMreordersstablekeyedstage/sidebarat860/861, matchMedialistenercleansup, drafts/selectedrun/page/focuspersistwithoutextraGET/POST. StagefocustriggersonlyuserLinknavigation; formalertslinkinvalidfieldsandfocusfirstafterDOMcommit. Semanticsectionstagefixesrealaxeregressionwithoutweakeningtest. Removedorder:-1,localfocus/errortargetstylesonly.
 - Gitdiffcheckinitiallyexit2foroneextratrackingEOFblankline. Formatting-onlytrailingblankremovedwhileappendingthisentry; sourcebehaviornotchangedforthis. No newcompletedtask; T7codewillbecommittedlocallybutacceptanceremainsblocked. U1/U3andotherpendingtasksunchanged.
 - Manualnextsteps: refreshQAapp, inspectNeto/ROIandprovenancedetails, resizeacross860pxwithadraft/selectedpage, submitinvalidformandcheckTab/focus. No manual/visual/mobilePASSobserved. Independentverificationremainsunavailable; no newactor/retry/substitute. Risk:item4asyncordering; no globalswitch/bypass or acceptanceclaim.
+
+### L20 — Documentation continuation and actionable human QA
+User, verbatim:
+> hazlo y dime que debo hacer yo continua con el odd y modo yolo
+- StartT8D/docs-onlysliceofapprovedU6; T8fullregression/acceptancestayspending. Updatecurrentbrand/navigation/deliveredUIsemanticsandaddmanualchecklist. No meaningful RED forpassiveprose; verifylinks, source-backedclaims, diffsandstagedscopeinstead. No runtime/test retry needed.
+- Source-backedcurrentstate: ShellshowsQuiniela/Laboratorios/Ajustes; database.pyregistersschema19, no20. PRODUCT/DESIGN/surfacebriefstilldescribeoldCorridas/staticcatalog. Preservepaper/ink/fonts/tokensandlegacydirectroutes.
+- READMEcontains2pendingU1Ahunks. CapturedHEADandworkingtreebeforeedits; appliedonlyourexplicitdocumentationedits; preparedaHEAD-baseddocumentationpatch, notwholeREADME. ReadbackprovedtheoldU1Adeltaremainsunchanged. No backendsource/dataedits.
+- Initialstructuralcheckcommandfailedexit1withPythonquotingSyntaxError; correctedtofile-based.tmp/mejoras-quiniela/docs-slice/check_docs.pyandobservedexit0:5docs/7links/READMEpreservation/patchcheck0. No app-testfailureorbroadsuiteretry. ProxyGEThttp://127.0.0.1:5173/api/v1/laboratoriesreturnedHTTP200/JSON4599bytes.
+- .impeccable/surfaces/route-laboratorios.mdupdatedlocallybutgitignored(.gitignore:43); donotforce-add. MarkdownformatterreportedMarksmanincomplete/MD025warning; no globaldiagnostic-cleanclaim. Passiveprosehasno meaningfulRED; source-backedreadbackandGitchecksaretheapplicableverification.
+- Precommitgitdiffcheckreturnedexit2foranextraEOFblankinthistrackingfile; removedthatformattingerrorbeforecommit. No application/testresultaffected.

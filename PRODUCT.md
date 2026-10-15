@@ -12,11 +12,11 @@ Una sola persona que usa la app en su propia computadora. Analiza el historial d
 
 ## Product Purpose
 
-Correr **una** estrategia sobre el historial, en **sesiones consecutivas**, y medir su rentabilidad. Cada sesión arranca con el capital inicial y termina por meta, por quiebra o por un límite opcional de sorteos; la siguiente arranca en el sorteo siguiente, hasta agotar la ventana. El éxito es poder lanzar muchas corridas sobre el mismo historial, repetir con cambios y leer sin ambigüedad cuánto ganó o perdió la estrategia en total.
+Definir laboratorios con reglas fijas, ejecutarlos sobre la referencia histórica congelada y leer sus resultados guardados por sesiones. El éxito es reproducir una configuración y entender sin ambigüedad cuánto ganó o perdió en el pasado. La sección histórica de Corridas conserva sus rutas y su motor; no se confunden sus contratos con los de laboratorios.
 
 ## Positioning
 
-Resultados reproducibles sobre un historial congelado y verificado por huella, con reglas del juego fijadas en cada corrida y apuestas siempre al mínimo. Ninguna otra herramienta de lotería para el público general trata la estrategia como algo que se **mide en el pasado** sin prometer nada hacia adelante.
+Resultados históricos con configuración y procedencia fijadas por corrida. Las huellas identifican la reproducción; no son una promesa de ganancia ni una probabilidad futura. Los estilos de apuesta dependen del laboratorio, no de una regla global.
 
 ## Operating Context
 
@@ -27,17 +27,18 @@ Resultados reproducibles sobre un historial congelado y verificado por huella, c
 
 ## Capabilities and Constraints
 
-- Estrategia: mezcla de rankings con porcentajes que suman 100, o paridad; cobertura de 1 a 50 números. Apuesta siempre la mínima por número.
-- Condiciones: capital, meta de saldo y duración máxima opcional medida en sorteos.
-- Ventana: todo el historial por defecto, con inicio y fin opcionales.
-- Resultado: neto total, retorno sobre lo apostado, sesiones por motivo de cierre (meta, quiebra, límite, incompleta), lista de sesiones y detalle de apuestas. El detalle puede estar completo, parcial o no almacenado. Sin gráficos, sin reproducción, sin comparación entre corridas, sin biblioteca de estrategias.
-- Navegación: dos secciones, Corridas y Ajustes.
+- Laboratorios: definiciones guardadas con nombre, sistema de selección, cobertura de 1 a 50, estilo (`bold`, `ladder`, `flat`), capital, meta, cinco premios y ventana histórica. Paridad requiere cobertura 50. Cambiar las reglas exige otra definición.
+- Ejecución: cada acción guarda una corrida nueva sobre la fuente congelada. Una respuesta incierta bloquea otro envío hasta completar una consulta nueva de corridas; no hay reintento automático.
+- Resultado propio: neto, ROI histórico, apostado, pagado, media de cerradas y contadores de cierre; páginas de resúmenes de sesión, sin detalle por apuesta. Las ocho métricas originales se conservan; ROI es presentación derivada y no se persiste.
+- Procedencia: sorteos evaluados, huecos entre extremos elegibles y un desplegable con ventana y huellas completas. Sin gráficos, comparación de corridas ni nuevas predicciones.
+- Navegación: Laboratorios y Ajustes. Corridas anteriores mantiene acceso directo y sus capacidades históricas de detalle, sin aparecer en el menú principal.
 - Fuera de alcance: apuestas reales, predicción de sorteos, probabilidades futuras, Monte Carlo, exportación, generar rankings nuevos.
-- **Sin decidir:** la dirección visual. El usuario rechazó el diseño anterior (una adaptación oscura de BossFarmer) sin precisar por qué.
+- Código U2/U4/U5 entregado con comprobaciones focalizadas, tipos y compilación observados; aceptación manual e independiente pendiente. U1 sigue sin aceptación completa. U3 (migración 20/caché) no está implementado.
+- Dirección visual fijada: libreta cuadriculada fría, tinta, Archivo/Archivo Narrow y controles cuadrados; no es un rediseño. Guía de revisión: [QA manual](docs/quiniela-ui-manual-qa.md).
 
 ## Brand Commitments
 
-Nombre: **Laboratorio Quiniela 80**. Interfaz en español rioplatense con voseo, como el resto de la app. No hay logotipo ni identidad previa vinculante.
+Nombre visible: **Quiniela**. Interfaz en español rioplatense con voseo, como el resto de la app. No hay logotipo ni identidad previa vinculante.
 
 ## Evidence on Hand
 
@@ -51,7 +52,7 @@ Nombre: **Laboratorio Quiniela 80**. Interfaz en español rioplatense con voseo,
 2. **Una sola tarea, a la vista.** La app existe para correr, leer y repetir; cada elemento que no sirve a eso sobra.
 3. **El número manda.** Las cifras (neto, retorno, saldo, sorteo) se leen primero, con signo y unidad, y nunca se adornan.
 4. **Nada de falsa precisión.** Si el detalle está truncado, incompleto o no almacenado, se dice con claridad.
-5. **Repetir es barato.** Volver a correr con un cambio debe costar un clic, no un formulario nuevo.
+5. **Reproducir sin ambigüedad.** Reutilizar reglas fijas requiere una acción explícita de ejecución. Cambiar las reglas crea otro laboratorio; la incertidumbre nunca se resuelve reenviando automáticamente.
 
 ## Accessibility & Inclusion
 
