@@ -23,6 +23,12 @@ const FIELD_LABELS: Record<FormField, string> = {
 };
 const FIELD_ORDER: FormField[] = ["name", "system", "stake_style", "coverage", "capital", "goal", ...PRIZE_FIELDS, "window_start", "window_end"];
 
+function fieldId(field: FormField): string {
+  if (field === "window_start") return "lab-window-start";
+  if (field === "window_end") return "lab-window-end";
+  return `lab-${field}`;
+}
+
 export function LaboratoryForm({ onCreated }: Props) {
   const [values, setValues] = useState<FormValues>(DEFAULT_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -57,7 +63,7 @@ export function LaboratoryForm({ onCreated }: Props) {
     {Object.keys(errors).length > 0 && <div className="reference-action-error lab-form-errors" role="alert">
       <p>Revisá los campos señalados.</p>
       <ul>{FIELD_ORDER.filter((field) => errors[field]).map((field) => <li key={field}>
-        <a href={`#lab-${field}`} onClick={(event) => { event.preventDefault(); formRef.current?.querySelector<HTMLElement>(`#lab-${field}`)?.focus(); }}>{FIELD_LABELS[field]}</a>
+        <a href={`#${fieldId(field)}`} onClick={(event) => { event.preventDefault(); formRef.current?.querySelector<HTMLElement>(`#${fieldId(field)}`)?.focus(); }}>{FIELD_LABELS[field]}</a>
       </li>)}</ul>
     </div>}
     <Field id="lab-name" label="Nombre" value={values.name} onChange={(event) => set("name")(event.target.value)} error={errors.name} hint="Único; hasta 120 bytes." autoComplete="off" />

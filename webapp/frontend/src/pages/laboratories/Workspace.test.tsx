@@ -148,6 +148,58 @@ describe("laboratory workspace", () => {
     expect(coverage).toHaveValue("0");
   });
 
+  it.each([
+    ["Ventana: inicio", "Ventana: inicio", "fecha inválida", "lab-window-start"],
+    ["Ventana: fin", "Ventana: fin", "fecha inválida", "lab-window-end"],
+    ["1.º", "Premio 1.º", "0", "lab-prize_1"],
+  ])("U5 targets invalid field links for %s", async (label, errorLabel, value, id) => {
+    const user = userEvent.setup();
+    renderAt("/laboratorios/nuevo");
+    const name = await screen.findByLabelText("Nombre");
+    await user.type(name, "Fechas de prueba");
+    const input = screen.getByLabelText(label);
+    await user.clear(input);
+    await user.type(input, value);
+    await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
+    const alert = await screen.findByRole("alert");
+    expect(input).toHaveFocus();
+    await user.click(name);
+    const link = within(alert).getByRole("link", { name: errorLabel });
+    expect(link).toHaveAttribute("href", `#${id}`);
+    await user.click(link);
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue(value);
+    expect(input).toHaveAttribute("aria-describedby", expect.stringContaining(`${id}-error`));
+    expect(name).toHaveValue("Fechas de prueba");
+    expect(m.createLaboratory).not.toHaveBeenCalled();
+    expect(m.createLaboratoryRun).not.toHaveBeenCalled();
+  });
+
+  it("U5 targets a reversed window error without submitting", async () => {
+    const user = userEvent.setup();
+    renderAt("/laboratorios/nuevo");
+    const name = await screen.findByLabelText("Nombre");
+    await user.type(name, "Ventana invertida");
+    const start = screen.getByLabelText("Ventana: inicio");
+    const end = screen.getByLabelText("Ventana: fin");
+    await user.clear(start);
+    await user.type(start, "2026-09-26 00:00");
+    await user.clear(end);
+    await user.type(end, "2026-09-25 18:20");
+    await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
+    const alert = await screen.findByRole("alert");
+    expect(end).toHaveFocus();
+    await user.click(name);
+    const link = within(alert).getByRole("link", { name: "Ventana: fin" });
+    expect(link).toHaveAttribute("href", "#lab-window-end");
+    await user.click(link);
+    expect(end).toHaveFocus();
+    expect(start).toHaveValue("2026-09-26 00:00");
+    expect(end).toHaveValue("2026-09-25 18:20");
+    expect(m.createLaboratory).not.toHaveBeenCalled();
+    expect(m.createLaboratoryRun).not.toHaveBeenCalled();
+  });
+
   it("U5 preserves the selected run and page without refetching on resize", async () => {
     const screenSize = viewport(861);
     const user = userEvent.setup();

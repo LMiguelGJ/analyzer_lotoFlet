@@ -14,6 +14,7 @@ U2, U4 y U5 están implementados; tu revisión manual todavía está pendiente. 
 | ID | Qué hacés | Qué debería pasar |
 | --- | --- | --- |
 | M1 | Entrá en Nuevo laboratorio y enviá con nombre vacío y cobertura 0. | No se crea nada; aparece un resumen de errores, el foco queda en Nombre y sus enlaces te llevan a cada campo inválido. Los valores escritos permanecen. |
+| M1-fechas | Con nombre válido, probá una fecha de inicio inválida, una fecha de fin inválida y un inicio posterior al fin. Pulsá cada enlace del resumen de errores. | No se crea nada; el enlace lleva el foco al campo correcto, conserva los valores y permite corregirlos. |
 | M2 | Corregí los campos, creá `QA interfaz` con reglas válidas y ejecutá una vez. Podés empezar con una ventana corta que tenga datos. | Crear solo guarda reglas. Ejecutar queda bloqueado mientras trabaja; después aparece una corrida guardada. |
 | M3 | Abrí el resultado y revisá Neto total y Retorno sobre apostado. | Neto = pagado − apostado. ROI = `100 × neto / apostado`, con signo y dos decimales. Sin apuestas: No disponible. Apostado, pagado, media de cerradas y contadores siguen presentes. |
 | M4 | Abrí Datos de la reproducción y revisá cobertura, sorteos evaluados y huecos. | Cobertura dice números seleccionados, no «de 50» ni probabilidad. El desplegable muestra ventana y tres SHA-256 completos: historial, rankings y sesiones. Los huecos son solo entre extremos elegibles. |
