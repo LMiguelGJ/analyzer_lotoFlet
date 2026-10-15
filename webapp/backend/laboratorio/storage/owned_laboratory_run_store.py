@@ -27,6 +27,18 @@ class OwnedLaboratoryRunStoreError(ValueError):
     """Invalid owned-run inputs or corrupt owned-laboratory storage data."""
 
 
+class OwnedLaboratoryRunCapacityError(OwnedLaboratoryRunStoreError):
+    """A valid complete owned result exceeds the per-run payload byte limit."""
+
+
+def _max_owned_sessions(result):
+    """Return the strict eligible-draw bound, or an invalid sentinel for bad input."""
+    if type(result) is not dict:
+        return -1
+    eligible_draws = result.get("eligible_draws")
+    return eligible_draws if type(eligible_draws) is int else -1
+
+
 def _canonical_uuid(value):
     if type(value) is not str:
         return False
@@ -59,7 +71,12 @@ def _decode_run(row, session_rows):
         ):
             raise ValueError("owner, snapshot and result identities disagree")
         sessions = result.get("sessions")
-        _validate_result(lab_id, definition.config.capital, result)
+        _validate_result(
+            lab_id,
+            definition.config.capital,
+            result,
+            max_sessions=_max_owned_sessions(result),
+        )
         _validate_session_rows(sessions, session_rows, definition.config.capital)
         return {
             "id": identifier,
@@ -107,7 +124,10 @@ def create_run(repo, run_id, owner_laboratory_id, snapshot, result, *, quota_byt
         if definition.id != owner_laboratory_id:
             raise ValueError("snapshot owner mismatch")
         result_json, sessions_json = _validate_result(
-            owner_laboratory_id, definition.config.capital, result
+            owner_laboratory_id,
+            definition.config.capital,
+            result,
+            max_sessions=_max_owned_sessions(result),
         )
         metadata_json = _canonical(validated.to_mapping())
         definition_json = _canonical(definition.to_mapping())
@@ -125,7 +145,7 @@ def create_run(repo, run_id, owner_laboratory_id, snapshot, result, *, quota_byt
         + sum(len(run_id.encode("utf-8")) + 8 + len(item.encode("utf-8")) for item in sessions_json)
     )
     if payload_bytes > MAX_PAYLOAD_BYTES:
-        raise OwnedLaboratoryRunStoreError("owned-laboratory payload exceeds storage limit")
+        raise OwnedLaboratoryRunCapacityError("owned-laboratory payload exceeds storage limit")
     effective = repo.effective_quota(quota_bytes, quota_explicit=quota_explicit)
     limit = validate_quota_bytes(effective.effective_bytes)
     with _transaction(repo.path) as db:

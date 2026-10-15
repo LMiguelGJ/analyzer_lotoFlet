@@ -428,3 +428,45 @@ def test_payload_limit_rejection_uses_small_test_limit_without_partial_rows(repo
         _save(repo, definition)
 
     assert _counts(repo) == before
+
+
+@pytest.mark.parametrize("invalid_eligible_draws", [True, 1.0, -1, None])
+def test_owned_result_rejects_invalid_eligible_bound_without_changing_usage(
+    repo, invalid_eligible_draws
+):
+    definition = _definition(repo, "Eligible bound")
+    result = _result(definition.id, definition.config.capital)
+    result["eligible_draws"] = invalid_eligible_draws
+    before = _counts(repo)
+    before_usage = repo.admission_logical_bytes()
+
+    with pytest.raises(OwnedLaboratoryRunStoreError):
+        _save(repo, definition, result=result)
+
+    assert _counts(repo) == before
+    assert repo.admission_logical_bytes() == before_usage
+
+
+def test_owned_zero_eligible_result_with_zero_sessions_is_admitted(repo):
+    definition = _definition(repo, "Zero eligible bound")
+    result = _result(definition.id, definition.config.capital)
+    result["sessions"] = []
+    result["eligible_draws"] = 0
+    result["totals"].update(
+        completed=0,
+        incomplete=0,
+        goals=0,
+        ruins=0,
+        sessions_total=0,
+        total_wagered=0,
+        total_paid=0,
+        total_net=0,
+        total_steps=0,
+        mean_net_closed=None,
+    )
+    result["first"] = result["last"] = None
+    result["session_sha256"] = hashlib.sha256(b"[]").hexdigest()
+
+    run_id = _save(repo, definition, result=result)
+
+    assert repo.get_owned_laboratory_run(definition.id, run_id)["sessions"] == []

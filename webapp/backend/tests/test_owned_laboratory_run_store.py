@@ -361,6 +361,7 @@ def test_get_run_returns_sessions_that_do_not_alias_the_result(repo):
     with connection(repo.path) as db:
         run = get_run(db, definition.id, run_id)
 
+    assert run is not None
     expected = _result(definition.id, definition.config.capital)["sessions"][0]["wagered"]
     run["sessions"][0]["wagered"] += 1
     assert run["result"]["sessions"][0]["wagered"] == expected
@@ -379,6 +380,23 @@ def test_get_run_validates_against_the_snapshot_capital(repo):
     OwnedLaboratoryRunSnapshot.from_mapping(metadata)
     run_id = str(uuid.uuid4())
     _insert_run(repo, definition, run_id, metadata=metadata)
+
+    with connection(repo.path) as db:
+        with pytest.raises(OwnedLaboratoryRunStoreError, match="corrupt owned-laboratory run"):
+            get_run(db, definition.id, run_id)
+
+
+def test_get_run_rejects_sessions_exceeding_persisted_eligible_draws(repo):
+    definition = repo.create_laboratory_definition(
+        "Eligible read bound",
+        initial_laboratory_definitions()[0].config,
+        quota_bytes=10**9,
+        quota_explicit=True,
+    )
+    result = _result(definition.id, definition.config.capital)
+    result["eligible_draws"] = 0
+    run_id = str(uuid.uuid4())
+    _insert_run(repo, definition, run_id, result=result)
 
     with connection(repo.path) as db:
         with pytest.raises(OwnedLaboratoryRunStoreError, match="corrupt owned-laboratory run"):

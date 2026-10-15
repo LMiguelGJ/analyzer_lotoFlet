@@ -14,7 +14,10 @@ from laboratorio.engine.owned_laboratory_service import (
     execute_owned_laboratory,
 )
 from laboratorio.storage.laboratory_store import LaboratoryStoreError
-from laboratorio.storage.owned_laboratory_run_store import OwnedLaboratoryRunStoreError
+from laboratorio.storage.owned_laboratory_run_store import (
+    OwnedLaboratoryRunCapacityError,
+    OwnedLaboratoryRunStoreError,
+)
 from laboratorio.storage.quota import QuotaExceeded
 
 router = APIRouter(prefix="/laboratories")
@@ -111,6 +114,10 @@ def create_laboratory_run(laboratory_id: str, body: CreateLaboratoryRun, request
         except QuotaExceeded:
             raise HTTPException(
                 409, "No hay espacio suficiente en la cuota para guardar esta corrida."
+            ) from None
+        except OwnedLaboratoryRunCapacityError:
+            raise HTTPException(
+                409, "El resultado completo supera el límite de almacenamiento de una corrida."
             ) from None
         except OwnedLaboratoryRunStoreError:
             raise HTTPException(

@@ -238,6 +238,16 @@ def test_empty_session_run_is_valid(repo):
     assert repo.get_reference_lab_run(run_id)["sessions"] == []
 
 
+def test_shared_result_validator_keeps_reference_session_default(repo):
+    from laboratorio.storage.reference_lab_store import MAX_SESSIONS, _validate_result
+
+    record = _record(sessions=1)
+    assert _validate_result(
+        record["config"]["lab_id"], record["config"]["capital"], record["result"]
+    )[0]
+    assert MAX_SESSIONS == 50_000
+
+
 def test_payload_and_session_caps_and_numeric_types(repo):
     from laboratorio.storage.reference_lab_store import MAX_PAYLOAD_BYTES, MAX_SESSIONS
 

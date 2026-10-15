@@ -137,9 +137,10 @@ def _session_digest(rows):
     return hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
 
 
-def _validate_result(lab_id, capital, result):
+def _validate_result(lab_id, capital, result, *, max_sessions=MAX_SESSIONS):
     _text(lab_id)
     capital = _integer(capital, minimum=1)
+    max_sessions = _integer(max_sessions, minimum=0)
     if type(result) is not dict or result.get("lab_id") != lab_id:
         raise ValueError("invalid result")
     _validate_json_values(result)
@@ -147,7 +148,7 @@ def _validate_result(lab_id, capital, result):
     if type(sessions) is tuple:
         result = {**result, "sessions": list(sessions)}
         sessions = result["sessions"]
-    if type(sessions) is not list or len(sessions) > MAX_SESSIONS or type(totals) is not dict:
+    if type(sessions) is not list or len(sessions) > max_sessions or type(totals) is not dict:
         raise ValueError("invalid session summaries")
     _check_totals(totals)
     if totals["sessions_total"] != len(sessions):

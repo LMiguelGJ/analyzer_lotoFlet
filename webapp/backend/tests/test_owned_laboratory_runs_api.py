@@ -191,6 +191,27 @@ def test_owned_execution_failure_saves_no_partial_run(owned_http, monkeypatch, f
         assert client.get(f"{ROOT}/{definition['id']}/runs").json()["total"] == 0
 
 
+def test_owned_byte_capacity_conflict_is_exact_and_atomic(owned_http, monkeypatch):
+    client, app, definition = owned_http
+    from laboratorio.storage import owned_laboratory_run_store
+
+    before_counts = _counts(client, definition["id"])
+    before_usage = app.state.repo.admission_logical_bytes()
+    before_definitions = app.state.repo.get_laboratory_owned_counts(definition["id"])
+    monkeypatch.setattr(owned_laboratory_run_store, "MAX_PAYLOAD_BYTES", 1)
+
+    response = _post(client, definition)
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "El resultado completo supera el límite de almacenamiento de una corrida."
+    }
+    assert _counts(client, definition["id"]) == before_counts == (0, 0)
+    assert client.get(f"{ROOT}/{definition['id']}/runs").json()["total"] == 0
+    assert app.state.repo.get_laboratory_owned_counts(definition["id"]) == before_definitions
+    assert app.state.repo.admission_logical_bytes() == before_usage
+
+
 @pytest.mark.parametrize(
     "suffix", ["?limit=0", "?limit=101", "?offset=-1", "?offset=9223372036854775808"]
 )
@@ -221,3 +242,92 @@ def test_owned_and_existing_posts_preserve_body_and_origin_guards(owned_http, le
         == 403
     )
     assert _counts(client, definition["id"]) == (0, 0)
+
+
+@pytest.mark.parametrize(
+    ("coverage", "capital", "goal", "prizes"),
+    [
+        (50, 50, 51, (1, 1, 1, 1, 1)),
+        (1, 1, 2, (2, 2, 2, 2, 2)),
+    ],
+    ids=["full-coverage-flat", "single-number-flat"],
+)
+def test_full_frozen_owned_result_is_saved_and_publicly_paginated(
+    tmp_path, lab_data, monkeypatch, coverage, capital, goal, prizes
+):
+    from dataclasses import asdict, replace
+
+    from laboratorio.api import laboratory_runs as runs_api
+
+    base_labels = [lab_data.history.labels[int(index)] for index in lab_data.rankings.row_ids]
+    config = replace(
+        initial_laboratory_definitions()[0].config,
+        coverage=coverage,
+        stake_style="flat",
+        capital=capital,
+        goal=goal,
+        prizes=prizes,
+        window_start=min(base_labels),
+        window_end=max(base_labels),
+    )
+    settings = replace(Settings.from_environment(), data_dir=tmp_path, port=8765)
+    app = create_app(settings, catalog_loader=lambda _: lab_data)
+    executions = []
+    execute = runs_api.execute_owned_laboratory
+
+    def capture(*args):
+        execution = execute(*args)
+        executions.append(execution)
+        return execution
+
+    monkeypatch.setattr(runs_api, "execute_owned_laboratory", capture)
+    with TestClient(app, base_url=BASE, raise_server_exceptions=False) as client:
+        created = client.post(
+            ROOT,
+            json={"name": "Full frozen result", "config": config.to_mapping()},
+            headers=ORIGIN,
+        )
+        assert created.status_code == 201, created.text
+        definition = created.json()
+        before_usage = app.state.repo.admission_logical_bytes()
+        before_counts = _counts(client, definition["id"])
+        response = _post(client, definition)
+        assert len(executions) == 1
+        expected = executions[0].result
+        runs_path = f"{ROOT}/{definition['id']}/runs"
+        if response.status_code == 409:
+            assert response.json() == {
+                "detail": "El resultado completo supera el límite de almacenamiento de una corrida."
+            }
+            assert before_counts == (0, 0)
+            assert _counts(client, definition["id"]) == before_counts
+            assert client.get(runs_path).json()["total"] == 0
+            assert app.state.repo.admission_logical_bytes() == before_usage
+            return
+
+        assert response.status_code == 201, response.text
+        run = response.json()
+        assert run["summary"]["eligible_draws"] == expected.eligible_draws
+        assert run["summary"]["session_count"] == expected.totals.sessions_total
+        assert run["summary"]["session_count"] <= run["summary"]["eligible_draws"]
+        assert _counts(client, definition["id"]) == (1, expected.totals.sessions_total)
+
+        all_items = []
+        offset = 0
+        while offset < expected.totals.sessions_total:
+            page = client.get(
+                f"{runs_path}/{run['id']}/sessions",
+                params={"offset": offset, "limit": 100},
+            )
+            assert page.status_code == 200, page.text
+            body = page.json()
+            assert body["total"] == expected.totals.sessions_total
+            assert body["offset"] == offset and body["limit"] == 100
+            assert [item["ordinal"] for item in body["items"]] == list(
+                range(offset, min(offset + 100, body["total"]))
+            )
+            all_items.extend(item["summary"] for item in body["items"])
+            offset += len(body["items"])
+        assert all_items == [asdict(session) for session in expected.sessions]
+        assert len(all_items) == expected.totals.sessions_total
+        assert all(item["outcome"] in {"goal", "ruin", "incomplete"} for item in all_items)

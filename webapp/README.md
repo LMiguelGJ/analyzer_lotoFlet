@@ -49,13 +49,13 @@ Todas las rutas viven bajo `/api/v1` y el servidor acepta solicitudes solo desde
 | `GET /laboratories/{id}/runs/{run_id}` | Snapshot histórico, resumen y capacidades; no devuelve sesiones completas. |
 | `GET /laboratories/{id}/runs/{run_id}/sessions?offset=0&limit=50` | Página estable de sesiones con ordinal; `limit` entre 1 y 100. |
 
-Los informes fijan la huella y el origen del historial usados al ejecutar; una importación posterior no reescribe corridas anteriores. El detalle de sesiones y apuestas se guarda sujeto a límites de 50.000 sesiones, 250.000 apuestas y 32 MiB; el informe indica si el detalle quedó completo, parcial o truncado.
+Los informes fijan la huella y el origen del historial usados al ejecutar; una importación posterior no reescribe corridas anteriores. Las corridas históricas/legacy y las de referencia conservan sus límites existentes de 50.000 sesiones, 250.000 apuestas y 32 MiB; el informe indica si su detalle quedó completo, parcial o truncado.
 
 ### Laboratorios administrables
 
 La configuración manual v1 incluye sistema, cobertura, estilo (`bold`, `ladder`, `flat`), capital, meta, cinco premios y ventana `YYYY-MM-DD HH:MM`. El replay usa esos valores y el UUID real, no sustituye la definición por un nombre del catálogo. Los resultados guardan la definición y huellas originales; no inventan trazas por apuesta (`per_bet_trace: false`).
 
-Estas corridas usan únicamente la historia congelada: importar otra historia en Ajustes no cambia esta fuente ni reescribe resultados. POST/detalle devuelven un resumen y `snapshot`, mientras las sesiones se consultan aparte. Una huella distinta, cuota insuficiente, cambio/borrado de definición durante el replay o datos dañados producen conflicto 409 y no se guarda una corrida parcial. Datos/cuerpo inválidos responden 422; IDs inexistentes, 404.
+Estas corridas usan únicamente la historia congelada: importar otra historia en Ajustes no cambia esta fuente ni reescribe resultados. POST/detalle devuelven un resumen y `snapshot`, mientras las sesiones se consultan aparte. Se conserva el resultado completo: el máximo de sesiones admitido deriva de los sorteos elegibles de esa ejecución, no del límite histórico/legacy de 50.000. La escritura sigue limitada a 32 MiB por corrida y a la cuota/disco disponibles; una ejecución válida que exceda los bytes reales permitidos responde 409 («El resultado completo supera el límite de almacenamiento de una corrida.»), igual que una cuota insuficiente, y no se guarda parcialmente. Una huella distinta, cambio/borrado de definición durante el replay o datos dañados también producen conflicto 409. Datos/cuerpo inválidos responden 422; IDs inexistentes, 404.
 
 Las catorce definiciones iniciales se insertan una sola vez. Podés eliminarlas; reiniciar no las repone. Recrear manualmente un nombre/configuración genera otro UUID sin recuperar resultados de la identidad eliminada. El DELETE exige el contador owned leído recientemente; si cambió, responde 409 para volver a confirmar.
 
