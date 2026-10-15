@@ -226,6 +226,14 @@ Clarification selected by the user, verbatim:
 - General visual acceptance only, not claimed execution of M1–M7 or independent functional PASS. Reopen S7/U3 implementation and focused U1 recovery, superseding only S13/S14's deferral/backend exclusion. Keep normal-data, broad-suite, frozen-input, delivery and JD protections unchanged.
 - Before any fresh U1 execution, establish no old matching check process remains; no duplicate, process termination or inference from missing registry. Preserve old evidence and source changes. New focused isolated checks/independent verification are explicitly authorized, not automatic retries. ODD cannot close until actual evidence or a clearly reported unavailable blocker.
 
+### S16 — Explicit authorization for one probe-only correction and revalidation
+Proposal accepted by the user, verbatim:
+> ¿Autorizás corregir únicamente esa sonda y hacer **una revalidación focalizada** antes de continuar con SQL/API?
+User, verbatim:
+> siii dale
+
+- Correct only the failed independent epoch probe; preserve failed source/raw logs. Perform one focused revalidation of the missing mutation/JSON/populated-cascade/rollback cases on the same immutable committed snapshot, verifying all source/input hashes. Do not repeat the already-passed eleven tests or cache verification, change production code, access normal data, or run broad suites. T4 remains unaccepted until the actual scoped verdict.
+
 ## Tasks
 
 - T0 — U0 recoverable baseline and ODD; S1–S2,S11; route: inline (existing narrow copy changes, no new behavior); status: done; commits: e9fd0513a895ad01bf1f04cc9dd0e4827ce43da7 (preserved UI baseline), a60cb3dded529cdeb5f5bd98295229b9bab6a4ab (approved plan/tracking); focused23PASS/job14exit0.
@@ -234,8 +242,8 @@ Clarification selected by the user, verbatim:
 - T2 — Original scoped JD gate; S5; route: retired by explicit user amendment; status: dropped; not completed/approved; original artifacts preserved; no correction/rejudgment budget consumed.
 - T2B — Independent functional verification of U1A/U1B; S3–S5,S11,S15; route: assess and newly authorized focused independent verification after own checks/exclusivity; status: pending; old verifier mv8uc1jf-1-b8ls failed without usable proof, job15 unconfirmed; old evidence retained, not passed.
 - T3 — U2 reconcile and separate immutable detail/session loading; S6,S11,S13; route: inline; status: blocked (implementation delivered, independent/manual acceptance pending); own RED6fail/exit1 then focused GREEN10PASS/exit0; local implementation commit: 84edcb7c5507df750aced727ba609a079dba10f3.
-- T4 — U3 infrastructure: additive migration20 epoch and independent bounded-cache primitive; S7,S11,S15; route: disjoint bounded writers; status: in_progress; isolated epoch/migration tests and new cache-only module/tests, no owned-store/API/U1A changes; both writer own checks passed (epoch11/cache9), parent focused seam20PASS/exit0; epoch commit f7e436f558d58cd600e8bb846f94ddc9248280b8; epoch assess unassessable→high, independent verification and cache commit/assess pending; not accepted.
-- T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11,S15; route: dependent bounded implementation + independent technical verification; status: pending (reopened by S15, isolated data only); commit: pending.
+- T4 — U3 infrastructure: additive migration20 epoch and independent bounded-cache primitive; S7,S11,S15; route: disjoint bounded writers plus S16 probe-only correction; status: done; independently accepted infrastructure only; isolated epoch/migration tests and new cache-only module/tests, no owned-store/API/U1A changes; both writer own checks passed (epoch11/cache9), parent focused seam20PASS/exit0; epoch commit f7e436f558d58cd600e8bb846f94ddc9248280b8 and cache commit badc7725a6dbfc985e4cb129d7de1fc30e805983; epoch assess unassessable→high, cache high(native medium+item4); status detail: cache independent PASS9/110hashes; epoch independent11PASS plus authorized S16 probe22checkpoints/exit0/108hashes unchanged; no scoped blockers. T5/U1/full feature not accepted.
+- T5 — U3 bounded read certificate/cache and SQL endpoints; S7,S11,S15; route: dependent bounded implementation + independent technical verification; status: pending (T4 accepted; source/candidate preservation before implementation); commit: pending.
 - T6 — U4 financial hierarchy/ROI/coverage/provenance; S8,S11,S13; route: inline; status: blocked (implementation delivered, manual/independent acceptance pending); RED7fail/exit1 then focused GREEN/job4exit0; implementation commit: c45e0bfe015330727956e4b0f2e9a9485b9c5eb5.
 - T7 — U5 semantic responsive order and accessible validation; S9,S11,S13; route: inline; status: blocked (implementation delivered, manual/independent acceptance pending); RED5fail→first GREEN9PASS/1FAIL→semantic fix→10focusedPASS, typecheck0/build0; implementation commit: 351ed5821cc47ebe6d305c2b39c90409011d6a31.
 - T8 — U6 docs, full regression, independent acceptance and isolated same-tab browser QA; S1–S11; route: inline docs + gentle-ai-verify, browser via Orca; status: pending; commit: pending.
@@ -422,3 +430,25 @@ Selected, verbatim:
 ### L24 — Epoch work-unit committed; fail-closed independent verification required
 - Epochcommitf7e436f558d58cd600e8bb846f94ddc9248280b8(7paths,224insertions/9deletions), exactindex/README/U1AsourcehashchecksandcachedGitdiffcheckexit0. No sourceU1Aincluded; normaldataunchanged.
 - NativeASSESSrange0480e0c..f7e436fcommittedOnlywithpersistenceitem1escalationreturnedriskunassessable,nativeRiskunassessable: untrackedfilesrequireexplicitdeclaration. RDDoff; planwriterSelfVerification=true,independentVerifier=true. Treatashigh, noreviewclaim,noassessmentretry/toolrepair. Preparecommittedisolatedverifiercandidatesaftercachecommit.
+- Cachecommitbadc7725a6dbfc985e4cb129d7de1fc30e805983(3paths,285insertions/1deletion); cacheassessf7e436f..badc772committedOnlyreturnedhigh(nativeMedium+concurrencyitem4),independentVerifiertrue. No native reviewstarted. Formatterleftcachetest143linesvswriter145; parentreadbackandseamcoveredpublicbehavior.
+- Freshgit-archiveverifiersnapshots: epoch-rg_5hg76/f7e436f108hashedfiles, cache-m9dlp9bl/badc772110hashedfiles; .tmp/mejoras-quiniela/s15-infra-verify/contexts.json. No dirtyU1A,.envornormaldata. Once-onlyrunnerhas30sperfocusedfiledeadline,rawlogsandbefore/afterhashes; correctedrootancestorbeforeexecution. Parentdidnotexecutetheindependentrunner.
+- Dispatchedread-onlyindependentverifiersepochmv9q5l31-4-asmq/cachemv9q5m6a-5-w17koncesimultaneously. BothmustreadwholefeatureforcontextbutverdictsonlyscopedT4/S7/S11/S15; nomanual/fullfeaturePASS. Whilepending, readonlyexplorerfollow-upmv9q6p50-6-7ctlselects<=20cheapU1admissionnodes,not263-testreplay; fullAPIcounterexamplesremainafterT5. T4staysinprogress.
+
+### L25 — Independent outcomes and explicit closure blocker
+- Cacheverifiermv9q5m6a-5-w17kPASSforstandaloneS7/S11/S15:9PASS/.20s/exit0,stderr empty,110hashesbefore/afterunchanged. No scopedblocker; optionalcustomprobesnotexecuted(exact-commandauthorizationqueryexpired), no retry. Parentreadfocused.result.jsonconfirmed0/nottimedout/sourceunchanged. SQL/callercompactness/snapshotconsistencyremainoutsideunit.
+- Epochverifiermv9q5l31-4-asmqfinalUNAVAILABLE: focused11PASS/3.17s/exit0,stderr empty,108hashesunchanged; probeprobes/independent_epoch.py:100failedbeforeexecutionSyntaxErrorunterminatedstringliteral/exit1. Coveragegap: combinedrun/sessionINSERTandunprovenJSONupdates/populatedcascades. No productiondefectdemonstrated. S11isolationandS15focusedboundaryPASSonly; S7acceptanceUNAVAILABLE. No correction/retry/fallback. Exactlogsunder.tmp/mejoras-quiniela/s15-infra-verify/epoch-rg_5hg76/logs/independent.*andfinal-hashes.json.
+- StopfurtherverificationandT5integration; T4BLOCKEDwaitingforhuman decision toauthorizeaboundedprobe-onlycorrectionandsingletargetedrevalidation. Do not treat writer/parent/independent11testsuccessascompleteepochproof. T5/T1R/T2B/fullT8remainpending; cacheacceptancedoesnotcloseS7orODD.
+- Explorerfollow-upmv9q6p50-6-7ctlreturned10cheapadmission/storeinstances(notexecuted)and2fullfrozenAPIcounterexamplesdeferreduntilT5. No cheapfull-sizeownedstoretestproves>50kcompletepersistence. PreservealloldU1evidenceand7dirtybackendhashes/README. No sourceU1Achanges, normaldatamigration,broadtests,push/PR.
+- CanonicalmemorysyncattemptreadpastEOF451whenfilehad428lines: bookkeepingfailureonly, priorODD/TODOeditsapplied; correctedboundedread1/151/301andsavedmirror. No test/workreplayed. Finalstatus/hashdelta remainsuncommittedforresume.
+
+### L26 — User authorizes one probe-only correction
+Accepted proposal, verbatim:
+> ¿Autorizás corregir únicamente esa sonda y hacer **una revalidación focalizada** antes de continuar con SQL/API?
+User, verbatim:
+> siii dale
+- S16reopensT4missingproofonly. Probeparsefailurewasunterminatedstringinbroken-migrationfixture; no productiondefectobserved. Preserveoriginalprobe/rawfailurelogs, fixprobeonly, ownsyntaxcheckwithoutimport/execution, thenoneindependenttargetedrevalidationon108hashedfiles. Do notreplay11passedtests/cache, touchproduction/normaldatabase,orstartT5beforeacceptance. TODOreviewed: T4inprogress, allothertechnicalgatesunchanged.
+
+### L27 — S16 correction accepted; infrastructure T4 closed
+- Preservedfailedprobeasindependent_epoch.failed-before-s16.py,SHAc94291de6d7ae1fa805722cdbbe781364eedf2f09f7d5f6616866336dd1b282d; correctedonlySQL-fixturestringnewlines. ast.parseexit0withoutimport/execution; no productionchange.
+- Independenttargetedrevalidationmv9qjb0l-7-zn3wPASS:22checkpoints/exit0,bothemptystderr,108source/inputhashesunchanged. Separate6triggerfamilies,JSON/owner/ordinal/run_idupdates,populatedrun/ownercascades,externalconnectionvisibility,rollback,fresh20/19->20preservationandfailedmigrationfull-dumprestore. Previous11PASSnotrerun; no additionalprobe/retry. Logs:s16-revalidation.*andindependent.*unders15-infra-verify/epoch-rg_5hg76/logs. Parentreadexit0andstdoutcases22/sourceunchanged.
+- T4DONEwithworkunitcommitsf7e436f/badc772andindependentcache9PASS+epoch11PASS/22targetedcheckpoints. No fullS7/T5/U1/featureacceptance. Ruffunavailable/LSPpartialremainadvisories. S15stillauthorizesT5afterthisacceptance; preserveU1baselinebeforeproductionintegration.
