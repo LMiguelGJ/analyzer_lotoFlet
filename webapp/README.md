@@ -70,18 +70,18 @@ Las catorce definiciones iniciales se insertan una sola vez. Podés eliminarlas;
 ## Interfaz entregada y validación pendiente
 
 - Ante una ejecución sin confirmación, no se reenvía automáticamente. «Actualizar corridas guardadas» mantiene el bloqueo hasta que termina correctamente una consulta nueva; si falla o se cancela, la incertidumbre continúa.
-- Cambiar la página de sesiones conserva el resumen y consulta solo sesiones. Esto **no** implica paginación SQL eficiente: el backend todavía puede validar la corrida completa en cada lectura; U3 sigue pendiente.
+- Cambiar la página de sesiones conserva el resumen y consulta solo sesiones. El backend usa certificados compactos por instancia de Repository: la lectura fría valida toda la corrida; las lecturas calientes usan el resumen certificado y `ORDER BY ordinal LIMIT/OFFSET` para las sesiones. La caché está limitada a 64 entradas y 16 MiB de payload; una época SQLite invalida los certificados ante mutaciones. No se promete coste O(página) en frío ni aceptación integral de integridad.
 - El neto y «Retorno sobre apostado» encabezan el resultado. ROI = `100 × neto / apostado`, incluidas las incompletas, con dos decimales y signo; sin apuestas se muestra «No disponible». Las ocho métricas originales no cambian.
 - «Números seleccionados» describe cobertura, no probabilidad. «Sin ranking entre extremos» cuenta `gaps` dentro del tramo elegible, no todos los sorteos excluidos. «Datos de la reproducción» conserva completas las huellas de historial, rankings y sesiones.
 - A 860 px o menos, el panel seleccionado precede a la lista en el DOM; sin selección, la lista queda primero. Redimensionar conserva borrador, selección y página. El formulario inválido anuncia un resumen y enfoca el primer campo que requiere corrección.
 
-El código de U2/U4/U5 tiene comprobaciones focalizadas, tipos y compilación observados. **La aceptación manual e independiente sigue pendiente**, igual que la aceptación de U1; no se ejecutó una regresión completa. Seguí la [guía de QA manual](../docs/quiniela-ui-manual-qa.md) y registrá lo observado, sin dar casos no ejecutados por aprobados.
+U1B/U2 tienen verificación técnica independiente focalizada y U4 revisión favorable de presentación/lógica; no equivalen a validación visual integral. El usuario solicitó cerrar la entrega de código y revisar el resto personalmente. **La aceptación manual y la matriz completa de integridad de U1/U3 siguen pendientes**; no se ejecutó una regresión completa ni los dos contraejemplos API de más de 50.000 sesiones. Seguí la [guía de QA manual](../docs/quiniela-ui-manual-qa.md) y registrá lo observado, sin dar casos no ejecutados por aprobados.
 
 ## Datos y migraciones
 
 - Entradas congeladas de solo lectura: `chance_express_history.json` y `repo_ref/reports/chance_rank_v1/predictions/pos1.npz`. El servidor verifica sus SHA-256 al iniciar; si no coinciden, no inicia.
 - Los datos generados se guardan fuera del repositorio y de OneDrive, en `%LOCALAPPDATA%\LaboratorioQuiniela` por defecto; `LABORATORIO_DATA_DIR` permite cambiar esa ubicación.
-- El código registra SQLite versión 20, con época de integridad y triggers. La caché y las lecturas SQL paginadas de U3 siguen pendientes de integración y aceptación. Esto no autoriza migrar la base habitual. El arranque inicializa una base nueva o aplica, en orden, las migraciones conocidas hasta la versión actual; una versión desconocida se rechaza. **No edites ni reemplaces las migraciones SQL.**
+- El código registra SQLite versión 20, con época de integridad y triggers. La caché y las lecturas SQL paginadas de U3 están integradas, con comprobaciones focalizadas; su aceptación completa de integridad sigue pendiente. Esto no autoriza migrar la base habitual. El arranque inicializa una base nueva o aplica, en orden, las migraciones conocidas hasta la versión actual; una versión desconocida se rechaza. **No edites ni reemplaces las migraciones SQL.**
 - Antes de copiar la base, detené la aplicación con Ctrl+C. No copies un archivo SQLite mientras el servidor está ejecutándose.
 
 ## Estructura actual

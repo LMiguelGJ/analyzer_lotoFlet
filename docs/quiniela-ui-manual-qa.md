@@ -1,6 +1,6 @@
 # Revisá la interfaz de Quiniela
 
-U2, U4 y U5 están implementados; tu revisión manual todavía está pendiente. Esta guía comprueba lo que ves y cómo interactuás, no sustituye las pruebas de integridad ni la revisión independiente.
+El código de U2/U4/U5 y las lecturas SQL de U3 se entregan para tu revisión, como pediste: «si ya termian lo demas lo reviso yo». La entrega no implica que la QA restante haya pasado. Esta guía comprueba lo que ves y cómo interactuás; no sustituye las pruebas técnicas de integridad.
 
 ## Antes de empezar
 
@@ -51,11 +51,13 @@ Error exacto o captura:
 
 No compartas bases SQLite, credenciales ni archivos `.env`. Un caso no ejecutado queda como no probado, no como aprobado.
 
-## Lo que no te corresponde comprobar a mano
+## Revisión técnica pendiente: no alcanza con mirar la interfaz
 
 - Atomicidad ante cuota/bytes: que no queden filas parciales ni cambie el uso al rechazar una escritura.
 - Corrupción, huellas y equivalencia de todas las sesiones; revisar dos páginas no acredita la totalidad.
 - Respuesta HTTP exitosa ilegible después de guardar y preservación de contratos históricos compartidos.
-- U3: la migración 20 de época está implementada y probada en bases temporales; caché y lecturas SQL paginadas siguen pendientes de integración y aceptación. No apliques la migración a tu base habitual.
+- U3: época, caché y lecturas SQL paginadas están implementadas. La validación fría sigue revisando toda la corrida; el camino caliente usa certificados y páginas SQL. Las tres pruebas focalizadas no acreditan todas las mutaciones/cascadas, concurrencia de instantáneas, conteos reales de filas/columnas, evicción/oversize ni ausencia de efectos sobre cuota en todos los GET.
+- U1: los dos contraejemplos API completos de más de 50.000 sesiones no se volvieron a ejecutar. No asumir ausencia de truncamiento por mirar dos páginas.
+- Cualquier revisión de corrupción, cuota o migraciones debe usar una base temporal aislada. **No apliques estos ensayos a tu base habitual ni manipules SQLite con la aplicación abierta.**
 
-U1 sigue sin aceptación completa. Tampoco se ejecutó una regresión amplia ni se obtuvo la aceptación independiente de U2/U4/U5. Tus resultados manuales se agregan como evidencia concreta sin borrar esos pendientes.
+U1B y U2 tienen verificación técnica independiente focalizada; U4 tiene revisión favorable de lógica/presentación. U1/U3 y la QA visual/manual integral siguen sin aceptación completa. No se ejecutó una regresión amplia. Por tu indicación, el resto de la revisión queda a tu cargo; un caso no observado sigue siendo **no probado**, no aprobado.

@@ -4,6 +4,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import asdict
+from typing import NoReturn
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import Field
@@ -44,7 +45,7 @@ def _definition(request, identifier):
     return definition
 
 
-def _corrupt():
+def _corrupt() -> NoReturn:
     raise HTTPException(409, "Una corrida guardada está dañada y no se puede mostrar.") from None
 
 
@@ -83,6 +84,34 @@ def _projection(record):
         },
         "capabilities": dict(_CAPABILITIES),
     }
+
+
+def _compact_projection(record):
+    return {
+        **{
+            key: record[key]
+            for key in ("id", "owner_laboratory_id", "lab_id", "contract_version", "created_at")
+        },
+        "snapshot": record["snapshot"],
+        "summary": record["summary"],
+        "capabilities": dict(_CAPABILITIES),
+    }
+
+
+def _stored_compact(request, owner_id, run_id):
+    try:
+        record = request.app.state.repo.get_owned_laboratory_run_summary(owner_id, run_id)
+    except OwnedLaboratoryRunStoreError:
+        try:
+            canonical = str(uuid.UUID(run_id)) == run_id
+        except ValueError:
+            canonical = False
+        if not canonical:
+            raise HTTPException(404, "La corrida no existe.") from None
+        _corrupt()
+    if record is None:
+        raise HTTPException(404, "La corrida no existe.")
+    return record
 
 
 @router.post("/{laboratory_id}/runs", status_code=201)
@@ -141,7 +170,7 @@ def list_laboratory_runs(
     _definition(request, laboratory_id)
     with request.app.state.reference_lab_lock:
         try:
-            return request.app.state.repo.list_owned_laboratory_runs(
+            return request.app.state.repo.list_owned_laboratory_run_summaries(
                 laboratory_id, offset=offset, limit=limit
             )
         except OwnedLaboratoryRunStoreError:
@@ -158,23 +187,26 @@ def laboratory_run_sessions(
 ):
     _definition(request, laboratory_id)
     with request.app.state.reference_lab_lock:
-        record = _stored(request, laboratory_id, run_id)
-    sessions = record["sessions"]
-    return {
-        "run_id": run_id,
-        "total": len(sessions),
-        "offset": offset,
-        "limit": limit,
-        "items": [
-            {"ordinal": ordinal, "summary": summary}
-            for ordinal, summary in enumerate(sessions[offset : offset + limit], start=offset)
-        ],
-    }
+        try:
+            page = request.app.state.repo.list_owned_laboratory_run_sessions(
+                laboratory_id, run_id, offset=offset, limit=limit
+            )
+        except OwnedLaboratoryRunStoreError:
+            try:
+                canonical = str(uuid.UUID(run_id)) == run_id
+            except ValueError:
+                canonical = False
+            if not canonical:
+                raise HTTPException(404, "La corrida no existe.") from None
+            _corrupt()
+    if page is None:
+        raise HTTPException(404, "La corrida no existe.")
+    return page
 
 
 @router.get("/{laboratory_id}/runs/{run_id}")
 def get_laboratory_run(laboratory_id: str, run_id: str, request: Request):
     _definition(request, laboratory_id)
     with request.app.state.reference_lab_lock:
-        record = _stored(request, laboratory_id, run_id)
-    return _projection(record)
+        record = _stored_compact(request, laboratory_id, run_id)
+    return _compact_projection(record)
