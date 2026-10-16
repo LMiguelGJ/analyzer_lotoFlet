@@ -39,6 +39,8 @@ Estos casos requieren respuestas de prueba o corridas sintéticas en QA. No alte
 
 La billetera es independiente por corrida; no suma simulaciones repetidas como dinero real. Su comprobación focalizada no aprueba los casos históricos no observados. Un caso de esta tabla sin ejecutar sigue siendo no probado.
 
+**Revisión visual de billetera: usuario / abierta / no verificada.** Por tu decisión «La revisión visual la hago yo; publicá lo probado», B1–B7 quedan a tu cargo en navegador. Las pruebas técnicas y su juicio independiente fueron favorables en su alcance acotado; la CLI del navegador no produjo una ejecución visual válida ni capturas. No se afirma aprobación visual, móvil, de teclado/toque o global WCAG.
+
 Para M3, un ejemplo de referencia: neto `−1.482.496` y apostado `30.303.350` deben dar `−4,89 %`. No esperes esos importes en una configuración diferente. Un conteo de sesiones sin datos debe mostrar `Sesiones 0 de 0`, nunca `1–0`.
 
 ### Opcional: incertidumbre con el navegador sin conexión
