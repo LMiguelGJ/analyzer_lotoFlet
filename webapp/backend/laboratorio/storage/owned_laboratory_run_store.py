@@ -8,6 +8,8 @@ import uuid
 from dataclasses import fields
 
 from laboratorio.domain.laboratory_run_snapshots import OwnedLaboratoryRunSnapshot
+from laboratorio.domain.laboratory_wallet import POLICY as WALLET_POLICY
+from laboratorio.domain.laboratory_wallet import derive_wallet
 from laboratorio.storage.laboratory_store import LaboratoryStoreError
 from laboratorio.storage.laboratory_store import _decode as _decode_definition
 from laboratorio.storage.laboratory_store import _row as _definition_row
@@ -273,6 +275,10 @@ def _read_epoch(db):
 
 def _compact_record(record):
     result = record["result"]
+    snapshot = OwnedLaboratoryRunSnapshot.from_mapping(record["snapshot"])
+    wallet = derive_wallet(
+        record["sessions"], snapshot.definition.config.capital, result["totals"]["total_net"]
+    )
     return {
         **{
             key: record[key]
@@ -286,6 +292,7 @@ def _compact_record(record):
             },
             "session_count": result["totals"]["sessions_total"],
             "totals": result["totals"],
+            "wallet": wallet,
         },
     }
 
@@ -334,11 +341,23 @@ def _decode_certificate(certificate, owner_id, run_id):
                 "session_sha256",
                 "session_count",
                 "totals",
+                "wallet",
             }
             or type(summary["totals"]) is not dict
             or type(summary["session_count"]) is not int
             or summary["session_count"] < 0
             or len(certificate.session_digests) != summary["session_count"] * 32
+            or type(summary["wallet"]) is not dict
+            or set(summary["wallet"]) != {"policy", "out_of_pocket", "final_wealth"}
+            or summary["wallet"].get("policy") != WALLET_POLICY
+            or any(
+                type(summary["wallet"].get(key)) is not int
+                or not 0 <= summary["wallet"][key] <= 2**53 - 1
+                for key in ("out_of_pocket", "final_wealth")
+            )
+            or type(summary["totals"].get("total_net")) is not int
+            or summary["wallet"]["final_wealth"] - summary["wallet"]["out_of_pocket"]
+            != summary["totals"]["total_net"]
         ):
             raise ValueError("invalid compact run summary")
         return value
@@ -374,7 +393,7 @@ def _load_certificate(db, repo, owner_id, run_id, epoch):
     record = _decode_run(row, session_rows)
     certificate = _certificate_for(record)
     cache.put(repo._owned_laboratory_database_id, epoch, owner_id, run_id, certificate)
-    return _compact_record(record), certificate
+    return _decode_certificate(certificate, owner_id, run_id), certificate
 
 
 def list_run_summaries(repo, owner_laboratory_id, *, offset=0, limit=20):

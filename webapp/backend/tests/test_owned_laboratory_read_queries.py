@@ -96,7 +96,14 @@ def test_cold_certificate_validates_all_rows_and_warm_reads_only_requested_page(
 
     assert cold == warm
     assert cold["total"] == 1
+    assert set(cold["items"][0]["summary"]) == {"totals", "eligible_draws", "gaps"}
     assert detail["summary"]["session_count"] == 1
+    assert detail["summary"]["wallet"] == {
+        "policy": "retain-gains-top-up-v1",
+        "out_of_pocket": definition.config.capital,
+        "final_wealth": definition.config.capital + 10,
+    }
+    assert repo._owned_laboratory_read_cache.info.payload_bytes > 32
     assert page == {
         "run_id": RUN_ID,
         "total": 1,
@@ -105,6 +112,26 @@ def test_cold_certificate_validates_all_rows_and_warm_reads_only_requested_page(
         "items": [{"ordinal": 0, "summary": _valid_result(definition)["sessions"][0]}],
     }
     assert calls == [(RUN_ID, 1)]
+
+
+def test_wallet_derivation_runs_once_on_cold_certificate_and_not_when_warm(
+    repo, saved_owned_run, monkeypatch
+):
+    definition = saved_owned_run
+    calls = []
+    derive = owned_laboratory_run_store.derive_wallet
+
+    def track_wallet(*args):
+        calls.append(len(args[0]))
+        return derive(*args)
+
+    monkeypatch.setattr(owned_laboratory_run_store, "derive_wallet", track_wallet)
+    cold = repo.get_owned_laboratory_run_summary(definition.id, RUN_ID)
+    assert calls == [1]
+    warm = repo.get_owned_laboratory_run_summary(definition.id, RUN_ID)
+
+    assert warm == cold
+    assert calls == [1]
 
 
 def test_cached_certificate_invalidates_after_out_of_page_owner_mutation(repo, saved_owned_run):

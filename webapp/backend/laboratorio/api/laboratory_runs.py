@@ -10,6 +10,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import Field
 
 from laboratorio.api import StrictBody
+from laboratorio.domain.laboratory_run_snapshots import OwnedLaboratoryRunSnapshot
+from laboratorio.domain.laboratory_wallet import derive_wallet
 from laboratorio.engine.owned_laboratory_service import (
     OwnedLaboratoryServiceError,
     execute_owned_laboratory,
@@ -68,6 +70,10 @@ def _stored(request, owner_id, run_id):
 
 def _projection(record):
     result = record["result"]
+    snapshot = OwnedLaboratoryRunSnapshot.from_mapping(record["snapshot"])
+    wallet = derive_wallet(
+        record["sessions"], snapshot.definition.config.capital, result["totals"]["total_net"]
+    )
     return {
         **{
             key: record[key]
@@ -81,6 +87,7 @@ def _projection(record):
             },
             "session_count": result["totals"]["sessions_total"],
             "totals": result["totals"],
+            "wallet": wallet,
         },
         "capabilities": dict(_CAPABILITIES),
     }

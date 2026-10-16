@@ -59,19 +59,27 @@ Estas corridas usan únicamente la historia congelada: importar otra historia en
 
 Las catorce definiciones iniciales se insertan una sola vez. Podés eliminarlas; reiniciar no las repone. Recrear manualmente un nombre/configuración genera otro UUID sin recuperar resultados de la identidad eliminada. El DELETE exige el contador owned leído recientemente; si cambió, responde 409 para volver a confirmar.
 
+### Aportes y patrimonio simulado
+
+El POST de una corrida administrable y su GET de detalle agregan `summary.wallet`: `policy: "retain-gains-top-up-v1"`, `out_of_pocket` y `final_wealth`. Los demás campos, el listado y las páginas de sesiones conservan su contrato. Es una proyección de todas las sesiones validadas y del capital del snapshot: no reescribe resultados ni huellas, no requiere migraciones y no vuelve a ejecutar corridas antiguas.
+
+La billetera conserva ganancias y saldos entre sesiones. Antes de una sesión existente, solo suma el aporte externo que falte para financiar su capital; no recarga después de la última quiebra. No supone retiros ni combina corridas. Sin sesiones, ambos importes son cero. Siempre se cumple `final_wealth - out_of_pocket = totals.total_net`.
+
+Por ejemplo, aportar RD$2.000 y ganar RD$800 deja RD$2.800 de patrimonio; reutilizar ese saldo no es otro aporte. «Volumen apostado» sí puede contar el mismo dinero varias veces. Estos importes son una simulación histórica, no depósitos bancarios reales ni una garantía de ganancias futuras. Una respuesta anterior sin billetera muestra «No disponible» en las dos cifras nuevas, sin ocultar las métricas existentes.
+
 ### Pantalla de laboratorios
 
 - **Crear:** el formulario valida en el cliente las mismas reglas que el servidor (el servidor sigue siendo la autoridad) y solo guarda las reglas; no ejecuta nada. Los valores iniciales copian la configuración de referencia, pero todos los campos se pueden editar. Las reglas de un laboratorio no se editan: para cambiarlas se crea otro.
 - **Ejecutar:** usa el resumen SHA-256 de la fuente congelada que informa el servidor. Si la respuesta se pierde por un fallo de red, la pantalla no reenvía la ejecución: pide actualizar las corridas guardadas antes de intentar otra.
-- **Resultados:** totales, media neta de las sesiones cerradas y una página de resúmenes de sesión. No hay detalle por apuesta.
+- **Resultados:** primero «Tu dinero · Simulación», con Aportado de tu bolsillo, Patrimonio al final y Ganancia / pérdida (el neto existente). Debajo, Movimiento de apuestas conserva volumen, premios recibidos y retorno; la media neta de cerradas queda en «Detalle de sesiones». Se mantienen contadores, procedencia y tabla paginada. «ⓘ Cómo se calcula» explica la billetera sin texto permanente. No hay detalle por apuesta.
 - **Eliminar:** el diálogo indica cuántas corridas y sesiones se perderán y envía ese conteo al servidor. Si cambió mientras tanto, el servidor responde 409 y la pantalla recarga los datos para volver a confirmar. No existe borrado individual de corridas.
-- Los montos en DOP se muestran siempre con signo explícito (convención de toda la aplicación), por lo que el capital aparece como `+RD$2.000`.
+- Los montos históricos conservan su signo explícito; por ejemplo, el capital configurado aparece como `+RD$2.000`. Solo los dos importes absolutos nuevos de billetera omiten el `+`: `RD$2.000` aportados y `RD$2.800` de patrimonio. Ganancia / pérdida y retorno mantienen el signo.
 
 ## Interfaz entregada y validación pendiente
 
 - Ante una ejecución sin confirmación, no se reenvía automáticamente. «Actualizar corridas guardadas» mantiene el bloqueo hasta que termina correctamente una consulta nueva; si falla o se cancela, la incertidumbre continúa.
 - Cambiar la página de sesiones conserva el resumen y consulta solo sesiones. El backend usa certificados compactos por instancia de Repository: la lectura fría valida toda la corrida; las lecturas calientes usan el resumen certificado y `ORDER BY ordinal LIMIT/OFFSET` para las sesiones. La caché está limitada a 64 entradas y 16 MiB de payload; una época SQLite invalida los certificados ante mutaciones. No se promete coste O(página) en frío ni aceptación integral de integridad.
-- El neto y «Retorno sobre apostado» encabezan el resultado. ROI = `100 × neto / apostado`, incluidas las incompletas, con dos decimales y signo; sin apuestas se muestra «No disponible». Las ocho métricas originales no cambian.
+- Los tres importes de billetera encabezan el resultado; Ganancia / pérdida reutiliza el neto existente. «Retorno sobre apostado» se conserva en Movimiento de apuestas: ROI = `100 × neto / apostado`, incluidas las incompletas, con dos decimales y signo; sin apuestas se muestra «No disponible». Las métricas anteriores conservan sus valores; no se agrega otro ROI sobre aportes.
 - «Números seleccionados» describe cobertura, no probabilidad. «Sin ranking entre extremos» cuenta `gaps` dentro del tramo elegible, no todos los sorteos excluidos. «Datos de la reproducción» conserva completas las huellas de historial, rankings y sesiones.
 - A 860 px o menos, el panel seleccionado precede a la lista en el DOM; sin selección, la lista queda primero. Redimensionar conserva borrador, selección y página. El formulario inválido anuncia un resumen y enfoca el primer campo que requiere corrección.
 
