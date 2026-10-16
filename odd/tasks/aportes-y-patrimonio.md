@@ -72,8 +72,8 @@ No changes to engine, history, rankings, `.env`, frozen inputs, `repo_ref/`, `la
 - T1 — S2,S3,S6,S7; route: backend worker, parallel with T2; status: done (implementation/self-check scope only; independent acceptance remains T4); commit: 997429f (job5 exit0); RED: missing-wallet GET; GREEN: 82 backend cases/21.43s with authorized plugin isolation, parent API/query9PASS/4.59s.
 - T2 — S4,S5,S6,S7; route: frontend worker, parallel with T1; status: done (implementation/self-check scope only; independent acceptance remains T4); commit: 3aa666a (job4 exit0); RED: absent Tu dinero heading; GREEN: 73 cases + tsc/build0; parent73PASS/19.08s.
 - T3 — S1,S4,S5,S6,S7; route: inline docs/integration/browser; status: dropped from automatic visual execution, transferred to user by L11 (NOT approved); docs commits: 3aa666a/997429f; wallet visual B1–B7 USER/OPEN; failed browser evidence retained.
-- T4 — S1–S7; route: independent read-only output judgment after authorized isolated host execution; status: in_progress (bounded backend/frontend judgments PASS, evidence commit pending); commit: pending; prior UNAVAILABLE and visual gap preserved.
-- T5 — S1,S7; route: inline verified master integration/publication/new-branch cleanup; status: pending; commit: delivery evidence pending.
+- T4 — S1–S7; route: independent read-only output judgment after authorized isolated host execution; status: done (bounded technical scope only); commit: 927d5786d323381ba4d0a642048a2a8844cadf21; prior UNAVAILABLE and user-owned visual gap preserved.
+- T5 — S1,S7; route: inline verified master integration/publication/new-branch cleanup; status: in_progress; commit: delivery preparation pending; master/remote preflight clean at9275c03, feature retention verified by ancestry.
 
 ### User-owned wallet review registry — OPEN / NOT VERIFIED
 
@@ -139,3 +139,6 @@ Job12short-loadercorrectionalsoexited1withSessionclosed,noQAresultorscreenshots.
 - Frontend independent output judgment mvba2yxh-9-wyui returned bounded T2 PASS: S4/S5 static/unit, frontend S6 tests73/43.46s +tsc0/build0(75modules/8.60s),S7binding85unchanged. Explicitly NOT browser or full-feature approval. Backend output judgment mvb9ughl-8-ec5h PASS remains scoped to S2/S3/backend S6/S7,26initial+56corrected distinct cases. Parent execution and independent judgment are separate facts.
 - Wallet visual registry and guide now explicitly retain B1–B7 as user-owned OPEN. No new browser/provider attempt. Own staticserverjob9 stopped; ownCLIclosejob13exit0 reports browser not open. No other servers/profiles or normal data touched.
 - README/design/QA docs are already committed alongside behavior; this evidence/handoff commit closes bounded T4 technical acceptance only. Master refresh is job14; final integration/publication/branch cleanup still waits for ordinary Git checks.
+
+### L12 — Bounded technical acceptance committed; delivery starts
+Evidence/handoffcommit927d5786d323381ba4d0a642048a2a8844cadf21(job15exit0)containsindependentjudgmentsandexplicitmanualvisualregistry. T4closesonlyitsboundedtechnicalscope. Fetchjob14exit0;localmasterandorigin/masterboth9275c0399db7ede98a98507b8ac552534329c942,ahead/behind0/0;masterisancestoroffeature,workingtreecleanbeforethisreceiptupdate. Preparethisdeliveryunitonfeature,thenFFmasterandordinarypush;deleteonlycreatedlocalfeatureafterpublishedidentity/ancestrychecks. No PR/force/otherbranch/viewcleanup.
