@@ -19,6 +19,12 @@
 .lab-result .lab-result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .lab-result .lab-result-grid > div { display: grid; align-content: start; gap: 8px; padding: 16px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow-x: auto; }
 .lab-result .lab-result-grid span { color: var(--ink-muted); }
+.lab-result .lab-result-primary > div { overflow-wrap: anywhere; }
+.lab-result-subheading { margin: 20px 0 8px; font: 600 1.125rem/1.3 var(--font-display); }
+.lab-result .lab-session-detail, .lab-result .lab-wallet-help { border-bottom: 1px solid var(--line); }
+.lab-result .lab-session-detail summary, .lab-result .lab-wallet-help summary { display: list-item; min-height: 48px; padding-block: 12px; cursor: pointer; }
+.lab-result .lab-session-detail summary:focus-visible, .lab-result .lab-wallet-help summary:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.lab-result .lab-wallet-help p { max-width: 72ch; margin: 0 0 16px; color: var(--ink-muted); }
 .lab-result .lab-result-grid strong { font-variant-numeric: tabular-nums; white-space: nowrap; overflow-wrap: normal; }
 .lab-result .lab-net strong { font-size: clamp(1rem, 3cqi, 2rem); line-height: 1.2; }
 .lab-result .lab-result-financial, .lab-result .lab-result-counts { border-top: 0; }

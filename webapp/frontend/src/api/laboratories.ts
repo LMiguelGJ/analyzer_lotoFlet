@@ -31,6 +31,11 @@ export interface LaboratoryDeleted {
   name: string;
   [key: string]: unknown;
 }
+export interface LaboratoryWallet {
+  policy: "retain-gains-top-up-v1";
+  out_of_pocket: number;
+  final_wealth: number;
+}
 export interface LaboratoryRunSummary {
   eligible_draws: number;
   gaps: number;
@@ -38,6 +43,7 @@ export interface LaboratoryRunSummary {
   last: string | null;
   session_sha256: string;
   session_count: number;
+  wallet?: LaboratoryWallet;
   totals: ReferenceTotals;
 }
 export interface LaboratoryRun {

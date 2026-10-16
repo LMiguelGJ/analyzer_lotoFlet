@@ -129,7 +129,7 @@ Paleta restringida de papel, tinta y dos acentos funcionales. Los tokens del fro
 
 ### Named Rules
 **The One Highlighter Rule.** El amarillo es raro por diseño: una sola aplicación por pantalla como máximo.
-**The Sign Always Rule.** Cada cantidad monetaria se presenta con signo (+ o −) y unidad RD$; el color solo refuerza el significado.
+**The Sign Always Rule.** Los resultados monetarios y retornos conservan signo (+ o −); el dinero mantiene unidad RD$ y el color solo refuerza el significado. Excepción local: los nuevos importes absolutos Aportado de tu bolsillo y Patrimonio al final no llevan `+`. No cambiar los formatos históricos ni los formateadores compartidos.
 **The Not Cream Rule.** El papel permanece frío y claro; no usar crema, sepia ni terracota.
 
 ## Typography
@@ -148,7 +148,7 @@ Paleta restringida de papel, tinta y dos acentos funcionales. Los tokens del fro
 - **Label** (600, 0.75rem, 0.08em): rótulos concisos; caja normal por defecto, sin convertir cada encabezado en un eyebrow.
 
 ### Named Rules
-**The Tabular Rule.** Las columnas numéricas alinean cifras tabulares; dinero y retorno muestran signo y unidad.
+**The Tabular Rule.** Las columnas numéricas alinean cifras tabulares; dinero lleva RD$ y resultados/retorno llevan signo. Los dos importes absolutos de billetera siguen la excepción local anterior.
 **The Local Font Rule.** Usa los archivos Archivo y Archivo Narrow ya empaquetados; no dependas de fuentes remotas.
 
 ## Layout
@@ -159,12 +159,13 @@ La navegación principal tiene dos destinos: Laboratorios y Ajustes. En móvil s
 
 ### Resultado y corrección en Laboratorios
 
-- Neto y retorno sobre apostado primero; después apostado, pagado y media de cerradas, con contadores de cierre secundarios. Mantener signo, RD$, cifras tabulares y dinero sin cortes; alinear las columnas monetarias a la derecha.
+- «Tu dinero · Simulación» primero: Aportado de tu bolsillo, Patrimonio al final y Ganancia / pérdida. La última reutiliza el neto, sin tarjeta duplicada. Los dos importes nuevos son absolutos y sin `+`; el neto conserva signo. Mantener RD$, cifras tabulares, dinero sin cortes y columnas monetarias alineadas a la derecha.
+- «Movimiento de apuestas» conserva volumen apostado, premios recibidos y retorno sobre apostado, con los mismos valores. Los cuatro contadores siguen presentes; «Media neta de cerradas» pasa a «Detalle de sesiones», cerrado inicialmente. La ayuda nativa «ⓘ Cómo se calcula» también empieza cerrada; no cambiar las ayudas de opciones ni añadir otro ROI.
 - La jerarquía se adapta al contenedor del panel, no a cuatro columnas fijas según el viewport. Los ajustes quedan limitados a Laboratorios, sin modificar rutas históricas ni tokens.
 - «Datos de la reproducción» es un desplegable nativo con ventana y huellas completas. No restaurar los seis párrafos explicativos retirados ni inventar trazas por apuesta.
 - El formulario inválido anuncia un resumen enlazado a sus campos y enfoca el primero. La navegación iniciada desde un enlace enfoca el panel, sin robar foco en carga inicial ni al consultar resultados.
 
-Estos comportamientos están implementados; la aceptación visual, móvil, de teclado e independiente sigue pendiente. El chequeo focalizado no acredita conformidad global WCAG. Ver [guía de QA manual](docs/quiniela-ui-manual-qa.md).
+Estos comportamientos están implementados; la aceptación visual, móvil, de teclado e independiente sigue pendiente. El chequeo focalizado no acredita conformidad global WCAG. Ver [guía de QA manual](quiniela-ui-manual-qa.md).
 
 ## Elevation & Depth
 

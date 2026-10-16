@@ -17,11 +17,27 @@ El código de U2/U4/U5 y las lecturas SQL de U3 se entregan para tu revisión, c
 | M1-fechas | Con nombre válido, probá una fecha de inicio inválida, una fecha de fin inválida y un inicio posterior al fin. Pulsá cada enlace del resumen de errores. | No se crea nada; el enlace lleva el foco al campo correcto, conserva los valores y permite corregirlos. |
 | M1-ayuda | Tocá ⓘ junto a Sistema de selección o Estilo de apuesta. Cambiá una opción y volvé a abrir; pulsá Comparar opciones. Repetí con teclado y pantalla estrecha. | La ayuda permanece oculta hasta pedirla; explica la opción elegida con su efecto y un ejemplo. Comparar muestra solo las opciones de ese grupo y señala la actual, sin cambiarla. Escape o Cerrar ayuda devuelve el foco al botón; tocar afuera cierra sin robar foco. No se pierde el borrador ni se crea nada. El panel cabe en la pantalla y permite desplazarse si hace falta. |
 | M2 | Corregí los campos, creá `QA interfaz` con reglas válidas y ejecutá una vez. Podés empezar con una ventana corta que tenga datos. | Crear solo guarda reglas. Ejecutar queda bloqueado mientras trabaja; después aparece una corrida guardada. |
-| M3 | Abrí el resultado y revisá Neto total y Retorno sobre apostado. | Neto = pagado − apostado. ROI = `100 × neto / apostado`, con signo y dos decimales. Sin apuestas: No disponible. Apostado, pagado, media de cerradas y contadores siguen presentes. |
+| M3 | Abrí el resultado y revisá Ganancia / pérdida y Retorno sobre apostado, en Movimiento de apuestas. | Ganancia / pérdida es el neto existente: pagado − apostado. ROI = `100 × neto / apostado`, con signo y dos decimales. Sin apuestas: No disponible. Volumen apostado, premios recibidos y contadores siguen presentes; la media de cerradas se consulta en Detalle de sesiones. |
 | M4 | Abrí Datos de la reproducción y revisá cobertura, sorteos evaluados y huecos. | Cobertura dice números seleccionados, no «de 50» ni probabilidad. El desplegable muestra ventana y tres SHA-256 completos: historial, rankings y sesiones. Los huecos son solo entre extremos elegibles. |
 | M5 | Si hay más de 50 sesiones, avanzá una página y volvé. Recargá y abrí otra vez la corrida. | Resumen y métricas permanecen al paginar; carga/error se limita a sesiones. No hay saltos o duplicados visibles en los ordinales. La corrida guardada sobrevive a la recarga. |
 | M6 | Escribí un borrador en Nuevo laboratorio y reducí/ampliá el viewport cruzando 860/861 px. Repetí con una corrida y página seleccionadas. | En móvil, panel primero; en escritorio, lista primero. Sin selección, lista primero también en móvil. No se pierde texto, selección, página ni foco; no se crea otra corrida. |
 | M7 | Navegá con Tab y abrí un laboratorio desde la lista. Probá pantalla estrecha y zoom 200 %. | Foco visible y orden coherente; el enlace lleva el foco al panel. No salta al panel por una carga de datos. El dinero no se corta; la tabla puede desplazarse sin ensanchar toda la página. |
+
+### Billetera simulada: casos adicionales
+
+Estos casos requieren respuestas de prueba o corridas sintéticas en QA. No alteres sesiones guardadas reales para fabricar importes.
+
+| ID | Qué hacés | Qué debería pasar |
+| --- | --- | --- |
+| B1 | Abrí una corrida de prueba con capital 2.000 y una sesión que termina en 2.800. | Tu dinero · Simulación muestra, en ese orden, `RD$2.000`, `RD$2.800` y `+RD$800`. No hay otra tarjeta que duplique el neto. |
+| B2 | Compará dos fixtures con saldos finales `[2800, 0]` y `[0, 2800]`, capital 2.000. | Ambos tienen neto `−RD$1.200`, pero el primero muestra aporte 2.000 / patrimonio 800; el segundo aporte 4.000 / patrimonio 2.800. El orden y la reutilización del saldo importan. |
+| B3 | Consultá el fixture `[2800, 0, 2000]` y otro con solo `[0]`. | El primero necesita aporte acumulado 3.200, no 6.000; el segundo termina con aporte 2.000 / patrimonio 0, sin recargar una sesión inexistente. |
+| B4 | Consultá una corrida sin sesiones y otra con `[2800, 1500]`, última incompleta. | La vacía muestra 0 / 0 / 0. La segunda incluye la incompleta: aporte 2.000 / patrimonio 2.300 / ganancia 300. |
+| B5 | Abrí una corrida de más de 50 sesiones, cambiá de página y recargá. | Los tres importes corresponden a toda la corrida; no cambian por la página ni se descargan todas las sesiones para calcularlos en el navegador. |
+| B6 | Usá una respuesta de prueba anterior sin `wallet` o con política/importes inválidos. | Los dos valores nuevos dicen No disponible, no cero inventado. Neto, retorno, contadores y demás datos siguen disponibles. |
+| B7 | Abrí Cómo se calcula y Detalle de sesiones con teclado y toque; probá 600/390/320 px y texto ampliado. | Ambos empiezan cerrados. La ayuda explica aportes, saldos retenidos y ausencia de retiros; el detalle conserva la media. No se recorta el dinero ni se ensancha la página. |
+
+La billetera es independiente por corrida; no suma simulaciones repetidas como dinero real. Su comprobación focalizada no aprueba los casos históricos no observados. Un caso de esta tabla sin ejecutar sigue siendo no probado.
 
 Para M3, un ejemplo de referencia: neto `−1.482.496` y apostado `30.303.350` deben dar `−4,89 %`. No esperes esos importes en una configuración diferente. Un conteo de sesiones sin datos debe mostrar `Sesiones 0 de 0`, nunca `1–0`.
 

@@ -29,7 +29,7 @@ const config = { schema_version: 1, system: "transition", coverage: 1, stake_sty
 const definition = { schema_version: 1, id: ID, name: "Transición propia", reference_id: null, config };
 const totals = { completed: 3, incomplete: 1, goals: 2, ruins: 1, sessions_total: 4, total_wagered: 1000, total_paid: 1100, total_net: 100, total_steps: 10, mean_net_closed: 50 };
 const runItem = { id: "run-1", created_at: "2026-10-01T10:00:00Z", summary: { eligible_draws: 10, gaps: 1, totals } };
-const run = { id: "run-1", owner_laboratory_id: ID, lab_id: ID, contract_version: 1, created_at: "2026-10-01T10:00:00Z", snapshot: { schema_version: 1, kind: "owned_laboratory_run" as const, definition, provenance: { history_sha256: SHA, rankings_sha256: "b".repeat(64), history_origin: "frozen" as const } }, summary: { eligible_draws: 10, gaps: 1, first: null, last: null, session_sha256: "c".repeat(64), session_count: 4, totals }, capabilities: { session_summary: true as const, per_bet_trace: false as const } };
+const run = { id: "run-1", owner_laboratory_id: ID, lab_id: ID, contract_version: 1, created_at: "2026-10-01T10:00:00Z", snapshot: { schema_version: 1, kind: "owned_laboratory_run" as const, definition, provenance: { history_sha256: SHA, rankings_sha256: "b".repeat(64), history_origin: "frozen" as const } }, summary: { eligible_draws: 10, gaps: 1, first: null, last: null, session_sha256: "c".repeat(64), session_count: 4, wallet: { policy: "retain-gains-top-up-v1" as const, out_of_pocket: 2000, final_wealth: 2800 }, totals }, capabilities: { session_summary: true as const, per_bet_trace: false as const } };
 
 const m = vi.mocked(api);
 function renderAt(path: string) {
@@ -200,15 +200,20 @@ describe("laboratory workspace", () => {
     expect(m.createLaboratoryRun).not.toHaveBeenCalled();
   });
 
-  it("U5 preserves the selected run and page without refetching on resize", async () => {
+  it("U5 preserves wallet totals while paging sessions without refetching the run", async () => {
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, wallet: { policy: "retain-gains-top-up-v1", out_of_pocket: 2000, final_wealth: 2100 }, totals: { ...totals, total_net: 100 } } });
     const screenSize = viewport(861);
     const user = userEvent.setup();
     m.listLaboratorySessions.mockImplementation(async (_lab, _run, params) => ({ run_id: "run-1", total: 51, offset: params?.offset ?? 0, limit: 50, items: [{ ordinal: params?.offset ?? 0, summary: { outcome: "goal", start_index: 0, end_index: 3, draws: 4, final_balance: 2800, wagered: 100, paid: 900 } }] }));
     const { container } = renderAt(`/laboratorios/${ID}`);
     await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
     await screen.findByRole("region", { name: "Resúmenes de sesiones" });
+    expect(screen.getByText("Aportado de tu bolsillo").parentElement).toHaveTextContent("RD$2.000");
+    expect(screen.getByText("Patrimonio al final").parentElement).toHaveTextContent("RD$2.100");
     await user.click(within(screen.getByRole("navigation", { name: "Paginación de sesiones" })).getByRole("button", { name: "Siguiente" }));
     await screen.findByRole("heading", { name: "Sesiones 51–51 de 51" });
+    expect(screen.getByText("Aportado de tu bolsillo").parentElement).toHaveTextContent("RD$2.000");
+    expect(screen.getByText("Patrimonio al final").parentElement).toHaveTextContent("RD$2.100");
     await act(async () => screenSize.resize(860));
     expect(container.querySelector(".lab-workspace")!.children[0]).toHaveClass("lab-stage");
     expect(screen.getByRole("heading", { name: "Sesiones 51–51 de 51" })).toBeInTheDocument();
@@ -233,6 +238,44 @@ describe("laboratory workspace", () => {
     expect(within(result).getByText("Retorno sobre apostado").parentElement).toHaveTextContent(expected);
     expect(within(result).getByText("Media neta de cerradas").parentElement).toHaveTextContent("+RD$50,00");
     expect(within(result).getByText("Incompletas").parentElement).toHaveTextContent("1");
+  });
+
+  it("shows the certified three-value wallet and keeps existing metrics in their disclosures", async () => {
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, totals: { ...totals, total_net: 800 } } });
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    expect(within(result).getByRole("heading", { name: "Tu dinero · Simulación" })).toBeInTheDocument();
+    for (const [label, value] of [["Aportado de tu bolsillo", "RD$2.000"], ["Patrimonio al final", "RD$2.800"], ["Ganancia / pérdida", "+RD$800"]]) {
+      expect(within(result).getByText(label).parentElement).toHaveTextContent(value);
+    }
+    expect(within(result).getByText("Movimiento de apuestas")).toBeInTheDocument();
+    expect(within(result).getByText("Volumen apostado").parentElement).toHaveTextContent("+RD$1.000");
+    expect(within(result).getByText("Premios recibidos").parentElement).toHaveTextContent("+RD$1.100");
+    const help = within(result).getByText("ⓘ Cómo se calcula").closest("details")!;
+    expect(help).not.toHaveAttribute("open");
+    expect(help).toHaveTextContent("no hay retiros");
+    const sessionDetails = within(result).getByText("Detalle de sesiones").closest("details")!;
+    expect(sessionDetails).not.toHaveAttribute("open");
+    expect(sessionDetails).toHaveTextContent("Media neta de cerradas");
+    expect(within(result).queryByText("Neto total")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["absent", undefined],
+    ["unknown policy", { policy: "future-policy", out_of_pocket: 2000, final_wealth: 2800 } as unknown as typeof run.summary.wallet],
+    ["inconsistent", { policy: "retain-gains-top-up-v1" as const, out_of_pocket: 2000, final_wealth: 2800 }],
+  ])("shows unavailable wallet values for %s without hiding existing totals", async (_case, wallet) => {
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, wallet, totals: { ...totals, total_net: 100 } } });
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    expect(within(result).getByText("Aportado de tu bolsillo").parentElement).toHaveTextContent("No disponible");
+    expect(within(result).getByText("Patrimonio al final").parentElement).toHaveTextContent("No disponible");
+    expect(within(result).getByText("Ganancia / pérdida").parentElement).toHaveTextContent("+RD$100");
+    expect(within(result).getByText("Volumen apostado").parentElement).toHaveTextContent("+RD$1.000");
   });
 
   it("U4 shows selected coverage and complete reproduction provenance", async () => {
@@ -442,7 +485,7 @@ describe("laboratory workspace", () => {
     renderAt(`/laboratorios/${ID}`);
     await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
     const result = await screen.findByRole("region", { name: "Resultado guardado" });
-    expect(within(result).getByText("Neto total").parentElement).toHaveTextContent("+RD$100");
+    expect(within(result).getByText("Ganancia / pérdida").parentElement).toHaveTextContent("+RD$100");
     expect(within(result).getByText("Incompletas").parentElement).toHaveTextContent("1");
     expect(within(result).getByText("Media neta de cerradas").parentElement).toHaveTextContent("+RD$50,00");
     expect(within(result).queryByText("Las sesiones incompletas aportan a los totales de dinero, pero no al promedio neto de sesiones cerradas.")).not.toBeInTheDocument();
