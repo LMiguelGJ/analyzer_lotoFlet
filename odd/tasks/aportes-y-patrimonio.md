@@ -1,5 +1,5 @@
 # Aportes de bolsillo y patrimonio simulado
-Objective: execute the approved wallet plan without changing the engine or stored results. Branch: `feat/aportes-y-patrimonio`; base: `9275c0399db7ede98a98507b8ac552534329c942`.
+Objective: execute the approved wallet plan without changing the engine or stored results. Branch: `master` (source feature `feat/aportes-y-patrimonio` integrated and deleted); base: `9275c0399db7ede98a98507b8ac552534329c942`.
 Delivery: exception-ok, explicit verified integration into master, no PR requested; forecast 600–850 authored diff lines including tests/docs, coherent work-unit commits. Runners: Python pytest, Node Vitest/tsc/Vite, isolated browser.
 
 ## Specs
@@ -73,7 +73,7 @@ No changes to engine, history, rankings, `.env`, frozen inputs, `repo_ref/`, `la
 - T2 — S4,S5,S6,S7; route: frontend worker, parallel with T1; status: done (implementation/self-check scope only; independent acceptance remains T4); commit: 3aa666a (job4 exit0); RED: absent Tu dinero heading; GREEN: 73 cases + tsc/build0; parent73PASS/19.08s.
 - T3 — S1,S4,S5,S6,S7; route: inline docs/integration/browser; status: dropped from automatic visual execution, transferred to user by L11 (NOT approved); docs commits: 3aa666a/997429f; wallet visual B1–B7 USER/OPEN; failed browser evidence retained.
 - T4 — S1–S7; route: independent read-only output judgment after authorized isolated host execution; status: done (bounded technical scope only); commit: 927d5786d323381ba4d0a642048a2a8844cadf21; prior UNAVAILABLE and user-owned visual gap preserved.
-- T5 — S1,S7; route: inline verified master integration/publication/new-branch cleanup; status: in_progress; commit: delivery preparation pending; master/remote preflight clean at9275c03, feature retention verified by ancestry.
+- T5 — S1,S7; route: inline verified master integration/publication/new-branch cleanup; status: done; feature work-unit/delivered boundary: 90a2dc75a723a781d7810fbedb697d41cc375aa7; master push job17 exit0; only-created-feature branch deleted by guarded branch-d; final receipt publication follows.
 
 ### User-owned wallet review registry — OPEN / NOT VERIFIED
 
@@ -142,3 +142,10 @@ Job12short-loadercorrectionalsoexited1withSessionclosed,noQAresultorscreenshots.
 
 ### L12 — Bounded technical acceptance committed; delivery starts
 Evidence/handoffcommit927d5786d323381ba4d0a642048a2a8844cadf21(job15exit0)containsindependentjudgmentsandexplicitmanualvisualregistry. T4closesonlyitsboundedtechnicalscope. Fetchjob14exit0;localmasterandorigin/masterboth9275c0399db7ede98a98507b8ac552534329c942,ahead/behind0/0;masterisancestoroffeature,workingtreecleanbeforethisreceiptupdate. Preparethisdeliveryunitonfeature,thenFFmasterandordinarypush;deleteonlycreatedlocalfeatureafterpublishedidentity/ancestrychecks. No PR/force/otherbranch/viewcleanup.
+
+### L13 — Master publication and created-branch cleanup observed
+- Feature delivery-preparation work-unit90a2dc75a723a781d7810fbedb697d41cc375aa7(job16exit0)closed source work before delivery. Clean-tree guards passed; switchedmasterandFF-onlymergedallfivefeaturecommits. Ordinarypushjob17exit0/5s published9275c03..90a2dc7toorigin/master.
+- Before deletion, exactrefguards confirmed currentbranchmasterandmaster/origin-master/featureall90a2dc75a723a781d7810fbedb697d41cc375aa7,treeclean. Authorized `git branch -d feat/aportes-y-patrimonio` exited0; onlymasterlocal/origin-masterplus symbolicoriginHEADremain,ahead/behind0/0. No remote featurebranchwascreated. Existingdetachedreviewviewsnotremoved.
+- Source-preservation Git check against9275c03exited0: engine,migrations,history/rankings,cacheclass,quotapolicy,sharedformatters/tokens,repo_ref/lagacy_loto/.envunchanged. Feature changed17plannedcode/test/doc/plan/trackerpaths only. Normaldatabasewasnotusedbyfeatureverification.
+- T5deliveredboundaryandfeatureworkunitare90a2dc7; thisfinalreceiptisonmasterasbookkeepingafterobservedpublication/cleanup,thenordinarypublishedwithoutnewcode/testclaims. Noagentacceptancetaskremainsopen; T3automaticvisualactivityisdroppedbyexplicitusertransfer,B1–B7remainUSER/OPEN/NOTVERIFIED. HistoricalQAregistryunchanged. Noactivefeaturetest/verifier/server/browserremains.
+- Final risk: item4(certifiedSQLite snapshot/cache integration); boundedindependenttechnicalchecksPASS,notfullintegritymatrix. LSPinconclusive,realbrowserunavailable/manualhandoff,no globalsuite/frozen65kcases executed. These gaps are not upgraded toPASS.
