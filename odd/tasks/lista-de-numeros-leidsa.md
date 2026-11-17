@@ -14,11 +14,11 @@ y dejar la pantalla de Ajustes limpia, sin tecnicismos. Loteka Chance Express de
 
 ## Tasks
 
-- T1 — S1, S6: catálogo de listas + lista activa persistida (migración 0021) + `GET/PUT` de lista activa; parseo con N posiciones sin cambiar Loteka. Route: worker. Commit: pending.
-- T2 — S3, S5, S6: laboratorios y corridas aceptan 3 posiciones; sistemas sin ranking para Leidsa (paridad, fríos, frecuencias, decaimiento); los que requieren ranking quedan bloqueados con mensaje claro; ventana derivada de la lista. Route: worker. Commit: pending.
-- T3 — S4: premios por posición editables en Ajustes para la lista activa (defecto Leidsa 60/8/4, Loteka 80/8/4/2/1). Route: worker. Commit: pending.
-- T4 — S1, S2, S4: rediseño de `/ajustes`: selector de lista, premios, textos simples; datos técnicos plegados en "Avanzado". Formularios de laboratorio con premios dinámicos. Route: worker. Commit: pending.
-- T5 — S1–S6: verificación independiente (backend + frontend + golden) y arranque de la app. Route: verify. Commit: n/a.
+- T1 — S1, S6: catálogo de listas + lista activa persistida (migración 0021) + `GET/PUT` de lista activa; parseo con N posiciones sin cambiar Loteka. Route: worker. Commit: bc6ec76. Done.
+- T2 — S3, S5, S6: laboratorios y corridas aceptan 3 posiciones; sistemas sin ranking para Leidsa (paridad, fríos, frecuencias, decaimiento); los que requieren ranking quedan bloqueados con mensaje claro; ventana derivada de la lista. Route: worker. Commit: 81efd04. Done.
+- T3 — S4: premios por posición editables en Ajustes para la lista activa (defecto Leidsa 60/8/4, Loteka 80/8/4/2/1). Route: worker. Commit: e1f730d. Done (premios enteros 1–10000).
+- T4 — S1, S2, S4: rediseño de `/ajustes`: selector de lista, premios, textos simples; datos técnicos plegados en "Avanzado". Formularios de laboratorio con premios dinámicos. Route: worker. Commit: 2cf8dd4. Done.
+- T5 — S1–S6: verificación independiente (backend + frontend + golden) y arranque de la app. Route: verify. Commit: n/a. Done: backend 1025 passed (1 pre-existing failure test_v13_database_upgrades_in_place, fails on master too), frontend 253 passed + typecheck + build, independent verify S1–S6 pass, fixes 3052e9f.
 
 ## Log
 
@@ -26,3 +26,4 @@ y dejar la pantalla de Ajustes limpia, sin tecnicismos. Loteka Chance Express de
 - L2 — Decisiones: motor genérico ("Que los laboratorios funcionen con Leidsa"); premios "Configurable en Ajustes"; "Leidsa con los 5 sistemas posibles".
 - L4 — Entrega: "al final debe pasar todo a la rama master" — al cerrar T5 con todo verificado, merge de feat/lista-leidsa a master (sin push).
 - L3 — Evidencia: el motor v1 está fijo en 5 posiciones (`engine/contracts.py:78`, `engine/adapter.py:105,170`, `domain/laboratories.py:104`); 9 de 13 sistemas dependen de `pos1.npz` (rankings de chance_rank, no recalculables con 1.381 sorteos); la capa v2 (`/api/v2/game-profiles`, `/history-sources`) es solo almacenamiento y no se reutiliza como motor. Test `test_v13_database_upgrades_in_place` ya fallaba en HEAD antes de este trabajo.
+- L5 — Cierre: verificador independiente S1–S6 pass; dos defectos bajos corregidos en 3052e9f (ventana vacía de laboratorio Leidsa → 422; nombre por defecto >80 caracteres se acorta). Base local del usuario migrada a v22 (solo aditiva); respaldo post-migración en %LOCALAPPDATA%\LaboratorioQuiniela\laboratorio-backup-20261117.db; un build anterior a 0021 ya no abre esa base. Lista activa devuelta a chance_express.
