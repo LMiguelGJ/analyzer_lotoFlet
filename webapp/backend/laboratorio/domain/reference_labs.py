@@ -20,6 +20,9 @@ class ReferenceLab:
     prizes: tuple[int, ...] = (80, 8, 4, 2, 1)
     window_start: str = "2025-09-02 05:10"
     window_end: str = "2026-09-25 18:20"
+    # The 14 fixed laboratories are Chance Express; user labs on other lists replay through
+    # the same engine with their own list id (see ``LaboratoryConfig``).
+    list_id: str = "chance_express"
 
 
 REFERENCE_LABS = (

@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
+from laboratorio.domain.number_lists import DEFAULT_LIST_ID, get_list, unavailable_message
 from laboratorio.domain.reference_labs import REFERENCE_LABS, ReferenceLab, StakeStyle
 
 SNAPSHOT_VERSION = 1
@@ -13,9 +14,24 @@ FROZEN_HISTORY_SHA256 = "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776
 MAX_FROZEN_DRAWS = 105_426
 MAX_SAFE_INTEGER = min(2**53 - 1, 2**63 - 1)
 _REFERENCE_NAMESPACE = uuid.UUID("5531ba2c-7735-5a3c-a97f-8358244c0fb4")
-_SUPPORTED_SYSTEMS = frozenset(lab.system for lab in REFERENCE_LABS)
+_SUPPORTED_SYSTEMS = frozenset(lab.system for lab in REFERENCE_LABS)  # Chance Express labs
 _REFERENCE_START = min(lab.window_start for lab in REFERENCE_LABS)
 _REFERENCE_END = max(lab.window_end for lab in REFERENCE_LABS)
+
+
+def supported_systems(list_id):
+    """Systems a user laboratory may use on a list (Chance keeps its archived family)."""
+    if list_id == DEFAULT_LIST_ID:
+        return _SUPPORTED_SYSTEMS
+    number_list = get_list(list_id)
+    return frozenset(number_list.available_systems) if number_list else frozenset()
+
+
+def default_window(list_id, first_label=None, last_label=None):
+    """Default laboratory window: Chance keeps its archived bounds, others use the list's labels."""
+    if list_id == DEFAULT_LIST_ID:
+        return _REFERENCE_START, _REFERENCE_END
+    return first_label, last_label
 
 
 def _strict_int(value, field):
@@ -84,10 +100,20 @@ class LaboratoryConfig:
     prizes: tuple[int, ...]
     window_start: str
     window_end: str
+    # Chance Express keeps its exact historical shape: the id is not serialized for it.
+    list_id: str = DEFAULT_LIST_ID
 
     def __post_init__(self):
-        if type(self.system) is not str or self.system not in _SUPPORTED_SYSTEMS:
+        number_list = get_list(self.list_id)
+        if number_list is None:
+            raise ValueError("list_id must identify a known number list")
+        if type(self.system) is not str:
             raise ValueError("system is not supported by the archived reference family")
+        if self.list_id == DEFAULT_LIST_ID:
+            if self.system not in _SUPPORTED_SYSTEMS:
+                raise ValueError("system is not supported by the archived reference family")
+        elif self.system not in number_list.available_systems:
+            raise ValueError(unavailable_message(self.system))
         _strict_int(self.coverage, "coverage")
         if self.coverage > 50:
             raise ValueError("coverage must be between 1 and 50")
@@ -101,8 +127,10 @@ class LaboratoryConfig:
         _strict_int(self.goal, "goal")
         if self.goal <= self.capital:
             raise ValueError("goal must exceed initial capital")
-        if type(self.prizes) is not tuple or len(self.prizes) != 5:
-            raise ValueError("prizes must be a tuple of exactly five positive integers")
+        positions = number_list.positions
+        if type(self.prizes) is not tuple or len(self.prizes) != positions:
+            words = {3: "three", 5: "five"}.get(positions, str(positions))
+            raise ValueError(f"prizes must be a tuple of exactly {words} positive integers")
         for prize in self.prizes:
             _strict_int(prize, "prize")
         if self.stake_style in {"bold", "ladder"} and self.prizes[0] <= self.coverage:
@@ -117,7 +145,7 @@ class LaboratoryConfig:
         end = _validate_window_label(self.window_end)
         if start > end:
             raise ValueError("window_start must not exceed window_end")
-        if start < _REFERENCE_START or end > _REFERENCE_END:
+        if self.list_id == DEFAULT_LIST_ID and (start < _REFERENCE_START or end > _REFERENCE_END):
             raise ValueError("window must be inside the archived reference date bounds")
         _financial_bounds(self)
 
@@ -126,7 +154,7 @@ class LaboratoryConfig:
         return "parity" if self.system == "parity" else "ranking"
 
     def to_mapping(self):
-        return {
+        mapping = {
             "schema_version": SNAPSHOT_VERSION,
             "system": self.system,
             "coverage": self.coverage,
@@ -137,6 +165,9 @@ class LaboratoryConfig:
             "window_start": self.window_start,
             "window_end": self.window_end,
         }
+        if self.list_id != DEFAULT_LIST_ID:
+            mapping["list_id"] = self.list_id
+        return mapping
 
     @classmethod
     def from_mapping(cls, value):
@@ -151,6 +182,13 @@ class LaboratoryConfig:
             "window_start",
             "window_end",
         }
+        list_id = DEFAULT_LIST_ID
+        if type(value) is dict and "list_id" in value:
+            list_id = value["list_id"]
+            # Only non-default lists carry the id; an explicit default would not round-trip.
+            if type(list_id) is not str or list_id == DEFAULT_LIST_ID or get_list(list_id) is None:
+                raise ValueError("invalid laboratory config snapshot")
+            keys = keys | {"list_id"}
         if (
             type(value) is not dict
             or set(value) != keys
@@ -168,6 +206,7 @@ class LaboratoryConfig:
             prizes=tuple(value["prizes"]),
             window_start=value["window_start"],
             window_end=value["window_end"],
+            list_id=list_id,
         )
 
 
@@ -235,6 +274,7 @@ class LaboratoryDefinition:
             config.prizes,
             config.window_start,
             config.window_end,
+            config.list_id,
         )
 
 

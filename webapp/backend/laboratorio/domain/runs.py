@@ -103,8 +103,8 @@ def _ratio(numerator: int, denominator: int) -> float:
     return float(value.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
 
 
-def _validate_rows(rows: tuple[Draw, ...], coverage: int) -> int:
-    """Check every row and return how many are ranked."""
+def _validate_rows(rows: tuple[Draw, ...], coverage: int, width: int = RESULTS_PER_DRAW) -> int:
+    """Check every row (``width`` results each) and return how many are ranked."""
     ranked = 0
     previous_minute = None
     for row in rows:
@@ -114,10 +114,10 @@ def _validate_rows(rows: tuple[Draw, ...], coverage: int) -> int:
             raise ValueError("draws must be strictly chronological")
         previous_minute = row.minute
         results = row.results
-        if len(results) != RESULTS_PER_DRAW or any(
+        if len(results) != width or any(
             type(number) is not int or not 0 <= number < NUMBERS for number in results
         ):
-            raise ValueError("draw results must be five integers between 0 and 99")
+            raise ValueError(f"draw results must be {width} integers between 0 and 99")
         order = row.order
         if order is not None:
             if (
@@ -157,17 +157,26 @@ def _totals(sessions: list[RunSession], capital: int) -> RunTotals:
     )
 
 
-def run_sessions(config: RunConfig, rows: Iterable[Draw]) -> RunResult:
+def run_sessions(
+    config: RunConfig, rows: Iterable[Draw], *, results_per_draw: int = RESULTS_PER_DRAW
+) -> RunResult:
     """Chain sessions over ``rows`` and report each one plus window totals.
 
     Unranked rows never bet. Before a session they are skipped; inside one they still advance
     the elapsed-draw clock used by ``max_draws``. After each settled bet the session closes
     on goal first, then ruin (the next bet is unaffordable), then limit.
+
+    ``results_per_draw`` is how many results every draw carries (five for Loteka Chance
+    Express, three for the Quiniela Leidsa); the config can bet on at most that many.
     """
     if type(config) is not RunConfig:
         raise TypeError("config must be RunConfig")
+    if type(results_per_draw) is not int or not 1 <= results_per_draw <= MAX_POSITIONS:
+        raise ValueError(f"results_per_draw must be between 1 and {MAX_POSITIONS}")
+    if config.positions > results_per_draw:
+        raise ValueError("positions cannot exceed the results of each draw")
     draws = tuple(rows)
-    ranked_draws = _validate_rows(draws, config.coverage)
+    ranked_draws = _validate_rows(draws, config.coverage, results_per_draw)
 
     capital = config.capital
     goal = config.goal

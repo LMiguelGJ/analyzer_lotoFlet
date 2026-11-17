@@ -113,6 +113,7 @@ def run_reference_lab(
         prizes=lab.prizes,
         window_start=lab.window_start,
         window_end=lab.window_end,
+        list_id=lab.list_id,
     )
     expected_selection = "parity" if lab.system == "parity" else config.selection_kind
     if lab.selection_kind != expected_selection:

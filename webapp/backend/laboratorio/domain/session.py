@@ -7,7 +7,7 @@ from dataclasses import dataclass
 class Draw:
     label: str
     minute: int
-    results: tuple[int, int, int, int, int]
+    results: tuple[int, ...]
     order: tuple[int, ...] | None
 
 
@@ -17,6 +17,6 @@ class Bet:
     numbers: tuple[int, ...]
     per_number: int
     wagered: int
-    results: tuple[int, int, int, int, int]
+    results: tuple[int, ...]
     paid: int
     balance: int

@@ -3,13 +3,19 @@
 import re
 from typing import Annotated, Literal, NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 from pydantic import Field, field_validator
 
-from laboratorio.api import StrictBody, repo, require_chance_express
+from laboratorio.api import StrictBody, repo
 from laboratorio.api.history import _meta
 from laboratorio.domain.contracts import SYSTEMS
-from laboratorio.engine.run_service import RunSpec, RunSpecError, execute_run
+from laboratorio.domain.number_lists import (
+    DEFAULT_LIST_ID,
+    UNAVAILABLE_REASON,
+    NumberList,
+)
+from laboratorio.engine.list_catalog import ListError
+from laboratorio.engine.run_service import RunSpec, RunSpecError, _list_snapshot, execute_run
 
 router = APIRouter(prefix="/runs")
 _HISTORY_SHA256 = re.compile(r"\A[0-9a-fA-F]{64}\Z")
@@ -66,7 +72,7 @@ class CreateRun(StrictBody):
         return value
 
 
-def _as_spec(body: CreateRun) -> RunSpec:
+def _as_spec(body: CreateRun, list_id: str = DEFAULT_LIST_ID) -> RunSpec:
     return RunSpec(
         name=body.name,
         positions=body.rules.positions,
@@ -81,6 +87,7 @@ def _as_spec(body: CreateRun) -> RunSpec:
         start_date=body.window.start_date,
         end_date=body.window.end_date,
         history_sha256=body.history_sha256,
+        list_id=list_id,
     )
 
 
@@ -90,47 +97,90 @@ def _storage_error(exc: ValueError) -> NoReturn:
     raise HTTPException(409, "Una corrida guardada está dañada y no se puede mostrar.") from None
 
 
-@router.get("/options", dependencies=[Depends(require_chance_express)])
+def system_entries(number_list: NumberList) -> list[dict]:
+    """Ranking systems for the options payload.
+
+    Chance Express keeps the plain ``{id, label}`` shape; any other list flags every system
+    as available or not (with the Spanish reason).
+    """
+    if number_list.id == DEFAULT_LIST_ID:
+        return [{"id": system, "label": label} for system, label in SYSTEMS.items()]
+    entries = []
+    for system, label in SYSTEMS.items():
+        if system in number_list.available_systems:
+            entries.append({"id": system, "label": label, "available": True})
+        else:
+            entries.append(
+                {"id": system, "label": label, "available": False, "reason": UNAVAILABLE_REASON}
+            )
+    return entries
+
+
+def list_summary(number_list: NumberList) -> dict:
+    return {"id": number_list.id, "name": number_list.name, "positions": number_list.positions}
+
+
+def _leidsa_history_meta(request: Request, number_list: NumberList) -> dict:
+    lists = request.app.state.lists
+    try:
+        lab = lists.lab_data(number_list.id)
+    except ListError as exc:
+        raise HTTPException(409, exc.message) from None
+    snapshot = _list_snapshot(lab)
+    meta = _meta(snapshot, active=True)
+    meta["list_id"] = number_list.id
+    return meta
+
+
+@router.get("/options")
 def run_options(request: Request):
-    catalog = request.app.state.history
-    active = catalog.active()
+    number_list = request.app.state.lists.active()
+    on_chance = number_list.id == DEFAULT_LIST_ID
+    prizes = [60, 10, 5] if on_chance else list(number_list.default_prizes)
+    components = (
+        [{"system": "transition", "percent": 60}, {"system": "cold", "percent": 40}]
+        if on_chance
+        else [{"system": "cold", "percent": 60}, {"system": "freq_recent", "percent": 40}]
+    )
+    if on_chance:
+        catalog = request.app.state.history
+        history = _meta(catalog.active(), active=True)
+    else:
+        history = _leidsa_history_meta(request, number_list)
     return {
-        "systems": [{"id": system, "label": label} for system, label in SYSTEMS.items()],
+        "list": list_summary(number_list),
+        "systems": system_entries(number_list),
+        "systems_available": list(number_list.available_systems),
         "defaults": {
             "name": None,
-            "rules": {"positions": 3, "prizes": [60, 10, 5], "minimum_stake": 1},
-            "strategy": {
-                "kind": "mix",
-                "components": [
-                    {"system": "transition", "percent": 60},
-                    {"system": "cold", "percent": 40},
-                ],
-                "coverage": 10,
-            },
+            "rules": {"positions": 3, "prizes": prizes, "minimum_stake": 1},
+            "strategy": {"kind": "mix", "components": components, "coverage": 10},
             "conditions": {"capital": 2000, "goal": 2800, "max_draws": None},
             "window": {"start_date": None, "end_date": None},
             "history_sha256": None,
         },
         "limits": {
             "coverage": {"min": 1, "max": 50},
-            "positions": {"min": 1, "max": 5},
+            "positions": {"min": 1, "max": 5 if on_chance else number_list.positions},
             "name": 80,
             "detail": {"sessions": 50000, "bets": 250000, "bytes": 33554432},
         },
-        "history": _meta(active, active=True),
+        "history": history,
     }
 
 
-@router.post("", status_code=201, dependencies=[Depends(require_chance_express)])
+@router.post("", status_code=201)
 def create_run(body: CreateRun, request: Request):
+    lists = request.app.state.lists
     try:
         return execute_run(
-            _as_spec(body),
+            _as_spec(body, lists.active_id()),
             catalog=request.app.state.history,
             repo=repo(request),
             settings=request.app.state.settings,
             rankings_cache=request.app.state.rankings_cache,
             lock=request.app.state.rankings_lock,
+            lists=lists,
         )
     except RunSpecError as exc:
         status = {"invalid": 422, "not_found": 404, "quota": 409}[exc.kind]

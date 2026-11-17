@@ -5,6 +5,7 @@ from typing import Literal
 
 from laboratorio.domain.laboratories import LaboratoryDefinition
 from laboratorio.domain.laboratory_run_snapshots import OwnedLaboratoryRunSnapshot
+from laboratorio.domain.number_lists import DEFAULT_LIST_ID
 from laboratorio.engine.adapter import LabData
 from laboratorio.engine.reference_labs import ReferenceResult, run_reference_lab
 from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256
@@ -39,12 +40,22 @@ def execute_owned_laboratory(
     except (ValueError, TypeError, AttributeError, OverflowError, RecursionError) as exc:
         raise OwnedLaboratoryServiceError("invalid", "invalid owned laboratory inputs") from exc
 
-    if data.history.sha256 != HISTORY_SHA256 or required_history_sha256 != data.history.sha256:
-        raise OwnedLaboratoryServiceError("conflict", "loaded history does not match frozen source")
+    list_id = definition.config.list_id
+    if list_id == DEFAULT_LIST_ID:
+        if data.history.sha256 != HISTORY_SHA256 or required_history_sha256 != data.history.sha256:
+            raise OwnedLaboratoryServiceError(
+                "conflict", "loaded history does not match frozen source"
+            )
+    elif required_history_sha256 != data.history.sha256:
+        # Lists without a pinned history: the caller must name the history it saw.
+        raise OwnedLaboratoryServiceError("conflict", "loaded history does not match the request")
     lab = definition.to_reference_lab()
     votes = data.parity_votes() if lab.selection_kind == "parity" else None
     result = run_reference_lab(lab, data.history, data.rankings, parity_votes=votes)
-    return OwnedLaboratoryExecution(
-        snapshot=OwnedLaboratoryRunSnapshot(definition, data.history.sha256, RANKINGS_SHA256),
-        result=result,
-    )
+    if list_id == DEFAULT_LIST_ID:
+        snapshot = OwnedLaboratoryRunSnapshot(definition, data.history.sha256, RANKINGS_SHA256)
+    else:
+        snapshot = OwnedLaboratoryRunSnapshot(
+            definition, data.history.sha256, None, list_id=list_id, history_origin="list"
+        )
+    return OwnedLaboratoryExecution(snapshot=snapshot, result=result)

@@ -48,6 +48,7 @@ def test_catalog_is_fixed_and_describes_both_lists():
     assert [item.id for item in CATALOG] == ["chance_express", "leidsa_quiniela"]
     assert DEFAULT_LIST_ID == "chance_express"
     chance = get_list("chance_express")
+    assert chance is not None
     assert (chance.name, chance.positions, chance.number_range) == (
         "Loteka Chance Express",
         5,
@@ -58,6 +59,7 @@ def test_catalog_is_fixed_and_describes_both_lists():
     assert chance.history_sha256 == HISTORY_SHA256
     assert chance.has_rankings is True
     leidsa = get_list("leidsa_quiniela")
+    assert leidsa is not None
     assert (leidsa.name, leidsa.positions, leidsa.number_range) == (
         "Quiniela Leidsa",
         3,
@@ -298,26 +300,16 @@ def test_list_is_reloaded_when_its_file_changes(tmp_path, lab_data):
 # ------------------------------------------------- Leidsa active: no silent Loteka data
 
 
+# Laboratories and runs now work with Leidsa (tests/test_leidsa_labs.py); only the history
+# import and the fixed Chance reference labs stay Loteka-only.
 BLOCKED_REQUESTS = [
     ("get", "/api/v1/history", None),
-    ("get", "/api/v1/runs/options", None),
-    (
-        "post",
-        "/api/v1/runs",
-        {
-            "rules": {"positions": 3, "prizes": [60, 8, 4], "minimum_stake": 1},
-            "strategy": {"kind": "single", "system": "parity", "coverage": 10},
-            "conditions": {"capital": 2000, "goal": 2800, "max_draws": None},
-            "window": {"start_date": None, "end_date": None},
-        },
-    ),
     ("get", "/api/v1/reference-labs", None),
     (
         "post",
         "/api/v1/reference-labs/paridad_50_audaz/runs",
         {"required_history_sha256": HISTORY_SHA256},
     ),
-    ("post", "/api/v1/laboratories/cualquiera/runs", {"required_history_sha256": HISTORY_SHA256}),
 ]
 
 

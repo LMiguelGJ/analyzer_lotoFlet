@@ -6,12 +6,14 @@ import uuid
 from dataclasses import asdict
 from typing import NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import Field
 
-from laboratorio.api import StrictBody, require_chance_express
+from laboratorio.api import StrictBody
 from laboratorio.domain.laboratory_run_snapshots import OwnedLaboratoryRunSnapshot
 from laboratorio.domain.laboratory_wallet import derive_wallet
+from laboratorio.domain.number_lists import DEFAULT_LIST_ID, get_list
+from laboratorio.engine.list_catalog import ListError
 from laboratorio.engine.owned_laboratory_service import (
     OwnedLaboratoryServiceError,
     execute_owned_laboratory,
@@ -121,17 +123,29 @@ def _stored_compact(request, owner_id, run_id):
     return record
 
 
-@router.post(
-    "/{laboratory_id}/runs", status_code=201, dependencies=[Depends(require_chance_express)]
-)
+@router.post("/{laboratory_id}/runs", status_code=201)
 def create_laboratory_run(laboratory_id: str, body: CreateLaboratoryRun, request: Request):
     definition = _definition(request, laboratory_id)
     state = request.app.state
+    lab_list = get_list(definition.config.list_id)
+    active = state.lists.active()
+    if lab_list is None or lab_list.id != active.id:
+        name = lab_list.name if lab_list else definition.config.list_id
+        raise HTTPException(
+            409,
+            f"Este laboratorio es de la lista «{name}» y la lista activa es «{active.name}». "
+            "Cambia la lista en Ajustes para ejecutarlo.",
+        )
+    if active.id == DEFAULT_LIST_ID:
+        data = state.data  # the frozen Chance Express inputs, exactly as before
+    else:
+        try:
+            data = state.lists.lab_data(active.id)
+        except ListError as exc:
+            raise HTTPException(409, exc.message) from None
     with state.reference_lab_lock, state.rankings_lock:
         try:
-            execution = execute_owned_laboratory(
-                definition, body.required_history_sha256, state.data
-            )
+            execution = execute_owned_laboratory(definition, body.required_history_sha256, data)
         except OwnedLaboratoryServiceError as exc:
             if exc.kind == "conflict":
                 raise HTTPException(

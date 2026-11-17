@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from laboratorio.domain.number_lists import CATALOG, DEFAULT_LIST_ID, NumberList, get_list
-from laboratorio.engine.adapter import DataError, History, load_history
+from laboratorio.engine.adapter import DataError, History, LabData, load_history
+from laboratorio.engine.causal_rankings import CausalRankings
 from laboratorio.settings import Settings
 from laboratorio.storage.repository import Repository
 
@@ -38,6 +39,8 @@ class ListCatalog:
         self._lock = threading.RLock()
         # list id -> (file signature, history); the signature invalidates on file changes.
         self._cache: dict[str, tuple[tuple[int, int], History]] = {}
+        # list id -> LabData built over the cached history (rankings computed on the fly).
+        self._lab_cache: dict[str, LabData] = {}
 
     # ------------------------------------------------------------------- paths
 
@@ -73,6 +76,30 @@ class ListCatalog:
                 raise self._unavailable(definition) from None
             self._cache[definition.id] = (signature, history)
             return history
+
+    def lab_data(self, list_id: str) -> LabData:
+        """Laboratory inputs of a list: Chance gets the frozen data, others on-the-fly rankings.
+
+        The returned object is the same one for as long as the list file is unchanged, so its
+        parity votes and ranking matrices are computed once.
+        """
+        definition = get_list(list_id)
+        if definition is None:
+            raise ListError("unknown", "Esa lista no existe.")
+        if definition.id == DEFAULT_LIST_ID:
+            return self._lab
+        history = self.history(list_id)
+        with self._lock:
+            cached = self._lab_cache.get(list_id)
+            if cached is not None and cached.history is history:
+                return cached
+            data = LabData(
+                history=history,
+                rankings=CausalRankings(history.nums),  # type: ignore[arg-type]
+                settings=self._settings,
+            )
+            self._lab_cache[list_id] = data
+            return data
 
     @staticmethod
     def _unavailable(definition: NumberList) -> ListError:

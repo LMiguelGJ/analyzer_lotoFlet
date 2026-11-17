@@ -6,7 +6,14 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import Field, StrictInt, StrictStr
 
 from laboratorio.api import StrictBody, repo
-from laboratorio.domain.laboratories import LaboratoryConfig
+from laboratorio.domain.laboratories import LaboratoryConfig, default_window
+from laboratorio.domain.number_lists import (
+    DEFAULT_LIST_ID,
+    PARITY_SYSTEM,
+    UNAVAILABLE_REASON,
+    system_label,
+)
+from laboratorio.engine.list_catalog import ListError
 from laboratorio.storage.laboratory_store import (
     LaboratoryDefinitionConflict,
     LaboratoryStoreError,
@@ -45,10 +52,59 @@ def _snapshot(definition):
     return definition.to_mapping()
 
 
+def _config_for_active_list(request: Request, raw: dict) -> dict:
+    """Stamp the active list on a new lab's config; a config naming another list is refused."""
+    active = request.app.state.lists.active()
+    mapping = dict(raw)
+    if "list_id" in mapping:
+        requested = mapping.pop("list_id")
+        if requested != active.id:
+            raise HTTPException(
+                409,
+                f"La lista activa es «{active.name}»: el laboratorio solo puede crearse "
+                "para esa lista. Cambia la lista en Ajustes.",
+            )
+    if active.id != DEFAULT_LIST_ID:
+        mapping["list_id"] = active.id
+    return mapping
+
+
+@router.get("/options")
+def laboratory_options(request: Request):
+    """What a new laboratory can use on the active list (systems, prizes, window, history)."""
+    from laboratorio.domain.contracts import SYSTEMS
+
+    lists = request.app.state.lists
+    active = lists.active()
+    try:
+        history = lists.history(active.id)
+    except ListError as exc:
+        raise HTTPException(409, exc.message) from None
+    first = history.labels[0] if history.labels else None
+    last = history.labels[-1] if history.labels else None
+    start, end = default_window(active.id, first, last)
+    systems = []
+    for system in (PARITY_SYSTEM, *SYSTEMS):
+        entry: dict[str, object] = {"id": system, "label": system_label(system)}
+        if system in active.available_systems:
+            entry["available"] = True
+        else:
+            entry["available"] = False
+            entry["reason"] = UNAVAILABLE_REASON
+        systems.append(entry)
+    return {
+        "list": {"id": active.id, "name": active.name, "positions": active.positions},
+        "systems": systems,
+        "prizes": list(active.default_prizes),
+        "window": {"start": start, "end": end},
+        "history_sha256": history.sha256,
+    }
+
+
 @router.post("", status_code=201)
 def create_laboratory(body: CreateLaboratory, request: Request):
     try:
-        config = LaboratoryConfig.from_mapping(body.config)
+        config = LaboratoryConfig.from_mapping(_config_for_active_list(request, body.config))
         settings = request.app.state.settings
         definition = create_laboratory_definition(
             repo(request),

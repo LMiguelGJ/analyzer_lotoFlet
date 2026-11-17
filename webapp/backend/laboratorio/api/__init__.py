@@ -17,7 +17,7 @@ def history(request: Request):
 
 
 def require_chance_express(request: Request) -> None:
-    """Dependency for endpoints that only know the Loteka history until laboratories are generic."""
+    """Dependency for endpoints that only know Loteka (history import, reference labs)."""
     catalog = request.app.state.lists
     active = catalog.active()
     if active.id != "chance_express":
