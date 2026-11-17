@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FORM, parseLaboratoryForm } from "./form-model";
+import { DEFAULT_FORM, buildDefaultForm, parseLaboratoryForm, prizeFieldsFor, systemChoices } from "./form-model";
 
 const valid = { ...DEFAULT_FORM, name: "Mi laboratorio" };
 
@@ -47,5 +47,33 @@ describe("laboratory form model", () => {
     expect(parseLaboratoryForm({ ...valid, name: "é".repeat(61) }).ok).toBe(false);
     expect(parseLaboratoryForm({ ...valid, name: "é".repeat(60) }).ok).toBe(true);
     expect(parseLaboratoryForm({ ...valid, name: "a\tb" }).ok).toBe(false);
+  });
+});
+
+describe("form model per list", () => {
+  const leidsaOptions = {
+    list: { id: "leidsa_quiniela", name: "Quiniela Leidsa", positions: 3 },
+    systems: [{ id: "cold", label: "Fríos", available: true }, { id: "transition", label: "Transición", available: false, reason: "No disponible para esta lista" }],
+    prizes: [60, 8, 4], window: { start: "2023-01-04 14:55", end: "2026-11-16 20:55" }, history_sha256: "e".repeat(64),
+  };
+  it("builds Leidsa defaults from the options and sends exactly three prizes", () => {
+    const form = buildDefaultForm(leidsaOptions);
+    expect([form.prize_1, form.prize_2, form.prize_3]).toEqual(["60", "8", "4"]);
+    expect(form.window_start).toBe("2023-01-04 14:55");
+    expect(form.system).toBe("cold");
+    const result = parseLaboratoryForm({ ...form, name: "Leidsa" }, 3);
+    expect(result.ok && result.value.config.prizes).toEqual([60, 8, 4]);
+  });
+  it("ignores unused prize fields for a three-position list but still checks the used ones", () => {
+    const form = { ...buildDefaultForm(leidsaOptions), name: "Leidsa", prize_4: "x" };
+    expect(parseLaboratoryForm(form, 3).ok).toBe(true);
+    const bad = parseLaboratoryForm({ ...form, prize_2: "0" }, 3);
+    expect(bad.ok === false && Object.keys(bad.errors)).toEqual(["prize_2"]);
+  });
+  it("keeps Chance Express on its archived six systems regardless of the options payload", () => {
+    const choices = systemChoices({ ...leidsaOptions, list: { id: "chance_express", name: "Loteka Chance Express", positions: 5 }, systems: [] });
+    expect(choices.map((choice) => choice.value)).toEqual(["transition", "cold", "select_interpretable", "mix", "ensemble", "parity"]);
+    expect(prizeFieldsFor(5)).toHaveLength(5);
+    expect(prizeFieldsFor(3)).toEqual(["prize_1", "prize_2", "prize_3"]);
   });
 });

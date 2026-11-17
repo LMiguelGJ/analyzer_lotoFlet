@@ -5,6 +5,7 @@ import { getReferenceLabs } from "../../api/referenceLabs";
 import type { ReferenceCatalog } from "../../api/referenceLabs";
 import { ErrorBanner, Loading } from "../../components/ui/Feedback";
 import { labTitle } from "./lab-model";
+import { ListNotice } from "./ListNotice";
 import "./reference-labs.css";
 
 function failureText(error: unknown): string {
@@ -16,22 +17,25 @@ function failureText(error: unknown): string {
 export function CatalogPage() {
   const [catalog, setCatalog] = useState<ReferenceCatalog | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     let current = true;
-    setFailure(null);
+    setFailure(null); setConflict(null);
     getReferenceLabs({ signal: controller.signal }).then((value) => {
       if (current) setCatalog(value);
     }).catch((error: unknown) => {
-      if (current && !(error instanceof Error && error.name === "AbortError")) setFailure(failureText(error));
+      if (!current || (error instanceof Error && error.name === "AbortError")) return;
+      if (error instanceof ApiError && error.status === 409) setConflict(error.detail);
+      else setFailure(failureText(error));
     });
     return () => { current = false; controller.abort(); };
   }, [reload]);
 
   return <section className="reference-page" aria-labelledby="reference-catalog-title">
     <header className="reference-heading"><div><h2 id="reference-catalog-title">Laboratorios de referencia</h2><p>Reproducciones históricas con reglas fijadas; describen el pasado, no predicen sorteos.</p></div></header>
-    {failure ? <ErrorBanner cause="No pudimos cargar los laboratorios." recovery={failure} actionLabel="Reintentar" onAction={() => setReload((value) => value + 1)} /> : !catalog ? <Loading label="Cargando laboratorios…" rows={5} /> : <>
+    {conflict ? <ListNotice message={conflict} /> : failure ? <ErrorBanner cause="No pudimos cargar los laboratorios." recovery={failure} actionLabel="Reintentar" onAction={() => setReload((value) => value + 1)} /> : !catalog ? <Loading label="Cargando laboratorios…" rows={5} /> : <>
       <section className="reference-source" aria-label="Fuente de referencia">
         <h3>Una sola fuente congelada</h3>
         <p>{catalog.reference_history.draws.toLocaleString("es-DO")} sorteos · {catalog.reference_history.first_label ?? "—"} – {catalog.reference_history.last_label ?? "—"}</p>

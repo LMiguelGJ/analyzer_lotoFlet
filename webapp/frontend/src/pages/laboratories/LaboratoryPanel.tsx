@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, NetworkError } from "../../api/client";
 import {
-  createLaboratoryRun, deleteLaboratory, getLaboratory, getLaboratoryRun, listLaboratoryRuns, listLaboratorySessions,
+  createLaboratoryRun, deleteLaboratory, getLaboratory, getLaboratoryOptions, getLaboratoryRun, listLaboratoryRuns, listLaboratorySessions,
 } from "../../api/laboratories";
 import type { LaboratoryDetail, LaboratoryRun, LaboratoryRunListItem } from "../../api/laboratories";
 import { getReferenceLabs } from "../../api/referenceLabs";
@@ -67,7 +67,12 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
 
   useEffect(() => {
     const controller = new AbortController(); let current = true;
-    getReferenceLabs({ signal: controller.signal }).then((catalog) => { if (current) setHistorySha(catalog.reference_history.sha256); })
+    // Chance Express runs against the frozen reference; any other list brings its own history fingerprint.
+    getLaboratoryOptions({ signal: controller.signal })
+      .then((options) => options.list.id === "chance_express"
+        ? getReferenceLabs({ signal: controller.signal }).then((catalog) => catalog.reference_history.sha256)
+        : options.history_sha256)
+      .then((sha) => { if (current) setHistorySha(sha); })
       .catch((error: unknown) => { if (current && !isAbort(error)) setHistoryError(errorText(error)); });
     return () => { current = false; controller.abort(); };
   }, []);
@@ -185,7 +190,7 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
 
     <div className="reference-run-action">
       <Button variant="primary" onClick={() => void execute()} loading={running} disabled={!historySha || uncertain || reconciling || !runs || !!runsError}>Ejecutar laboratorio</Button>
-      {historyError && <span>{`No se pudo leer la fuente congelada: ${historyError}`}</span>}
+      {historyError && <span>{`No se pudo leer la fuente de datos: ${historyError}`}</span>}
     </div>
     {actionError && <div className="reference-action-error" role="alert"><p>{actionError}</p>{uncertain && <Button disabled={reconciling} onClick={reconcileRuns}>Actualizar corridas guardadas</Button>}</div>}
 

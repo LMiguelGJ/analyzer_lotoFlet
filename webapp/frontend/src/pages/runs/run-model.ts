@@ -16,6 +16,11 @@ export function formatStrategyLabel(strategy: PersistedRunConfig["strategy"], sy
   return `${components.length ? components.join(" + ") : "Mezcla de rankings"} · ${strategy.coverage} números`;
 }
 
+/** Systems the active list can run; Chance Express omits the flag, so absent means available. */
+export function usableSystems(options: RunOptions): RunOptions["systems"] {
+  return options.systems.filter((system) => system.available !== false);
+}
+
 export function parseIntegerInput(value: string): number | null {
   if (!/^[0-9]+$/.test(value)) return null;
   const parsed = Number(value);
@@ -59,8 +64,8 @@ export function validateRunForm(form: RunForm, options: RunOptions): { errors: R
   const errors: RunFormErrors = {};
   if (form.name.trim().length > options.limits.name) errors.name = `El nombre admite hasta ${options.limits.name} caracteres.`;
   const positions = parseIntegerInput(form.positions);
-  if (positions === null || positions < options.limits.positions.min || positions > options.limits.positions.max) errors.positions = "Elegí entre 1 y 5 posiciones.";
-  (positions !== null ? resizePrizes(form.prizes, Math.max(0, Math.min(positions, 5))) : []).forEach((value, index) => {
+  if (positions === null || positions < options.limits.positions.min || positions > options.limits.positions.max) errors.positions = `Elegí entre ${options.limits.positions.min} y ${options.limits.positions.max} posiciones.`;
+  (positions !== null ? resizePrizes(form.prizes, Math.max(0, Math.min(positions, options.limits.positions.max))) : []).forEach((value, index) => {
     const error = integerError(value, `Premio ${index + 1}`, 1);
     if (error) errors.prizes = error;
   });
@@ -82,7 +87,7 @@ export function validateRunForm(form: RunForm, options: RunOptions): { errors: R
     if (form.components.length < 1 || form.components.length > 13) errors.components = "La mezcla necesita entre 1 y 13 sistemas.";
     const ids = form.components.map((item) => item.system);
     if (new Set(ids).size !== ids.length) errors.components = "No repitas sistemas en la mezcla.";
-    if (ids.some((id) => !options.systems.some((system) => system.id === id))) errors.components = "Elegí sistemas disponibles.";
+    if (ids.some((id) => !usableSystems(options).some((system) => system.id === id))) errors.components = "Elegí sistemas disponibles.";
     const percentages = form.components.map((item) => parseIntegerInput(item.percent));
     if (percentages.some((value) => value === null || value < 1 || value > 100)) errors.components = "Cada porcentaje debe ser un entero entre 1 y 100.";
     else if (percentages.reduce<number>((sum, value) => sum + Number(value), 0) !== 100) errors.components = "Los porcentajes de la mezcla deben sumar 100 %.";

@@ -5,8 +5,18 @@ import { axe } from "jest-axe";
 import * as api from "../../api/laboratories";
 import { LaboratoryForm } from "./LaboratoryForm";
 
-vi.mock("../../api/laboratories", () => ({ createLaboratory: vi.fn() }));
-beforeEach(() => vi.clearAllMocks());
+vi.mock("../../api/laboratories", () => ({ createLaboratory: vi.fn(), getLaboratoryOptions: vi.fn() }));
+export const chanceOptions = {
+  list: { id: "chance_express", name: "Loteka Chance Express", positions: 5 },
+  systems: [{ id: "transition", label: "Transición" }],
+  prizes: [80, 8, 4, 2, 1], window: { start: "2025-09-02 05:10", end: "2026-09-25 18:20" }, history_sha256: "d".repeat(64),
+};
+beforeEach(() => { vi.clearAllMocks(); vi.mocked(api.getLaboratoryOptions).mockResolvedValue(chanceOptions); });
+async function renderForm(onCreated = vi.fn()) {
+  const view = render(<LaboratoryForm onCreated={onCreated} />);
+  await screen.findByLabelText("Nombre");
+  return view;
+}
 
 const cases = [
   ["Sistema de selección", "system", "transition", "Transición", /número anterior/i],
@@ -23,8 +33,8 @@ const cases = [
 function helpButton(group: string) { return screen.getByRole("button", { name: `Ayuda sobre ${group.toLowerCase()}` }); }
 
 describe("laboratory option help", () => {
-  it("keeps help hidden until requested and preserves native option lists", () => {
-    render(<LaboratoryForm onCreated={vi.fn()} />);
+  it("keeps help hidden until requested and preserves native option lists", async () => {
+    await renderForm();
     expect(helpButton("Sistema de selección")).toHaveAttribute("aria-expanded", "false");
     expect(helpButton("Estilo de apuesta")).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -42,7 +52,7 @@ describe("laboratory option help", () => {
   it.each(cases)("explains %s / %s / %s without submitting", async (group, _kind, value, label, fact) => {
     const user = userEvent.setup();
     const onCreated = vi.fn();
-    render(<LaboratoryForm onCreated={onCreated} />);
+    await renderForm(onCreated);
     await user.selectOptions(screen.getByLabelText(group), value);
     await user.click(helpButton(group));
     const panel = screen.getByRole("dialog", { name: label });
@@ -57,7 +67,7 @@ describe("laboratory option help", () => {
 
   it("compares only the requested group, marks its current choice and keeps the draft", async () => {
     const user = userEvent.setup();
-    render(<LaboratoryForm onCreated={vi.fn()} />);
+    await renderForm();
     await user.type(screen.getByLabelText("Nombre"), "Mi borrador");
     await user.selectOptions(screen.getByLabelText("Estilo de apuesta"), "flat");
     await user.click(helpButton("Estilo de apuesta"));
@@ -77,7 +87,7 @@ describe("laboratory option help", () => {
 
   it("opens by keyboard, closes with Escape, and returns focus to its trigger", async () => {
     const user = userEvent.setup();
-    render(<LaboratoryForm onCreated={vi.fn()} />);
+    await renderForm();
     const trigger = helpButton("Sistema de selección");
     trigger.focus();
     await user.keyboard("{Enter}");
@@ -95,7 +105,7 @@ describe("laboratory option help", () => {
 
   it("allows one panel, dismisses outside without stealing focus, and follows the selected value", async () => {
     const user = userEvent.setup();
-    render(<LaboratoryForm onCreated={vi.fn()} />);
+    await renderForm();
     await user.click(helpButton("Sistema de selección"));
     await user.click(helpButton("Estilo de apuesta"));
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
@@ -112,7 +122,7 @@ describe("laboratory option help", () => {
 
   it("exposes accessible names and relationships in selected and comparison views", async () => {
     const user = userEvent.setup();
-    const { container } = render(<LaboratoryForm onCreated={vi.fn()} />);
+    const { container } = await renderForm();
     expect(await axe(container)).toHaveNoViolations();
     await user.click(helpButton("Sistema de selección"));
     expect(helpButton("Sistema de selección")).toHaveAttribute("aria-controls", screen.getByRole("dialog").id);

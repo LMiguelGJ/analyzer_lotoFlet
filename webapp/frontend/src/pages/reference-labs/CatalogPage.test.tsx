@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "../../api/client";
 import { getReferenceLabs } from "../../api/referenceLabs";
 import { CatalogPage } from "./CatalogPage";
 import type { ReferenceCatalog } from "../../api/referenceLabs";
@@ -35,5 +36,12 @@ describe("reference laboratories catalog", () => {
     render(<MemoryRouter><CatalogPage /></MemoryRouter>);
     expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos cargar los laboratorios.");
     expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
+  });
+  it("shows the server's message instead of an error screen when the active list has no reference labs", async () => {
+    getCatalogMock.mockRejectedValue(new ApiError(409, "Los laboratorios de referencia solo existen para Loteka Chance Express."));
+    render(<MemoryRouter><CatalogPage /></MemoryRouter>);
+    expect((await screen.findAllByText(/Los laboratorios de referencia solo existen para Loteka Chance Express\./)).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Cambiar la lista en Ajustes" })).toHaveAttribute("href", "/ajustes");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

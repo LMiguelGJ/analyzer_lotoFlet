@@ -35,8 +35,32 @@ export interface PersistedRunConfig {
   history: { sha256: string; origin: "frozen" | "import" };
 }
 
+/** A selectable list of draws (GET /lists). `prizes` are the editable payouts per position. */
+export interface NumberListInfo {
+  id: string;
+  name: string;
+  positions: number;
+  draws: number;
+  first_label: string | null;
+  last_label: string | null;
+  active: boolean;
+  available: boolean;
+  prizes: number[];
+  default_prizes: number[];
+}
+
+export interface SystemOption {
+  id: string;
+  label: string;
+  /** Absent on Chance Express (every listed system is usable); false when the active list cannot offer it. */
+  available?: boolean;
+  reason?: string;
+}
+
 export interface RunOptions {
-  systems: { id: string; label: string }[];
+  list?: { id: string; name: string; positions: number };
+  systems: SystemOption[];
+  systems_available?: string[];
   defaults: CreateRunRequest;
   limits: {
     coverage: { min: number; max: number };

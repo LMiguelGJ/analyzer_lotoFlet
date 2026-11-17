@@ -1,10 +1,11 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ApiError, NetworkError } from "../../api/client";
-import { createLaboratory } from "../../api/laboratories";
-import type { LaboratoryDefinition } from "../../api/laboratories";
+import { createLaboratory, getLaboratoryOptions } from "../../api/laboratories";
+import type { LaboratoryDefinition, LaboratoryOptions } from "../../api/laboratories";
 import { Button, Field } from "../../components/ui/Controls";
-import { DEFAULT_FORM, PRIZE_FIELDS, STAKE_STYLES, SYSTEMS, parseLaboratoryForm } from "./form-model";
+import { ErrorBanner, Loading } from "../../components/ui/Feedback";
+import { PRIZE_FIELDS, STAKE_STYLES, buildDefaultForm, parseLaboratoryForm, prizeFieldsFor, systemChoices } from "./form-model";
 import type { FormErrors, FormField, FormValues } from "./form-model";
 import { LaboratoryOptionHelp } from "./LaboratoryOptionHelp";
 import type { HelpKind } from "./option-help";
@@ -13,6 +14,12 @@ function failureText(error: unknown): string {
   if (error instanceof ApiError) return error.detail;
   if (error instanceof NetworkError) return "No se pudo contactar al servidor local. Verificá la lista antes de intentar de nuevo.";
   return "No se pudo crear el laboratorio.";
+}
+
+function loadFailureText(error: unknown): string {
+  if (error instanceof ApiError) return error.detail;
+  if (error instanceof NetworkError) return "No se pudo contactar al servidor local.";
+  return "No se pudieron leer las opciones de la lista activa.";
 }
 
 interface Props { onCreated: (definition: LaboratoryDefinition) => void }
@@ -31,8 +38,30 @@ function fieldId(field: FormField): string {
   return `lab-${field}`;
 }
 
+/** Loads what the active list allows (prize count, defaults, window, systems) before showing the form. */
 export function LaboratoryForm({ onCreated }: Props) {
-  const [values, setValues] = useState<FormValues>(DEFAULT_FORM);
+  const [options, setOptions] = useState<LaboratoryOptions | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const retry = useCallback(() => setReload((value) => value + 1), []);
+  useEffect(() => {
+    const controller = new AbortController(); let current = true;
+    setOptions(null); setLoadError(null);
+    getLaboratoryOptions({ signal: controller.signal }).then((value) => { if (current) setOptions(value); })
+      .catch((error: unknown) => { if (current && !(error instanceof Error && error.name === "AbortError")) setLoadError(loadFailureText(error)); });
+    return () => { current = false; controller.abort(); };
+  }, [reload]);
+  if (loadError) return <ErrorBanner cause="No pudimos preparar el formulario." recovery={loadError} actionLabel="Reintentar" onAction={retry} />;
+  if (!options) return <Loading label="Cargando opciones de la lista…" rows={4} />;
+  return <LaboratoryFormBody key={options.list.id} options={options} onCreated={onCreated} />;
+}
+
+function LaboratoryFormBody({ options, onCreated }: Props & { options: LaboratoryOptions }) {
+  const positions = options.list.positions;
+  const prizeFields = prizeFieldsFor(positions);
+  const choices = systemChoices(options);
+  const systemIds = choices.filter((choice) => choice.available).map((choice) => choice.value);
+  const [values, setValues] = useState<FormValues>(() => buildDefaultForm(options));
   const [errors, setErrors] = useState<FormErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -51,7 +80,7 @@ export function LaboratoryForm({ onCreated }: Props) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (saving) return;
-    const parsed = parseLaboratoryForm(values);
+    const parsed = parseLaboratoryForm(values, positions);
     if (!parsed.ok) { focusInvalid.current = true; setErrors(parsed.errors); setFailure(null); return; }
     setErrors({}); setFailure(null); setSaving(true);
     try {
@@ -62,7 +91,7 @@ export function LaboratoryForm({ onCreated }: Props) {
   }
 
   return <form ref={formRef} className="lab-form" onSubmit={(event) => void submit(event)} noValidate aria-labelledby="lab-form-title">
-    <header className="reference-heading"><div><h2 id="lab-form-title">Nuevo laboratorio</h2><p>Definí las reglas una vez; quedan fijas y cada ejecución las reproduce sobre la fuente histórica congelada.</p></div></header>
+    <header className="reference-heading"><div><h2 id="lab-form-title">Nuevo laboratorio</h2><p>{options.list.id === "chance_express" ? "Definí las reglas una vez; quedan fijas y cada ejecución las reproduce sobre la fuente histórica congelada." : `Definí las reglas una vez; quedan fijas y cada ejecución las reproduce sobre la lista «${options.list.name}».`}</p></div></header>
     {Object.keys(errors).length > 0 && <div className="reference-action-error lab-form-errors" role="alert">
       <p>Revisá los campos señalados.</p>
       <ul>{FIELD_ORDER.filter((field) => errors[field]).map((field) => <li key={field}>
@@ -72,10 +101,10 @@ export function LaboratoryForm({ onCreated }: Props) {
     <Field id="lab-name" label="Nombre" value={values.name} onChange={(event) => set("name")(event.target.value)} error={errors.name} hint="Único; hasta 120 bytes." autoComplete="off" />
     <div className="lab-form-row">
       <div className="ledger-field"><div className="lab-field-label"><label className="ledger-label" htmlFor="lab-system">Sistema de selección</label>
-        <LaboratoryOptionHelp kind="system" value={values.system} open={help === "system"} onOpen={() => setHelp("system")} onClose={() => setHelp(null)} /></div>
-        <select id="lab-system" className="ledger-control" value={values.system} onChange={(event) => set("system")(event.target.value)}>{SYSTEMS.map((system) => <option key={system.value} value={system.value}>{system.label}</option>)}</select></div>
+        <LaboratoryOptionHelp kind="system" systemIds={systemIds} value={values.system} open={help === "system"} onOpen={() => setHelp("system")} onClose={() => setHelp(null)} /></div>
+        <select id="lab-system" className="ledger-control" value={values.system} onChange={(event) => set("system")(event.target.value)}>{choices.map((system) => <option key={system.value} value={system.value} disabled={!system.available}>{system.available ? system.label : `${system.label} — ${system.reason ?? "No disponible para esta lista"}`}</option>)}</select></div>
       <div className="ledger-field"><div className="lab-field-label"><label className="ledger-label" htmlFor="lab-stake">Estilo de apuesta</label>
-        <LaboratoryOptionHelp kind="stake_style" value={values.stake_style} open={help === "stake_style"} onOpen={() => setHelp("stake_style")} onClose={() => setHelp(null)} /></div>
+        <LaboratoryOptionHelp kind="stake_style" firstPrize={options.prizes[0]} value={values.stake_style} open={help === "stake_style"} onOpen={() => setHelp("stake_style")} onClose={() => setHelp(null)} /></div>
         <select id="lab-stake" className="ledger-control" value={values.stake_style} onChange={(event) => set("stake_style")(event.target.value)}>{STAKE_STYLES.map((style) => <option key={style.value} value={style.value}>{style.label}</option>)}</select></div>
       <Field id="lab-coverage" label="Cobertura (números)" inputMode="numeric" value={values.coverage} onChange={(event) => set("coverage")(event.target.value)} error={errors.coverage} hint="De 1 a 50." />
     </div>
@@ -84,7 +113,7 @@ export function LaboratoryForm({ onCreated }: Props) {
       <Field id="lab-goal" label="Meta de saldo" inputMode="numeric" value={values.goal} onChange={(event) => set("goal")(event.target.value)} error={errors.goal} />
     </div>
     <fieldset className="lab-prizes"><legend className="ledger-label">Premios por posición</legend>
-      <div className="lab-form-row lab-form-row-5">{PRIZE_FIELDS.map((field, index) => <Field key={field} id={`lab-${field}`} label={`${index + 1}.º`} inputMode="numeric" value={values[field]} onChange={(event) => set(field)(event.target.value)} error={errors[field]} />)}</div>
+      <div className="lab-form-row lab-form-row-prizes" style={{ ["--prize-count" as string]: prizeFields.length }}>{prizeFields.map((field, index) => <Field key={field} id={`lab-${field}`} label={`${index + 1}.º`} inputMode="numeric" value={values[field]} onChange={(event) => set(field)(event.target.value)} error={errors[field]} />)}</div>
     </fieldset>
     <div className="lab-form-row">
       <Field id="lab-window-start" label="Ventana: inicio" value={values.window_start} onChange={(event) => set("window_start")(event.target.value)} error={errors.window_start} hint="AAAA-MM-DD HH:MM" />

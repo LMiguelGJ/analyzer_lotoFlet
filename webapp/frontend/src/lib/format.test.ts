@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDOP, formatNumber, formatOutcome, formatPercent, formatSignedDOP, formatTwoDigit } from "./format";
+import { formatDOP, formatLongDate, formatNumber, formatOutcome, formatPercent, formatSignedDOP, formatTwoDigit } from "./format";
 
 describe("financial and Dominican formatting", () => {
   it("formats signed money with RD$ and never emits negative zero", () => {
@@ -25,4 +25,15 @@ describe("financial and Dominican formatting", () => {
   });
 
   it("keeps Quiniela numbers zero-padded", () => expect(formatTwoDigit(4)).toBe("04"));
+});
+
+describe("formatLongDate", () => {
+  it("writes the date part of a draw label in plain Spanish", () => {
+    expect(formatLongDate("2023-01-04 14:55")).toBe("4 de enero de 2023");
+    expect(formatLongDate("2026-09-25")).toBe("25 de septiembre de 2026");
+  });
+  it("leaves anything that is not a date untouched", () => {
+    expect(formatLongDate("sin fecha")).toBe("sin fecha");
+    expect(formatLongDate("2026-13-01")).toBe("2026-13-01");
+  });
 });

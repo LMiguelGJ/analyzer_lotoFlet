@@ -38,6 +38,28 @@ const systems: Record<(typeof SYSTEMS)[number]["value"], OptionExplanation> = {
   },
 };
 
+/** Systems only the Quiniela Leidsa list offers (they need no prepared ranking). */
+const listSystems: Record<string, OptionExplanation & { label: string }> = {
+  freq_hist: {
+    label: "Frecuencia histórica",
+    what: "Ordena los números por cuántas veces salieron en esa posición en todo el historial previo.",
+    effect: "Prioriza los más frecuentes del pasado. Que hayan salido más veces no significa que salgan antes en el futuro.",
+    example: "Con cobertura 5, selecciona los cinco números que más veces salieron en esa posición hasta el sorteo anterior.",
+  },
+  freq_recent: {
+    label: "Frecuencia reciente",
+    what: "Ordena los números por cuántas veces salieron en esa posición en los sorteos más recientes.",
+    effect: "Da más peso a lo que pasó hace poco que a lo que pasó hace años.",
+    example: "Con cobertura 5, selecciona los cinco números más frecuentes de la ventana reciente.",
+  },
+  decay: {
+    label: "Decaimiento",
+    what: "Cuenta cada aparición pasada con un peso que baja a medida que el sorteo queda atrás.",
+    effect: "Es un punto medio entre la frecuencia histórica y la reciente: lo viejo cuenta, pero menos.",
+    example: "Con cobertura 5, selecciona los cinco números con mayor puntaje ponderado por antigüedad.",
+  },
+};
+
 const stakes: Record<(typeof STAKE_STYLES)[number]["value"], OptionExplanation> = {
   bold: {
     what: "Calcula cuánto apostar por número para alcanzar la meta con un acierto en el primer premio, sin superar el saldo disponible.",
@@ -55,6 +77,27 @@ const stakes: Record<(typeof STAKE_STYLES)[number]["value"], OptionExplanation> 
     example: "Con cobertura de 5 números, apostás 5 unidades por sorteo.",
   },
 };
+
+export interface HelpOption extends OptionExplanation { value: string; label: string }
+
+/** Explanations for the systems a list offers; unknown ids are skipped, never invented. */
+export function systemHelpOptions(values: readonly string[]): HelpOption[] {
+  return values.flatMap((value): HelpOption[] => {
+    const base = SYSTEMS.find((system) => system.value === value);
+    if (base) return [{ ...base, ...systems[base.value] }];
+    const extra = listSystems[value];
+    return extra ? [{ value, ...extra }] : [];
+  });
+}
+
+/** Bold and ladder examples quote the first prize; only the archived 80 keeps its worked numbers. */
+export function stakeHelpOptions(firstPrize: number): HelpOption[] {
+  return STAKE_STYLES.map((option) => {
+    const base = { ...option, ...stakes[option.value] };
+    if (firstPrize === 80 || option.value === "flat") return base;
+    return { ...base, example: `Con primer premio ${firstPrize} y cobertura 10, la apuesta por número se recalcula en cada sorteo según el saldo y la meta.` };
+  });
+}
 
 export const OPTION_HELP = {
   system: {

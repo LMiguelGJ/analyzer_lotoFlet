@@ -61,4 +61,11 @@ describe("first faithful reference laboratory page", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("El laboratorio de referencia no existe.");
     expect(screen.queryByText("Corridas")).not.toBeInTheDocument();
   });
+  it("shows the 409 message as a notice, not an error screen, under another list", async () => {
+    mocks.getLab.mockRejectedValueOnce(new ApiError(409, "Con Quiniela Leidsa no hay laboratorios de referencia."));
+    renderPage();
+    expect(await screen.findByText("Con Quiniela Leidsa no hay laboratorios de referencia.")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reintentar" })).not.toBeInTheDocument();
+  });
 });

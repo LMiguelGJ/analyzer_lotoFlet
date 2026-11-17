@@ -13,6 +13,7 @@ vi.mock("../../api/laboratories", async (importOriginal) => {
     ...actual,
     listLaboratories: vi.fn(),
     createLaboratory: vi.fn(),
+    getLaboratoryOptions: vi.fn(),
     getLaboratory: vi.fn(),
     deleteLaboratory: vi.fn(),
     listLaboratoryRuns: vi.fn(),
@@ -41,6 +42,7 @@ function renderAt(path: string) {
 beforeEach(() => {
   vi.unstubAllGlobals();
   vi.resetAllMocks();
+  m.getLaboratoryOptions.mockResolvedValue({ list: { id: "chance_express", name: "Loteka Chance Express", positions: 5 }, systems: [], prizes: [80, 8, 4, 2, 1], window: { start: "2025-09-02 05:10", end: "2026-09-25 18:20" }, history_sha256: SHA });
   m.listLaboratories.mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [definition] });
   m.getLaboratory.mockResolvedValue({ definition, owned_run_count: 1, owned_session_count: 4 });
   m.listLaboratoryRuns.mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [runItem] });
@@ -490,7 +492,7 @@ describe("laboratory workspace", () => {
   it("preserves source-loading errors and disables execution", async () => {
     vi.mocked(getReferenceLabs).mockRejectedValue(new NetworkError());
     renderAt(`/laboratorios/${ID}`);
-    expect(await screen.findByText("No se pudo leer la fuente congelada: No se pudo contactar al servidor local.")).toBeInTheDocument();
+    expect(await screen.findByText("No se pudo leer la fuente de datos: No se pudo contactar al servidor local.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ejecutar laboratorio" })).toBeDisabled();
     expect(m.createLaboratoryRun).not.toHaveBeenCalled();
   });
@@ -507,6 +509,21 @@ describe("laboratory workspace", () => {
     expect(await screen.findByRole("heading", { name: "Resultado guardado" })).toBeInTheDocument();
     expect(screen.getByText(SHA, { selector: ".reference-sha" })).toBeInTheDocument();
     expect(screen.getByText("+RD$50,00")).toBeInTheDocument();
+  });
+
+  it("runs against the list's own history fingerprint when Leidsa is active and the reference catalog answers 409", async () => {
+    const LEIDSA_SHA = "e".repeat(64);
+    m.getLaboratoryOptions.mockResolvedValue({ list: { id: "leidsa_quiniela", name: "Quiniela Leidsa", positions: 3 }, systems: [], prizes: [60, 8, 4], window: { start: "2023-01-04 14:55", end: "2026-11-16 20:55" }, history_sha256: LEIDSA_SHA });
+    vi.mocked(getReferenceLabs).mockRejectedValue(new ApiError(409, "Con Leidsa no hay catálogo de referencia."));
+    m.createLaboratoryRun.mockResolvedValue(run);
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    const execute = await screen.findByRole("button", { name: "Ejecutar laboratorio" });
+    await waitFor(() => expect(execute).toBeEnabled());
+    await user.click(execute);
+    await waitFor(() => expect(m.createLaboratoryRun).toHaveBeenCalledTimes(1));
+    expect(m.createLaboratoryRun.mock.calls[0].slice(0, 2)).toEqual([ID, LEIDSA_SHA]);
+    expect(getReferenceLabs).not.toHaveBeenCalled();
   });
 
   it("removes incomplete-session guidance without changing financial summaries", async () => {

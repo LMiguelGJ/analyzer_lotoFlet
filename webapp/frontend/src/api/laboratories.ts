@@ -1,4 +1,5 @@
 import { request } from "./client";
+import type { SystemOption } from "./types";
 import type { ReferenceCapabilities, ReferencePage, ReferenceSessionPage, ReferenceTotals, PageParams } from "./referenceLabs";
 
 export type StakeStyle = "bold" | "ladder" | "flat";
@@ -68,6 +69,15 @@ export interface LaboratoryRunListItem {
   [key: string]: unknown;
 }
 
+/** GET /laboratories/options: what a new laboratory can use on the active list. */
+export interface LaboratoryOptions {
+  list: { id: string; name: string; positions: number };
+  systems: SystemOption[];
+  prizes: number[];
+  window: { start: string | null; end: string | null };
+  history_sha256: string;
+}
+
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
 
 function paging({ offset = 0, limit }: PageParams, defaultLimit: number): string {
@@ -79,6 +89,9 @@ function paging({ offset = 0, limit }: PageParams, defaultLimit: number): string
 }
 const base = (id: string) => `/laboratories/${encodeURIComponent(id)}`;
 
+export function getLaboratoryOptions(options?: RequestInit): Promise<LaboratoryOptions> {
+  return request("/laboratories/options", options);
+}
 export function listLaboratories(params: PageParams = {}, options?: RequestInit): Promise<ReferencePage<LaboratoryDefinition>> {
   return request(`/laboratories?${paging(params, 20)}`, options);
 }

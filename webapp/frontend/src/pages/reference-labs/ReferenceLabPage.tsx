@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/Controls";
 import { ErrorBanner, Loading } from "../../components/ui/Feedback";
 import { formatNumber, formatSignedDOP } from "../../lib/format";
 import { labTitle, stakeLabel } from "./lab-model";
+import { ListNotice } from "./ListNotice";
 import "./reference-labs.css";
 
 const RUN_PAGE_SIZE = 20;
@@ -31,6 +32,7 @@ export function ReferenceLabPage() {
   const { labId = "" } = useParams();
   const [detail, setDetail] = useState<ReferenceLabDetail | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailConflict, setDetailConflict] = useState<string | null>(null);
   const [reloadDetail, setReloadDetail] = useState(0);
   const [runs, setRuns] = useState<ReferencePage<ReferenceRunListItem> | null>(null);
   const [runOffset, setRunOffset] = useState(0);
@@ -54,9 +56,11 @@ export function ReferenceLabPage() {
 
   useEffect(() => {
     const controller = new AbortController(); let current = true;
-    setDetail(null); setDetailError(null); setRuns(null); setSelectedRunId(null); setSelectedRun(null); setSessionPage(null); setActionError(null); setUncertain(false); setReconciling(false);
+    setDetail(null); setDetailError(null); setDetailConflict(null); setRuns(null); setSelectedRunId(null); setSelectedRun(null); setSessionPage(null); setActionError(null); setUncertain(false); setReconciling(false);
     getReferenceLab(labId, { signal: controller.signal }).then((value) => { if (current) setDetail(value); }).catch((error: unknown) => {
-      if (current && !(error instanceof Error && error.name === "AbortError")) setDetailError(errorText(error));
+      if (!current || (error instanceof Error && error.name === "AbortError")) return;
+      if (error instanceof ApiError && error.status === 409) setDetailConflict(error.detail);
+      else setDetailError(errorText(error));
     });
     return () => { current = false; controller.abort(); runAbortRef.current?.abort(); };
   }, [labId, reloadDetail]);
@@ -123,6 +127,7 @@ export function ReferenceLabPage() {
     finally { setDeleteBusy(false); }
   }
 
+  if (detailConflict) return <section className="reference-page"><ListNotice message={detailConflict} /></section>;
   if (detailError) return <section className="reference-page"><ErrorBanner cause="No pudimos abrir este laboratorio." recovery={detailError} actionLabel="Reintentar" onAction={() => setReloadDetail((value) => value + 1)} /></section>;
   if (!detail) return <section className="reference-page"><Loading label="Cargando laboratorio…" rows={4} /></section>;
   const lab = detail.lab;

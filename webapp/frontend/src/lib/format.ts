@@ -47,3 +47,14 @@ export function formatTwoDigit(value: number): string {
   }
   return value.toString().padStart(2, "0");
 }
+
+const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+/** "2023-01-04 12:00" → "4 de enero de 2023"; anything that is not a date is returned untouched. */
+export function formatLongDate(label: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(label);
+  if (!match) return label;
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return label;
+  return `${Number(match[3])} de ${MONTHS[month - 1]} de ${match[1]}`;
+}

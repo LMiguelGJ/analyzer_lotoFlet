@@ -33,7 +33,7 @@ describe("run routes", () => {
   });
   it("loads settings and routes result IDs to the report", async () => {
     const { unmount } = render(<MemoryRouter initialEntries={["/ajustes"]}><App /></MemoryRouter>);
-    expect(await screen.findByRole("status")).toHaveTextContent("Cargando ajustes e historial");
+    expect(await screen.findByRole("status")).toHaveTextContent("Cargando ajustes");
     unmount();
     render(<MemoryRouter initialEntries={["/corridas/run-1"]}><App /></MemoryRouter>);
     expect(await screen.findByText("Informe de corrida cargado")).toBeInTheDocument();

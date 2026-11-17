@@ -1,4 +1,4 @@
-import type { LaboratoryConfig, StakeStyle } from "../../api/laboratories";
+import type { LaboratoryConfig, LaboratoryOptions, StakeStyle } from "../../api/laboratories";
 
 export const SYSTEMS = [
   { value: "transition", label: "Transición" },
@@ -8,6 +8,15 @@ export const SYSTEMS = [
   { value: "ensemble", label: "Ensemble" },
   { value: "parity", label: "Paridad" },
 ] as const;
+export const CHANCE_LIST_ID = "chance_express";
+/** One entry of the system selector; `reason` explains why an unavailable system cannot be picked. */
+export interface SystemChoice { value: string; label: string; available: boolean; reason?: string }
+
+/** Chance Express keeps its archived six systems; other lists offer what the options endpoint reports. */
+export function systemChoices(options: LaboratoryOptions): SystemChoice[] {
+  if (options.list.id === CHANCE_LIST_ID) return SYSTEMS.map((system) => ({ value: system.value, label: system.label, available: true }));
+  return options.systems.map((system) => ({ value: system.id, label: system.label, available: system.available !== false, reason: system.reason }));
+}
 export const STAKE_STYLES: { value: StakeStyle; label: string }[] = [
   { value: "bold", label: "Audaz" },
   { value: "ladder", label: "Escalera" },
@@ -34,6 +43,28 @@ export const DEFAULT_FORM: FormValues = {
   window_end: "2026-09-25 18:20",
 };
 
+/** The prize ids a list with `positions` numbers per draw uses (never more than five). */
+export function prizeFieldsFor(positions: number): (typeof PRIZE_FIELDS)[number][] {
+  return PRIZE_FIELDS.slice(0, Math.max(1, Math.min(positions, PRIZE_FIELDS.length)));
+}
+
+/** Initial form for the active list: its default prizes, window and first usable system. */
+export function buildDefaultForm(options: LaboratoryOptions): FormValues {
+  if (options.list.id === CHANCE_LIST_ID && options.prizes.length === 5 && options.window.start && options.window.end) {
+    const form = { ...DEFAULT_FORM };
+    options.prizes.forEach((prize, index) => { form[PRIZE_FIELDS[index]] = String(prize); });
+    form.window_start = options.window.start; form.window_end = options.window.end;
+    return form;
+  }
+  const choices = systemChoices(options);
+  const system = (choices.find((choice) => choice.available && choice.value === "cold") ?? choices.find((choice) => choice.available))?.value ?? DEFAULT_FORM.system;
+  const form: FormValues = { ...DEFAULT_FORM, system, prize_1: "", prize_2: "", prize_3: "", prize_4: "", prize_5: "" };
+  options.prizes.slice(0, PRIZE_FIELDS.length).forEach((prize, index) => { form[PRIZE_FIELDS[index]] = String(prize); });
+  if (options.window.start) form.window_start = options.window.start;
+  if (options.window.end) form.window_end = options.window.end;
+  return form;
+}
+
 const MAX_NAME_BYTES = 120;
 const SAFE_MAX = Number.MAX_SAFE_INTEGER;
 const WINDOW = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
@@ -57,7 +88,8 @@ export type ParseResult =
   | { ok: false; errors: FormErrors };
 
 /** Client-side mirror of the server rules; the server remains the authority. */
-export function parseLaboratoryForm(values: FormValues): ParseResult {
+export function parseLaboratoryForm(values: FormValues, positions: number = PRIZE_FIELDS.length): ParseResult {
+  const prizeFields = prizeFieldsFor(positions);
   const errors: FormErrors = {};
   const name = values.name;
   if (name.trim() === "" || name !== name.trim()) errors.name = "Escribí un nombre sin espacios al inicio ni al final.";
@@ -77,7 +109,7 @@ export function parseLaboratoryForm(values: FormValues): ParseResult {
   if (goal === null) errors.goal = "La meta es un entero positivo.";
   else if (capital !== null && goal <= capital) errors.goal = "La meta debe ser mayor que el capital inicial.";
 
-  const prizes = PRIZE_FIELDS.map((field) => {
+  const prizes = prizeFields.map((field) => {
     const prize = positiveInt(values[field]);
     if (prize === null) errors[field] = "El premio es un entero positivo.";
     return prize;

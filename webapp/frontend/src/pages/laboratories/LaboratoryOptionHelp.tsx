@@ -1,22 +1,30 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { OPTION_HELP } from "./option-help";
+import { OPTION_HELP, stakeHelpOptions, systemHelpOptions } from "./option-help";
 import type { HelpKind, OptionExplanation } from "./option-help";
 
-interface Props { kind: HelpKind; value: string; open: boolean; onOpen: () => void; onClose: () => void }
+interface Props {
+  kind: HelpKind; value: string; open: boolean; onOpen: () => void; onClose: () => void;
+  /** System ids the active list offers; defaults to the archived Chance Express six. */
+  systemIds?: readonly string[];
+  /** First prize of the active list, quoted in the stake examples. */
+  firstPrize?: number;
+}
 
 function Explanation({ what, effect, example }: OptionExplanation) {
   return <><p>{what}</p><p><strong>En qué afecta:</strong> {effect}</p><p><strong>Ejemplo:</strong> {example}</p></>;
 }
 
-export function LaboratoryOptionHelp({ kind, value, open, onOpen, onClose }: Props) {
+export function LaboratoryOptionHelp({ kind, value, open, onOpen, onClose, systemIds, firstPrize = 80 }: Props) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const [comparing, setComparing] = useState(false);
-  const group = OPTION_HELP[kind];
-  const selected = group.options.find((option) => option.value === value)!;
+  const base = OPTION_HELP[kind];
+  const options = kind === "system" && systemIds ? systemHelpOptions(systemIds) : kind === "stake_style" ? stakeHelpOptions(firstPrize) : base.options;
+  const group = { ...base, options };
+  const selected = options.find((option) => option.value === value) ?? options[0];
 
   function close(restoreFocus: boolean) {
     setComparing(false);
