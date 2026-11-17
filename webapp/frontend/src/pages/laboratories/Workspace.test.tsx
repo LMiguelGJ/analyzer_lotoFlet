@@ -240,6 +240,35 @@ describe("laboratory workspace", () => {
     expect(within(result).getByText("Incompletas").parentElement).toHaveTextContent("1");
   });
 
+  it("keeps result hierarchy semantic without interrupting the wallet or session summary", async () => {
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, totals: { ...totals, total_net: 800 } } });
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    const wallet = within(result).getByRole("region", { name: "Tu dinero · Simulación" });
+    const movement = within(result).getByRole("region", { name: "Movimiento de apuestas" });
+    const summary = within(result).getByRole("region", { name: "Resumen de sesiones" });
+    expect(within(wallet).getByText("Aportado de tu bolsillo").parentElement).toHaveTextContent("RD$2.000");
+    expect(within(wallet).getByText("Patrimonio al final").parentElement).toHaveTextContent("RD$2.800");
+    expect(within(wallet).getByText("Ganancia / pérdida").parentElement).toHaveTextContent("+RD$800");
+    const help = within(wallet).getByText("ⓘ Cómo se calcula").closest("details")!;
+    expect(help).not.toHaveAttribute("open");
+    await user.click(within(wallet).getByText("ⓘ Cómo se calcula"));
+    expect(help).toHaveAttribute("open");
+    expect(within(movement).getByText("Volumen apostado").parentElement).toHaveTextContent("+RD$1.000");
+    for (const label of ["Sesiones cerradas", "Metas", "Quiebras", "Incompletas", "Sorteos evaluados", "Sin ranking entre extremos"]) {
+      expect(within(summary).getByText(label)).toBeInTheDocument();
+    }
+    expect(wallet.compareDocumentPosition(movement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(movement.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const details = within(result).getByText("Detalle de sesiones").closest("details")!;
+    expect(summary.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(m.getLaboratoryRun).toHaveBeenCalledTimes(1);
+    expect(m.listLaboratorySessions).toHaveBeenCalledTimes(1);
+    expect(m.createLaboratoryRun).not.toHaveBeenCalled();
+  });
+
   it("shows the certified three-value wallet and keeps existing metrics in their disclosures", async () => {
     m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, totals: { ...totals, total_net: 800 } } });
     const user = userEvent.setup();

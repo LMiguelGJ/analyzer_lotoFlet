@@ -206,28 +206,27 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
     {selectedId && !selectedError && !selected && <Loading label="Cargando resultado guardado…" rows={4} />}
     {selected && totals && <section className="reference-result lab-result" aria-labelledby="lab-result-title">
       <h3 id="lab-result-title">Resultado guardado</h3>
-      <h4 className="lab-result-subheading">Tu dinero · Simulación</h4>
+      <section className="lab-result-wallet" aria-labelledby="lab-wallet-title">
+      <h4 id="lab-wallet-title" className="lab-result-subheading">Tu dinero · Simulación</h4>
       <div className="lab-result-grid lab-result-primary">
         <div><span>Aportado de tu bolsillo</span><strong>{formatAbsoluteDOP(wallet?.out_of_pocket ?? null)}</strong></div>
         <div><span>Patrimonio al final</span><strong>{formatAbsoluteDOP(wallet?.final_wealth ?? null)}</strong></div>
-        <div className="lab-net"><span>Ganancia / pérdida</span><strong>{money(totals.total_net)}</strong></div>
+        <div className="lab-net" data-negative={totals.total_net < 0}><span>Ganancia / pérdida</span><strong>{money(totals.total_net)}</strong></div>
       </div>
-      <h4 className="lab-result-subheading">Movimiento de apuestas</h4>
+      <details className="lab-wallet-help">
+        <summary>ⓘ Cómo se calcula</summary>
+        <p>Los saldos que quedan se conservan para la próxima sesión. Solo se aporta dinero si falta capital para iniciar una sesión existente; no hay retiros y las apuestas no cambian.</p>
+      </details>
+      </section>
+      <section className="lab-result-movement" aria-labelledby="lab-movement-title">
+      <h4 id="lab-movement-title" className="lab-result-subheading">Movimiento de apuestas</h4>
       <div className="lab-result-grid lab-result-financial">
         <div><span>Volumen apostado</span><strong>{money(totals.total_wagered)}</strong></div>
         <div><span>Premios recibidos</span><strong>{money(totals.total_paid)}</strong></div>
         <div><span>Retorno sobre apostado</span><strong>{formatReturnOnWagered(returnOnWagered(totals.total_net, totals.total_wagered))}</strong></div>
       </div>
-      <details className="lab-session-detail">
-        <summary>Detalle de sesiones</summary>
-        <div className="lab-result-grid lab-result-financial">
-          <div><span>Media neta de cerradas</span><strong>{totals.mean_net_closed === null ? "No disponible" : formatMean(totals.mean_net_closed)}</strong></div>
-        </div>
-      </details>
-      <details className="lab-wallet-help">
-        <summary>ⓘ Cómo se calcula</summary>
-        <p>Los saldos que quedan se conservan para la próxima sesión. Solo se aporta dinero si falta capital para iniciar una sesión existente; no hay retiros y las apuestas no cambian.</p>
-      </details>
+      </section>
+      <section className="lab-result-summary" aria-label="Resumen de sesiones">
       <div className="lab-result-grid lab-result-counts">
         <div><span>Sesiones cerradas</span><strong>{formatNumber(totals.completed)}</strong></div>
         <div><span>Metas</span><strong>{formatNumber(totals.goals)}</strong></div>
@@ -238,6 +237,14 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
         <div><dt>Sorteos evaluados</dt><dd>{formatNumber(selected.summary.eligible_draws)}</dd></div>
         <div><dt>Sin ranking entre extremos</dt><dd>{formatNumber(selected.summary.gaps)}</dd></div>
       </dl>
+      </section>
+      <div className="lab-result-details">
+      <details className="lab-session-detail">
+        <summary>Detalle de sesiones</summary>
+        <div className="lab-result-grid lab-result-financial">
+          <div><span>Media neta de cerradas</span><strong>{totals.mean_net_closed === null ? "No disponible" : formatMean(totals.mean_net_closed)}</strong></div>
+        </div>
+      </details>
       <details className="lab-provenance">
         <summary>Datos de la reproducción</summary>
         <dl>
@@ -248,6 +255,7 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
           <div><dt>SHA-256 de sesiones</dt><dd className="reference-sha">{selected.summary.session_sha256}</dd></div>
         </dl>
       </details>
+      </div>
       {sessionError ? <ErrorBanner cause="No pudimos cargar las sesiones." recovery={sessionError} actionLabel="Reintentar" onAction={() => setSessionReload((value) => value + 1)} />
         : !sessions ? <Loading label="Cargando sesiones…" rows={4} /> : <>
       <div className="reference-section-heading"><div><h4>{sessions.total === 0 ? "Sesiones 0 de 0" : `Sesiones ${formatNumber(sessions.offset + 1)}–${formatNumber(Math.min(sessions.offset + sessions.items.length, sessions.total))} de ${formatNumber(sessions.total)}`}</h4></div></div>
