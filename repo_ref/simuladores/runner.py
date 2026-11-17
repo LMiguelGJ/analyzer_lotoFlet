@@ -10,7 +10,7 @@ from quiniela_compare import historical_scenario, ranking_context
 from quiniela_sim import load_validated_history
 
 ROOT = Path(__file__).resolve().parent.parent
-HISTORY = ROOT / "chance_express_history.json"
+HISTORY = ROOT.parent / "datos" / "chance_express_history.json"
 RANKINGS = ROOT / "repo_ref/reports/chance_rank_v1/predictions/pos1.npz"
 HISTORY_SHA256 = "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711"
 RANKINGS_SHA256 = "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d"

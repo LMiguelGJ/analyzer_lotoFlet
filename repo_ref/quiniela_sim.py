@@ -511,7 +511,7 @@ def main(argv=None):
     parser.add_argument("--meta", type=int, default=GOAL)
     parser.add_argument("--mc-sessions", type=int, default=MC_SESSIONS)
     parser.add_argument("--input", type=Path,
-                        default=Path(__file__).resolve().parent.parent / "chance_express_history.json")
+                        default=Path(__file__).resolve().parent.parent / "datos" / "chance_express_history.json")
     parser.add_argument("--report", type=Path)
     args = parser.parse_args(argv)
     if args.capital <= 0 or args.mc_sessions <= 0 or args.meta <= args.capital:

@@ -33,7 +33,7 @@ def _assert_binary_vector(votes, expected_length):
 
 def test_distinct_parity_voters_match_on_validated_frozen_history():
     production, reference = _voters()
-    history = load_history(ROOT / "chance_express_history.json", HISTORY_SHA256)
+    history = load_history(ROOT / "datos" / "chance_express_history.json", HISTORY_SHA256)
     assert history.sha256 == HISTORY_SHA256
     first_numbers = history.nums[:, 0]
     assert len(first_numbers) == 105426

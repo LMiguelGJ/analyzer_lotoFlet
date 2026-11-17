@@ -557,7 +557,7 @@ def test_synthetic_full_grid_budget_benchmark():
 
                 from chance_rank.data import load_history
 
-                real_path = Path(__file__).resolve().parent.parent / "chance_express_history.json"
+                real_path = Path(__file__).resolve().parent.parent.parent / "datos" / "chance_express_history.json"
                 if not real_path.exists():
                     pytest.skip("chance_express_history.json not present")
                 real_h = load_history(real_path, expected_sha=None)

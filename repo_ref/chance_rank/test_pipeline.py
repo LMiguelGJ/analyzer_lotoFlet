@@ -606,7 +606,7 @@ def test_export_step_memory_budget_synthetic_20k_rows():
     from chance_rank import artifacts, models
     from chance_rank.data import load_history
 
-    real_path = Path(__file__).resolve().parent.parent / "chance_express_history.json"
+    real_path = Path(__file__).resolve().parent.parent.parent / "datos" / "chance_express_history.json"
     if not real_path.exists():
         pytest.skip("chance_express_history.json not present")
 

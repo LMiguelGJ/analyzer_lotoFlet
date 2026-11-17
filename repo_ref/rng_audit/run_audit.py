@@ -1,6 +1,6 @@
 """Audit Chance Express draws with NIST SP 800-22 and lottery-specific tests.
 
-Usage: py -m rng_audit.run_audit [path/to/chance_express_history.json]
+Usage: py -m rng_audit.run_audit [path/to/datos/chance_express_history.json]
 Reads the history file only; writes reports/rng_audit.md and reports/rng_audit.json.
 """
 
@@ -209,7 +209,7 @@ def write_report(audit, source, sha):
 def main():
     import hashlib
 
-    source = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "chance_express_history.json"
+    source = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "datos" / "chance_express_history.json"
     sha = hashlib.sha256(source.read_bytes()).hexdigest()
     loteka = load_draws(source)
     datasets = {"Loteka": loteka}

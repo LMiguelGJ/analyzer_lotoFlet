@@ -87,7 +87,7 @@ U1B/U2 tienen verificación técnica independiente focalizada y U4 revisión fav
 
 ## Datos y migraciones
 
-- Entradas congeladas de solo lectura: `chance_express_history.json` y `repo_ref/reports/chance_rank_v1/predictions/pos1.npz`. El servidor verifica sus SHA-256 al iniciar; si no coinciden, no inicia.
+- Entradas congeladas de solo lectura: `datos/chance_express_history.json` y `repo_ref/reports/chance_rank_v1/predictions/pos1.npz`. El servidor verifica sus SHA-256 al iniciar; si no coinciden, no inicia.
 - Los datos generados se guardan fuera del repositorio y de OneDrive, en `%LOCALAPPDATA%\LaboratorioQuiniela` por defecto; `LABORATORIO_DATA_DIR` permite cambiar esa ubicación.
 - El código registra SQLite versión 20, con época de integridad y triggers. La caché y las lecturas SQL paginadas de U3 están integradas, con comprobaciones focalizadas; su aceptación completa de integridad sigue pendiente. Esto no autoriza migrar la base habitual. El arranque inicializa una base nueva o aplica, en orden, las migraciones conocidas hasta la versión actual; una versión desconocida se rechaza. **No edites ni reemplaces las migraciones SQL.**
 - Antes de copiar la base, detené la aplicación con Ctrl+C. No copies un archivo SQLite mientras el servidor está ejecutándose.

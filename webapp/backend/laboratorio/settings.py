@@ -89,7 +89,10 @@ class Settings:
         return cls(
             data_dir=Path(data_dir) if data_dir else _default_data_dir(),
             history_path=Path(
-                os.environ.get("LABORATORIO_HISTORY", REPO_ROOT / "chance_express_history.json")
+                os.environ.get(
+                    "LABORATORIO_HISTORY",
+                    REPO_ROOT / "datos" / "chance_express_history.json",
+                )
             ),
             rankings_path=Path(
                 os.environ.get(

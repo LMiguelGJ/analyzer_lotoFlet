@@ -24,7 +24,7 @@ def inputs():
     runner = importlib.import_module("simuladores.runner")
     compare = importlib.import_module("quiniela_compare")
     sim = importlib.import_module("quiniela_sim")
-    history_path = ROOT / "chance_express_history.json"
+    history_path = ROOT / "datos" / "chance_express_history.json"
     rankings_path = ROOT / "repo_ref" / "reports" / "chance_rank_v1" / "predictions" / "pos1.npz"
     runner.verify_input(history_path, runner.HISTORY_SHA256)
     runner.verify_input(rankings_path, runner.RANKINGS_SHA256)
@@ -164,7 +164,7 @@ def test_all_fourteen_laboratories_match_independent_history_and_frozen_golden(i
     monkeypatch.setattr(adapter, "_write_cached_parity", lambda *args: None)
     settings = Settings(
         data_dir=ROOT / "webapp" / "backend" / "tests" / "fixtures",
-        history_path=ROOT / "chance_express_history.json",
+        history_path=ROOT / "datos" / "chance_express_history.json",
         rankings_path=ROOT / "repo_ref" / "reports" / "chance_rank_v1" / "predictions" / "pos1.npz",
         frontend_dist=ROOT / "webapp" / "frontend" / "dist",
     )
@@ -320,7 +320,7 @@ def test_independent_literal_flat_uses_single_stake_and_keeps_censored_loss():
 
 def test_golden_provenance_pins_actual_reference_inputs_and_sources():
     provenance = GOLDEN["provenance"]
-    assert provenance["history"]["relative_path"] == "chance_express_history.json"
+    assert provenance["history"]["relative_path"] == "datos/chance_express_history.json"
     assert provenance["history"]["sha256"] == HISTORY_SHA256
     assert provenance["rankings"]["relative_path"] == (
         "repo_ref/reports/chance_rank_v1/predictions/pos1.npz"

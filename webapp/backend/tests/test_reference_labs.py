@@ -225,7 +225,7 @@ def test_first_lab_matches_readonly_reference_oracle():
     replay = compare.replay
     selected_payments = compare.selected_payments
     load_validated_history = sim.load_validated_history
-    HISTORY = ROOT / "chance_express_history.json"
+    HISTORY = ROOT / "datos" / "chance_express_history.json"
     RANKINGS = ROOT / "repo_ref/reports/chance_rank_v1/predictions/pos1.npz"
     ranking_context = runner.ranking_context
 

@@ -103,14 +103,14 @@ def markdown(report):
 def main():
     # Check all fixed inputs and output locations before generating any outcomes.
     for name, expected in EXPECTED_HASHES.items():
-        path = ROOT / ("reports" if name.startswith("strategy_tests") else "") / name
+        path = (ROOT / "reports" if name.startswith("strategy_tests") else ROOT.parent / "datos") / name
         if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
             raise SystemExit(f"Frozen input changed: {path}")
     md = REPORT_DIR / "e5_healthy_calibration.md"
     js = REPORT_DIR / "e5_healthy_calibration.json"
     if md.exists() or js.exists():
         raise SystemExit("Calibration outputs already exist; never rerun changing outcomes")
-    source = ROOT / "chance_express_history.json"
+    source = ROOT.parent / "datos" / "chance_express_history.json"
     original_report = json.loads((REPORT_DIR / "strategy_tests.json").read_text(encoding="utf-8"))
     original = original_report["results"]["sano (SHA-256)"]["money"]["E5"]
     if original["held_out"] is None or original["held_out"]["hi"] >= RANDOM_RETURN:

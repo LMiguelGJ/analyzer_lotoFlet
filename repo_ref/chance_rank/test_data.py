@@ -16,7 +16,7 @@ from chance_rank.data import (
 )
 from chance_rank.protocol import EXPECTED_SHA256
 
-REPO_HISTORY = Path(__file__).resolve().parent.parent / "chance_express_history.json"
+REPO_HISTORY = Path(__file__).resolve().parent.parent.parent / "datos" / "chance_express_history.json"
 
 
 def _write(tmp_path, sorteos_por_fecha):

@@ -42,7 +42,7 @@ Nombre visible: **Quiniela**. Interfaz en español rioplatense con voseo, como e
 
 ## Evidence on Hand
 
-- `chance_express_history.json` (SHA-256 `d1c0e9ec…9711`) y `repo_ref/reports/chance_rank_v1/predictions/pos1.npz` (SHA-256 `b405041f…4d94d`), verificados al arrancar.
+- `datos/chance_express_history.json` (SHA-256 `d1c0e9ec…9711`) y `repo_ref/reports/chance_rank_v1/predictions/pos1.npz` (SHA-256 `b405041f…4d94d`), verificados al arrancar.
 - Catorce escenarios de referencia con resultado conocido en `docs/resumen_resultados_quiniela.md`.
 - No hay testimonios, clientes, precios ni métricas de uso, y no deben inventarse.
 

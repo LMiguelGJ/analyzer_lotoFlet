@@ -2,7 +2,7 @@
 """Descarga los resultados oficiales de Loteka Chance Express por fecha.
 
 Consulta el endpoint oficial día por día desde la fecha inicial hasta hoy y
-guarda los cinco números de cada sorteo en chance_express_history.json.
+guarda los cinco números de cada sorteo en datos/chance_express_history.json.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ PREMIOS_ENDPOINT = "https://premios.do/resultados-chance-express-"
 TIMEZONE = "America/Santo_Domingo"
 DEFAULT_START_DATE = date(2025, 3, 5)  # Fecha inicial del historial.
 NUMBER_RE = re.compile(r"^\d{1,2}$")
+DEFAULT_OUTPUT = Path(__file__).resolve().parent / "datos" / "chance_express_history.json"
 
 
 class DownloadError(RuntimeError):
@@ -237,10 +238,10 @@ def print_day(day: date, records: list[dict[str, Any]], quiet: bool) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Descarga Chance Express por fecha al JSON raíz.")
+    parser = argparse.ArgumentParser(description="Descarga Chance Express por fecha al JSON en datos/.")
     parser.add_argument("--start-date", help="Primera fecha (DD/MM/AAAA; por defecto 05/03/2025).")
     parser.add_argument("--end-date", help="Última fecha (DD/MM/AAAA; por defecto hoy).")
-    parser.add_argument("--output", type=Path, default=Path("chance_express_history.json"))
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--delay", type=float, default=0.25, help="Segundos entre consultas.")
     parser.add_argument("--timeout", type=float, default=30.0, help="Timeout por consulta.")
     parser.add_argument("--quiet-draws", action="store_true", help="No imprimir los números.")

@@ -1,7 +1,7 @@
 {
   "provenance": {
     "history": {
-      "relative_path": "chance_express_history.json",
+      "relative_path": "datos/chance_express_history.json",
       "sha256": "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711"
     },
     "rankings": {
@@ -9,10 +9,10 @@
       "sha256": "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d"
     },
     "sources": {
-      "repo_ref/quiniela_compare.py": "adde5572c8e0e6d44da71e4bfaaf1f1851ad2689d53af11a614c1d97e8c90acf",
-      "repo_ref/quiniela_sim.py": "c0dca164a84b79a6fedbd24c1a4cb8e958e5ebb5efa1f8b5059a6d42501b67ac",
+      "repo_ref/quiniela_compare.py": "7906f5d93dca7549e553799ad6ede0c6ebfadecf59acd3bf3b69fe91be94e55c",
+      "repo_ref/quiniela_sim.py": "c8c6044cc5abbf7c21ccf7172a297d849ef6b69491c4f954ff81773248a5371f",
       "repo_ref/strategy_tests/rules.py": "6cabf441d99c58e71be0dbc1b570bb39a65b9743d688814e6ca4c830da671ed7",
-      "repo_ref/simuladores/runner.py": "d1a544c849d02655115bc4b0a0d9b669d9ec0d854b99ca4a534fcaea96c82c0a",
+      "repo_ref/simuladores/runner.py": "0ea630da59201bf9a04933ed3e3a4377aa2a42ba28326ec792e5ca457cdd3ee0",
       "repo_ref/chance_rank/data.py": "2b0feb5d715aab99b8d3d3d53e1be51ca88edc66df2f7a8c08e5f1b78c50850b",
       "repo_ref/simuladores/transicion_1_audaz/ejecutar.py": "60df6331aef21128393726231d52799c8b315cce97faa402c340dacacc18c88f",
       "repo_ref/simuladores/frios_1_audaz/ejecutar.py": "bf1a4c1f2d97eba82db089a9202ef79e8f964b981cbbd77a84f193a9543f78dc",

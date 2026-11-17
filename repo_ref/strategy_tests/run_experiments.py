@@ -1,6 +1,6 @@
 """Run betting-strategy experiments E1-E8 plus descriptive Loteka E9 and write a Spanish report.
 
-Usage: py -m strategy_tests.run_experiments [path/to/chance_express_history.json]
+Usage: py -m strategy_tests.run_experiments [path/to/datos/chance_express_history.json]
 Reads the history file only; writes reports/strategy_tests.md and reports/strategy_tests.json.
 """
 
@@ -351,7 +351,7 @@ def controls_section(results):
 
 
 def main():
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "chance_express_history.json"
+    path = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "datos" / "chance_express_history.json"
     try:
         sha = hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError as exc:
