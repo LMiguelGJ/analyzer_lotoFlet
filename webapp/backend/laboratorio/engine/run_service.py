@@ -101,7 +101,9 @@ def _default_name(spec):
         strategy = " + ".join(
             f"{SYSTEM_LABELS[system]} {percent} %" for system, percent in spec.components
         )
-    return f"{strategy} · {spec.coverage} números"
+    name = f"{strategy} · {spec.coverage} números"
+    # A wide mix can exceed the 80-character name limit; shorten instead of refusing.
+    return name if len(name) <= 80 else name[:79].rstrip() + "…"
 
 
 def _list_snapshot(lab) -> HistorySnapshot:

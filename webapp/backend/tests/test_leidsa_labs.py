@@ -432,3 +432,31 @@ def test_run_engine_accepts_three_wide_draws_only_when_told_so():
         run_sessions(config, rows)  # default width stays five
     with pytest.raises(ValueError):
         run_sessions(RunConfig(100, 150, 2, 4, (60, 8, 4, 2), 1, 5), rows, results_per_draw=3)
+
+
+def test_leidsa_lab_with_a_window_without_draws_is_rejected_and_saves_nothing(client):
+    activate(client, LEIDSA)
+    config = lab_config(window_start="2022-01-01 00:00", window_end="2022-06-01 00:00")
+    lab = create_lab(client, "Leidsa ventana vacía", config).json()
+    response = run_lab(client, lab, leidsa_sha(client))
+    assert response.status_code == 422
+    assert response.json()["detail"] == "La ventana elegida no tiene sorteos."
+    runs = client.get(f"/api/v1/laboratories/{lab['id']}/runs").json()
+    assert runs["total"] == 0
+
+
+def test_default_run_name_of_a_wide_mix_fits_the_name_limit(client):
+    activate(client, LEIDSA)
+    strategy = {
+        "kind": "mix",
+        "components": [
+            {"system": "cold", "percent": 25},
+            {"system": "freq_hist", "percent": 25},
+            {"system": "freq_recent", "percent": 25},
+            {"system": "decay", "percent": 25},
+        ],
+        "coverage": 10,
+    }
+    response = client.post("/api/v1/runs", json=run_body(strategy), headers=ORIGIN)
+    assert response.status_code == 201, response.text
+    assert len(response.json()["name"]) <= 80

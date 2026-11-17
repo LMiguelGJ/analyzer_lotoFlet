@@ -151,6 +151,8 @@ def create_laboratory_run(laboratory_id: str, body: CreateLaboratoryRun, request
                 raise HTTPException(
                     409, "La historia requerida no coincide con la referencia fija."
                 ) from None
+            if exc.kind == "empty_window":
+                raise HTTPException(422, "La ventana elegida no tiene sorteos.") from None
             raise HTTPException(422, "La solicitud del laboratorio no es válida.") from None
         identifier = str(uuid.uuid4())
         try:

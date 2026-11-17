@@ -12,7 +12,7 @@ from laboratorio.settings import HISTORY_SHA256, RANKINGS_SHA256
 
 
 class OwnedLaboratoryServiceError(ValueError):
-    def __init__(self, kind: Literal["invalid", "conflict"], message: str):
+    def __init__(self, kind: Literal["invalid", "conflict", "empty_window"], message: str):
         super().__init__(message)
         self.kind = kind
 
@@ -49,6 +49,10 @@ def execute_owned_laboratory(
     elif required_history_sha256 != data.history.sha256:
         # Lists without a pinned history: the caller must name the history it saw.
         raise OwnedLaboratoryServiceError("conflict", "loaded history does not match the request")
+    else:
+        start, end = definition.config.window_start, definition.config.window_end
+        if not any(start <= label <= end for label in data.history.labels):
+            raise OwnedLaboratoryServiceError("empty_window", "window has no draws")
     lab = definition.to_reference_lab()
     votes = data.parity_votes() if lab.selection_kind == "parity" else None
     result = run_reference_lab(lab, data.history, data.rankings, parity_votes=votes)
