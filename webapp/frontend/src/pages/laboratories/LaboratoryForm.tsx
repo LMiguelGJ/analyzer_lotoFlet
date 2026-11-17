@@ -98,7 +98,7 @@ function LaboratoryFormBody({ options, onCreated }: Props & { options: Laborator
         <a href={`#${fieldId(field)}`} onClick={(event) => { event.preventDefault(); formRef.current?.querySelector<HTMLElement>(`#${fieldId(field)}`)?.focus(); }}>{FIELD_LABELS[field]}</a>
       </li>)}</ul>
     </div>}
-    <Field id="lab-name" label="Nombre" value={values.name} onChange={(event) => set("name")(event.target.value)} error={errors.name} hint="Único; hasta 120 bytes." autoComplete="off" />
+    <Field id="lab-name" label="Nombre" value={values.name} onChange={(event) => set("name")(event.target.value)} error={errors.name} hint="Un nombre que no uses en otro laboratorio." autoComplete="off" />
     <div className="lab-form-row">
       <div className="ledger-field"><div className="lab-field-label"><label className="ledger-label" htmlFor="lab-system">Sistema de selección</label>
         <LaboratoryOptionHelp kind="system" systemIds={systemIds} value={values.system} open={help === "system"} onOpen={() => setHelp("system")} onClose={() => setHelp(null)} /></div>

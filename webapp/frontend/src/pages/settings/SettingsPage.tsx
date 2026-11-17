@@ -17,6 +17,11 @@ import "./settings.css";
 
 const MAX_IMPORT_BYTES = 32 * 1024 * 1024;
 const CHANCE_ID = "chance_express";
+const QUOTA_SOURCE_LABELS: Record<string, string> = {
+  persisted: "lo elegiste vos",
+  environment: "lo fija el arranque de la aplicación",
+  env: "lo fija el arranque de la aplicación",
+};
 const BYTE_FORMAT = (value: string) => formatExactBytes(value);
 
 interface Snapshot { lists: NumberListInfo[]; settings: SettingsResponse; history: HistoryResponse | null }
@@ -316,7 +321,7 @@ export function SettingsPage() {
   const quotaDirty = quotaDraft !== bytesToMbInput(limit);
   const quotaInvalid = quotaMbError(quotaDraft);
   const shownQuotaError = quotaError ?? (quotaDirty ? quotaInvalid : null);
-  const sourceLabel = settings.quota.source === "environment" || settings.quota.source === "env" ? "entorno" : settings.quota.source;
+  const sourceLabel = QUOTA_SOURCE_LABELS[settings.quota.source] ?? "valor de fábrica";
   const prizesDirty = active ? prizeDrafts.join(",") !== active.prizes.join(",") : false;
   const prizesAtDefault = active ? active.prizes.join(",") === active.default_prizes.join(",") && !prizesDirty : true;
   const onChance = active?.id === CHANCE_ID;
@@ -385,7 +390,7 @@ export function SettingsPage() {
           <input id="settings-quota" className="ledger-control" type="text" inputMode="decimal" autoComplete="off" value={quotaDraft} disabled={!quotaWritable || disabled}
             aria-invalid={Boolean(shownQuotaError)} aria-describedby={`quota-help${shownQuotaError ? " quota-error" : ""}`}
             onChange={(event) => { setQuotaDraft(event.target.value); setQuotaError(null); setQuotaSaved(false); }} />
-          <p id="quota-help" className="ledger-hint">{quotaWritable ? `Cuánto espacio puede ocupar la aplicación (1 GB son 1.024 MB). Configuración: ${sourceLabel}.` : "Este límite está fijado fuera de esta pantalla y no se puede cambiar aquí."}</p>
+          <p id="quota-help" className="ledger-hint">{quotaWritable ? `Cuánto espacio puede ocupar la aplicación (1 GB son 1.024 MB); ${sourceLabel}.` : "Este límite está fijado fuera de esta pantalla y no se puede cambiar aquí."}</p>
           {shownQuotaError && <p id="quota-error" className="ledger-error" role="alert">{shownQuotaError}</p>}
         </div>
         <Button type="submit" variant="primary" disabled={disabled || !quotaWritable || !quotaDirty || Boolean(quotaInvalid)} aria-busy={disabled}>{disabled ? "Guardando…" : "Guardar límite"}</Button>
@@ -417,7 +422,7 @@ export function SettingsPage() {
 
         {history && <section aria-labelledby="settings-history-title" className="settings-subsection">
           <h3 id="settings-history-title">Fuentes de historial</h3>
-          <div className="settings-history-list" aria-label="Fuentes de historial">
+          <div className="settings-history-list" role="group" aria-label="Fuentes de historial">
             {history.sources.map((source) => <section className="settings-history-source" key={source.sha256} aria-label={`${source.active ? "Activo" : "Inactivo"} · ${source.origin === "frozen" ? "Historial congelado" : "Historial importado"}`}>
               <div className="settings-source-heading"><h4>{source.active ? "Activo" : "Inactivo"} · {source.origin === "frozen" ? "Historial congelado" : "Historial importado"}</h4><p>{snapshotDescription(source)}</p></div>
               <dl className="settings-source-metrics"><div><dt>Sorteos</dt><dd>{source.draws}</dd></div><div><dt>Sorteos con ranking</dt><dd>{source.ranked_draws} de {source.draws}</dd></div></dl>
