@@ -95,7 +95,7 @@ def laboratory_options(request: Request):
     return {
         "list": {"id": active.id, "name": active.name, "positions": active.positions},
         "systems": systems,
-        "prizes": list(active.default_prizes),
+        "prizes": lists.prizes(active.id),
         "window": {"start": start, "end": end},
         "history_sha256": history.sha256,
     }

@@ -136,7 +136,14 @@ def _leidsa_history_meta(request: Request, number_list: NumberList) -> dict:
 def run_options(request: Request):
     number_list = request.app.state.lists.active()
     on_chance = number_list.id == DEFAULT_LIST_ID
-    prizes = [60, 10, 5] if on_chance else list(number_list.default_prizes)
+    saved = request.app.state.lists.prizes(number_list.id)
+    if on_chance:
+        # Runs play 3 positions by default: Loteka keeps its own 60/10/5 table until the user
+        # saves one, then the first three saved prizes are offered.
+        custom = saved != list(number_list.default_prizes)
+        prizes = saved[:3] if custom else [60, 10, 5]
+    else:
+        prizes = saved
     components = (
         [{"system": "transition", "percent": 60}, {"system": "cold", "percent": 40}]
         if on_chance

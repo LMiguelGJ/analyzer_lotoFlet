@@ -192,6 +192,8 @@ def test_get_lists_describes_catalog_and_marks_chance_active(tmp_path, lab_data)
             "last_label": "2026-09-25 18:20",
             "active": True,
             "available": True,
+            "prizes": [80, 8, 4, 2, 1],
+            "default_prizes": [80, 8, 4, 2, 1],
         },
         {
             "id": "leidsa_quiniela",
@@ -202,6 +204,8 @@ def test_get_lists_describes_catalog_and_marks_chance_active(tmp_path, lab_data)
             "last_label": "2026-11-16 20:50",
             "active": False,
             "available": True,
+            "prizes": [60, 8, 4],
+            "default_prizes": [60, 8, 4],
         },
     ]
 

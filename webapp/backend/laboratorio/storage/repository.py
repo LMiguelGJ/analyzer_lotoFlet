@@ -1,5 +1,6 @@
 """SQLite persistence: quota accounting and saved runs."""
 
+import json
 import shutil
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
@@ -300,6 +301,24 @@ class Repository:
                 "INSERT INTO active_number_list (id, list_id) VALUES (1, ?) "
                 "ON CONFLICT(id) DO UPDATE SET list_id = excluded.list_id",
                 (list_id,),
+            )
+
+    def get_list_prizes(self) -> dict[str, list[int | float]]:
+        """Saved prize tables by list id; lists without a row use the catalog default."""
+        with connection(self.path) as db:
+            rows = db.execute("SELECT list_id, prizes_json FROM list_prizes").fetchall()
+        return {list_id: json.loads(prizes_json) for list_id, prizes_json in rows}
+
+    def set_list_prizes(self, list_id: str, prizes: list[int | float] | None) -> None:
+        """Save a list's prize table; ``None`` deletes the row and restores the default."""
+        with _transaction(self.path) as db:
+            if prizes is None:
+                db.execute("DELETE FROM list_prizes WHERE list_id = ?", (list_id,))
+                return
+            db.execute(
+                "INSERT INTO list_prizes (list_id, prizes_json) VALUES (?, ?) "
+                "ON CONFLICT(list_id) DO UPDATE SET prizes_json = excluded.prizes_json",
+                (list_id, json.dumps(prizes, separators=(",", ":"))),
             )
 
     def get_history_source(self, sha256: str) -> dict | None:

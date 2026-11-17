@@ -1,7 +1,9 @@
 """Loads the histories of the selectable number lists, lazily and cached per list id."""
 
+import math
 import threading
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 from laboratorio.domain.number_lists import CATALOG, DEFAULT_LIST_ID, NumberList, get_list
@@ -18,6 +20,25 @@ class ListError(Exception):
         super().__init__(message)
         self.kind = kind
         self.message = message
+
+
+PRIZE_VALUE_MESSAGE = "Cada premio debe ser un número entero mayor que 0 y como máximo 10000."
+MAX_PRIZE = 10000
+
+
+def _clean_prize(value: object) -> int | None:
+    """A whole prize in [1, 10000] (``60.0`` counts as ``60``); else None.
+
+    Labs and runs only accept whole prizes, so a saved table must be whole too.
+    """
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return None
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    number = Decimal(repr(value))
+    if number <= 0 or number > MAX_PRIZE or number != number.to_integral_value():
+        return None
+    return int(number)
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,6 +144,37 @@ class ListCatalog:
     def set_active(self, list_id: str) -> None:
         self.history(list_id)  # rejects unknown and unavailable lists before persisting
         self._repo.set_active_list_id(list_id)
+
+    # ------------------------------------------------------------------ prizes
+
+    def prizes(self, list_id: str) -> list[int | float]:
+        """Effective prize table of a list: the saved one or the catalog default."""
+        definition = get_list(list_id)
+        if definition is None:
+            raise ListError("unknown", "Esa lista no existe.")
+        saved = self._repo.get_list_prizes().get(definition.id)
+        if saved is None or len(saved) != definition.positions:
+            return list(definition.default_prizes)
+        return saved
+
+    def set_prizes(self, list_id: str, prizes: object) -> None:
+        """Validate and save a prize table (``None`` restores the default); nothing on error."""
+        definition = get_list(list_id)
+        if definition is None:
+            raise ListError("unknown", "Esa lista no existe.")
+        if prizes is None:
+            self._repo.set_list_prizes(definition.id, None)
+            return
+        if not isinstance(prizes, list) or len(prizes) != definition.positions:
+            raise ListError(
+                "invalid",
+                f"La lista «{definition.name}» necesita {definition.positions} premios, "
+                "uno por posición.",
+            )
+        clean = [_clean_prize(value) for value in prizes]
+        if any(value is None for value in clean):
+            raise ListError("invalid", PRIZE_VALUE_MESSAGE)
+        self._repo.set_list_prizes(definition.id, clean)  # type: ignore[arg-type]
 
     # ----------------------------------------------------------------- listing
 
