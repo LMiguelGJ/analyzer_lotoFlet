@@ -1,6 +1,6 @@
 """Versioned HTTP resources and presentation helpers."""
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
 
@@ -14,3 +14,15 @@ def repo(request: Request):
 
 def history(request: Request):
     return request.app.state.history
+
+
+def require_chance_express(request: Request) -> None:
+    """Dependency for endpoints that only know the Loteka history until laboratories are generic."""
+    catalog = request.app.state.lists
+    active = catalog.active()
+    if active.id != "chance_express":
+        raise HTTPException(
+            409,
+            f"La lista activa es «{active.name}» y esta función todavía solo funciona con "
+            "«Loteka Chance Express». Cámbiala en Ajustes.",
+        )

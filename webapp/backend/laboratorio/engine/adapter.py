@@ -93,7 +93,9 @@ def parity_votes_for(history: History, settings: Settings) -> np.ndarray:
     return votes
 
 
-def _validated_records(date_key: str, records: list) -> list[tuple[str, tuple[int, ...]]]:
+def _validated_records(
+    date_key: str, records: list, positions: int
+) -> list[tuple[str, tuple[int, ...]]]:
     normalized = []
     for rec in records:
         if not isinstance(rec, dict):
@@ -102,7 +104,7 @@ def _validated_records(date_key: str, records: list) -> list[tuple[str, tuple[in
         if not isinstance(hora, str) or not _HORA_RE.fullmatch(hora):
             raise DataError(f"invalid hora at {date_key}: {hora!r}")
         numeros = rec.get("numeros")
-        if not isinstance(numeros, list) or len(numeros) != 5:
+        if not isinstance(numeros, list) or len(numeros) != positions:
             raise DataError(f"invalid numeros count at {date_key} {hora}: {numeros!r}")
         numbers = []
         for x in numeros:
@@ -137,7 +139,7 @@ def _minutes_since_epoch(label: str) -> int:
     return int((datetime.strptime(label, DRAW_FORMAT) - _EPOCH).total_seconds() // 60)
 
 
-def parse_history(raw: bytes) -> History:
+def parse_history(raw: bytes, positions: int = 5) -> History:
     sha256 = hashlib.sha256(raw).hexdigest()
     try:
         data = json.loads(raw)
@@ -162,12 +164,12 @@ def parse_history(raw: bytes) -> History:
         if not records:
             continue
 
-        normalized = _validated_records(date_key, records)
+        normalized = _validated_records(date_key, records, positions)
         for hora, numbers in _merge_duplicates(date_key, normalized):
             rows.append((f"{date_key} {hora}", numbers))
 
     labels = tuple(label for label, _ in rows)
-    nums = np.asarray([numbers for _, numbers in rows], dtype=np.uint8).reshape(-1, 5)
+    nums = np.asarray([numbers for _, numbers in rows], dtype=np.uint8).reshape(-1, positions)
     minutes = np.asarray([_minutes_since_epoch(label) for label in labels], dtype=np.int64)
     return History(labels=labels, nums=nums, minutes=minutes, sha256=sha256)
 
@@ -184,9 +186,9 @@ def _read_bytes_verified(path: Path, expected_sha: str | None, label: str) -> by
     return raw
 
 
-def load_history(path: Path, expected_sha: str | None) -> History:
+def load_history(path: Path, expected_sha: str | None, positions: int = 5) -> History:
     raw = _read_bytes_verified(Path(path), expected_sha, "History")
-    return parse_history(raw)
+    return parse_history(raw, positions)
 
 
 def load_rankings(path: Path, expected_sha: str | None, history: History) -> Rankings:

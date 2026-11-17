@@ -6,10 +6,10 @@ import uuid
 from dataclasses import asdict
 from typing import NoReturn
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import Field
 
-from laboratorio.api import StrictBody
+from laboratorio.api import StrictBody, require_chance_express
 from laboratorio.domain.laboratory_run_snapshots import OwnedLaboratoryRunSnapshot
 from laboratorio.domain.laboratory_wallet import derive_wallet
 from laboratorio.engine.owned_laboratory_service import (
@@ -121,7 +121,9 @@ def _stored_compact(request, owner_id, run_id):
     return record
 
 
-@router.post("/{laboratory_id}/runs", status_code=201)
+@router.post(
+    "/{laboratory_id}/runs", status_code=201, dependencies=[Depends(require_chance_express)]
+)
 def create_laboratory_run(laboratory_id: str, body: CreateLaboratoryRun, request: Request):
     definition = _definition(request, laboratory_id)
     state = request.app.state

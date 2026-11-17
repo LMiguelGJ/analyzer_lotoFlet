@@ -56,6 +56,8 @@ class Settings:
     quota_bytes: int = DEFAULT_QUOTA_BYTES
     # None preserves compatibility for manually constructed settings and dataclasses.replace.
     quota_explicit: bool | None = None
+    # Repository root used to resolve every non-default number list (see domain/number_lists.py).
+    repo_root: Path = REPO_ROOT
 
     def __post_init__(self):
         validate_quota_bytes(self.quota_bytes)

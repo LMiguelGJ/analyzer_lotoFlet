@@ -2,11 +2,11 @@
 
 from typing import cast
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
-from laboratorio.api import history
+from laboratorio.api import history, require_chance_express
 from laboratorio.engine.active_history import HistoryImportError, HistorySnapshot
 from laboratorio.engine.adapter import History
 
@@ -28,7 +28,7 @@ def _meta(snapshot: HistorySnapshot, *, active: bool) -> dict:
     }
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(require_chance_express)])
 def list_history(request: Request):
     catalog = history(request)
     active_snapshot = catalog.active()
@@ -41,7 +41,7 @@ def list_history(request: Request):
     return {"active": _meta(active_snapshot, active=True), "sources": sources}
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_chance_express)])
 async def import_history(request: Request):
     raw = await request.body()
     if not raw:

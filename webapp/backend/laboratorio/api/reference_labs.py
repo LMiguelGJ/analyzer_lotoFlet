@@ -5,10 +5,10 @@ import uuid
 from dataclasses import asdict
 from typing import NoReturn
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import Field
 
-from laboratorio.api import StrictBody
+from laboratorio.api import StrictBody, require_chance_express
 from laboratorio.domain.reference_labs import REFERENCE_LABS, get_reference_lab
 from laboratorio.engine.reference_lab_service import (
     ReferenceLabServiceError,
@@ -67,7 +67,7 @@ def _response(request: Request, lab):
     }
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(require_chance_express)])
 def reference_labs(request: Request):
     return {
         "contract_version": _CONTRACT_VERSION,
@@ -77,7 +77,7 @@ def reference_labs(request: Request):
     }
 
 
-@router.get("/{lab_id}")
+@router.get("/{lab_id}", dependencies=[Depends(require_chance_express)])
 def reference_lab_detail(lab_id: str, request: Request):
     try:
         lab = get_reference_lab(lab_id)
@@ -158,7 +158,7 @@ _SERVICE_ERRORS = {
 }
 
 
-@router.post("/{lab_id}/runs", status_code=201)
+@router.post("/{lab_id}/runs", status_code=201, dependencies=[Depends(require_chance_express)])
 def create_lab_run(lab_id: str, body: CreateReferenceLabRun, request: Request):
     lab = _lab_or_404(lab_id)
     state = request.app.state

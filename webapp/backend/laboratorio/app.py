@@ -19,10 +19,12 @@ from laboratorio.api.history import router as history_router
 from laboratorio.api.history_sources import router as history_sources_router
 from laboratorio.api.laboratories import router as laboratories_router
 from laboratorio.api.laboratory_runs import router as laboratory_runs_router
+from laboratorio.api.lists import router as lists_router
 from laboratorio.api.reference_labs import router as reference_labs_router
 from laboratorio.api.runs import router as runs_router
 from laboratorio.engine.active_history import HistoryCatalog
 from laboratorio.engine.adapter import open_lab_data
+from laboratorio.engine.list_catalog import ListCatalog
 from laboratorio.settings import Settings
 from laboratorio.storage.database import initialize_database
 from laboratorio.storage.repository import Repository
@@ -94,6 +96,7 @@ def create_app(
         app.state.repo = repo
         app.state.data = data
         app.state.history = HistoryCatalog(repo, data, settings)
+        app.state.lists = ListCatalog(repo, data, settings)
         app.state.settings = settings
         app.state.rankings_cache = {}
         app.state.rankings_lock = threading.Lock()
@@ -189,6 +192,7 @@ def create_app(
         return await call_next(request)
 
     app.include_router(settings_api.router, prefix="/api/v1")
+    app.include_router(lists_router, prefix="/api/v1")
     app.include_router(history_router, prefix="/api/v1")
     app.include_router(runs_router, prefix="/api/v1")
     app.include_router(reference_labs_router, prefix="/api/v1")

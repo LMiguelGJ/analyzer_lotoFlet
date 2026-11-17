@@ -3,10 +3,10 @@
 import re
 from typing import Annotated, Literal, NoReturn
 
-from fastapi import APIRouter, HTTPException, Path, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import Field, field_validator
 
-from laboratorio.api import StrictBody, repo
+from laboratorio.api import StrictBody, repo, require_chance_express
 from laboratorio.api.history import _meta
 from laboratorio.domain.contracts import SYSTEMS
 from laboratorio.engine.run_service import RunSpec, RunSpecError, execute_run
@@ -90,7 +90,7 @@ def _storage_error(exc: ValueError) -> NoReturn:
     raise HTTPException(409, "Una corrida guardada está dañada y no se puede mostrar.") from None
 
 
-@router.get("/options")
+@router.get("/options", dependencies=[Depends(require_chance_express)])
 def run_options(request: Request):
     catalog = request.app.state.history
     active = catalog.active()
@@ -121,7 +121,7 @@ def run_options(request: Request):
     }
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, dependencies=[Depends(require_chance_express)])
 def create_run(body: CreateRun, request: Request):
     try:
         return execute_run(

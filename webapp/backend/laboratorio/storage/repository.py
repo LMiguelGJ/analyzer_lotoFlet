@@ -6,6 +6,7 @@ from dataclasses import dataclass, fields
 from datetime import UTC, datetime
 from pathlib import Path
 
+from laboratorio.domain.number_lists import DEFAULT_LIST_ID
 from laboratorio.settings import DEFAULT_QUOTA_BYTES
 from laboratorio.storage.database import connection, require_database
 from laboratorio.storage.quota import QuotaStatus, measure, validate_quota_bytes
@@ -287,6 +288,19 @@ class Repository:
         with connection(self.path) as db:
             row = db.execute("SELECT sha256 FROM history_active WHERE id = 1").fetchone()
         return None if row is None else row[0]
+
+    def get_active_list_id(self) -> str:
+        with connection(self.path) as db:
+            row = db.execute("SELECT list_id FROM active_number_list WHERE id = 1").fetchone()
+        return DEFAULT_LIST_ID if row is None else row[0]
+
+    def set_active_list_id(self, list_id: str) -> None:
+        with _transaction(self.path) as db:
+            db.execute(
+                "INSERT INTO active_number_list (id, list_id) VALUES (1, ?) "
+                "ON CONFLICT(id) DO UPDATE SET list_id = excluded.list_id",
+                (list_id,),
+            )
 
     def get_history_source(self, sha256: str) -> dict | None:
         with connection(self.path) as db:
