@@ -7,6 +7,7 @@ import sqlite3
 import uuid
 from datetime import UTC, datetime
 
+from laboratorio.storage.paging import MAX_PAGE_SIZE
 from laboratorio.storage.quota import QuotaStatus, measure, validate_quota_bytes
 
 SCHEMA_VERSION = 1
@@ -15,7 +16,7 @@ MAX_PAYLOAD_BYTES = 32 * 1024 * 1024
 _MAX_I64 = 2**63 - 1
 _MIN_I64 = -(2**63)
 _SUMMARY_MAX_CHARS = 2048
-_OUTCOMES = ("goal", "ruin", "incomplete")
+_OUTCOMES = ("goal", "ruin", "incomplete", "timeout")
 _SESSION_KEYS = (
     "outcome",
     "start_index",
@@ -39,6 +40,10 @@ _TOTAL_KEYS = frozenset(
         "mean_net_closed",
     }
 )
+
+
+_DEADLINE_KEYS = frozenset({"timeouts", "timeout_net", "goal_draws"})
+_SIGNED_TOTALS = frozenset({"total_net", "timeout_net"})
 
 
 class ReferenceLabStoreError(ValueError):
@@ -98,16 +103,17 @@ def _validate_json_values(value):
 
 
 def _check_totals(totals):
-    if type(totals) is not dict or set(totals) != _TOTAL_KEYS:
+    # The deadline keys exist only for laboratories with a per-session deadline.
+    if type(totals) is not dict or set(totals) not in (_TOTAL_KEYS, _TOTAL_KEYS | _DEADLINE_KEYS):
         raise ValueError("invalid result totals")
-    for key in _TOTAL_KEYS - {"mean_net_closed"}:
-        _integer(totals[key], minimum=0 if key != "total_net" else _MIN_I64)
+    for key in set(totals) - {"mean_net_closed"}:
+        _integer(totals[key], minimum=_MIN_I64 if key in _SIGNED_TOTALS else 0)
     mean = totals["mean_net_closed"]
     if mean is not None and (type(mean) is not float or not math.isfinite(mean)):
         raise ValueError("invalid mean")
     if (
         totals["completed"] + totals["incomplete"] != totals["sessions_total"]
-        or totals["goals"] + totals["ruins"] != totals["completed"]
+        or totals["goals"] + totals["ruins"] + totals.get("timeouts", 0) != totals["completed"]
         or totals["total_net"] != totals["total_paid"] - totals["total_wagered"]
     ):
         raise ValueError("inconsistent result totals")
@@ -137,7 +143,7 @@ def _session_digest(rows):
     return hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest()
 
 
-def _validate_result(lab_id, capital, result, *, max_sessions=MAX_SESSIONS):
+def _validate_result(lab_id, capital, result, *, max_sessions=MAX_SESSIONS, max_session_draws=None):
     _text(lab_id)
     capital = _integer(capital, minimum=1)
     max_sessions = _integer(max_sessions, minimum=0)
@@ -151,6 +157,10 @@ def _validate_result(lab_id, capital, result, *, max_sessions=MAX_SESSIONS):
     if type(sessions) is not list or len(sessions) > max_sessions or type(totals) is not dict:
         raise ValueError("invalid session summaries")
     _check_totals(totals)
+    if max_session_draws is not None:
+        _integer(max_session_draws, minimum=1)
+    if ("timeouts" in totals) != (max_session_draws is not None):
+        raise ValueError("timeout count does not match the laboratory deadline")
     if totals["sessions_total"] != len(sessions):
         raise ValueError("inconsistent result totals")
     if set(result) != {
@@ -175,14 +185,28 @@ def _validate_result(lab_id, capital, result, *, max_sessions=MAX_SESSIONS):
         or any(char not in "0123456789abcdef" for char in digest)
     ):
         raise ValueError("invalid session digest")
-    session_totals = {"goal": 0, "ruin": 0, "incomplete": 0}
+    session_totals = {"goal": 0, "ruin": 0, "incomplete": 0, "timeout": 0}
     session_wagered = session_paid = session_steps = closed_count = closed_net = 0
+    timeout_net = goal_draws = 0
     digest_rows = []
     for session in sessions:
         row = _check_session(session, capital)
         digest_rows.append(row)
         outcome, _start, _end, draws, final, wagered, paid = row
+        if max_session_draws is None:
+            if outcome == "timeout":
+                raise ValueError("timeout session without a laboratory deadline")
+        elif (
+            draws > max_session_draws
+            or (outcome == "timeout" and draws != max_session_draws)
+            or (outcome == "incomplete" and draws >= max_session_draws)
+        ):
+            raise ValueError("session length disagrees with the laboratory deadline")
         session_totals[outcome] += 1
+        if outcome == "timeout":
+            timeout_net += final - capital
+        elif outcome == "goal":
+            goal_draws += draws
         if outcome != "incomplete":
             closed_count += 1
             closed_net += final - capital
@@ -193,11 +217,16 @@ def _validate_result(lab_id, capital, result, *, max_sessions=MAX_SESSIONS):
         session_totals["goal"] != totals["goals"]
         or session_totals["ruin"] != totals["ruins"]
         or session_totals["incomplete"] != totals["incomplete"]
+        or session_totals["timeout"] != totals.get("timeouts", 0)
         or session_wagered != totals["total_wagered"]
         or session_paid != totals["total_paid"]
         or session_steps != totals["total_steps"]
     ):
         raise ValueError("session summaries disagree with totals")
+    if max_session_draws is not None and (
+        totals["timeout_net"] != timeout_net or totals["goal_draws"] != goal_draws
+    ):
+        raise ValueError("deadline totals disagree with the sessions")
     if totals["mean_net_closed"] != (closed_net / closed_count if closed_count else None):
         raise ValueError("mean net disagrees with completed sessions")
     if digest != _session_digest(digest_rows):
@@ -354,7 +383,7 @@ def _summary_item(row):
 def _paging(offset, limit):
     if type(offset) is not int or not 0 <= offset <= _MAX_I64:
         raise ValueError("offset out of range")
-    if type(limit) is not int or not 1 <= limit <= 100:
+    if type(limit) is not int or not 1 <= limit <= MAX_PAGE_SIZE:
         raise ValueError("limit out of range")
 
 

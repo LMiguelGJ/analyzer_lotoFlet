@@ -1,7 +1,7 @@
 """Isolated historical replay for the archived reference-laboratory contracts."""
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from hashlib import sha256
 
 import numpy as np
@@ -33,6 +33,16 @@ class ReferenceTotals:
     total_net: int
     total_steps: int
     mean_net_closed: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class DeadlineReferenceTotals(ReferenceTotals):
+    """Totals of a lab with ``max_session_draws``; labs without one keep ``ReferenceTotals``
+    exactly, so their stored results and golden fixtures are unchanged."""
+
+    timeouts: int  # sessions cut off by the deadline
+    timeout_net: int  # net result summed over those sessions
+    goal_draws: int  # draws spent by the sessions that reached the goal
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,7 +124,9 @@ def run_reference_lab(
         window_start=lab.window_start,
         window_end=lab.window_end,
         list_id=lab.list_id,
+        max_session_draws=lab.max_session_draws,
     )
+    max_draws = lab.max_session_draws
     expected_selection = "parity" if lab.system == "parity" else config.selection_kind
     if lab.selection_kind != expected_selection:
         raise ValueError("selection kind does not match the laboratory system")
@@ -203,6 +215,8 @@ def run_reference_lab(
             )
             if balance < lab.coverage or balance < lab.coverage * next_per_number:
                 outcome = "ruin"
+        if outcome is None and max_draws is not None and draws >= max_draws:
+            outcome = "timeout"
         if outcome is not None:
             sessions.append(ReferenceSession(outcome, start, index, draws, balance, wagered, paid))
             balance, round_index = lab.capital, 0
@@ -213,7 +227,8 @@ def run_reference_lab(
             ReferenceSession("incomplete", start, len(eligible) - 1, draws, balance, wagered, paid)
         )
 
-    complete = [session for session in sessions if session.outcome in ("goal", "ruin")]
+    # A timed-out session is closed: it kept its balance and the next one starts fresh.
+    complete = [s for s in sessions if s.outcome in ("goal", "ruin", "timeout")]
     wagered_total = sum(session.wagered for session in sessions)
     paid_total = sum(session.paid for session in sessions)
     net_closed = sum(session.final_balance - lab.capital for session in complete)
@@ -229,6 +244,14 @@ def run_reference_lab(
         total_steps=sum(session.draws for session in sessions),
         mean_net_closed=(net_closed / len(complete) if complete else None),
     )
+    if max_draws is not None:
+        timed_out = [s for s in sessions if s.outcome == "timeout"]
+        totals = DeadlineReferenceTotals(
+            **asdict(totals),
+            timeouts=len(timed_out),
+            timeout_net=sum(s.final_balance - lab.capital for s in timed_out),
+            goal_draws=sum(s.draws for s in sessions if s.outcome == "goal"),
+        )
     digest_payload = [
         (s.outcome, s.start_index, s.end_index, s.draws, s.final_balance, s.wagered, s.paid)
         for s in sessions

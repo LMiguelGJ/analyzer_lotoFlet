@@ -3,17 +3,18 @@ import type { MouseEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ApiError, NetworkError } from "../../api/client";
 import { listLaboratories } from "../../api/laboratories";
-import type { LaboratoryDefinition } from "../../api/laboratories";
+import type { LaboratoryListItem } from "../../api/laboratories";
 import type { ReferencePage } from "../../api/referenceLabs";
 import { ErrorBanner, Loading } from "../../components/ui/Feedback";
 import { count } from "./count";
 import { stakeLabel, systemLabel } from "../reference-labs/lab-model";
 import { LaboratoryForm } from "./LaboratoryForm";
 import { LaboratoryPanel } from "./LaboratoryPanel";
+import { lastRunPresentation } from "./last-run";
 import "../reference-labs/reference-labs.css";
 import "./laboratories.css";
 
-const PAGE = 20;
+const PAGE = 200;
 const CREATE_SEGMENT = "nuevo";
 
 function failureText(error: unknown): string {
@@ -21,9 +22,10 @@ function failureText(error: unknown): string {
   if (error instanceof NetworkError) return "No se pudo contactar al servidor local. Revisá la conexión e intentá de nuevo.";
   return "No se pudo leer la lista de laboratorios.";
 }
-function summary(definition: LaboratoryDefinition): string {
+function summary(definition: LaboratoryListItem): string {
   const { config } = definition;
-  return `${systemLabel(config.system)} · ${config.coverage} ${config.coverage === 1 ? "número" : "números"} · ${stakeLabel(config.stake_style)}`;
+  const limit = config.max_session_draws === undefined ? "" : ` · máx ${config.max_session_draws} ${config.max_session_draws === 1 ? "día" : "días"}`;
+  return `${systemLabel(config.system)} · ${config.coverage} ${config.coverage === 1 ? "número" : "números"} · ${stakeLabel(config.stake_style)}${limit}`;
 }
 
 export function Workspace() {
@@ -35,7 +37,7 @@ export function Workspace() {
   const stageRef = useRef<HTMLElement>(null);
   const restoreFocus = useRef<HTMLElement | null>(null);
   const focusOnNavigation = useRef(false);
-  const [page, setPage] = useState<ReferencePage<LaboratoryDefinition> | null>(null);
+  const [page, setPage] = useState<ReferencePage<LaboratoryListItem> | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [reload, setReload] = useState(0);
@@ -94,12 +96,19 @@ export function Workspace() {
         : page.items.length === 0 ? <p className="reference-empty">No hay laboratorios guardados. Creá el primero con «Nuevo laboratorio».</p>
         : <>
           <ul className="lab-list">
-            {page.items.map((definition) => <li key={definition.id}>
-              <Link to={`/laboratorios/${encodeURIComponent(definition.id)}`} onClick={requestPanelFocus} aria-current={labId === definition.id ? "page" : undefined}>
-                <span className="lab-list-name">{definition.name}</span>
-                <span className="lab-list-meta">{summary(definition)}</span>
-              </Link>
-            </li>)}
+            {page.items.map((definition) => {
+              const result = lastRunPresentation(definition.last_run);
+              return <li key={definition.id} data-result={result.state}>
+                <Link to={`/laboratorios/${encodeURIComponent(definition.id)}`} onClick={requestPanelFocus} aria-current={labId === definition.id ? "page" : undefined}>
+                  <span className="lab-list-name">{definition.name}</span>
+                  <span className="lab-list-meta">{summary(definition)}</span>
+                  <span className="lab-list-result" data-state={result.state}>
+                    <span aria-hidden="true">{result.text}</span>
+                    <span className="sr-only">{result.label}</span>
+                  </span>
+                </Link>
+              </li>;
+            })}
           </ul>
           <nav className="reference-pagination" aria-label="Paginación de laboratorios"><span>{count(page.total, "laboratorio", "laboratorios")}</span>
             <div><button type="button" className="ledger-button ledger-button-secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>Anterior</button>
@@ -108,7 +117,7 @@ export function Workspace() {
     </aside>;
   const stage = <section key="stage" className="lab-stage" ref={stageRef} tabIndex={-1} aria-label="Contenido del laboratorio">
       {creating ? <LaboratoryForm onCreated={(definition) => { setOffset(0); refresh(); navigate(`/laboratorios/${encodeURIComponent(definition.id)}`); }} />
-        : labId ? <LaboratoryPanel key={labId} labId={labId} onDeleted={() => { refresh(); navigate("/laboratorios"); }} />
+        : labId ? <LaboratoryPanel key={labId} labId={labId} onRunsChanged={refresh} onDeleted={() => { refresh(); navigate("/laboratorios"); }} />
         : <section className="reference-page" aria-labelledby="lab-empty-title"><header className="reference-heading"><div><h2 id="lab-empty-title">Elegí un laboratorio</h2><p>Abrí uno de la lista para ejecutarlo y ver sus corridas, o definí uno nuevo con tus propias reglas. Describen el pasado; no predicen sorteos.</p></div></header></section>}
     </section>;
 

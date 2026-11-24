@@ -23,6 +23,9 @@ class ReferenceLab:
     # The 14 fixed laboratories are Chance Express; user labs on other lists replay through
     # the same engine with their own list id (see ``LaboratoryConfig``).
     list_id: str = "chance_express"
+    # Optional deadline: a session that has not reached its goal (or ruin) after this many
+    # draws ends as a "timeout". ``None`` keeps sessions unlimited, exactly as before.
+    max_session_draws: int | None = None
 
 
 REFERENCE_LABS = (

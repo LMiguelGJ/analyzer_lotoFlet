@@ -43,6 +43,19 @@ describe("laboratory form model", () => {
     expect(order.ok === false && order.errors.window_end).toMatch(/posterior/);
   });
 
+  it("leaves the deadline out of the config when the field is empty and sends it when set", () => {
+    const empty = parseLaboratoryForm({ ...valid, max_session_draws: "   " });
+    expect(empty.ok && "max_session_draws" in empty.value.config).toBe(false);
+    const set = parseLaboratoryForm({ ...valid, max_session_draws: " 30 " });
+    expect(set.ok && set.value.config.max_session_draws).toBe(30);
+  });
+
+  it.each(["0", "-3", "1.5", "abc", "10001"])("refuses %s as maximum days per session", (raw) => {
+    const result = parseLaboratoryForm({ ...valid, max_session_draws: raw });
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.errors.max_session_draws).toMatch(/entre 1 y 10000/);
+  });
+
   it("rejects names above 120 UTF-8 bytes and control characters", () => {
     expect(parseLaboratoryForm({ ...valid, name: "é".repeat(61) }).ok).toBe(false);
     expect(parseLaboratoryForm({ ...valid, name: "é".repeat(60) }).ok).toBe(true);

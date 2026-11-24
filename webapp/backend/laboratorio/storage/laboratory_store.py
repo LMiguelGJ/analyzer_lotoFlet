@@ -11,6 +11,7 @@ from laboratorio.domain.laboratories import (
     create_laboratory_definition as _create_laboratory_definition,
 )
 from laboratorio.storage.database import connection
+from laboratorio.storage.paging import MAX_PAGE_SIZE
 from laboratorio.storage.quota import QuotaStatus, measure, validate_quota_bytes
 
 _MAX_I64 = 2**63 - 1
@@ -49,7 +50,7 @@ def _loads(value):
 def _paging(offset, limit):
     if type(offset) is not int or not 0 <= offset <= _MAX_I64:
         raise ValueError("offset out of range")
-    if type(limit) is not int or not 1 <= limit <= 100:
+    if type(limit) is not int or not 1 <= limit <= MAX_PAGE_SIZE:
         raise ValueError("limit out of range")
 
 
@@ -181,6 +182,45 @@ def list_laboratory_definitions(repo, *, offset=0, limit=20):
         "limit": limit,
         "items": [_decode(row) for row in rows],
     }
+
+
+_LAST_RUN_TOTALS = ("total_net", "total_wagered", "total_paid")
+_LAST_RUNS_SQL = (
+    "SELECT r.owner_laboratory_id,r.id,r.created_at,"
+    "json_extract(r.result_json,'$.result.totals.total_net'),"
+    "json_extract(r.result_json,'$.result.totals.total_wagered'),"
+    "json_extract(r.result_json,'$.result.totals.total_paid') "
+    "FROM reference_lab_runs AS r "
+    "WHERE r.owner_laboratory_id IN (SELECT value FROM json_each(?)) AND r.id=("
+    "SELECT s.id FROM reference_lab_runs AS s "
+    "WHERE s.owner_laboratory_id=r.owner_laboratory_id "
+    "ORDER BY s.created_at DESC,s.id DESC LIMIT 1)"
+)
+
+
+def get_laboratory_last_runs(repo, identifiers):
+    """Map each laboratory id to its most recent owned run's totals, in one query.
+
+    Laboratories without runs are absent. A run whose stored totals are not plain integers is
+    omitted too: the list only orients the user; the run detail is where corruption surfaces.
+    """
+    ids = list(identifiers)
+    for identifier in ids:
+        _canonical_identifier(identifier)
+    if not ids:
+        return {}
+    with connection(repo.path) as db:
+        rows = db.execute(_LAST_RUNS_SQL, (json.dumps(ids),)).fetchall()
+    result = {}
+    for owner, run_id, created_at, *totals in rows:
+        if any(type(value) is not int for value in totals):
+            continue
+        result[owner] = {
+            "id": run_id,
+            "created_at": created_at,
+            **dict(zip(_LAST_RUN_TOTALS, totals, strict=True)),
+        }
+    return result
 
 
 def _canonical_identifier(identifier):

@@ -9,7 +9,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from laboratorio.storage.quota import validate_quota_bytes
+from laboratorio.storage.quota import UNLIMITED_QUOTA_BYTES, validate_quota_bytes
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LOOPBACK_HOST = "127.0.0.1"
@@ -19,7 +19,8 @@ APP_DIR_NAME = "LaboratorioQuiniela"
 # Frozen inputs: the lab refuses to run if either file changes.
 HISTORY_SHA256 = "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711"
 RANKINGS_SHA256 = "b405041fff1f45fe24fd9ab09fed2c6709e979576811c703e7d27e57f3ded94d"
-DEFAULT_QUOTA_BYTES = 5 * 1024**3
+# No storage budget unless the user (Ajustes) or LABORATORIO_QUOTA_BYTES asks for one.
+DEFAULT_QUOTA_BYTES = UNLIMITED_QUOTA_BYTES
 
 
 def _port_from(value):

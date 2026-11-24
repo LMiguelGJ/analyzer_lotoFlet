@@ -213,7 +213,7 @@ def test_owned_byte_capacity_conflict_is_exact_and_atomic(owned_http, monkeypatc
 
 
 @pytest.mark.parametrize(
-    "suffix", ["?limit=0", "?limit=101", "?offset=-1", "?offset=9223372036854775808"]
+    "suffix", ["?limit=0", "?limit=501", "?offset=-1", "?offset=9223372036854775808"]
 )
 def test_owned_list_rejects_out_of_range_paging_without_writes(owned_http, suffix):
     client, _app, definition = owned_http

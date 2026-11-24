@@ -23,6 +23,7 @@ from laboratorio.storage.owned_laboratory_run_store import (
     OwnedLaboratoryRunCapacityError,
     OwnedLaboratoryRunStoreError,
 )
+from laboratorio.storage.paging import MAX_PAGE_SIZE
 from laboratorio.storage.quota import QuotaExceeded
 
 router = APIRouter(prefix="/laboratories")
@@ -190,7 +191,7 @@ def list_laboratory_runs(
     laboratory_id: str,
     request: Request,
     offset: int = Query(0, ge=0, le=_MAX_I64),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=MAX_PAGE_SIZE),
 ):
     _definition(request, laboratory_id)
     with request.app.state.reference_lab_lock:
@@ -208,7 +209,7 @@ def laboratory_run_sessions(
     run_id: str,
     request: Request,
     offset: int = Query(0, ge=0, le=_MAX_I64),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=MAX_PAGE_SIZE),
 ):
     _definition(request, laboratory_id)
     with request.app.state.reference_lab_lock:

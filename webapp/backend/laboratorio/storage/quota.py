@@ -6,6 +6,9 @@ from pathlib import Path
 
 LOGICAL_MARGIN_BYTES = 1024**2  # reserve for the next run's unknown serialized result
 DISK_MARGIN_BYTES = 64 * 1024**2  # WAL, journal, temporary writes and metadata headroom
+# "Sin límite": the largest SQLite-safe integer doubles as the explicit unlimited marker, so the
+# existing INTEGER column and every older reader keep working without a schema change.
+UNLIMITED_QUOTA_BYTES = 2**63 - 1
 
 
 class QuotaExceeded(RuntimeError):
@@ -32,6 +35,10 @@ class QuotaStatus:
     temp_bytes: int
 
     @property
+    def unlimited(self) -> bool:
+        return self.limit_bytes == UNLIMITED_QUOTA_BYTES
+
+    @property
     def admission_logical_bytes(self) -> int:
         return (
             self.logical_used_bytes
@@ -46,17 +53,21 @@ class QuotaStatus:
 
     @property
     def warning(self) -> bool:
+        if self.free_disk_bytes <= 2 * self.disk_margin_bytes:
+            return True
         return (
-            self.limit_bytes - self.admission_logical_bytes <= 2 * self.logical_margin_bytes
-            or self.free_disk_bytes <= 2 * self.disk_margin_bytes
+            not self.unlimited
+            and self.limit_bytes - self.admission_logical_bytes <= 2 * self.logical_margin_bytes
         )
 
     def require_capacity(self, write_bytes: int = 0) -> None:
         if (
-            self.admission_logical_bytes + write_bytes + self.logical_margin_bytes
+            not self.unlimited
+            and self.admission_logical_bytes + write_bytes + self.logical_margin_bytes
             >= self.limit_bytes
         ):
             raise QuotaExceeded("experiment quota has insufficient remaining headroom")
+        # The only guard left in "sin límite" mode: refuse when the disk is actually full.
         if self.free_disk_bytes <= self.disk_margin_bytes + write_bytes:
             raise QuotaExceeded("free disk has insufficient write headroom")
 

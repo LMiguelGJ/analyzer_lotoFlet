@@ -13,13 +13,13 @@ import { formatNumber, formatSignedDOP } from "../../lib/format";
 import { stakeLabel, systemLabel } from "../reference-labs/lab-model";
 import { count } from "./count";
 import { formatMean } from "./mean";
-import { formatAbsoluteDOP, formatReturnOnWagered, isValidLaboratoryWallet, returnOnWagered } from "./result-model";
+import { deadlineSummary, formatAbsoluteDOP, formatAverageDays, formatPercentShare, formatReturnOnWagered, isValidLaboratoryWallet, returnOnWagered } from "./result-model";
 import "../reference-labs/reference-labs.css";
 
-const RUN_PAGE = 20;
-const SESSION_PAGE = 50;
+const RUN_PAGE = 200;
+const SESSION_PAGE = 200;
 const money = (value: number) => formatSignedDOP(value);
-const outcomeLabel = (outcome: string) => (outcome === "goal" ? "Meta" : outcome === "ruin" ? "Quiebra" : "Incompleta");
+const outcomeLabel = (outcome: string) => (outcome === "goal" ? "Meta" : outcome === "ruin" ? "Quiebra" : outcome === "timeout" ? "No llegó a tiempo" : "Incompleta");
 const isAbort = (error: unknown) => error instanceof Error && error.name === "AbortError";
 function errorText(error: unknown): string {
   if (error instanceof ApiError) return error.detail;
@@ -27,9 +27,9 @@ function errorText(error: unknown): string {
   return "Ocurrió un error inesperado.";
 }
 
-interface Props { labId: string; onDeleted: () => void }
+interface Props { labId: string; onDeleted: () => void; /** A run was saved: the parent list refetches its latest-result indicators. */ onRunsChanged?: () => void }
 
-export function LaboratoryPanel({ labId, onDeleted }: Props) {
+export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
   const [detail, setDetail] = useState<LaboratoryDetail | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailReload, setDetailReload] = useState(0);
@@ -136,7 +136,7 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
     try {
       const run = await createLaboratoryRun(labId, historySha, { signal: controller.signal });
       if (controller.signal.aborted) return;
-      setSelectedId(run.id); setSessionOffset(0); setRunOffset(0); reloadRuns(); setDetailReload((value) => value + 1);
+      setSelectedId(run.id); setSessionOffset(0); setRunOffset(0); reloadRuns(); setDetailReload((value) => value + 1); onRunsChanged?.();
     } catch (error) {
       if (controller.signal.aborted) return;
       if (error instanceof NetworkError || isAbort(error) || (error instanceof ApiError && error.uncertainWrite)) {
@@ -165,11 +165,12 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
   const { definition } = detail;
   const config = definition.config;
   const totals = selected?.summary.totals;
+  const deadline = totals ? deadlineSummary(totals) : null;
   const wallet = selected && totals && isValidLaboratoryWallet(selected.summary.wallet, totals.total_net) ? selected.summary.wallet : null;
 
   return <section className="reference-page" aria-labelledby="lab-title">
     <header className="reference-heading">
-      <div><h2 id="lab-title">{definition.name}</h2><p>{systemLabel(config.system)} · {config.coverage} {config.coverage === 1 ? "número" : "números"} · {stakeLabel(config.stake_style)}</p></div>
+      <div><h2 id="lab-title">{definition.name}</h2><p>{systemLabel(config.system)} · {config.coverage} {config.coverage === 1 ? "número" : "números"} · {stakeLabel(config.stake_style)}{config.max_session_draws === undefined ? "" : ` · máx ${config.max_session_draws} ${config.max_session_draws === 1 ? "día" : "días"}`}</p></div>
       <Button variant="ghost" onClick={() => { setDeleteError(null); setConfirmDelete(true); }}>Eliminar laboratorio</Button>
     </header>
     {deleteError && <div className="reference-action-error" role="alert"><p>{deleteError}</p><Button onClick={() => setDeleteError(null)}>Cerrar</Button></div>}
@@ -234,10 +235,16 @@ export function LaboratoryPanel({ labId, onDeleted }: Props) {
       <section className="lab-result-summary" aria-label="Resumen de sesiones">
       <div className="lab-result-grid lab-result-counts">
         <div><span>Sesiones cerradas</span><strong>{formatNumber(totals.completed)}</strong></div>
-        <div><span>Metas</span><strong>{formatNumber(totals.goals)}</strong></div>
+        <div><span>{deadline ? "Metas en tiempo" : "Metas"}</span><strong>{formatNumber(totals.goals)}</strong></div>
+        {deadline && <div><span>No llegó a tiempo</span><strong>{formatNumber(deadline.timeouts)}</strong></div>}
         <div><span>Quiebras</span><strong>{formatNumber(totals.ruins)}</strong></div>
         <div><span>Incompletas</span><strong>{formatNumber(totals.incomplete)}</strong></div>
       </div>
+      {deadline && <dl className="lab-evaluation lab-deadline" aria-label="Plazo por sesión">
+        <div><dt>Sesiones que llegaron a la meta a tiempo</dt><dd>{formatPercentShare(deadline.inTimePercent)}</dd></div>
+        <div><dt>Días promedio hasta la meta</dt><dd>{formatAverageDays(deadline.averageDaysToGoal)}</dd></div>
+        <div><dt>Perdido en las que no llegaron a tiempo</dt><dd>{deadline.timeoutNet === null ? "No disponible" : money(deadline.timeoutNet)}</dd></div>
+      </dl>}
       <dl className="lab-evaluation">
         <div><dt>Sorteos evaluados</dt><dd>{formatNumber(selected.summary.eligible_draws)}</dd></div>
         <div><dt>Sin ranking entre extremos</dt><dd>{formatNumber(selected.summary.gaps)}</dd></div>

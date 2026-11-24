@@ -1,4 +1,5 @@
 import type { LaboratoryWallet } from "../../api/laboratories";
+import type { ReferenceTotals } from "../../api/referenceLabs";
 import { formatNumber } from "../../lib/format";
 
 const percentage = new Intl.NumberFormat("es-ES", {
@@ -34,3 +35,32 @@ export function formatReturnOnWagered(value: number | null): string {
   if (value === null) return "No disponible";
   return `${percentage.format(value).replace(/^-0,00$/, "+0,00").replace("-", "−")} %`;
 }
+
+export interface DeadlineSummary {
+  goalsInTime: number;
+  timeouts: number;
+  ruins: number;
+  /** Share (0–100) of closed sessions that reached the goal in time; null without closed sessions. */
+  inTimePercent: number | null;
+  /** Average draws (days on Leidsa) the successful sessions needed; null when none succeeded. */
+  averageDaysToGoal: number | null;
+  /** Net money across the sessions that ran out of time (usually negative). */
+  timeoutNet: number | null;
+}
+
+/** Deadline figures, or null when the laboratory has no session deadline (older results). */
+export function deadlineSummary(totals: ReferenceTotals): DeadlineSummary | null {
+  if (totals.timeouts === undefined) return null;
+  return {
+    goalsInTime: totals.goals,
+    timeouts: totals.timeouts,
+    ruins: totals.ruins,
+    inTimePercent: totals.completed === 0 ? null : (totals.goals / totals.completed) * 100,
+    averageDaysToGoal: totals.goals === 0 || totals.goal_draws === undefined ? null : totals.goal_draws / totals.goals,
+    timeoutNet: totals.timeout_net ?? null,
+  };
+}
+
+const oneDecimal = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false });
+export const formatPercentShare = (value: number | null): string => (value === null ? "No disponible" : `${oneDecimal.format(value)} %`);
+export const formatAverageDays = (value: number | null): string => (value === null ? "No disponible" : `${oneDecimal.format(value)} días`);

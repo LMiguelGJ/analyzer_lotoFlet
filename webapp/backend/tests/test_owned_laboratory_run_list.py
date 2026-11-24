@@ -151,7 +151,7 @@ def test_owned_listing_is_ordered_paginated_and_explicitly_owner_scoped(repo, ow
         (None, {"offset": 0.0}),
         (None, {"offset": 2**63}),
         (None, {"limit": 0}),
-        (None, {"limit": 101}),
+        (None, {"limit": 501}),
         (None, {"limit": True}),
         (None, {"limit": "1"}),
     ],

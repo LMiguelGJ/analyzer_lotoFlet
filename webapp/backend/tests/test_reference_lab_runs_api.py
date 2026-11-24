@@ -166,7 +166,7 @@ def test_sessions_default_page_is_stable_and_ordinal_ordered(served):
     "query",
     [
         {"limit": 0},
-        {"limit": 101},
+        {"limit": 501},
         {"limit": "x"},
         {"offset": -1},
         {"offset": 2**63},

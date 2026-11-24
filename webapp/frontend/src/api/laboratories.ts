@@ -14,6 +14,8 @@ export interface LaboratoryConfig {
   prizes: number[];
   window_start: string;
   window_end: string;
+  /** Optional deadline in draws per session (one draw per day on Leidsa); absent = no limit. */
+  max_session_draws?: number;
 }
 export interface LaboratoryDefinition {
   schema_version: number;
@@ -21,6 +23,18 @@ export interface LaboratoryDefinition {
   name: string;
   reference_id: string | null;
   config: LaboratoryConfig;
+}
+/** Totals of a laboratory's most recent saved run, as the list reports them. */
+export interface LaboratoryLastRun {
+  id: string;
+  created_at: string;
+  total_net: number;
+  total_wagered: number;
+  total_paid: number;
+}
+/** A list item: the definition plus its latest run result (null/absent: never run). */
+export interface LaboratoryListItem extends LaboratoryDefinition {
+  last_run?: LaboratoryLastRun | null;
 }
 export interface LaboratoryDetail {
   definition: LaboratoryDefinition;
@@ -80,10 +94,12 @@ export interface LaboratoryOptions {
 
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
 
+/** Backend ceiling per page (laboratorio.storage.paging.MAX_PAGE_SIZE). */
+export const MAX_PAGE_SIZE = 500;
 function paging({ offset = 0, limit }: PageParams, defaultLimit: number): string {
   const resolvedLimit = limit ?? defaultLimit;
-  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(resolvedLimit) || resolvedLimit < 1 || resolvedLimit > 100) {
-    throw new RangeError("La paginación debe usar un desplazamiento válido y un límite entre 1 y 100.");
+  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(resolvedLimit) || resolvedLimit < 1 || resolvedLimit > MAX_PAGE_SIZE) {
+    throw new RangeError("La paginación debe usar un desplazamiento válido y un límite entre 1 y 500.");
   }
   return `offset=${offset}&limit=${resolvedLimit}`;
 }
@@ -92,7 +108,7 @@ const base = (id: string) => `/laboratories/${encodeURIComponent(id)}`;
 export function getLaboratoryOptions(options?: RequestInit): Promise<LaboratoryOptions> {
   return request("/laboratories/options", options);
 }
-export function listLaboratories(params: PageParams = {}, options?: RequestInit): Promise<ReferencePage<LaboratoryDefinition>> {
+export function listLaboratories(params: PageParams = {}, options?: RequestInit): Promise<ReferencePage<LaboratoryListItem>> {
   return request(`/laboratories?${paging(params, 20)}`, options);
 }
 export function createLaboratory(name: string, config: LaboratoryConfig, options?: RequestInit): Promise<LaboratoryDefinition> {

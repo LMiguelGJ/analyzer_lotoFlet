@@ -45,11 +45,11 @@ describe("managed laboratory API", () => {
   it("lists and reads laboratories with bounded paging and encoded identifiers", async () => {
     const fetchMock = vi.fn().mockImplementation(async () => response({ items: [] }));
     vi.stubGlobal("fetch", fetchMock);
-    await listLaboratories({ offset: 20, limit: 100 });
+    await listLaboratories({ offset: 20, limit: 500 });
     await getLaboratory("a/b");
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/laboratories?offset=20&limit=100");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/laboratories?offset=20&limit=500");
     expect(fetchMock.mock.calls[1][0]).toBe("/api/v1/laboratories/a%2Fb");
-    expect(() => listLaboratories({ limit: 101 })).toThrow(RangeError);
+    expect(() => listLaboratories({ limit: 501 })).toThrow(RangeError);
     expect(() => listLaboratories({ offset: -1 })).toThrow(RangeError);
   });
 

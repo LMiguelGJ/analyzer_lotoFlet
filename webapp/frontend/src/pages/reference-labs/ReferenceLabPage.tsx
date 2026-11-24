@@ -11,8 +11,8 @@ import { labTitle, stakeLabel } from "./lab-model";
 import { ListNotice } from "./ListNotice";
 import "./reference-labs.css";
 
-const RUN_PAGE_SIZE = 20;
-const SESSION_PAGE_SIZE = 50;
+const RUN_PAGE_SIZE = 200;
+const SESSION_PAGE_SIZE = 200;
 function errorText(error: unknown): string {
   if (error instanceof ApiError) return error.detail;
   if (error instanceof NetworkError) return "No se pudo contactar al servidor local.";

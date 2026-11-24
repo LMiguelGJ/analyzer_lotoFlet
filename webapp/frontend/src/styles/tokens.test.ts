@@ -98,13 +98,22 @@ describe("live paper-and-ink tokens", () => {
     expect(styles).not.toMatch(/opacity:\s*0\.58/);
     const button = declarations(".ledger-button:disabled");
     const input = declarations("input:disabled");
-    for (const rule of [button, input]) {
-      expect(cssColor(property(rule, "background"))).toBe(token("paper-sheet"));
+    for (const [rule, fill] of [[button, "grid"], [input, "paper-sheet"]] as const) {
+      expect(cssColor(property(rule, "background"))).toBe(token(fill));
       expect(cssColor(property(rule, "color"))).toBe(token("ink-muted"));
       expect(cssColor(property(rule, "border-color"))).toBe(token("ink-muted"));
       expect(contrast(cssColor(property(rule, "color")), cssColor(property(rule, "background")))).toBeGreaterThanOrEqual(4.5);
       expect(contrast(cssColor(property(rule, "border-color")), cssColor(property(rule, "background")))).toBeGreaterThanOrEqual(3);
     }
+  });
+
+  it("makes a disabled button visibly different from an enabled secondary one (regression: dead-looking Anterior/Siguiente)", () => {
+    const enabled = declarations(".btn-secondary, .ledger-button-secondary");
+    const disabled = declarations(".ledger-button:disabled");
+    expect(cssColor(property(enabled, "background"))).toBe(token("paper-sheet"));
+    expect(cssColor(property(disabled, "background"))).not.toBe(cssColor(property(enabled, "background")));
+    expect(property(disabled, "border-style")).toBe("dashed");
+    expect(property(disabled, "cursor")).toBe("not-allowed");
   });
 
   it("contains no former bf tokens or non-flat shadow styles", () => {

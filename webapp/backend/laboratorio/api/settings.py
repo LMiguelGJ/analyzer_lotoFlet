@@ -40,6 +40,7 @@ def read_settings(request: Request):
     return {
         "storage": {
             **asdict(status),
+            "unlimited": status.unlimited,
             "sqlite_bytes": status.sqlite_bytes,
             "warning": status.warning,
             "logical_used_bytes_exact": str(status.logical_used_bytes),
@@ -56,6 +57,7 @@ def read_settings(request: Request):
             ),
             "source": effective.source,
             "writable": effective.writable,
+            "unlimited": effective.unlimited,
         },
         "sources": {
             "history_id": settings.history_path.name,

@@ -45,6 +45,12 @@ export interface ReferenceTotals {
   total_net: number;
   total_steps: number;
   mean_net_closed: number | null;
+  /** Sessions cut off by the lab's deadline; present only when the lab has one. */
+  timeouts?: number;
+  /** Net result summed over the timed-out sessions (deadline labs only). */
+  timeout_net?: number;
+  /** Draws spent by the sessions that reached the goal (deadline labs only). */
+  goal_draws?: number;
 }
 export interface ReferenceRunSummary {
   eligible_draws: number;
@@ -73,7 +79,7 @@ export interface ReferenceRun {
   capabilities: ReferenceCapabilities;
 }
 export interface ReferenceSession {
-  outcome: "goal" | "ruin" | "incomplete";
+  outcome: "goal" | "ruin" | "incomplete" | "timeout";
   start_index: number;
   end_index: number;
   draws: number;
@@ -91,10 +97,11 @@ export interface ReferenceSessionPage {
 export interface ReferencePage<T> { total: number; offset: number; limit: number; items: T[] }
 export interface PageParams { offset?: number; limit?: number }
 
+const MAX_PAGE_SIZE = 500;
 function paging({ offset = 0, limit }: PageParams, defaultLimit: number): string {
   const resolvedLimit = limit ?? defaultLimit;
-  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(resolvedLimit) || resolvedLimit < 1 || resolvedLimit > 100) {
-    throw new RangeError("La paginación debe usar un desplazamiento válido y un límite entre 1 y 100.");
+  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(resolvedLimit) || resolvedLimit < 1 || resolvedLimit > MAX_PAGE_SIZE) {
+    throw new RangeError("La paginación debe usar un desplazamiento válido y un límite entre 1 y 500.");
   }
   return `offset=${offset}&limit=${resolvedLimit}`;
 }

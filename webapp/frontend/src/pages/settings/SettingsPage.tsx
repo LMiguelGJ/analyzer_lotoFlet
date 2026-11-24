@@ -11,7 +11,7 @@ import { ErrorBanner, Loading } from "../../components/ui/Feedback";
 import { formatLongDate, formatNumber } from "../../lib/format";
 import {
   PRIZE_ERROR, bytesToMbInput, formatDiskBytes, formatExactBytes, formatSize, mbInputToBytes, parsePrizes,
-  positionLabel, quotaMbError, remainingBytes, usagePercent,
+  isUnlimited, positionLabel, quotaMbError, remainingBytes, UNLIMITED_BYTES, usagePercent,
 } from "./settings-model";
 import "./settings.css";
 
@@ -19,6 +19,7 @@ const MAX_IMPORT_BYTES = 32 * 1024 * 1024;
 const CHANCE_ID = "chance_express";
 const QUOTA_SOURCE_LABELS: Record<string, string> = {
   persisted: "lo elegiste vos",
+  default: "sin límite de fábrica",
   environment: "lo fija el arranque de la aplicación",
   env: "lo fija el arranque de la aplicación",
 };
@@ -229,6 +230,22 @@ export function SettingsPage() {
     } finally { endMutation(controller); }
   }
 
+  async function saveUnlimited() {
+    if (busyGuard.current || !settings?.quota.writable) return;
+    setQuotaError(null);
+    setQuotaSaved(false);
+    const controller = beginMutation();
+    try {
+      const saved = await updateSettings(UNLIMITED_BYTES, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      applyQuota(saved);
+      setQuotaSaved(true);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setQuotaError(apiMessage(error, error instanceof NetworkError ? "No se pudo contactar al servidor local. No se confirmó el cambio de límite." : "No se pudo quitar el límite."));
+    } finally { endMutation(controller); }
+  }
+
   async function reconcileHistory() {
     const epoch = mutationEpoch.current;
     const request = ++reconcileSequence.current;
@@ -318,6 +335,7 @@ export function SettingsPage() {
   const limit = settings.quota.effective_bytes;
   const left = remainingBytes(limit, used);
   const percent = usagePercent(used, limit);
+  const unlimited = isUnlimited(limit);
   const quotaDirty = quotaDraft !== bytesToMbInput(limit);
   const quotaInvalid = quotaMbError(quotaDraft);
   const shownQuotaError = quotaError ?? (quotaDirty ? quotaInvalid : null);
@@ -378,22 +396,24 @@ export function SettingsPage() {
       <SectionHeader id="settings-storage-title" title="Espacio" />
       {storage.warning && <p className="settings-warning" role="status">Queda poco espacio disponible.</p>}
       <div className="settings-usage">
-        <p className="settings-usage-line"><span>Espacio usado</span><strong>{formatSize(used)} de {formatSize(limit)}</strong></p>
-        <div className="settings-meter" role="progressbar" aria-label="Espacio usado" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={`${percent} % del límite`} data-high={percent >= 85 ? "true" : "false"}>
+        <p className="settings-usage-line"><span>Espacio usado</span><strong>{unlimited ? `${formatSize(used)} · Sin límite` : `${formatSize(used)} de ${formatSize(limit)}`}</strong></p>
+        {!unlimited && <div className="settings-meter" role="progressbar" aria-label="Espacio usado" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={`${percent} % del límite`} data-high={percent >= 85 ? "true" : "false"}>
           <span style={{ width: `${percent}%` }} />
-        </div>
-        <p className="settings-note">Quedan {formatSize(left)} libres ({percent} % usado).</p>
+        </div>}
+        {unlimited ? <p className="settings-note">Sin límite: la aplicación solo se detiene si el disco se llena de verdad.</p>
+          : <p className="settings-note">Quedan {formatSize(left)} libres ({percent} % usado).</p>}
       </div>
       <form className="settings-quota-form" onSubmit={(event) => void saveQuota(event)} noValidate>
         <div className="field">
           <label className="ledger-label" htmlFor="settings-quota">Límite de espacio (MB)</label>
-          <input id="settings-quota" className="ledger-control" type="text" inputMode="decimal" autoComplete="off" value={quotaDraft} disabled={!quotaWritable || disabled}
+          <input id="settings-quota" className="ledger-control" type="text" inputMode="decimal" autoComplete="off" value={quotaDraft} placeholder={unlimited ? "Sin límite" : undefined} disabled={!quotaWritable || disabled}
             aria-invalid={Boolean(shownQuotaError)} aria-describedby={`quota-help${shownQuotaError ? " quota-error" : ""}`}
             onChange={(event) => { setQuotaDraft(event.target.value); setQuotaError(null); setQuotaSaved(false); }} />
-          <p id="quota-help" className="ledger-hint">{quotaWritable ? `Cuánto espacio puede ocupar la aplicación (1 GB son 1.024 MB); ${sourceLabel}.` : "Este límite está fijado fuera de esta pantalla y no se puede cambiar aquí."}</p>
+          <p id="quota-help" className="ledger-hint">{quotaWritable ? (unlimited ? "Hoy no hay límite. Escribí unos MB y guardá solo si querés fijar uno (1 GB son 1.024 MB)." : `Cuánto espacio puede ocupar la aplicación (1 GB son 1.024 MB); ${sourceLabel}.`) : "Este límite está fijado fuera de esta pantalla y no se puede cambiar aquí."}</p>
           {shownQuotaError && <p id="quota-error" className="ledger-error" role="alert">{shownQuotaError}</p>}
         </div>
         <Button type="submit" variant="primary" disabled={disabled || !quotaWritable || !quotaDirty || Boolean(quotaInvalid)} aria-busy={disabled}>{disabled ? "Guardando…" : "Guardar límite"}</Button>
+        {quotaWritable && !unlimited && <Button variant="secondary" disabled={disabled} onClick={() => void saveUnlimited()}>Sin límite</Button>}
         {quotaSaved && <p className="settings-success" role="status">Límite guardado</p>}
       </form>
     </Block>

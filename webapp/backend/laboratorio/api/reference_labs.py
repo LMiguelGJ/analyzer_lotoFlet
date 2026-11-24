@@ -14,6 +14,7 @@ from laboratorio.engine.reference_lab_service import (
     ReferenceLabServiceError,
     execute_reference_lab,
 )
+from laboratorio.storage.paging import MAX_PAGE_SIZE
 from laboratorio.storage.quota import QuotaExceeded
 from laboratorio.storage.reference_lab_store import (
     ReferenceLabStoreError,
@@ -200,7 +201,7 @@ def list_lab_runs(
     lab_id: str,
     request: Request,
     offset: int = Query(0, ge=0, le=_MAX_I64),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=MAX_PAGE_SIZE),
 ):
     lab = _lab_or_404(lab_id)
     with request.app.state.reference_lab_lock:
@@ -218,7 +219,7 @@ def lab_run_sessions(
     run_id: str,
     request: Request,
     offset: int = Query(0, ge=0, le=_MAX_I64),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=MAX_PAGE_SIZE),
 ):
     lab = _lab_or_404(lab_id)
     with request.app.state.reference_lab_lock:

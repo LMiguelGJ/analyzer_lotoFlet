@@ -16,21 +16,21 @@ beforeEach(() => { vi.clearAllMocks(); optionsMock.mockResolvedValue(optionsFixt
 describe("runs list", () => {
   it("teaches the empty state and offers a new run", async () => { listMock.mockResolvedValue(page([])); mount(); expect(await screen.findByText("Todavía no hay corridas")).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Nueva corrida" })).toBeInTheDocument(); });
   it("announces loading and offers retry after an error", async () => { listMock.mockRejectedValueOnce(new Error("offline")).mockResolvedValue(page([])); mount(); expect(screen.getByRole("status")).toHaveTextContent("Cargando corridas"); await userEvent.click(await screen.findByRole("button", { name: "Reintentar" })); expect(await screen.findByText("Todavía no hay corridas")).toBeInTheDocument(); });
-  it("pages with 20 records and aborts stale reads on unmount", async () => { listMock.mockResolvedValue(page([runFixture], 21)); const { unmount } = mount(); expect(await screen.findByRole("link", { name: "Abrir" })).toBeInTheDocument(); await userEvent.click(screen.getByRole("button", { name: "Siguiente" })); await waitFor(() => expect(listMock).toHaveBeenLastCalledWith({ offset: 20, limit: 20 }, expect.objectContaining({ signal: expect.any(AbortSignal) }))); unmount(); });
+  it("pages with 100 records and aborts stale reads on unmount", async () => { listMock.mockResolvedValue(page([runFixture], 101)); const { unmount } = mount(); expect(await screen.findByRole("link", { name: "Abrir" })).toBeInTheDocument(); await userEvent.click(screen.getByRole("button", { name: "Siguiente" })); await waitFor(() => expect(listMock).toHaveBeenLastCalledWith({ offset: 100, limit: 100 }, expect.objectContaining({ signal: expect.any(AbortSignal) }))); unmount(); });
   it("asks before deletion, supports cancel, and reports delete failure", async () => { listMock.mockResolvedValue(page([runFixture])); deleteMock.mockRejectedValue(new Error("offline")); mount(); await screen.findByRole("link", { name: "Abrir" }); await userEvent.click(screen.getByRole("button", { name: "Borrar" })); expect(deleteMock).not.toHaveBeenCalled(); const dialog = screen.getByRole("alertdialog", { name: "Borrar esta corrida" }); await userEvent.click(within(dialog).getByRole("button", { name: "Cancelar" })); expect(deleteMock).not.toHaveBeenCalled(); await userEvent.click(screen.getByRole("button", { name: "Borrar" })); await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Borrar" })); expect(await screen.findByText(/No se pudo contactar al servidor local/)).toBeInTheDocument(); });
   it("navigates to page two, deletes its only row, then reloads and shows page one", async () => {
-    const firstPage = Array.from({ length: 20 }, (_, index) => ({ ...runFixture, id: `page-one-${index}` }));
-    listMock.mockResolvedValueOnce(page(firstPage, 21, 0)).mockResolvedValueOnce(page([runFixture], 21, 20)).mockResolvedValueOnce(page(firstPage, 20, 0));
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({ ...runFixture, id: `page-one-${index}` }));
+    listMock.mockResolvedValueOnce(page(firstPage, 101, 0)).mockResolvedValueOnce(page([runFixture], 101, 100)).mockResolvedValueOnce(page(firstPage, 100, 0));
     deleteMock.mockResolvedValue();
     mount();
     await screen.findAllByRole("link", { name: "Abrir" });
     await userEvent.click(screen.getByRole("button", { name: "Siguiente" }));
-    await waitFor(() => expect(listMock.mock.calls.map(([params]) => params?.offset)).toEqual([0, 20]));
+    await waitFor(() => expect(listMock.mock.calls.map(([params]) => params?.offset)).toEqual([0, 100]));
     const pageTwo = within(screen.getByRole("region", { name: "Lista de corridas" }));
     await userEvent.click(pageTwo.getByRole("button", { name: "Borrar" }));
     await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Borrar" }));
-    await waitFor(() => expect(listMock.mock.calls.map(([params]) => params?.offset)).toEqual([0, 20, 0]));
-    expect(await screen.findByText("20 corridas · 1–20")).toBeInTheDocument();
+    await waitFor(() => expect(listMock.mock.calls.map(([params]) => params?.offset)).toEqual([0, 100, 0]));
+    expect(await screen.findByText("100 corridas · 1–100")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Anterior" })).toBeDisabled();
   });
   it("uses localized API catalog labels and never displays system IDs", async () => {

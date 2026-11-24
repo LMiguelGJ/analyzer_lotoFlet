@@ -10,7 +10,12 @@ from pathlib import Path
 from laboratorio.domain.number_lists import DEFAULT_LIST_ID
 from laboratorio.settings import DEFAULT_QUOTA_BYTES
 from laboratorio.storage.database import connection, require_database
-from laboratorio.storage.quota import QuotaStatus, measure, validate_quota_bytes
+from laboratorio.storage.quota import (
+    UNLIMITED_QUOTA_BYTES,
+    QuotaStatus,
+    measure,
+    validate_quota_bytes,
+)
 
 
 class QuotaReadOnly(RuntimeError):
@@ -27,6 +32,10 @@ class EffectiveQuota:
     persisted_bytes: int | None
     source: str
     writable: bool
+
+    @property
+    def unlimited(self) -> bool:
+        return self.effective_bytes == UNLIMITED_QUOTA_BYTES
 
 
 def _now_iso() -> str:
@@ -252,12 +261,38 @@ def _effective_quota(db, quota_bytes: int | None, quota_explicit: bool | None) -
     )
 
 
+_UNLIMITED_MARKER = "quota_unlimited_v1"
+
+
+def _adopt_unlimited_quota_once(path: Path) -> None:
+    """One-time, data-only switch to "sin límite" for databases that predate that mode.
+
+    Older versions persisted a finite budget that blocked writes. The marker (existing
+    ``storage_bootstrap_state`` table, no schema change) makes this run once; a limit the
+    user sets afterwards in Ajustes is never overridden.
+    """
+    with _transaction(path) as db:
+        if db.execute(
+            "SELECT 1 FROM storage_bootstrap_state WHERE state_key = ?", (_UNLIMITED_MARKER,)
+        ).fetchone():
+            return
+        db.execute(
+            "UPDATE settings_quota SET quota_bytes = ? WHERE id = 1 AND quota_bytes < ?",
+            (UNLIMITED_QUOTA_BYTES, UNLIMITED_QUOTA_BYTES),
+        )
+        db.execute(
+            "INSERT INTO storage_bootstrap_state (state_key, state_value) VALUES (?, ?)",
+            (_UNLIMITED_MARKER, "complete"),
+        )
+
+
 class Repository:
     def __init__(self, path: Path):
         from laboratorio.storage.owned_laboratory_read_cache import OwnedLaboratoryReadCache
 
         self.path = Path(path)
         require_database(self.path)
+        _adopt_unlimited_quota_once(self.path)
         self._owned_laboratory_database_id = self.path.resolve().as_uri()
         self._owned_laboratory_read_cache = OwnedLaboratoryReadCache()
 
@@ -618,6 +653,11 @@ class Repository:
         from laboratorio.storage.laboratory_store import list_laboratory_definitions
 
         return list_laboratory_definitions(self, offset=offset, limit=limit)
+
+    def get_laboratory_last_runs(self, identifiers):
+        from laboratorio.storage.laboratory_store import get_laboratory_last_runs
+
+        return get_laboratory_last_runs(self, identifiers)
 
     def get_laboratory_owned_counts(self, identifier):
         from laboratorio.storage.laboratory_store import get_laboratory_owned_counts

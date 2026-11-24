@@ -13,6 +13,7 @@ SNAPSHOT_VERSION = 1
 FROZEN_HISTORY_SHA256 = "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776d2b8f9711"
 MAX_FROZEN_DRAWS = 105_426
 MAX_SAFE_INTEGER = min(2**53 - 1, 2**63 - 1)
+MAX_SESSION_DRAWS_LIMIT = 10_000
 _REFERENCE_NAMESPACE = uuid.UUID("5531ba2c-7735-5a3c-a97f-8358244c0fb4")
 _SUPPORTED_SYSTEMS = frozenset(lab.system for lab in REFERENCE_LABS)  # Chance Express labs
 _REFERENCE_START = min(lab.window_start for lab in REFERENCE_LABS)
@@ -37,6 +38,16 @@ def default_window(list_id, first_label=None, last_label=None):
 def _strict_int(value, field):
     if type(value) is not int or value < 1:
         raise ValueError(f"{field} must be a positive integer")
+
+
+def _validate_max_session_draws(value):
+    if value is None:
+        return
+    if type(value) is not int or not 1 <= value <= MAX_SESSION_DRAWS_LIMIT:
+        raise ValueError(
+            "El máximo de días por sesión debe ser un número entero entre 1 y "
+            f"{MAX_SESSION_DRAWS_LIMIT}, o quedar vacío para no poner límite."
+        )
 
 
 def _validate_name(name):
@@ -102,6 +113,8 @@ class LaboratoryConfig:
     window_end: str
     # Chance Express keeps its exact historical shape: the id is not serialized for it.
     list_id: str = DEFAULT_LIST_ID
+    # Optional per-session deadline in draws (one draw per day on Leidsa). ``None`` = unlimited.
+    max_session_draws: int | None = None
 
     def __post_init__(self):
         number_list = get_list(self.list_id)
@@ -114,6 +127,7 @@ class LaboratoryConfig:
                 raise ValueError("system is not supported by the archived reference family")
         elif self.system not in number_list.available_systems:
             raise ValueError(unavailable_message(self.system))
+        _validate_max_session_draws(self.max_session_draws)
         _strict_int(self.coverage, "coverage")
         if self.coverage > 50:
             raise ValueError("coverage must be between 1 and 50")
@@ -167,6 +181,8 @@ class LaboratoryConfig:
         }
         if self.list_id != DEFAULT_LIST_ID:
             mapping["list_id"] = self.list_id
+        if self.max_session_draws is not None:
+            mapping["max_session_draws"] = self.max_session_draws
         return mapping
 
     @classmethod
@@ -189,6 +205,8 @@ class LaboratoryConfig:
             if type(list_id) is not str or list_id == DEFAULT_LIST_ID or get_list(list_id) is None:
                 raise ValueError("invalid laboratory config snapshot")
             keys = keys | {"list_id"}
+        if type(value) is dict and "max_session_draws" in value:
+            keys = keys | {"max_session_draws"}
         if (
             type(value) is not dict
             or set(value) != keys
@@ -207,6 +225,7 @@ class LaboratoryConfig:
             window_start=value["window_start"],
             window_end=value["window_end"],
             list_id=list_id,
+            max_session_draws=value.get("max_session_draws"),
         )
 
 
@@ -275,6 +294,7 @@ class LaboratoryDefinition:
             config.window_start,
             config.window_end,
             config.list_id,
+            config.max_session_draws,
         )
 
 

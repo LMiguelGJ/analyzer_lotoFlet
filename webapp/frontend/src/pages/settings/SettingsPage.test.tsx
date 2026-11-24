@@ -81,6 +81,18 @@ describe("settings page", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("La cuota no puede ser menor al uso actual.");
     expect(input).toHaveValue("800");
   });
+  it("offers «Sin límite»: sends the explicit marker and then shows no meter or finite cap", async () => {
+    const unlimited = { ...settingsFixture, quota: { ...settingsFixture.quota, effective_bytes: "9223372036854775807", persisted_bytes: "9223372036854775807", unlimited: true } };
+    updateMock.mockResolvedValueOnce(unlimited);
+    mount();
+    expect(await screen.findByRole("progressbar", { name: "Espacio usado" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Sin límite" }));
+    await waitFor(() => expect(updateMock).toHaveBeenCalledWith("9223372036854775807", expect.objectContaining({ signal: expect.any(AbortSignal) })));
+    expect(await screen.findByText(/Sin límite: la aplicación solo se detiene si el disco se llena/)).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar", { name: "Espacio usado" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Límite de espacio (MB)")).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Sin límite" })).not.toBeInTheDocument();
+  });
   it("keeps an environment-managed quota read-only", async () => {
     settingsMock.mockResolvedValue({ ...settingsFixture, quota: { ...settingsFixture.quota, source: "environment", writable: false } });
     mount();

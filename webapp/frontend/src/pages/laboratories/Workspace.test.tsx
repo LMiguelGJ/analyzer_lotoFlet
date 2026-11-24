@@ -206,19 +206,19 @@ describe("laboratory workspace", () => {
     m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, wallet: { policy: "retain-gains-top-up-v1", out_of_pocket: 2000, final_wealth: 2100 }, totals: { ...totals, total_net: 100 } } });
     const screenSize = viewport(861);
     const user = userEvent.setup();
-    m.listLaboratorySessions.mockImplementation(async (_lab, _run, params) => ({ run_id: "run-1", total: 51, offset: params?.offset ?? 0, limit: 50, items: [{ ordinal: params?.offset ?? 0, summary: { outcome: "goal", start_index: 0, end_index: 3, draws: 4, final_balance: 2800, wagered: 100, paid: 900 } }] }));
+    m.listLaboratorySessions.mockImplementation(async (_lab, _run, params) => ({ run_id: "run-1", total: 201, offset: params?.offset ?? 0, limit: 200, items: [{ ordinal: params?.offset ?? 0, summary: { outcome: "goal", start_index: 0, end_index: 3, draws: 4, final_balance: 2800, wagered: 100, paid: 900 } }] }));
     const { container } = renderAt(`/laboratorios/${ID}`);
     await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
     await screen.findByRole("region", { name: "Resúmenes de sesiones" });
     expect(screen.getByText("Aportado de tu bolsillo").parentElement).toHaveTextContent("RD$2.000");
     expect(screen.getByText("Patrimonio al final").parentElement).toHaveTextContent("RD$2.100");
     await user.click(within(screen.getByRole("navigation", { name: "Paginación de sesiones" })).getByRole("button", { name: "Siguiente" }));
-    await screen.findByRole("heading", { name: "Sesiones 51–51 de 51" });
+    await screen.findByRole("heading", { name: "Sesiones 201–201 de 201" });
     expect(screen.getByText("Aportado de tu bolsillo").parentElement).toHaveTextContent("RD$2.000");
     expect(screen.getByText("Patrimonio al final").parentElement).toHaveTextContent("RD$2.100");
     await act(async () => screenSize.resize(860));
     expect(container.querySelector(".lab-workspace")!.children[0]).toHaveClass("lab-stage");
-    expect(screen.getByRole("heading", { name: "Sesiones 51–51 de 51" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sesiones 201–201 de 201" })).toBeInTheDocument();
     expect(m.getLaboratory).toHaveBeenCalledTimes(1);
     expect(m.getLaboratoryRun).toHaveBeenCalledTimes(1);
     expect(m.listLaboratorySessions).toHaveBeenCalledTimes(2);
@@ -346,7 +346,7 @@ describe("laboratory workspace", () => {
     expect(execute).toBeDisabled();
     expect(screen.getByRole("button", { name: "Actualizar corridas guardadas" })).toBeDisabled();
     expect(m.createLaboratoryRun).toHaveBeenCalledTimes(1);
-    expect(m.listLaboratoryRuns.mock.calls.at(-1)?.slice(0, 2)).toEqual([ID, { offset: 0, limit: 20 }]);
+    expect(m.listLaboratoryRuns.mock.calls.at(-1)?.slice(0, 2)).toEqual([ID, { offset: 0, limit: 200 }]);
     await act(async () => {
       if (outcome === "success") fresh.resolve(savedRuns);
       else fresh.reject(outcome === "abort" ? new DOMException("Aborted", "AbortError") : new NetworkError());
@@ -388,7 +388,7 @@ describe("laboratory workspace", () => {
   });
 
   it("U2 keeps immutable details while paging and retries only failed sessions", async () => {
-    const first = { run_id: "run-1", total: 51, offset: 0, limit: 50, items: [{ ordinal: 0, summary: { outcome: "goal" as const, start_index: 0, end_index: 3, draws: 4, final_balance: 2800, wagered: 100, paid: 900 } }] };
+    const first = { run_id: "run-1", total: 201, offset: 0, limit: 200, items: [{ ordinal: 0, summary: { outcome: "goal" as const, start_index: 0, end_index: 3, draws: 4, final_balance: 2800, wagered: 100, paid: 900 } }] };
     m.listLaboratorySessions.mockResolvedValue(first);
     const user = userEvent.setup();
     renderAt(`/laboratorios/${ID}`);
@@ -402,9 +402,9 @@ describe("laboratory workspace", () => {
     await act(async () => pending.reject(new NetworkError()));
     const error = await screen.findByRole("alert");
     expect(screen.getByRole("heading", { name: "Resultado guardado" })).toBeInTheDocument();
-    m.listLaboratorySessions.mockResolvedValue({ ...first, offset: 50, items: [{ ...first.items[0], ordinal: 50 }] });
+    m.listLaboratorySessions.mockResolvedValue({ ...first, offset: 200, items: [{ ...first.items[0], ordinal: 200 }] });
     await user.click(within(error).getByRole("button", { name: "Reintentar" }));
-    await screen.findByRole("heading", { name: "Sesiones 51–51 de 51" });
+    await screen.findByRole("heading", { name: "Sesiones 201–201 de 201" });
     expect(m.getLaboratoryRun).toHaveBeenCalledTimes(1);
     expect(m.listLaboratorySessions).toHaveBeenCalledTimes(3);
   });
@@ -442,6 +442,55 @@ describe("laboratory workspace", () => {
     m.listLaboratories.mockResolvedValue({ total: 0, offset: 0, limit: 20, items: [] });
     renderAt("/laboratorios");
     expect(await screen.findByText(/No hay laboratorios guardados/)).toBeInTheDocument();
+  });
+
+  it("shows the deadline results with plain labels when the lab has a deadline", async () => {
+    const capped = { ...definition, config: { ...config, max_session_draws: 30 } };
+    m.listLaboratories.mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [capped] });
+    m.getLaboratory.mockResolvedValue({ definition: capped, owned_run_count: 1, owned_session_count: 4 });
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, totals: { ...totals, completed: 10, goals: 6, ruins: 1, timeouts: 3, timeout_net: -450, goal_draws: 120, sessions_total: 11 } } });
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    expect(await screen.findByText(/· máx 30 días/, { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /máx 30 días/ })).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const summary = within(await screen.findByRole("region", { name: "Resumen de sesiones" }));
+    expect(summary.getByText("Metas en tiempo").parentElement).toHaveTextContent("6");
+    expect(summary.getByText("No llegó a tiempo").parentElement).toHaveTextContent("3");
+    expect(summary.getByText("Quiebras").parentElement).toHaveTextContent("1");
+    expect(summary.getByText("Sesiones que llegaron a la meta a tiempo").parentElement).toHaveTextContent("60,0 %");
+    expect(summary.getByText("Días promedio hasta la meta").parentElement).toHaveTextContent("20,0 días");
+    expect(summary.getByText("Perdido en las que no llegaron a tiempo").parentElement).toHaveTextContent("−RD$450");
+  });
+
+  it("keeps the usual result labels when the lab has no deadline", async () => {
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const summary = within(await screen.findByRole("region", { name: "Resumen de sesiones" }));
+    expect(summary.getByText("Metas")).toBeInTheDocument();
+    expect(summary.queryByText("No llegó a tiempo")).not.toBeInTheDocument();
+    expect(summary.queryByText("Metas en tiempo")).not.toBeInTheDocument();
+    expect(screen.queryByText(/máx \d+ días?/)).not.toBeInTheDocument();
+  });
+
+  it("offers an optional maximum of days per session and sends it only when filled", async () => {
+    m.createLaboratory.mockResolvedValue(definition);
+    const user = userEvent.setup();
+    renderAt("/laboratorios/nuevo");
+    const field = await screen.findByLabelText("Máximo de días por sesión");
+    expect(field).toHaveValue("");
+    expect(screen.getByText("Si una sesión no llega a la meta en esos sorteos, termina y empieza otra.")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Nombre"), "Con plazo");
+    await user.type(field, "0");
+    await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
+    expect(await screen.findByText(/entre 1 y 10000/, { selector: "p" })).toBeInTheDocument();
+    expect(m.createLaboratory).not.toHaveBeenCalled();
+    await user.clear(field);
+    await user.type(field, "30");
+    await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
+    await waitFor(() => expect(m.createLaboratory).toHaveBeenCalledTimes(1));
+    expect(m.createLaboratory).toHaveBeenCalledWith("Con plazo", { ...config, max_session_draws: 30 });
   });
 
   it("validates before sending and creates with the exact payload", async () => {
@@ -556,7 +605,7 @@ describe("laboratory workspace", () => {
     const pagination = within(result).getByRole("navigation", { name: "Paginación de sesiones" });
     expect(within(pagination).getByRole("button", { name: "Anterior" })).toBeDisabled();
     expect(within(pagination).getByRole("button", { name: "Siguiente" })).toBeDisabled();
-    expect(m.listLaboratorySessions.mock.calls[0].slice(0, 3)).toEqual([ID, "run-1", { offset: 0, limit: 50 }]);
+    expect(m.listLaboratorySessions.mock.calls[0].slice(0, 3)).toEqual([ID, "run-1", { offset: 0, limit: 200 }]);
     expect(within(result).queryByText("Se consulta solo esta página de resúmenes.")).not.toBeInTheDocument();
   });
 
@@ -619,6 +668,56 @@ describe("laboratory workspace", () => {
     expect(await screen.findByText("1 corrida")).toBeInTheDocument();
     expect(screen.getByText(/4 · 1 incompleta$/)).toBeInTheDocument();
     expect(screen.getByText("1 laboratorio")).toBeInTheDocument();
+  });
+
+  describe("latest-run result indicator in the list", () => {
+    const lastRun = (total_net: number) => ({ id: "run-9", created_at: "2026-10-02T10:00:00.000Z", total_net, total_wagered: 1000, total_paid: 1000 + total_net });
+    const others = [
+      { ...definition, id: "00000000-0000-4000-8000-000000000002", name: "Gana", last_run: lastRun(1234) },
+      { ...definition, id: "00000000-0000-4000-8000-000000000003", name: "Pierde", last_run: lastRun(-500) },
+      { ...definition, id: "00000000-0000-4000-8000-000000000004", name: "Empata", last_run: lastRun(0) },
+      { ...definition, id: "00000000-0000-4000-8000-000000000005", name: "Nueva", last_run: null },
+      { ...definition, id: "00000000-0000-4000-8000-000000000006", name: "Antigua" },
+    ];
+
+    it("shows text, accessible name and a per-state marker for gain, loss, even and no runs", async () => {
+      m.listLaboratories.mockResolvedValue({ total: others.length, offset: 0, limit: 20, items: others });
+      renderAt("/laboratorios");
+      const expected: Record<string, [string, string, string]> = {
+        Gana: ["gain", "▲ +RD$1.234", "Último resultado: ganancia de RD$1.234"],
+        Pierde: ["loss", "▼ −RD$500", "Último resultado: pérdida de RD$500"],
+        Empata: ["even", "= RD$0", "Último resultado: sin ganancia ni pérdida (RD$0)"],
+        Nueva: ["none", "Sin corridas", "Último resultado: sin corridas guardadas"],
+        Antigua: ["none", "Sin corridas", "Último resultado: sin corridas guardadas"],
+      };
+      for (const [name, [state, text, label]] of Object.entries(expected)) {
+        const link = await screen.findByRole("link", { name: (accessible) => accessible.startsWith(`${name} `) });
+        const item = link.closest("li") as HTMLElement;
+        expect(item).toHaveAttribute("data-result", state);
+        expect(within(link).getByText(text)).toHaveAttribute("aria-hidden", "true");
+        expect(within(link).getByText(text).parentElement).toHaveAttribute("data-state", state);
+        expect(link).toHaveAccessibleName(expect.stringContaining(label));
+        // The existing name + description lines are untouched.
+        expect(within(link).getByText(name)).toHaveClass("lab-list-name");
+        expect(within(link).getByText(/Transición · 1 número · Audaz/)).toHaveClass("lab-list-meta");
+      }
+    });
+
+    it("refetches the list after a run is saved so the new result shows up", async () => {
+      m.listLaboratories.mockResolvedValueOnce({ total: 1, offset: 0, limit: 20, items: [{ ...definition, last_run: null }] });
+      m.listLaboratories.mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [{ ...definition, last_run: lastRun(250) }] });
+      m.createLaboratoryRun.mockResolvedValue(run);
+      const user = userEvent.setup();
+      renderAt(`/laboratorios/${ID}`);
+      const link = await screen.findByRole("link", { name: /Transición propia/ });
+      expect(within(link).getByText("Sin corridas")).toBeInTheDocument();
+      const execute = await screen.findByRole("button", { name: "Ejecutar laboratorio" });
+      await waitFor(() => expect(execute).toBeEnabled());
+      const callsBefore = m.listLaboratories.mock.calls.length;
+      await user.click(execute);
+      await waitFor(() => expect(m.listLaboratories.mock.calls.length).toBe(callsBefore + 1));
+      expect(await within(await screen.findByRole("link", { name: /Transición propia/ })).findByText("▲ +RD$250")).toBeInTheDocument();
+    });
   });
 
   it("has no detectable accessibility violations in the create form", async () => {

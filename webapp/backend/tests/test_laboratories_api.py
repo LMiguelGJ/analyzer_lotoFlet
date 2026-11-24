@@ -2,6 +2,7 @@ import asyncio
 import json
 import uuid
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -59,7 +60,7 @@ def test_list_detail_delete_and_recreate_use_canonical_snapshots(tmp_path, lab_d
         assert listing.status_code == 200
         page = listing.json()
         assert (page["total"], page["offset"], page["limit"]) == (15, 0, 20)
-        assert page["items"][0] == first
+        assert page["items"][0] == {**first, "last_run": None}
         tail = client.get(ROOT, params={"offset": 14, "limit": 1}).json()["items"]
         assert tail == page["items"][14:15]
         assert tail[0]["reference_id"] is not None
@@ -103,7 +104,7 @@ def test_list_detail_delete_and_recreate_use_canonical_snapshots(tmp_path, lab_d
         {"offset": 2**63},
         {"offset": "1.5"},
         {"limit": 0},
-        {"limit": 101},
+        {"limit": 501},
         {"limit": "x"},
     ],
 )
@@ -148,13 +149,73 @@ def test_invalid_name_or_domain_config_is_422(tmp_path, lab_data, name, config):
 def test_duplicate_casefold_and_quota_fail_with_conflict_without_mutation(tmp_path, lab_data):
     with TestClient(make_app(tmp_path, lab_data), base_url=BASE_URL) as client:
         assert post(client, "Duplica").status_code == 201
-        assert post(client, "DUPLICA").status_code == 409
+        duplicate = post(client, "DUPLICA")
+        assert duplicate.status_code == 409
+        assert duplicate.json()["detail"] == "Ya existe un laboratorio con ese nombre."
         assert client.get(ROOT).json()["total"] == 15
 
     quota_app = make_app(tmp_path / "quota", lab_data, quota_bytes=1)
     with TestClient(quota_app, base_url=BASE_URL) as client:
-        assert post(client, "Quota").status_code == 409
+        refused = post(client, "Quota")
+        assert refused.status_code == 409
+        assert "nombre" not in refused.json()["detail"]
+        assert "límite de almacenamiento" in refused.json()["detail"]
         assert client.get(ROOT).json()["total"] == 14
+
+
+def test_default_quota_is_unlimited_and_never_blocks_creation(tmp_path, lab_data):
+    with TestClient(make_app(tmp_path, lab_data), base_url=BASE_URL) as client:
+        settings = client.get("/api/v1/settings").json()
+        assert settings["quota"]["unlimited"] is True
+        assert settings["storage"]["unlimited"] is True
+        assert settings["storage"]["warning"] is False
+        for index in range(30):
+            assert post(client, f"Sin límite {index}").status_code == 201
+        assert client.get(ROOT).json()["total"] == 44
+
+
+def test_unlimited_still_refuses_only_when_the_disk_is_full():
+    from laboratorio.storage.quota import UNLIMITED_QUOTA_BYTES, QuotaExceeded, measure
+
+    status = measure(
+        Path("x.db"),
+        UNLIMITED_QUOTA_BYTES,
+        10**15,
+        disk_usage=lambda _path: type("U", (), {"free": 10**12})(),
+    )
+    status.require_capacity(10**9)
+    full = measure(
+        Path("x.db"),
+        UNLIMITED_QUOTA_BYTES,
+        0,
+        disk_usage=lambda _path: type("U", (), {"free": 1024})(),
+    )
+    with pytest.raises(QuotaExceeded, match="free disk"):
+        full.require_capacity(1)
+
+
+def test_legacy_finite_preference_is_adopted_as_unlimited_once(tmp_path, lab_data):
+    from laboratorio.storage.quota import UNLIMITED_QUOTA_BYTES
+    from laboratorio.storage.repository import Repository
+
+    app = make_app(tmp_path, lab_data)
+    with TestClient(app, base_url=BASE_URL):
+        path = app.state.repo.path
+    with connection(path) as db:
+        db.execute("DELETE FROM storage_bootstrap_state WHERE state_key='quota_unlimited_v1'")
+        db.execute("INSERT INTO settings_quota (id, quota_bytes) VALUES (1, 4244635648)")
+        db.commit()
+    assert Repository(path).get_quota_preference() == UNLIMITED_QUOTA_BYTES
+    # A limit chosen afterwards survives later starts.
+    Repository(path).set_quota_preference(10**12)
+    assert Repository(path).get_quota_preference() == 10**12
+
+
+def test_list_accepts_the_new_page_ceiling(tmp_path, lab_data):
+    with TestClient(make_app(tmp_path, lab_data), base_url=BASE_URL) as client:
+        page = client.get(ROOT, params={"limit": 500})
+        assert page.status_code == 200
+        assert page.json()["limit"] == 500
 
 
 def test_unknown_definition_get_and_delete_are_404(tmp_path, lab_data):

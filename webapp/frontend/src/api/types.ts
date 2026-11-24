@@ -197,7 +197,7 @@ export interface SettingsResponse {
     run_artifact_bytes_exact: string;
     admission_logical_bytes_exact: string;
   };
-  quota: { effective_bytes: string; persisted_bytes: string | null; source: string; writable: boolean };
+  quota: { effective_bytes: string; persisted_bytes: string | null; source: string; writable: boolean; unlimited?: boolean };
   sources: { history_id: string; history_sha256: string; rankings_id: string; rankings_sha256: string; code_version: string };
   connection: { host: string; port: number; version: string };
 }

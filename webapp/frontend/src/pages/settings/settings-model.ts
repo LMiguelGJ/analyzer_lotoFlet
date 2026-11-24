@@ -8,6 +8,10 @@ export function quotaInputError(value: string): string | null {
   return null;
 }
 
+/** The backend's explicit "sin límite" marker (largest SQLite-safe integer). */
+export const UNLIMITED_BYTES = "9223372036854775807";
+export function isUnlimited(quota: string): boolean { return quota === UNLIMITED_BYTES; }
+
 export function remainingBytes(quota: string, used: string): string {
   const difference = BigInt(quota) - BigInt(used);
   return (difference > 0n ? difference : 0n).toString();
@@ -50,6 +54,7 @@ export function usagePercent(used: string, limit: string): number {
 
 /** Megabytes shown in the quota editor: at most two decimals, no trailing zeros. */
 export function bytesToMbInput(bytes: string): string {
+  if (isUnlimited(bytes)) return "";
   const hundredths = BigInt(bytes) * 100n / MB;
   const whole = hundredths / 100n;
   const fraction = (hundredths % 100n).toString().padStart(2, "0").replace(/0+$/, "");
@@ -68,7 +73,7 @@ export function mbInputToBytes(input: string): string | null {
 }
 
 export function quotaMbError(input: string): string | null {
-  if (input.trim() === "") return "Escribí cuántos MB querés permitir.";
+  if (input.trim() === "") return "Escribí cuántos MB querés permitir, o elegí «Sin límite».";
   const bytes = mbInputToBytes(input);
   if (bytes === null) return "Escribí un número de MB mayor que 0, con hasta dos decimales.";
   return quotaInputError(bytes) === null ? null : "El límite supera el máximo admitido.";

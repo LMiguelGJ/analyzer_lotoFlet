@@ -86,7 +86,7 @@
   .ledger-field-choice .ledger-choice-label.is-disabled { cursor: not-allowed; }
   .ledger-field-choice .ledger-choice-control { flex: 0 0 24px; width: 24px; height: 24px; min-height: 24px; margin: 0; padding: 0; }
   input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; border-color: var(--ink-muted); background: var(--paper-sheet); color: var(--ink-muted); }
-  button:disabled, [aria-disabled="true"] { cursor: not-allowed; border-color: var(--ink-muted); background: var(--paper-sheet); color: var(--ink-muted); }
+  button:disabled, [aria-disabled="true"] { cursor: not-allowed; border-color: var(--ink-muted); background: var(--grid); color: var(--ink-muted); }
   .ledger-disclosure summary { display: flex; min-height: 48px; align-items: center; cursor: pointer; color: var(--ink); font-family: var(--font-display); font-weight: 600; }
 
   .btn, .ledger-button {
@@ -104,7 +104,8 @@
   .btn-destructive { border-color: var(--pencil-red); background: var(--pencil-red); color: #FFFFFF; }
   .btn-destructive:hover { background: var(--paper-sheet); color: var(--pencil-red); }
   .btn:focus-visible, .ledger-button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
-  .btn:disabled, .btn[aria-disabled="true"], .ledger-button:disabled, .ledger-button[aria-disabled="true"] { cursor: not-allowed; border-color: var(--ink-muted); background: var(--paper-sheet); color: var(--ink-muted); }
+  /* Disabled must NOT look like an enabled button: grey fill + dashed border (no opacity dimming). */
+  .btn:disabled, .btn[aria-disabled="true"], .ledger-button:disabled, .ledger-button[aria-disabled="true"] { cursor: not-allowed; border-style: dashed; border-color: var(--ink-muted); background: var(--grid); color: var(--ink-muted); }
   .ledger-button[aria-invalid="true"] { border-color: var(--pencil-red); color: var(--pencil-red); }
   .ledger-button-primary[aria-invalid="true"] { border-color: var(--pencil-red); background: var(--pencil-red); color: var(--paper); }
   .ledger-button-primary[aria-invalid="true"]:hover { border-color: var(--pencil-red); background: var(--pencil-red); color: var(--paper); }

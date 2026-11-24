@@ -81,6 +81,7 @@ def _decode_run(row, session_rows):
             definition.config.capital,
             result,
             max_sessions=_max_owned_sessions(result),
+            max_session_draws=definition.config.max_session_draws,
         )
         _validate_session_rows(sessions, session_rows, definition.config.capital)
         return {
@@ -133,6 +134,7 @@ def create_run(repo, run_id, owner_laboratory_id, snapshot, result, *, quota_byt
             definition.config.capital,
             result,
             max_sessions=_max_owned_sessions(result),
+            max_session_draws=definition.config.max_session_draws,
         )
         metadata_json = _canonical(validated.to_mapping())
         definition_json = _canonical(definition.to_mapping())

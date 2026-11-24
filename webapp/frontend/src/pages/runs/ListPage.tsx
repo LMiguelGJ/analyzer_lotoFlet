@@ -10,7 +10,7 @@ import { EmptyState, ErrorBanner, Loading } from "../../components/ui/Feedback";
 import { formatStrategyLabel } from "./run-model";
 import "./runs.css";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 100;
 const detailLabel = { complete: "Detalle completo", partial: "Detalle parcial", sessions_truncated: "Sesiones truncadas" } as const;
 function errorText(error: unknown): string {
   if (error instanceof ApiError) return error.detail;

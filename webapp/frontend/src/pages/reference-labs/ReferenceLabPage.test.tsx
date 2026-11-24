@@ -37,7 +37,7 @@ describe("first faithful reference laboratory page", () => {
     expect(screen.getByText("+RD$5,5")).toBeInTheDocument();
     expect(screen.getByText(/Las sesiones incompletas aportan a los totales/)).toBeInTheDocument();
     expect(screen.getByText(/no incluye el detalle de cada apuesta/)).toBeInTheDocument();
-    expect(mocks.sessions).toHaveBeenCalledWith("transicion_1_audaz", run.id, { offset: 0, limit: 50 }, expect.any(Object));
+    expect(mocks.sessions).toHaveBeenCalledWith("transicion_1_audaz", run.id, { offset: 0, limit: 200 }, expect.any(Object));
   });
 
   it("does not resubmit after an ambiguous network failure and requires explicit reconciliation", async () => {

@@ -19,9 +19,9 @@ describe("reference laboratory API", () => {
   it("encodes lab and run IDs, requests only the visible session page, and rejects invalid bounds", async () => {
     const fetchMock = vi.fn().mockResolvedValue(response({ items: [] }));
     vi.stubGlobal("fetch", fetchMock);
-    await listReferenceSessions("lab/x", "run ?", { offset: 50, limit: 100 });
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/reference-labs/lab%2Fx/runs/run%20%3F/sessions?offset=50&limit=100");
-    expect(() => listReferenceSessions("lab", "run", { limit: 101 })).toThrow(RangeError);
+    await listReferenceSessions("lab/x", "run ?", { offset: 50, limit: 500 });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/reference-labs/lab%2Fx/runs/run%20%3F/sessions?offset=50&limit=500");
+    expect(() => listReferenceSessions("lab", "run", { limit: 501 })).toThrow(RangeError);
   });
 
   it("keeps API conflict distinct and does not retry an ambiguous network failure", async () => {

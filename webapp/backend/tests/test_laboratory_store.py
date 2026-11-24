@@ -153,7 +153,7 @@ def test_seed_definitions_are_strictly_readable_and_paged_stably(repo):
         {"offset": 2**63},
         {"limit": True},
         {"limit": 0},
-        {"limit": 101},
+        {"limit": 501},
     ],
 )
 def test_paging_rejects_bool_negative_and_unsafe_values(repo, kwargs):

@@ -20,9 +20,11 @@ from laboratorio.storage.laboratory_store import (
     create_laboratory_definition,
     delete_laboratory_definition,
     get_laboratory_definition,
+    get_laboratory_last_runs,
     get_laboratory_owned_counts,
     list_laboratory_definitions,
 )
+from laboratorio.storage.paging import MAX_PAGE_SIZE
 from laboratorio.storage.quota import QuotaExceeded
 
 router = APIRouter(prefix="/laboratories")
@@ -113,9 +115,13 @@ def create_laboratory(body: CreateLaboratory, request: Request):
             quota_bytes=settings.quota_bytes,
             quota_explicit=settings.is_quota_explicit,
         )
-    except (LaboratoryDefinitionConflict, QuotaExceeded):
+    except LaboratoryDefinitionConflict:
+        raise HTTPException(409, "Ya existe un laboratorio con ese nombre.") from None
+    except QuotaExceeded:
         raise HTTPException(
-            409, "No se pudo crear el laboratorio por un conflicto o límite de cuota."
+            409,
+            "No se pudo crear el laboratorio: no hay espacio libre suficiente en el disco "
+            "o se alcanzó el límite de almacenamiento fijado en Ajustes.",
         ) from None
     except LaboratoryStoreError:
         raise _corrupt() from None
@@ -128,15 +134,18 @@ def create_laboratory(body: CreateLaboratory, request: Request):
 def list_laboratories(
     request: Request,
     offset: int = Query(0, ge=0, le=_MAX_I64),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=MAX_PAGE_SIZE),
 ):
     try:
-        page = list_laboratory_definitions(repo(request), offset=offset, limit=limit)
+        repository = repo(request)
+        page = list_laboratory_definitions(repository, offset=offset, limit=limit)
+        last_runs = get_laboratory_last_runs(repository, [item.id for item in page["items"]])
     except LaboratoryStoreError:
         raise _corrupt() from None
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
-    return {**page, "items": [_snapshot(item) for item in page["items"]]}
+    items = [{**_snapshot(item), "last_run": last_runs.get(item.id)} for item in page["items"]]
+    return {**page, "items": items}
 
 
 @router.get("/{laboratory_id}")

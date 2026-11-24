@@ -758,7 +758,7 @@ def test_listing_keeps_filter_order_offset_and_limit_cap(repo):
     assert [item["id"] for item in full] == [ids[0], ids[3], ids[2]]
     assert repo.list_reference_lab_runs(lab_id="x' OR '1'='1")["total"] == 0
     with pytest.raises(ValueError):
-        repo.list_reference_lab_runs(limit=101)
+        repo.list_reference_lab_runs(limit=501)
 
 
 @pytest.mark.parametrize(

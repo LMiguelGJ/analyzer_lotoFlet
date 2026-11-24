@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAbsoluteDOP, formatReturnOnWagered, isValidLaboratoryWallet, returnOnWagered } from "./result-model";
+import { deadlineSummary, formatAbsoluteDOP, formatAverageDays, formatPercentShare, formatReturnOnWagered, isValidLaboratoryWallet, returnOnWagered } from "./result-model";
 
 describe("certified wallet presentation", () => {
   const wallet = { policy: "retain-gains-top-up-v1", out_of_pocket: 2000, final_wealth: 2800 } as const;
@@ -35,5 +35,25 @@ describe("historical return presentation", () => {
   });
   it("divides before multiplying, without an overflowing intermediate", () => {
     expect(returnOnWagered(Number.MAX_VALUE, Number.MAX_VALUE)).toBe(100);
+  });
+});
+
+describe("deadline presentation", () => {
+  const base = { completed: 10, incomplete: 1, goals: 6, ruins: 1, sessions_total: 11, total_wagered: 0, total_paid: 0, total_net: 0, total_steps: 0, mean_net_closed: 0 };
+  it("is absent for results of laboratories without a deadline", () => {
+    expect(deadlineSummary(base)).toBeNull();
+  });
+  it("derives the share and the average days from the closed sessions", () => {
+    expect(deadlineSummary({ ...base, timeouts: 3, timeout_net: -450, goal_draws: 120 })).toEqual({
+      goalsInTime: 6, timeouts: 3, ruins: 1, inTimePercent: 60, averageDaysToGoal: 20, timeoutNet: -450,
+    });
+    expect(formatPercentShare(60)).toBe("60,0 %");
+    expect(formatAverageDays(20)).toBe("20,0 días");
+  });
+  it("says so when nothing can be computed", () => {
+    const empty = deadlineSummary({ ...base, completed: 0, goals: 0, ruins: 0, timeouts: 0 });
+    expect(empty).toMatchObject({ inTimePercent: null, averageDaysToGoal: null, timeoutNet: null });
+    expect(formatPercentShare(null)).toBe("No disponible");
+    expect(formatAverageDays(null)).toBe("No disponible");
   });
 });
