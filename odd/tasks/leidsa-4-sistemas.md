@@ -11,9 +11,9 @@ con todos los sorteos disponibles (2010-07-19 → hoy).
 
 ## Tasks
 
-- T1 — S3: `engine/causal_rankings.py` con las 4 familias nuevas (causales, fila 0 = orden TIE), `FAMILIES` intacto. Commit: pending.
-- T2 — S1, S3: `domain/number_lists.py` (Leidsa con 9 sistemas y etiquetas propias), `run_data.py`, `run_service.py` y las dos APIs de opciones. Commit: pending.
-- T3 — S1: frontend — ayuda por lista, etiquetas de los sistemas en la lista lateral y en el panel. Commit: pending.
+- T1 — S3: `engine/causal_rankings.py` con las 4 familias nuevas (causales, fila 0 = orden TIE), `FAMILIES` intacto. Commit: 68a1cad.
+- T2 — S1, S3: `domain/number_lists.py` (Leidsa con 9 sistemas y etiquetas propias), `run_data.py`, `run_service.py` y las dos APIs de opciones. Commit: 68a1cad.
+- T3 — S1: frontend — ayuda por lista, etiquetas de los sistemas en la lista lateral y en el panel. Commit: 68a1cad.
 - T4 — S1, S2: informe `odd/reports/leidsa-4-sistemas.md` con la tabla anual y la prueba fuera de muestra. Commit: ver `git log -- odd/reports`.
 - T5 — S2: un laboratorio por sistema nuevo en la app, con todo el rango.
 
