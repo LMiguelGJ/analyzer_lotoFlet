@@ -1,0 +1,3 @@
+# The reference engines are pinned by SHA-256 in webapp/backend/tests/fixtures/reference_labs_golden.json;
+# keep their exact LF bytes on every checkout.
+repo_ref/**/*.py text eol=lf
