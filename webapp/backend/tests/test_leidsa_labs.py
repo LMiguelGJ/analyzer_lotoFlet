@@ -1,4 +1,4 @@
-"""Laboratories and runs on the Quiniela Leidsa list: 3 positions, 5 systems (S3, S5, S6)."""
+"""Laboratories and runs on the Quiniela Leidsa list: 3 positions and 9 systems (S3, S5, S6)."""
 
 from dataclasses import replace
 
@@ -16,8 +16,18 @@ BASE = "http://localhost:8765"
 ORIGIN = {"Origin": BASE, "Content-Type": "application/json"}
 LEIDSA = "leidsa_quiniela"
 UNAVAILABLE = "No disponible para esta lista"
-AVAILABLE_SYSTEMS = {"parity", "cold", "freq_hist", "freq_recent", "decay"}
-RANKING_SYSTEMS = {"cold", "freq_hist", "freq_recent", "decay"}
+AVAILABLE_SYSTEMS = {
+    "parity",
+    "cold",
+    "freq_hist",
+    "freq_recent",
+    "decay",
+    "transition",
+    "overdue",
+    "digits",
+    "ensemble",
+}
+RANKING_SYSTEMS = AVAILABLE_SYSTEMS - {"parity"}
 
 
 @pytest.fixture
@@ -99,8 +109,8 @@ def test_leidsa_run_completes_with_three_positions_and_numbers_00_99(client, str
     assert run["config"]["rules"] == {"positions": 3, "prizes": [60, 8, 4], "minimum_stake": 1}
     assert run["config"]["history"]["list_id"] == LEIDSA
     window = run["summary"]["window"]
-    assert window["draws"] == window["ranked_draws"] == 1381
-    assert window["first_label"] == "2023-01-04 20:50"
+    assert window["draws"] == window["ranked_draws"] == 5836
+    assert window["first_label"] == "2010-07-19 20:50"
     assert run["summary"]["totals"]["sessions"] >= 1
     sessions = client.get(f"/api/v1/runs/{run['id']}/sessions").json()["items"]
     assert sessions
@@ -124,7 +134,9 @@ def test_leidsa_run_results_are_deterministic(client):
     assert first["summary"]["detail"] == second["summary"]["detail"]
 
 
-@pytest.mark.parametrize("system", ["transition", "mix", "ensemble", "time", "carry", "notebook"])
+@pytest.mark.parametrize(
+    "system", ["mix", "doubles", "category", "time", "carry", "notebook", "select_interpretable"]
+)
 def test_ranking_dependent_system_is_rejected_for_leidsa(client, system):
     activate(client, LEIDSA)
     response = client.post("/api/v1/runs", json=run_body(mix(system)), headers=ORIGIN)
@@ -139,7 +151,7 @@ def test_a_mix_with_one_unavailable_component_is_rejected(client):
         "kind": "mix",
         "components": [
             {"system": "cold", "percent": 50},
-            {"system": "transition", "percent": 50},
+            {"system": "notebook", "percent": 50},
         ],
         "coverage": 5,
     }
@@ -164,19 +176,19 @@ def test_leidsa_run_rejects_an_unknown_history_fingerprint(client):
     assert response.status_code == 404
 
 
-def test_run_options_for_leidsa_offer_exactly_the_five_systems(client):
+def test_run_options_for_leidsa_offer_exactly_the_nine_systems(client):
     activate(client, LEIDSA)
     options = client.get("/api/v1/runs/options").json()
     assert options["list"] == {"id": LEIDSA, "name": "Quiniela Leidsa", "positions": 3}
     assert set(options["systems_available"]) == AVAILABLE_SYSTEMS
-    assert len(options["systems_available"]) == 5
+    assert len(options["systems_available"]) == 9
     by_id = {item["id"]: item for item in options["systems"]}
     assert {key for key, item in by_id.items() if item["available"]} == RANKING_SYSTEMS
     for key, item in by_id.items():
         if key not in RANKING_SYSTEMS:
             assert item["available"] is False
             assert item["reason"] == UNAVAILABLE
-    assert len(by_id) == 13
+    assert len(by_id) == 13 + 2  # the archived systems plus the two list-only ids
     assert options["defaults"]["rules"] == {
         "positions": 3,
         "prizes": [60, 8, 4],
@@ -185,8 +197,8 @@ def test_run_options_for_leidsa_offer_exactly_the_five_systems(client):
     default_systems = {c["system"] for c in options["defaults"]["strategy"]["components"]}
     assert default_systems <= RANKING_SYSTEMS
     assert options["limits"]["positions"] == {"min": 1, "max": 3}
-    assert options["history"]["draws"] == 1381
-    assert options["history"]["first_label"] == "2023-01-04 20:50"
+    assert options["history"]["draws"] == 5836
+    assert options["history"]["first_label"] == "2010-07-19 20:50"
 
 
 def test_run_options_for_chance_keep_their_shape(client):
@@ -205,7 +217,7 @@ def test_lab_options_describe_the_active_list(client):
     options = client.get("/api/v1/laboratories/options").json()
     assert options["list"] == {"id": LEIDSA, "name": "Quiniela Leidsa", "positions": 3}
     assert options["prizes"] == [60, 8, 4]
-    assert options["window"] == {"start": "2023-01-04 20:50", "end": "2026-11-16 20:50"}
+    assert options["window"] == {"start": "2010-07-19 20:50", "end": "2026-11-23 20:50"}
     assert options["history_sha256"] == leidsa_sha(client)
     available = {item["id"] for item in options["systems"] if item["available"]}
     assert available == AVAILABLE_SYSTEMS
@@ -220,6 +232,21 @@ def test_lab_options_describe_the_active_list(client):
     assert chance["history_sha256"] == HISTORY_SHA256
     assert all(item["available"] for item in chance["systems"])
     assert len(chance["systems"]) == 14
+
+
+def test_lab_options_use_the_list_labels_and_chance_keeps_ensemble(client):
+    activate(client, LEIDSA)
+    options = client.get("/api/v1/laboratories/options").json()
+    leidsa = {item["id"]: item["label"] for item in options["systems"]}
+    assert leidsa["ensemble"] == "Ensamble"
+    assert leidsa["transition"] == "Transición"
+    assert leidsa["overdue"] == "Ciclo vencido"
+    assert leidsa["digits"] == "Terminaciones y decenas"
+    activate(client, "chance_express")
+    chance_options = client.get("/api/v1/laboratories/options").json()
+    chance = {item["id"]: item["label"] for item in chance_options["systems"]}
+    assert chance["ensemble"] == "Ensemble"
+    assert "overdue" not in chance and "digits" not in chance
 
 
 @pytest.mark.parametrize("system", sorted(AVAILABLE_SYSTEMS))
@@ -248,7 +275,7 @@ def test_leidsa_lab_is_created_and_runs(client, system):
 
 def test_leidsa_lab_rejects_unavailable_systems_and_wrong_prize_count(client):
     activate(client, LEIDSA)
-    blocked = create_lab(client, "x", lab_config("transition", 1))
+    blocked = create_lab(client, "x", lab_config("notebook", 1))
     assert blocked.status_code == 422
     assert UNAVAILABLE in blocked.json()["detail"]
     five = create_lab(client, "y", lab_config("cold", 10, prizes=[80, 8, 4, 2, 1]))
@@ -436,7 +463,7 @@ def test_run_engine_accepts_three_wide_draws_only_when_told_so():
 
 def test_leidsa_lab_with_a_window_without_draws_is_rejected_and_saves_nothing(client):
     activate(client, LEIDSA)
-    config = lab_config(window_start="2022-01-01 00:00", window_end="2022-06-01 00:00")
+    config = lab_config(window_start="2009-01-01 00:00", window_end="2009-12-31 00:00")
     lab = create_lab(client, "Leidsa ventana vacía", config).json()
     response = run_lab(client, lab, leidsa_sha(client))
     assert response.status_code == 422

@@ -1,4 +1,4 @@
-import { STAKE_STYLES, SYSTEMS } from "./form-model";
+import { CHANCE_LIST_ID, STAKE_STYLES, SYSTEMS } from "./form-model";
 
 export type HelpKind = "system" | "stake_style";
 export interface OptionExplanation { what: string; effect: string; example: string }
@@ -38,8 +38,14 @@ const systems: Record<(typeof SYSTEMS)[number]["value"], OptionExplanation> = {
   },
 };
 
-/** Systems only the Quiniela Leidsa list offers (they need no prepared ranking). */
+/** Help the Quiniela Leidsa list uses for its own systems; it wins over the archived Chance copy. */
 const listSystems: Record<string, OptionExplanation & { label: string }> = {
+  cold: {
+    label: "Fríos",
+    what: "Ordena los números por los sorteos que llevan sin salir en la primera posición.",
+    effect: "Prioriza los más ausentes. Parece que «ya tocan», pero cada sorteo es independiente: es una hipótesis de patrón, no una garantía.",
+    example: "Con cobertura 5, selecciona los cinco números con más sorteos seguidos sin salir primero.",
+  },
   freq_hist: {
     label: "Frecuencia histórica",
     what: "Ordena los números por cuántas veces salieron en esa posición en todo el historial previo.",
@@ -57,6 +63,30 @@ const listSystems: Record<string, OptionExplanation & { label: string }> = {
     what: "Cuenta cada aparición pasada con un peso que baja a medida que el sorteo queda atrás.",
     effect: "Es un punto medio entre la frecuencia histórica y la reciente: lo viejo cuenta, pero menos.",
     example: "Con cobertura 5, selecciona los cinco números con mayor puntaje ponderado por antigüedad.",
+  },
+  transition: {
+    label: "Transición",
+    what: "Ordena los números por la secuencia de la primera posición: cuántas veces salió cada número justo después del último número que salió primero.",
+    effect: "Supone que algunas continuaciones se repiten más que otras. Es una hipótesis de patrón, no una garantía, y no cambia cuánto apostás por número.",
+    example: "Con cobertura 5, selecciona los cinco números que más veces siguieron al último primer número del historial.",
+  },
+  overdue: {
+    label: "Ciclo vencido",
+    what: "Ordena los números comparando los sorteos que llevan sin salir primero con la espera habitual de cada número en el historial previo.",
+    effect: "Destaca los que ya superaron su espera típica. Es una hipótesis de patrón: no significa que el próximo sorteo los vaya a sacar.",
+    example: "Con cobertura 5, selecciona los cinco números que llevan más veces su espera promedio sin salir primero.",
+  },
+  digits: {
+    label: "Terminaciones y decenas",
+    what: "Mira la unidad y la decena de la primera posición en los sorteos recientes y ordena los números según cuánto se repiten esas terminaciones.",
+    effect: "Prefiere números cuyas unidades y decenas fueron comunes hace poco. Es una hipótesis de patrón, no una garantía de aciertos.",
+    example: "Con cobertura 5, selecciona los cinco números cuyas terminaciones y decenas son las más frecuentes de la ventana reciente.",
+  },
+  ensemble: {
+    label: "Ensamble",
+    what: "Combina los siete rankings de la lista (Fríos, Frecuencia histórica, Frecuencia reciente, Decaimiento, Transición, Ciclo vencido y Terminaciones y decenas) promediando la posición de cada número.",
+    effect: "Un número sube si varios rankings lo ponen arriba. Es una hipótesis de patrón: combinar señales no garantiza aciertos.",
+    example: "Con cobertura 5, selecciona los cinco números con mejor posición promedio entre los siete rankings.",
   },
 };
 
@@ -80,13 +110,19 @@ const stakes: Record<(typeof STAKE_STYLES)[number]["value"], OptionExplanation> 
 
 export interface HelpOption extends OptionExplanation { value: string; label: string }
 
-/** Explanations for the systems a list offers; unknown ids are skipped, never invented. */
-export function systemHelpOptions(values: readonly string[]): HelpOption[] {
+/**
+ * Explanations for the systems a list offers; unknown ids are skipped, never invented.
+ * Outside Chance Express the list's own copy wins, so Leidsa never shows the archived Chance text.
+ */
+export function systemHelpOptions(values: readonly string[], listId?: string): HelpOption[] {
+  const chance = listId === undefined || listId === CHANCE_LIST_ID;
   return values.flatMap((value): HelpOption[] => {
-    const base = SYSTEMS.find((system) => system.value === value);
+    const base = chance ? SYSTEMS.find((system) => system.value === value) : undefined;
     if (base) return [{ ...base, ...systems[base.value] }];
     const extra = listSystems[value];
-    return extra ? [{ value, ...extra }] : [];
+    if (extra) return [{ value, ...extra }];
+    const fallback = SYSTEMS.find((system) => system.value === value);
+    return fallback ? [{ ...fallback, ...systems[fallback.value] }] : [];
   });
 }
 

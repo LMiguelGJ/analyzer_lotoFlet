@@ -7,6 +7,8 @@ interface Props {
   kind: HelpKind; value: string; open: boolean; onOpen: () => void; onClose: () => void;
   /** System ids the active list offers; defaults to the archived Chance Express six. */
   systemIds?: readonly string[];
+  /** Id of the active list: outside Chance Express its own system copy wins. */
+  listId?: string;
   /** First prize of the active list, quoted in the stake examples. */
   firstPrize?: number;
 }
@@ -15,14 +17,14 @@ function Explanation({ what, effect, example }: OptionExplanation) {
   return <><p>{what}</p><p><strong>En qué afecta:</strong> {effect}</p><p><strong>Ejemplo:</strong> {example}</p></>;
 }
 
-export function LaboratoryOptionHelp({ kind, value, open, onOpen, onClose, systemIds, firstPrize = 80 }: Props) {
+export function LaboratoryOptionHelp({ kind, value, open, onOpen, onClose, systemIds, listId, firstPrize = 80 }: Props) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const [comparing, setComparing] = useState(false);
   const base = OPTION_HELP[kind];
-  const options = kind === "system" && systemIds ? systemHelpOptions(systemIds) : kind === "stake_style" ? stakeHelpOptions(firstPrize) : base.options;
+  const options = kind === "system" && systemIds ? systemHelpOptions(systemIds, listId) : kind === "stake_style" ? stakeHelpOptions(firstPrize) : base.options;
   const group = { ...base, options };
   const selected = options.find((option) => option.value === value) ?? options[0];
 

@@ -9,12 +9,17 @@ from uuid import uuid4
 import numpy as np
 
 from laboratorio.domain.contracts import SYSTEMS
-from laboratorio.domain.number_lists import DEFAULT_LIST_ID, get_list, unavailable_message
+from laboratorio.domain.number_lists import (
+    DEFAULT_LIST_ID,
+    LIST_ONLY_SYSTEMS,
+    get_list,
+    system_label,
+    unavailable_message,
+)
 from laboratorio.domain.runs import RunConfig, run_sessions
 from laboratorio.engine.active_history import HistoryCatalog, HistorySnapshot
 from laboratorio.engine.list_catalog import ListCatalog, ListError
 from laboratorio.engine.run_data import (
-    SYSTEM_LABELS,
     RunSource,
     RunStrategy,
     RunWindow,
@@ -82,7 +87,9 @@ def _fail_validation(spec):
         if any(not isinstance(item, tuple) or len(item) != 2 for item in spec.components):
             return "Cada sistema de la mezcla debe ser distinto y existir en el catálogo."
         names = [item[0] for item in spec.components]
-        if len(names) != len(set(names)) or any(name not in SYSTEMS for name in names):
+        if len(names) != len(set(names)) or any(
+            name not in SYSTEMS and name not in LIST_ONLY_SYSTEMS for name in names
+        ):
             return "Cada sistema de la mezcla debe ser distinto y existir en el catálogo."
         percentages = [item[1] for item in spec.components]
         if any(type(percent) is not int or not 1 <= percent <= 100 for percent in percentages):
@@ -92,14 +99,15 @@ def _fail_validation(spec):
     return None
 
 
-def _default_name(spec):
+def _default_name(spec, number_list):
     if spec.kind == "parity":
         strategy = "Paridad"
     elif len(spec.components) == 1:
-        strategy = SYSTEM_LABELS[spec.components[0][0]]
+        strategy = system_label(spec.components[0][0], number_list)
     else:
         strategy = " + ".join(
-            f"{SYSTEM_LABELS[system]} {percent} %" for system, percent in spec.components
+            f"{system_label(system, number_list)} {percent} %"
+            for system, percent in spec.components
         )
     name = f"{strategy} · {spec.coverage} números"
     # A wide mix can exceed the 80-character name limit; shorten instead of refusing.
@@ -138,7 +146,7 @@ def _check_list_rules(spec, number_list) -> None:
     if spec.kind == "mix":
         for system, _percent in spec.components:
             if system not in number_list.available_systems:
-                raise RunSpecError(unavailable_message(system))
+                raise RunSpecError(unavailable_message(system, number_list))
 
 
 def _execute(spec, *, catalog, repo, settings, rankings_cache, lists=None):
@@ -150,9 +158,9 @@ def _execute(spec, *, catalog, repo, settings, rankings_cache, lists=None):
     if number_list is None:
         raise RunSpecError("Esa lista no existe.", "not_found")
     on_the_fly = number_list.id != DEFAULT_LIST_ID
-    if on_the_fly:
-        _check_list_rules(spec, number_list)
-    name = _default_name(spec) if spec.name is None or spec.name == "" else spec.name
+    # Every list refuses what it cannot do, including the ids only some lists compute.
+    _check_list_rules(spec, number_list)
+    name = _default_name(spec, number_list) if spec.name is None or spec.name == "" else spec.name
     if not isinstance(name, str) or len(name) > 80:
         raise RunSpecError("El nombre de la corrida no puede superar 80 caracteres.")
     if on_the_fly:

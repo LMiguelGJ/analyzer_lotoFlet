@@ -428,6 +428,24 @@ describe("laboratory workspace", () => {
     expect(screen.getByRole("link", { name: "Nuevo laboratorio" })).toHaveAttribute("href", "/laboratorios/nuevo");
   });
 
+  it("names the Leidsa systems in the sidebar and in the panel instead of showing raw ids", async () => {
+    const overdue = { ...definition, id: "00000000-0000-4000-8000-000000000009", name: "Ciclo vencido propio", config: { ...config, system: "overdue" } };
+    const digits = { ...definition, id: "00000000-0000-4000-8000-000000000010", name: "Terminaciones propias", config: { ...config, system: "digits" } };
+    m.listLaboratories.mockResolvedValue({ total: 2, offset: 0, limit: 20, items: [overdue, digits] });
+    m.getLaboratory.mockImplementation(async (id) => ({ definition: id === digits.id ? digits : overdue, owned_run_count: 0, owned_session_count: 0 }));
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${overdue.id}`);
+    const overdueLink = await screen.findByRole("link", { name: /Ciclo vencido propio/ });
+    expect(within(overdueLink).getByText("Ciclo vencido · 1 número · Audaz")).toHaveClass("lab-list-meta");
+    const digitsLink = screen.getByRole("link", { name: /Terminaciones propias/ });
+    expect(within(digitsLink).getByText("Terminaciones y decenas · 1 número · Audaz")).toHaveClass("lab-list-meta");
+    const rules = await screen.findByRole("region", { name: "Reglas del laboratorio" });
+    expect(within(rules).getByText("Ciclo vencido")).toBeInTheDocument();
+    await user.click(digitsLink);
+    expect(await screen.findByText("Terminaciones y decenas · 1 número · Audaz", { selector: "p" })).toBeInTheDocument();
+    expect(within(await screen.findByRole("region", { name: "Reglas del laboratorio" })).getByText("Terminaciones y decenas")).toBeInTheDocument();
+  });
+
   it("marks the workspace as having a selection so narrow screens can show the content first", async () => {
     const { container, unmount } = renderAt("/laboratorios");
     await screen.findByRole("link", { name: /Transición propia/ });

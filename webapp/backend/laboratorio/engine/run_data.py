@@ -13,6 +13,7 @@ from typing import Literal
 import numpy as np
 
 from laboratorio.domain.contracts import SYSTEMS
+from laboratorio.domain.number_lists import LIST_ONLY_SYSTEMS
 from laboratorio.domain.runs import MAX_COVERAGE, NUMBERS
 from laboratorio.domain.session import Draw
 from laboratorio.engine.adapter import History, LabData, Rankings
@@ -97,7 +98,7 @@ class RunStrategy:
             if not isinstance(component, tuple) or len(component) != 2:
                 raise ValueError("each component must be a (system, percent) pair")
             name, percent = component
-            if not isinstance(name, str) or name not in SYSTEMS:
+            if not isinstance(name, str) or (name not in SYSTEMS and name not in LIST_ONLY_SYSTEMS):
                 raise ValueError(f"unknown ranking system: {name!r}")
             if name in names:
                 raise ValueError(f"duplicate ranking system: {name}")

@@ -9,6 +9,7 @@ from laboratorio.api import StrictBody, repo
 from laboratorio.domain.laboratories import LaboratoryConfig, default_window
 from laboratorio.domain.number_lists import (
     DEFAULT_LIST_ID,
+    LIST_ONLY_SYSTEMS,
     PARITY_SYSTEM,
     UNAVAILABLE_REASON,
     system_label,
@@ -86,8 +87,12 @@ def laboratory_options(request: Request):
     last = history.labels[-1] if history.labels else None
     start, end = default_window(active.id, first, last)
     systems = []
-    for system in (PARITY_SYSTEM, *SYSTEMS):
-        entry: dict[str, object] = {"id": system, "label": system_label(system)}
+    offered = (PARITY_SYSTEM, *SYSTEMS)
+    if active.id != DEFAULT_LIST_ID:
+        # Lists that rank on the fly also offer the ids the archived export never had.
+        offered = (*offered, *LIST_ONLY_SYSTEMS)
+    for system in offered:
+        entry: dict[str, object] = {"id": system, "label": system_label(system, active)}
         if system in active.available_systems:
             entry["available"] = True
         else:

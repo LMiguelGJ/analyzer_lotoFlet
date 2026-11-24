@@ -73,7 +73,7 @@ def test_causal_rankings_object_duck_types_the_frozen_rankings():
     from laboratorio.engine.adapter import DataError
 
     with pytest.raises(DataError):
-        rankings.family("transition")
+        rankings.family("notebook")
 
 
 def _parse_config_id(config_id):

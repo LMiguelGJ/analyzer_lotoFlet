@@ -7,6 +7,11 @@ const SYSTEM_LABELS: Record<string, string> = {
   mix: "Mezclas",
   ensemble: "Ensemble",
   parity: "Paridad",
+  freq_hist: "Frecuencia histórica",
+  freq_recent: "Frecuencia reciente",
+  decay: "Decaimiento",
+  overdue: "Ciclo vencido",
+  digits: "Terminaciones y decenas",
 };
 const STAKE_LABELS: Record<ReferenceLab["stake_style"], string> = {
   bold: "Audaz",

@@ -37,11 +37,31 @@ _PROTOCOL_TIE_LABEL = "chance-rank-v1/tie"
 #: Families this module can rank, in the order they are offered.
 FAMILIES = ("cold", "freq_hist", "freq_recent", "decay")
 
+#: Extra families offered only by lists whose rankings are computed on the fly (Leidsa).
+EXTRA_FAMILIES = ("transition", "overdue", "digits", "ensemble")
+
+#: Every family this module can rank, in the order they are offered.
+LEIDSA_FAMILIES = FAMILIES + EXTRA_FAMILIES
+
 DEFAULT_PARAMS: dict[str, dict] = {
     "cold": {"scope": "position"},
     "freq_hist": {"scope": "position", "window": None},
     "freq_recent": {"window": 500},
     "decay": {"half_life": 500},
+    "transition": {"fallback_window": 500},
+    "overdue": {},
+    "digits": {"window": 500},
+    "ensemble": {
+        "components": (
+            "cold",
+            "freq_hist",
+            "freq_recent",
+            "decay",
+            "transition",
+            "overdue",
+            "digits",
+        )
+    },
 }
 
 
@@ -67,9 +87,9 @@ def _check_nums(nums: np.ndarray) -> np.ndarray:
 
 
 def _exclusive_counts(indicator: np.ndarray) -> np.ndarray:
-    """(n + 1, 100) cumulative counts: row t holds the counts over rows < t."""
+    """(n + 1, width) cumulative counts: row t holds the counts over rows < t."""
     n = indicator.shape[0]
-    cumulative = np.zeros((n + 1, N_VALUES), dtype=np.int64)
+    cumulative = np.zeros((n + 1, indicator.shape[1]), dtype=np.int64)
     np.cumsum(indicator, axis=0, out=cumulative[1:])
     return cumulative
 
@@ -152,11 +172,90 @@ def _cold_key(nums: np.ndarray, params: dict) -> np.ndarray:
     return index[:, None] - last_exclusive
 
 
+def _transition_key(nums: np.ndarray, params: dict) -> np.ndarray:
+    """Transition matrix of first-position pairs; row ``t`` counts only pairs with ``s <= t-1``.
+
+    ``score[t] = M_t[a[t-1]] + f[t] / (1000 * (fallback_window + 1))``: the pair count from
+    the score matrix dominates and the windowed frequency only breaks ties and covers states
+    without history. Rows 0 and 1 have no pair yet, so they rank by ``f`` alone (row 0 by 0).
+    """
+    n = nums.shape[0]
+    a = nums[:, 0]
+    fallback_window = params["fallback_window"]
+    fallback = _freq_recent_key(nums, {"window": fallback_window})
+    scale = 1.0 / (1000 * (fallback_window + 1))
+    scores = np.zeros((n, N_VALUES), dtype=np.float64)
+    counts = np.zeros((N_VALUES, N_VALUES), dtype=np.int64)
+    for t in range(n):
+        scores[t] = fallback[t] * scale
+        if t >= 2:
+            scores[t] += counts[a[t - 1]]
+        if t >= 1:
+            # Pair ``s = t``: it becomes visible from row ``t + 1`` on.
+            counts[a[t - 1], a[t]] += 1
+    return scores
+
+
+def _overdue_key(nums: np.ndarray, params: dict) -> np.ndarray:
+    """``age / mean_gap`` over first-position appearances before the row.
+
+    ``age = t - last_seen(v)`` (never seen -> ``t + 1``); ``mean_gap`` is the average gap
+    between the first and the last sighting (``100`` until the number appears twice).
+    """
+    del params
+    n = nums.shape[0]
+    indicator = _first_position_indicator(nums)
+    index = np.arange(n, dtype=np.int64)[:, None]
+    occurrence = np.where(indicator > 0, index, -1)
+    last_inclusive = np.maximum.accumulate(occurrence, axis=0)
+    last = np.vstack([np.full((1, N_VALUES), -1, dtype=np.int64), last_inclusive[:-1]])
+    first_occurrence = np.where(indicator > 0, index, n)
+    first_inclusive = np.minimum.accumulate(first_occurrence, axis=0)
+    first = np.vstack([np.full((1, N_VALUES), n, dtype=np.int64), first_inclusive[:-1]])
+    counts = _exclusive_counts(indicator)[:n]
+    age = np.where(last >= 0, index - last, index + 1)
+    span = np.maximum(last - first, 0)
+    mean_gap = np.where(counts >= 2, span / np.maximum(counts - 1, 1), 100.0)
+    return age / mean_gap
+
+
+def _digits_key(nums: np.ndarray, params: dict) -> np.ndarray:
+    """``U[v % 10] + D[v // 10]``: unit and decade shares over the last ``window`` draws."""
+    n = nums.shape[0]
+    a = nums[:, 0]
+    index = np.arange(n)
+    units = np.zeros((n, 10), dtype=np.int8)
+    units[index, a % 10] = 1
+    decades = np.zeros((n, 10), dtype=np.int8)
+    decades[index, a // 10] = 1
+    window = params["window"]
+    rows = np.minimum(np.arange(n, dtype=np.int64), window).astype(np.float64)
+    denominator = np.maximum(rows, 1.0)[:, None]
+    kept = rows[:, None] > 0
+    unit_share = np.where(kept, _windowed(_exclusive_counts(units), window) / denominator, 0.0)
+    decade_share = np.where(kept, _windowed(_exclusive_counts(decades), window) / denominator, 0.0)
+    numbers = np.arange(N_VALUES, dtype=np.int64)
+    return unit_share[:, numbers % 10] + decade_share[:, numbers // 10]
+
+
+def _ensemble_key(nums: np.ndarray, params: dict) -> np.ndarray:
+    """Borda score: minus the mean ranking position of every component (0 is the best)."""
+    positions = [
+        np.argsort(causal_ranking(component, nums), axis=1).astype(np.float64)
+        for component in params["components"]
+    ]
+    return -np.mean(positions, axis=0)
+
+
 _KEYS = {
     "cold": _cold_key,
     "freq_hist": _freq_hist_key,
     "freq_recent": _freq_recent_key,
     "decay": _decay_key,
+    "transition": _transition_key,
+    "overdue": _overdue_key,
+    "digits": _digits_key,
+    "ensemble": _ensemble_key,
 }
 
 

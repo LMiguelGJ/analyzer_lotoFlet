@@ -26,6 +26,18 @@ const leidsa: LaboratoryOptions = {
   ],
   prizes: [60, 8, 4], window: { start: "2023-01-04 14:55", end: "2026-11-16 20:55" }, history_sha256: "e".repeat(64),
 };
+/** What the options endpoint reports once the list offers its nine systems. */
+const leidsaNine: LaboratoryOptions = {
+  list: { id: "leidsa_quiniela", name: "Quiniela Leidsa", positions: 3 },
+  systems: [
+    { id: "parity", label: "Paridad", available: true }, { id: "cold", label: "Fríos", available: true },
+    { id: "freq_hist", label: "Frecuencia histórica", available: true }, { id: "freq_recent", label: "Frecuencia reciente", available: true },
+    { id: "decay", label: "Decaimiento", available: true }, { id: "transition", label: "Transición", available: true },
+    { id: "overdue", label: "Ciclo vencido", available: true }, { id: "digits", label: "Terminaciones y decenas", available: true },
+    { id: "ensemble", label: "Ensamble", available: true },
+  ],
+  prizes: [60, 8, 4], window: { start: "2023-01-04 14:55", end: "2026-11-16 20:55" }, history_sha256: "e".repeat(64),
+};
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe("laboratory form follows the active list", () => {
@@ -62,6 +74,34 @@ describe("laboratory form follows the active list", () => {
     expect(config.system).toBe("cold");
     expect(config.window_start).toBe("2023-01-04 14:55");
     expect(onCreated).toHaveBeenCalled();
+  });
+
+  it("offers the nine Leidsa systems with the labels the list reports", async () => {
+    optionsMock.mockResolvedValue(leidsaNine);
+    render(<LaboratoryForm onCreated={vi.fn()} />);
+    const select = await screen.findByLabelText("Sistema de selección");
+    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Paridad", "Fríos", "Frecuencia histórica", "Frecuencia reciente", "Decaimiento",
+      "Transición", "Ciclo vencido", "Terminaciones y decenas", "Ensamble",
+    ]);
+    expect(select).toHaveValue("cold");
+  });
+
+  it.each([
+    ["transition", "Transición", /en la misma posición/],
+    ["ensemble", "Ensamble", /contexto horario/],
+  ])("explains %s with the Leidsa text instead of the Chance copy", async (value, label, chanceOnly) => {
+    optionsMock.mockResolvedValue(leidsaNine);
+    const user = userEvent.setup();
+    render(<LaboratoryForm onCreated={vi.fn()} />);
+    await user.selectOptions(await screen.findByLabelText("Sistema de selección"), value);
+    await user.click(screen.getByRole("button", { name: "Ayuda sobre sistema de selección" }));
+    const panel = screen.getByRole("dialog", { name: label });
+    expect(within(panel).getByText(/hipótesis de patrón/)).toBeVisible();
+    expect(within(panel).queryByText(chanceOnly)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Comparar opciones" }));
+    expect(within(screen.getByRole("dialog")).getAllByRole("heading", { level: 4 }).map((node) => node.textContent))
+      .toEqual(["Paridad", "Fríos", "Frecuencia histórica", "Frecuencia reciente", "Decaimiento", "Transición", "Ciclo vencido", "Terminaciones y decenas", "Ensamble"]);
   });
 
   it("lists unavailable systems disabled with their reason and keeps the available ones selectable", async () => {

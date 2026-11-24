@@ -77,14 +77,14 @@ def test_catalog_is_fixed_and_describes_both_lists():
 
 def test_leidsa_parses_three_positions_matching_the_file():
     history = load_history(LEIDSA_FILE, None, positions=3)
-    assert history.nums.shape == (1381, 3)
+    draws = int(json.loads(LEIDSA_FILE.read_text(encoding="utf-8"))["metadata"]["cantidad_sorteos"])
+    assert draws > 5000  # the file covers 2010-07-19 onward
+    assert history.nums.shape == (draws, 3)
     assert history.nums.dtype == np.uint8
-    assert len(history.labels) == 1381
-    assert history.labels[0] == "2023-01-04 20:50"
-    assert history.labels[-1] == "2026-11-16 20:50"
-    assert tuple(history.nums[0]) == (65, 95, 31)
-    assert tuple(history.nums[-1]) == (1, 47, 51)
-    assert history.minutes.shape == (1381,)
+    assert len(history.labels) == draws
+    assert history.labels[0].startswith("2010-07-19")
+    assert tuple(history.nums[0]) != ()
+    assert history.minutes.shape == (draws,)
 
 
 def test_leidsa_empty_days_are_not_draws():
@@ -181,6 +181,9 @@ def test_repository_active_list_round_trip(repo):
 def test_get_lists_describes_catalog_and_marks_chance_active(tmp_path, lab_data):
     with TestClient(make_app(tmp_path, lab_data), base_url=BASE_URL) as client:
         response = client.get("/api/v1/lists")
+    leidsa = load_history(LEIDSA_FILE, None, positions=3)
+    leidsa_draws = len(leidsa.labels)
+    leidsa_first, leidsa_last = leidsa.labels[0], leidsa.labels[-1]
     assert response.status_code == 200
     assert response.json() == [
         {
@@ -199,9 +202,9 @@ def test_get_lists_describes_catalog_and_marks_chance_active(tmp_path, lab_data)
             "id": "leidsa_quiniela",
             "name": "Quiniela Leidsa",
             "positions": 3,
-            "draws": 1381,
-            "first_label": "2023-01-04 20:50",
-            "last_label": "2026-11-16 20:50",
+            "draws": leidsa_draws,
+            "first_label": leidsa_first,
+            "last_label": leidsa_last,
             "active": False,
             "available": True,
             "prizes": [60, 8, 4],

@@ -11,8 +11,10 @@ from laboratorio.api.history import _meta
 from laboratorio.domain.contracts import SYSTEMS
 from laboratorio.domain.number_lists import (
     DEFAULT_LIST_ID,
+    LIST_ONLY_SYSTEMS,
     UNAVAILABLE_REASON,
     NumberList,
+    system_label,
 )
 from laboratorio.engine.list_catalog import ListError
 from laboratorio.engine.run_service import RunSpec, RunSpecError, _list_snapshot, execute_run
@@ -100,13 +102,15 @@ def _storage_error(exc: ValueError) -> NoReturn:
 def system_entries(number_list: NumberList) -> list[dict]:
     """Ranking systems for the options payload.
 
-    Chance Express keeps the plain ``{id, label}`` shape; any other list flags every system
-    as available or not (with the Spanish reason).
+    Chance Express keeps the plain ``{id, label}`` shape over the archived export. Any other
+    list flags every system as available or not (with the Spanish reason) and appends the ids
+    only lists that rank on the fly can offer.
     """
     if number_list.id == DEFAULT_LIST_ID:
         return [{"id": system, "label": label} for system, label in SYSTEMS.items()]
     entries = []
-    for system, label in SYSTEMS.items():
+    for system in (*SYSTEMS, *LIST_ONLY_SYSTEMS):
+        label = system_label(system, number_list)
         if system in number_list.available_systems:
             entries.append({"id": system, "label": label, "available": True})
         else:

@@ -101,7 +101,7 @@ function LaboratoryFormBody({ options, onCreated }: Props & { options: Laborator
     <Field id="lab-name" label="Nombre" value={values.name} onChange={(event) => set("name")(event.target.value)} error={errors.name} hint="Un nombre que no uses en otro laboratorio." autoComplete="off" />
     <div className="lab-form-row">
       <div className="ledger-field"><div className="lab-field-label"><label className="ledger-label" htmlFor="lab-system">Sistema de selección</label>
-        <LaboratoryOptionHelp kind="system" systemIds={systemIds} value={values.system} open={help === "system"} onOpen={() => setHelp("system")} onClose={() => setHelp(null)} /></div>
+        <LaboratoryOptionHelp kind="system" systemIds={systemIds} listId={options.list.id} value={values.system} open={help === "system"} onOpen={() => setHelp("system")} onClose={() => setHelp(null)} /></div>
         <select id="lab-system" className="ledger-control" value={values.system} onChange={(event) => set("system")(event.target.value)}>{choices.map((system) => <option key={system.value} value={system.value} disabled={!system.available}>{system.available ? system.label : `${system.label} — ${system.reason ?? "No disponible para esta lista"}`}</option>)}</select></div>
       <div className="ledger-field"><div className="lab-field-label"><label className="ledger-label" htmlFor="lab-stake">Estilo de apuesta</label>
         <LaboratoryOptionHelp kind="stake_style" firstPrize={options.prizes[0]} value={values.stake_style} open={help === "stake_style"} onOpen={() => setHelp("stake_style")} onClose={() => setHelp(null)} /></div>
