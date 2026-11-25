@@ -5,7 +5,7 @@
     "origen": "https://www.leidsa.com/results",
     "endpoint": "https://premios.do/resultados-leidsa-AAAA-MM-DD",
     "zona_horaria": "America/Santo_Domingo",
-    "generado_utc": "2026-11-25T04:59:26.186726+00:00",
+    "generado_utc": "2026-11-25T19:17:00.476932+00:00",
     "rango_solicitado": {
       "desde": "2010-07-19",
       "hasta": "2026-11-25"
