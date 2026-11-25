@@ -232,7 +232,8 @@ def test_lab_options_describe_the_active_list(client):
     options = client.get("/api/v1/laboratories/options").json()
     assert options["list"] == {"id": LEIDSA, "name": "Quiniela Leidsa", "positions": 3}
     assert options["prizes"] == [60, 8, 4]
-    assert options["window"] == {"start": "2010-07-19 20:50", "end": LEIDSA_LAST_LABEL}
+    # The default window starts after the 500-draw warm-up (draw index 500), not at the first draw.
+    assert options["window"] == {"start": "2011-12-03 20:50", "end": LEIDSA_LAST_LABEL}
     assert options["history_sha256"] == leidsa_sha(client)
     available = {item["id"] for item in options["systems"] if item["available"]}
     assert available == AVAILABLE_SYSTEMS

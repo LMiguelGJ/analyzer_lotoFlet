@@ -3,9 +3,9 @@ import type { FormEvent } from "react";
 import { ApiError, NetworkError } from "../../api/client";
 import { createLaboratory, getLaboratoryOptions } from "../../api/laboratories";
 import type { LaboratoryDefinition, LaboratoryOptions } from "../../api/laboratories";
-import { Button, Field } from "../../components/ui/Controls";
+import { Button, Disclosure, Field } from "../../components/ui/Controls";
 import { ErrorBanner, Loading } from "../../components/ui/Feedback";
-import { PRIZE_FIELDS, buildDefaultForm, parseLaboratoryForm, prizeFieldsFor, stakeChoices, systemChoices } from "./form-model";
+import { ENSEMBLE_COMPONENTS, HALF_LIFE_MAX, HALF_LIFE_MIN, PRIZE_FIELDS, RANKING_WINDOW_MAX, RANKING_WINDOW_MIN, buildDefaultForm, chosenComponents, parseLaboratoryForm, prizeFieldsFor, rankingParamFields, stakeChoices, systemChoices } from "./form-model";
 import type { FormErrors, FormField, FormValues } from "./form-model";
 import { LaboratoryOptionHelp } from "./LaboratoryOptionHelp";
 import type { HelpKind } from "./option-help";
@@ -28,14 +28,16 @@ const FIELD_LABELS: Record<FormField, string> = {
   name: "Nombre", system: "Sistema de selección", stake_style: "Estilo de apuesta",
   coverage: "Cobertura (números)", capital: "Capital inicial", goal: "Meta de saldo", max_session_draws: "Máximo de días por sesión",
   max_stake_per_number: "Apuesta máxima por número",
+  rp_window: "Ventana (sorteos)", rp_half_life: "Vida media (sorteos)", rp_scope: "Mirar", rp_components: "Componentes del ensamble", rp_tie_break: "Desempate",
   prize_1: "Premio 1.º", prize_2: "Premio 2.º", prize_3: "Premio 3.º", prize_4: "Premio 4.º", prize_5: "Premio 5.º",
   window_start: "Ventana: inicio", window_end: "Ventana: fin",
 };
-const FIELD_ORDER: FormField[] = ["name", "system", "stake_style", "coverage", "capital", "goal", "max_session_draws", "max_stake_per_number", ...PRIZE_FIELDS, "window_start", "window_end"];
+const FIELD_ORDER: FormField[] = ["name", "system", "stake_style", "coverage", "capital", "goal", "max_session_draws", "max_stake_per_number", ...PRIZE_FIELDS, "rp_window", "rp_half_life", "rp_scope", "rp_components", "rp_tie_break", "window_start", "window_end"];
 
 function fieldId(field: FormField): string {
   if (field === "window_start") return "lab-window-start";
   if (field === "window_end") return "lab-window-end";
+  if (field.startsWith("rp_")) return `lab-${field.replace("_", "-")}`;
   return `lab-${field}`;
 }
 
@@ -76,12 +78,22 @@ function LaboratoryFormBody({ options, onCreated }: Props & { options: Laborator
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
   }, [errors]);
 
+  const params = rankingParamFields(values.system, options.list.id);
+  const anyParam = params.window || params.halfLife || params.scope || params.components || params.tieBreak;
+  const components = chosenComponents(values.rp_components);
+  const toggleComponent = (component: string, checked: boolean) => setValues((current) => {
+    const now = chosenComponents(current.rp_components);
+    const base = now.length === 0 ? [...ENSEMBLE_COMPONENTS] : now;
+    const next = checked ? [...base, component] : base.filter((item) => item !== component);
+    const ordered = ENSEMBLE_COMPONENTS.filter((item) => next.includes(item));
+    return { ...current, rp_components: ordered.length === ENSEMBLE_COMPONENTS.length ? "" : ordered.join(",") };
+  });
   const set = (field: FormField) => (value: string) => setValues((current) => ({ ...current, [field]: value }));
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (saving) return;
-    const parsed = parseLaboratoryForm(values, positions);
+    const parsed = parseLaboratoryForm(values, positions, options.list.id);
     if (!parsed.ok) { focusInvalid.current = true; setErrors(parsed.errors); setFailure(null); return; }
     setErrors({}); setFailure(null); setSaving(true);
     try {
@@ -115,6 +127,27 @@ function LaboratoryFormBody({ options, onCreated }: Props & { options: Laborator
       <Field id="lab-max_session_draws" label="Máximo de días por sesión" inputMode="numeric" value={values.max_session_draws} onChange={(event) => set("max_session_draws")(event.target.value)} error={errors.max_session_draws} hint="Si una sesión no llega a la meta en esos sorteos, termina y empieza otra." placeholder="Sin límite" />
       <Field id="lab-max_stake_per_number" label="Apuesta máxima por número" inputMode="numeric" value={values.max_stake_per_number} onChange={(event) => set("max_stake_per_number")(event.target.value)} error={errors.max_stake_per_number} hint="Como el tope de la banca: ningún número recibe más que esto por sorteo." placeholder="Sin tope" />
     </div>
+    {anyParam && <Disclosure summary="Parámetros del sistema" className="lab-system-params">
+      <p className="ledger-hint">Todo es opcional: vacío usa el valor por defecto (500 sorteos de ventana o vida media). Una ventana corta reacciona más rápido a los últimos sorteos.</p>
+      <div className="lab-form-row">
+        {params.window && <Field id="lab-rp-window" label="Ventana (sorteos)" inputMode="numeric" value={values.rp_window} onChange={(event) => set("rp_window")(event.target.value)} error={errors.rp_window} hint={`Entre ${RANKING_WINDOW_MIN} y ${RANKING_WINDOW_MAX}.`} placeholder={values.system === "freq_hist" ? "Todo el historial" : "500"} />}
+        {params.halfLife && <Field id="lab-rp-half-life" label="Vida media (sorteos)" inputMode="numeric" value={values.rp_half_life} onChange={(event) => set("rp_half_life")(event.target.value)} error={errors.rp_half_life} hint={`Entre ${HALF_LIFE_MIN} y ${HALF_LIFE_MAX}: cada ese número de sorteos, una aparición pesa la mitad.`} placeholder="500" />}
+        {params.scope && <div className="ledger-field"><div className="lab-field-label"><label className="ledger-label" htmlFor="lab-rp-scope">Mirar</label></div>
+          <select id="lab-rp-scope" className="ledger-control" value={values.rp_scope} onChange={(event) => set("rp_scope")(event.target.value)}>
+            <option value="">Por defecto (1.er lugar)</option><option value="position">1.er lugar</option><option value="any">Cualquier lugar</option></select>
+          <p className="ledger-hint">Cualquier lugar cuenta también el 2.º y el 3.er premio.</p></div>}
+        <div className="ledger-field"><div className="lab-field-label"><label className="ledger-label" htmlFor="lab-rp-tie-break">Desempate</label></div>
+          <select id="lab-rp-tie-break" className="ledger-control" value={values.rp_tie_break} onChange={(event) => set("rp_tie_break")(event.target.value)}>
+            <option value="">Por defecto (fijo)</option><option value="fixed">Fijo</option><option value="seeded">Variado</option></select>
+          <p className="ledger-hint">Cuando varios números empatan: fijo siempre favorece los mismos; variado los alterna según el sorteo, sin usar datos futuros.</p></div>
+      </div>
+      {params.components && <fieldset className="lab-prizes" id="lab-rp-components" aria-invalid={errors.rp_components ? true : undefined}><legend className="ledger-label">Componentes del ensamble</legend>
+        <p className="ledger-hint">Vacío usa los siete. Fríos y Ciclo vencido son casi iguales (se repiten): con ambos ese voto pesa doble. Fríos y Ciclo vencido votan al revés de Frecuencia reciente y Decaimiento: uno prefiere los que llevan más sin salir y el otro los que salieron hace poco, así que se anulan entre sí. Elegí al menos 2.</p>
+        <div className="lab-form-row">{ENSEMBLE_COMPONENTS.map((component) => <Field key={component} id={`lab-rp-component-${component}`} type="checkbox" label={systemChoices(options).find((choice) => choice.value === component)?.label ?? component}
+          checked={components.length === 0 || components.includes(component)} onChange={(event) => toggleComponent(component, event.target.checked)} />)}</div>
+        {errors.rp_components && <p className="ledger-error">{errors.rp_components}</p>}
+      </fieldset>}
+    </Disclosure>}
     <fieldset className="lab-prizes"><legend className="ledger-label">Premios por posición</legend>
       <div className="lab-form-row lab-form-row-prizes" style={{ ["--prize-count" as string]: prizeFields.length }}>{prizeFields.map((field, index) => <Field key={field} id={`lab-${field}`} label={`${index + 1}.º`} inputMode="numeric" value={values[field]} onChange={(event) => set(field)(event.target.value)} error={errors[field]} />)}</div>
     </fieldset>

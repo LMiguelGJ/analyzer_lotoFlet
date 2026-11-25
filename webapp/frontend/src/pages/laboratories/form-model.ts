@@ -1,4 +1,4 @@
-import type { LaboratoryConfig, LaboratoryOptions, StakeStyle } from "../../api/laboratories";
+import type { LaboratoryConfig, LaboratoryOptions, RankingParams, StakeStyle } from "../../api/laboratories";
 import { stakeLabel } from "../reference-labs/lab-model";
 
 export const SYSTEMS = [
@@ -29,6 +29,7 @@ export function stakeChoices(options: LaboratoryOptions): { value: StakeStyle; l
 export const PRIZE_FIELDS = ["prize_1", "prize_2", "prize_3", "prize_4", "prize_5"] as const;
 export type FormField =
   | "name" | "system" | "coverage" | "stake_style" | "capital" | "goal" | "max_session_draws" | "max_stake_per_number"
+  | "rp_window" | "rp_half_life" | "rp_scope" | "rp_components" | "rp_tie_break"
   | (typeof PRIZE_FIELDS)[number] | "window_start" | "window_end";
 export type FormValues = Record<FormField, string>;
 export type FormErrors = Partial<Record<FormField, string>>;
@@ -43,6 +44,8 @@ export const DEFAULT_FORM: FormValues = {
   goal: "2800",
   max_session_draws: "",
   max_stake_per_number: "",
+  // Ranking parameters: empty = the system's default (500 draws, first place, fixed tie-break, all components).
+  rp_window: "", rp_half_life: "", rp_scope: "", rp_components: "", rp_tie_break: "",
   prize_1: "80", prize_2: "8", prize_3: "4", prize_4: "2", prize_5: "1",
   window_start: "2025-09-02 05:10",
   window_end: "2026-09-25 18:20",
@@ -70,9 +73,9 @@ export function buildDefaultForm(options: LaboratoryOptions): FormValues {
   return form;
 }
 
-/** Bold, ladder and Oscar's Grind size their stake from the first prize minus the coverage, so it must be larger. */
+/** Bold, ladder and Oscar's Grind size their stake from the first prize minus the coverage; the progressions can only go broke without it. */
 function needsPrizeAboveCoverage(style: string): boolean {
-  return style === "bold" || style === "ladder" || style === "oscars_grind";
+  return ["bold", "ladder", "oscars_grind", "martingale", "paroli", "dalembert", "fibonacci"].includes(style);
 }
 
 const MAX_NAME_BYTES = 120;
@@ -95,12 +98,56 @@ function validWindow(raw: string): boolean {
     && date.getUTCHours() === hour && date.getUTCMinutes() === minute;
 }
 
+export const RANKING_WINDOW_MIN = 10;
+export const RANKING_WINDOW_MAX = 5000;
+export const HALF_LIFE_MIN = 5;
+export const HALF_LIFE_MAX = 5000;
+/** The seven rankings an ensemble can vote with, in the server's order. */
+export const ENSEMBLE_COMPONENTS = ["cold", "freq_hist", "freq_recent", "decay", "transition", "overdue", "digits"] as const;
+
+/** Which system parameters the form shows for a system; parity and Chance Express take none. */
+export function rankingParamFields(system: string, listId: string): { window: boolean; halfLife: boolean; scope: boolean; components: boolean; tieBreak: boolean } {
+  const none = { window: false, halfLife: false, scope: false, components: false, tieBreak: false };
+  if (listId === CHANCE_LIST_ID || system === "parity" || !(ENSEMBLE_COMPONENTS as readonly string[]).concat("ensemble").includes(system)) return none;
+  return {
+    window: ["freq_recent", "freq_hist", "digits", "transition"].includes(system),
+    halfLife: system === "decay",
+    scope: system === "cold" || system === "freq_hist",
+    components: system === "ensemble",
+    tieBreak: true,
+  };
+}
+
+/** The components currently chosen in the form (empty = the default seven). */
+export function chosenComponents(raw: string): string[] {
+  return raw.split(",").filter((item) => item !== "");
+}
+
+function rankingInt(raw: string, low: number, high: number): number | null {
+  if (!/^\d+$/.test(raw.trim())) return null;
+  const value = Number(raw.trim());
+  return value >= low && value <= high ? value : null;
+}
+
+/** Spanish short text of the chosen params for headers and the sidebar, e.g. " · vida media 300". */
+export function rankingParamsText(params: RankingParams | undefined): string {
+  if (!params) return "";
+  const parts: string[] = [];
+  if (params.half_life !== undefined) parts.push(`vida media ${params.half_life}`);
+  if (typeof params.window === "number") parts.push(`ventana ${params.window}`);
+  if (params.fallback_window !== undefined) parts.push(`ventana ${params.fallback_window}`);
+  if (params.scope !== undefined) parts.push(params.scope === "any" ? "mirar cualquier lugar" : "mirar 1.er lugar");
+  if (params.components !== undefined) parts.push(`${params.components.length} componentes`);
+  if (params.tie_break === "seeded") parts.push("desempate variado");
+  return parts.map((part) => ` · ${part}`).join("");
+}
+
 export type ParseResult =
   | { ok: true; value: { name: string; config: LaboratoryConfig } }
   | { ok: false; errors: FormErrors };
 
 /** Client-side mirror of the server rules; the server remains the authority. */
-export function parseLaboratoryForm(values: FormValues, positions: number = PRIZE_FIELDS.length): ParseResult {
+export function parseLaboratoryForm(values: FormValues, positions: number = PRIZE_FIELDS.length, listId: string = CHANCE_LIST_ID): ParseResult {
   const prizeFields = prizeFieldsFor(positions);
   const errors: FormErrors = {};
   const name = values.name;
@@ -148,6 +195,27 @@ export function parseLaboratoryForm(values: FormValues, positions: number = PRIZ
     errors.prize_1 = "El primer premio debe ser mayor que la cobertura.";
   }
 
+  const rankingParams: RankingParams = {};
+  const fields = rankingParamFields(values.system, listId);
+  if (fields.window && values.rp_window.trim() !== "") {
+    const window = rankingInt(values.rp_window, RANKING_WINDOW_MIN, RANKING_WINDOW_MAX);
+    if (window === null) errors.rp_window = `La ventana es un entero entre ${RANKING_WINDOW_MIN} y ${RANKING_WINDOW_MAX} sorteos, o dejala vacía para usar la de por defecto.`;
+    else if (values.system === "transition") rankingParams.fallback_window = window;
+    else rankingParams.window = window;
+  }
+  if (fields.halfLife && values.rp_half_life.trim() !== "") {
+    const halfLife = rankingInt(values.rp_half_life, HALF_LIFE_MIN, HALF_LIFE_MAX);
+    if (halfLife === null) errors.rp_half_life = `La vida media es un entero entre ${HALF_LIFE_MIN} y ${HALF_LIFE_MAX} sorteos, o dejala vacía para usar 500.`;
+    else rankingParams.half_life = halfLife;
+  }
+  if (fields.scope && values.rp_scope !== "") rankingParams.scope = values.rp_scope === "any" ? "any" : "position";
+  if (fields.components && values.rp_components !== "") {
+    const components = chosenComponents(values.rp_components).filter((item) => (ENSEMBLE_COMPONENTS as readonly string[]).includes(item));
+    if (components.length < 2) errors.rp_components = "Elegí al menos 2 componentes, o dejá todos para usar el Ensamble de siempre.";
+    else rankingParams.components = ENSEMBLE_COMPONENTS.filter((item) => components.includes(item));
+  }
+  if (fields.tieBreak && values.rp_tie_break === "seeded") rankingParams.tie_break = "seeded";
+
   if (!validWindow(values.window_start)) errors.window_start = "Usá el formato AAAA-MM-DD HH:MM con una fecha real.";
   if (!validWindow(values.window_end)) errors.window_end = "Usá el formato AAAA-MM-DD HH:MM con una fecha real.";
   else if (!errors.window_start && values.window_end < values.window_start) errors.window_end = "El fin debe ser posterior al inicio.";
@@ -171,6 +239,7 @@ export function parseLaboratoryForm(values: FormValues, positions: number = PRIZ
         window_end: values.window_end,
         ...(maxSessionDraws === null ? {} : { max_session_draws: maxSessionDraws }),
         ...(maxStakePerNumber === null ? {} : { max_stake_per_number: maxStakePerNumber }),
+        ...(Object.keys(rankingParams).length === 0 ? {} : { ranking_params: rankingParams }),
       },
     },
   };

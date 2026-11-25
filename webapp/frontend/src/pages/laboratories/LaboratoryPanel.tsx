@@ -11,6 +11,7 @@ import { Button } from "../../components/ui/Controls";
 import { ErrorBanner, Loading } from "../../components/ui/Feedback";
 import { formatNumber, formatSignedDOP } from "../../lib/format";
 import { stakeLabel, systemLabel } from "../reference-labs/lab-model";
+import { rankingParamsText } from "./form-model";
 import { count } from "./count";
 import { formatMean } from "./mean";
 import { deadlineSummary, expectedReturnPerPeso, formatAbsoluteDOP, formatAverageDays, formatHouseEdge, formatPercentShare, formatReturnOnWagered, formatReturnPerPeso, houseEdgePercent, isValidLaboratoryWallet, returnOnWagered, returnPerPeso } from "./result-model";
@@ -170,7 +171,7 @@ export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
 
   return <section className="reference-page" aria-labelledby="lab-title">
     <header className="reference-heading">
-      <div><h2 id="lab-title">{definition.name}</h2><p>{systemLabel(config.system)} · {config.coverage} {config.coverage === 1 ? "número" : "números"} · {stakeLabel(config.stake_style)}{config.max_session_draws === undefined ? "" : ` · máx ${config.max_session_draws} ${config.max_session_draws === 1 ? "día" : "días"}`}{config.max_stake_per_number === undefined ? "" : ` · tope ${formatAbsoluteDOP(config.max_stake_per_number)}`}</p></div>
+      <div><h2 id="lab-title">{definition.name}</h2><p>{systemLabel(config.system)} · {config.coverage} {config.coverage === 1 ? "número" : "números"} · {stakeLabel(config.stake_style)}{rankingParamsText(config.ranking_params)}{config.max_session_draws === undefined ? "" : ` · máx ${config.max_session_draws} ${config.max_session_draws === 1 ? "día" : "días"}`}{config.max_stake_per_number === undefined ? "" : ` · tope ${formatAbsoluteDOP(config.max_stake_per_number)}`}</p></div>
       <Button variant="ghost" onClick={() => { setDeleteError(null); setConfirmDelete(true); }}>Eliminar laboratorio</Button>
     </header>
     {deleteError && <div className="reference-action-error" role="alert"><p>{deleteError}</p><Button onClick={() => setDeleteError(null)}>Cerrar</Button></div>}
@@ -180,6 +181,7 @@ export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
       <dl className="reference-contract-grid">
         <div><dt>Selección</dt><dd>{systemLabel(config.system)}</dd></div>
         <div><dt>Cobertura</dt><dd>{config.coverage} {config.coverage === 1 ? "número seleccionado" : "números seleccionados"}</dd></div>
+        {config.ranking_params !== undefined && <div><dt>Parámetros del sistema</dt><dd>{rankingParamsText(config.ranking_params).slice(3)}</dd></div>}
         <div><dt>Estilo de apuesta</dt><dd>{stakeLabel(config.stake_style)}</dd></div>
         <div><dt>Capital inicial</dt><dd>{money(config.capital)}</dd></div>
         <div><dt>Meta de saldo</dt><dd>{money(config.goal)}</dd></div>

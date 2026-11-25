@@ -4,6 +4,23 @@ import type { ReferenceCapabilities, ReferencePage, ReferenceSessionPage, Refere
 
 export type StakeStyle = "bold" | "ladder" | "flat" | "martingale" | "paroli" | "dalembert" | "fibonacci" | "oscars_grind";
 
+/** Optional overrides of the ranking system of a lab (absent = the fixed defaults). Not for Chance Express. */
+export interface RankingParams {
+  /** Draws of the window (freq_recent, freq_hist, digits). */
+  window?: number | null;
+  /** Draws of the fallback window (transition). */
+  fallback_window?: number;
+  /** Half-life in draws (decay). */
+  half_life?: number;
+  /** Which prize positions count (cold, freq_hist). */
+  scope?: "position" | "any";
+  /** Ensemble voters (at least two of the seven rankings). */
+  components?: string[];
+  component_params?: Record<string, Record<string, unknown>>;
+  /** Equal scores: fixed order (default) or a seeded permutation per draw. */
+  tie_break?: "fixed" | "seeded";
+}
+
 export interface LaboratoryConfig {
   schema_version: number;
   system: string;
@@ -18,6 +35,8 @@ export interface LaboratoryConfig {
   max_session_draws?: number;
   /** Optional bank cap: no number receives more than this per draw; absent = no cap. */
   max_stake_per_number?: number;
+  /** Optional ranking overrides (window, half-life, scope, components, tie-break). */
+  ranking_params?: RankingParams;
 }
 export interface LaboratoryDefinition {
   schema_version: number;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FORM, buildDefaultForm, parseLaboratoryForm, prizeFieldsFor, systemChoices } from "./form-model";
+import { DEFAULT_FORM, buildDefaultForm, parseLaboratoryForm, prizeFieldsFor, rankingParamFields, rankingParamsText, systemChoices } from "./form-model";
 
 const valid = { ...DEFAULT_FORM, name: "Mi laboratorio" };
 
@@ -103,5 +103,63 @@ describe("form model per list", () => {
     expect(choices.map((choice) => choice.value)).toEqual(["transition", "cold", "select_interpretable", "mix", "ensemble", "parity"]);
     expect(prizeFieldsFor(5)).toHaveLength(5);
     expect(prizeFieldsFor(3)).toEqual(["prize_1", "prize_2", "prize_3"]);
+  });
+});
+
+describe("system parameters (ranking_params)", () => {
+  const leidsa = "leidsa_quiniela";
+  const decay = { ...valid, system: "decay", prize_1: "60", prize_2: "8", prize_3: "4" };
+
+  it("leaves ranking_params out when every field is empty (today's config, byte for byte)", () => {
+    const result = parseLaboratoryForm(decay, 3, leidsa);
+    expect(result.ok && "ranking_params" in result.value.config).toBe(false);
+  });
+
+  it("sends the half-life of Decaimiento and the seeded tie-break", () => {
+    const result = parseLaboratoryForm({ ...decay, rp_half_life: " 300 ", rp_tie_break: "seeded" }, 3, leidsa);
+    expect(result.ok && result.value.config.ranking_params).toEqual({ half_life: 300, tie_break: "seeded" });
+  });
+
+  it("maps the window field to the system that owns it", () => {
+    const window = (system: string) => {
+      const result = parseLaboratoryForm({ ...decay, system, rp_window: "120" }, 3, leidsa);
+      return result.ok ? result.value.config.ranking_params : result.errors;
+    };
+    expect(window("freq_recent")).toEqual({ window: 120 });
+    expect(window("digits")).toEqual({ window: 120 });
+    expect(window("transition")).toEqual({ fallback_window: 120 });
+    expect(window("decay")).toBeUndefined(); // decay has no window: the field is ignored
+  });
+
+  it("sends the scope and the chosen ensemble components, and demands at least two", () => {
+    const cold = parseLaboratoryForm({ ...decay, system: "cold", rp_scope: "any" }, 3, leidsa);
+    expect(cold.ok && cold.value.config.ranking_params).toEqual({ scope: "any" });
+    const ensemble = { ...decay, system: "ensemble" };
+    const two = parseLaboratoryForm({ ...ensemble, rp_components: "decay,freq_recent" }, 3, leidsa);
+    expect(two.ok && two.value.config.ranking_params).toEqual({ components: ["freq_recent", "decay"] });
+    const one = parseLaboratoryForm({ ...ensemble, rp_components: "decay" }, 3, leidsa);
+    expect(one.ok === false && one.errors.rp_components).toMatch(/al menos 2/);
+  });
+
+  it("rejects out-of-range values with a Spanish message and never sends params for Chance Express or parity", () => {
+    const low = parseLaboratoryForm({ ...decay, rp_half_life: "4" }, 3, leidsa);
+    expect(low.ok === false && low.errors.rp_half_life).toMatch(/vida media/i);
+    const big = parseLaboratoryForm({ ...decay, system: "freq_recent", rp_window: "5001" }, 3, leidsa);
+    expect(big.ok === false && big.errors.rp_window).toMatch(/ventana/i);
+    const chance = parseLaboratoryForm({ ...valid, system: "cold", rp_scope: "any" });
+    expect(chance.ok && "ranking_params" in chance.value.config).toBe(false);
+    expect(rankingParamFields("parity", leidsa)).toMatchObject({ window: false, halfLife: false, tieBreak: false });
+    expect(rankingParamFields("decay", "chance_express").tieBreak).toBe(false);
+  });
+
+  it("requires a first prize above the coverage for the progressions too", () => {
+    const result = parseLaboratoryForm({ ...valid, stake_style: "martingale", coverage: "5", prize_1: "5" });
+    expect(result.ok === false && result.errors.prize_1).toMatch(/mayor/);
+  });
+
+  it("describes the chosen params for the sidebar and the panel", () => {
+    expect(rankingParamsText(undefined)).toBe("");
+    expect(rankingParamsText({ half_life: 300 })).toBe(" · vida media 300");
+    expect(rankingParamsText({ window: 90, scope: "any", tie_break: "seeded" })).toBe(" · ventana 90 · mirar cualquier lugar · desempate variado");
   });
 });

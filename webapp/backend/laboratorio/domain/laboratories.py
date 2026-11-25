@@ -1,11 +1,13 @@
 """Validated definitions for mutable user laboratories (not persistence or execution)."""
 
+import copy
 import unicodedata
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 from laboratorio.domain.number_lists import DEFAULT_LIST_ID, get_list, unavailable_message
+from laboratorio.domain.ranking_params import validate_ranking_params
 from laboratorio.domain.reference_labs import (
     REFERENCE_LABS,
     STAKE_STYLE_LABELS,
@@ -19,6 +21,8 @@ FROZEN_HISTORY_SHA256 = "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776
 MAX_FROZEN_DRAWS = 105_426
 MAX_SAFE_INTEGER = min(2**53 - 1, 2**63 - 1)
 MAX_SESSION_DRAWS_LIMIT = 10_000
+# Draws a list without precomputed rankings needs before its rankings carry information.
+WARMUP_DRAWS = 500
 MAX_STAKE_PER_NUMBER_LIMIT = 1_000_000
 _REFERENCE_NAMESPACE = uuid.UUID("5531ba2c-7735-5a3c-a97f-8358244c0fb4")
 _SUPPORTED_SYSTEMS = frozenset(lab.system for lab in REFERENCE_LABS)  # Chance Express labs
@@ -133,6 +137,9 @@ class LaboratoryConfig:
     max_session_draws: int | None = None
     # Optional bank cap: no number receives more than this per draw. ``None`` = no cap.
     max_stake_per_number: int | None = None
+    # Optional overrides of the ranking system (window, half-life, scope, components, tie-break).
+    # ``None`` keeps today's fixed defaults and is never serialized (see ``ranking_params``).
+    ranking_params: dict | None = field(default=None, hash=False)
 
     def __post_init__(self):
         number_list = get_list(self.list_id)
@@ -147,6 +154,11 @@ class LaboratoryConfig:
             raise ValueError(unavailable_message(self.system))
         _validate_max_session_draws(self.max_session_draws)
         _validate_max_stake_per_number(self.max_stake_per_number)
+        object.__setattr__(
+            self,
+            "ranking_params",
+            validate_ranking_params(self.system, self.list_id, self.ranking_params),
+        )
         _strict_int(self.coverage, "coverage")
         if self.coverage > 50:
             raise ValueError("coverage must be between 1 and 50")
@@ -212,6 +224,8 @@ class LaboratoryConfig:
             mapping["max_session_draws"] = self.max_session_draws
         if self.max_stake_per_number is not None:
             mapping["max_stake_per_number"] = self.max_stake_per_number
+        if self.ranking_params is not None:
+            mapping["ranking_params"] = copy.deepcopy(self.ranking_params)
         return mapping
 
     @classmethod
@@ -238,6 +252,8 @@ class LaboratoryConfig:
             keys = keys | {"max_session_draws"}
         if type(value) is dict and "max_stake_per_number" in value:
             keys = keys | {"max_stake_per_number"}
+        if type(value) is dict and "ranking_params" in value:
+            keys = keys | {"ranking_params"}
         if (
             type(value) is not dict
             or set(value) != keys
@@ -258,6 +274,7 @@ class LaboratoryConfig:
             list_id=list_id,
             max_session_draws=value.get("max_session_draws"),
             max_stake_per_number=value.get("max_stake_per_number"),
+            ranking_params=value.get("ranking_params"),
         )
 
 
@@ -328,6 +345,25 @@ class LaboratoryDefinition:
             config.list_id,
             config.max_session_draws,
             config.max_stake_per_number,
+        )
+
+
+_PROGRESSION_STYLES = ("martingale", "paroli", "dalembert", "fibonacci")
+
+
+def validate_new_laboratory_config(config):
+    """Extra rules for laboratories created from now on (stored ones keep loading as saved).
+
+    Martingale, Paroli, D'Alembert and Fibonacci can only go broke when the first prize does
+    not exceed the coverage, so a new lab like that is refused (B-009).
+    """
+    if type(config) is not LaboratoryConfig:
+        raise ValueError("config must be a validated LaboratoryConfig")
+    if config.stake_style in _PROGRESSION_STYLES and config.prizes[0] <= config.coverage:
+        label = STAKE_STYLE_LABELS[config.stake_style]
+        raise ValueError(
+            f"{label} necesita que el primer premio sea mayor que la cobertura: "
+            "con un premio igual o menor solo puede perder."
         )
 
 

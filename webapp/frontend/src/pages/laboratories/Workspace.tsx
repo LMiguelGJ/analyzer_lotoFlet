@@ -8,6 +8,7 @@ import type { ReferencePage } from "../../api/referenceLabs";
 import { ErrorBanner, Loading } from "../../components/ui/Feedback";
 import { count } from "./count";
 import { stakeLabel, systemLabel } from "../reference-labs/lab-model";
+import { rankingParamsText } from "./form-model";
 import { LaboratoryForm } from "./LaboratoryForm";
 import { LaboratoryPanel } from "./LaboratoryPanel";
 import { lastRunPresentation } from "./last-run";
@@ -27,7 +28,7 @@ function summary(definition: LaboratoryListItem): string {
   const { config } = definition;
   const limit = config.max_session_draws === undefined ? "" : ` · máx ${config.max_session_draws} ${config.max_session_draws === 1 ? "día" : "días"}`;
   const cap = config.max_stake_per_number === undefined ? "" : ` · tope ${formatAbsoluteDOP(config.max_stake_per_number)}`;
-  return `${systemLabel(config.system)} · ${config.coverage} ${config.coverage === 1 ? "número" : "números"} · ${stakeLabel(config.stake_style)}${limit}${cap}`;
+  return `${systemLabel(config.system)} · ${config.coverage} ${config.coverage === 1 ? "número" : "números"} · ${stakeLabel(config.stake_style)}${rankingParamsText(config.ranking_params)}${limit}${cap}`;
 }
 
 export function Workspace() {

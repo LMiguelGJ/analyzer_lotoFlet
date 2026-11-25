@@ -6,7 +6,12 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import Field, StrictInt, StrictStr
 
 from laboratorio.api import StrictBody, repo
-from laboratorio.domain.laboratories import LaboratoryConfig, default_window
+from laboratorio.domain.laboratories import (
+    WARMUP_DRAWS,
+    LaboratoryConfig,
+    default_window,
+    validate_new_laboratory_config,
+)
 from laboratorio.domain.number_lists import (
     DEFAULT_LIST_ID,
     LIST_ONLY_SYSTEMS,
@@ -86,7 +91,9 @@ def laboratory_options(request: Request):
         raise HTTPException(409, exc.message) from None
     first = history.labels[0] if history.labels else None
     last = history.labels[-1] if history.labels else None
-    start, end = default_window(active.id, first, last)
+    # Rankings need history: non-Chance lists start the default window after the warm-up.
+    warm = history.labels[WARMUP_DRAWS] if len(history.labels) > WARMUP_DRAWS else first
+    start, end = default_window(active.id, warm, last)
     systems = []
     offered = (PARITY_SYSTEM, *SYSTEMS)
     if active.id != DEFAULT_LIST_ID:
@@ -116,6 +123,7 @@ def laboratory_options(request: Request):
 def create_laboratory(body: CreateLaboratory, request: Request):
     try:
         config = LaboratoryConfig.from_mapping(_config_for_active_list(request, body.config))
+        validate_new_laboratory_config(config)
         settings = request.app.state.settings
         definition = create_laboratory_definition(
             repo(request),

@@ -55,7 +55,13 @@ def execute_owned_laboratory(
             raise OwnedLaboratoryServiceError("empty_window", "window has no draws")
     lab = definition.to_reference_lab()
     votes = data.parity_votes() if lab.selection_kind == "parity" else None
-    result = run_reference_lab(lab, data.history, data.rankings, parity_votes=votes)
+    rankings = data.rankings
+    params = definition.config.ranking_params
+    variant = getattr(rankings, "variant", None)  # only on-the-fly (non-Chance) rankings
+    if params and variant is not None:
+        # Rankings of this lab's params; cached per params and sharing the list's matrices.
+        rankings = variant({definition.config.system: params})
+    result = run_reference_lab(lab, data.history, rankings, parity_votes=votes)
     if list_id == DEFAULT_LIST_ID:
         snapshot = OwnedLaboratoryRunSnapshot(definition, data.history.sha256, RANKINGS_SHA256)
     else:

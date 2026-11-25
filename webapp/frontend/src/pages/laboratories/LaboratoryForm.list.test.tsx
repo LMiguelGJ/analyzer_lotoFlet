@@ -150,4 +150,50 @@ describe("laboratory form follows the active list", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByLabelText("Nombre")).toBeInTheDocument();
   });
+
+  it("shows «Parámetros del sistema» collapsed with the field of the chosen system and sends it", async () => {
+    optionsMock.mockResolvedValue(leidsaNine);
+    createMock.mockResolvedValue({ schema_version: 1, id: "x", name: "L", reference_id: null, config: {} as never });
+    const user = userEvent.setup();
+    render(<LaboratoryForm onCreated={vi.fn()} />);
+    await screen.findByLabelText("Nombre");
+    const summary = screen.getByText("Parámetros del sistema");
+    expect(summary.closest("details")).not.toHaveAttribute("open");
+    await user.selectOptions(screen.getByLabelText("Sistema de selección"), "decay");
+    await user.click(summary);
+    expect(screen.getByLabelText("Vida media (sorteos)")).toHaveAttribute("placeholder", "500");
+    expect(screen.queryByLabelText("Ventana (sorteos)")).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Vida media (sorteos)"), "300");
+    await user.selectOptions(screen.getByLabelText("Desempate"), "seeded");
+    await user.type(screen.getByLabelText("Nombre"), "Decaimiento 300");
+    await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+    expect(createMock.mock.calls[0][1].ranking_params).toEqual({ half_life: 300, tie_break: "seeded" });
+  });
+
+  it("offers the ensemble components as checkboxes and explains the opposite votes", async () => {
+    optionsMock.mockResolvedValue(leidsaNine);
+    const user = userEvent.setup();
+    render(<LaboratoryForm onCreated={vi.fn()} />);
+    await screen.findByLabelText("Nombre");
+    await user.selectOptions(screen.getByLabelText("Sistema de selección"), "ensemble");
+    await user.click(screen.getByText("Parámetros del sistema"));
+    expect(screen.getAllByRole("checkbox")).toHaveLength(7);
+    expect(screen.getByText(/casi iguales/)).toBeInTheDocument();
+    expect(screen.getByText(/votan al revés/)).toBeInTheDocument();
+  });
+
+  it("shows no system parameters for Paridad or Chance Express", async () => {
+    optionsMock.mockResolvedValue(leidsaNine);
+    const user = userEvent.setup();
+    const { unmount } = render(<LaboratoryForm onCreated={vi.fn()} />);
+    await screen.findByLabelText("Nombre");
+    await user.selectOptions(screen.getByLabelText("Sistema de selección"), "parity");
+    expect(screen.queryByText("Parámetros del sistema")).not.toBeInTheDocument();
+    unmount();
+    optionsMock.mockResolvedValue(chance);
+    render(<LaboratoryForm onCreated={vi.fn()} />);
+    await screen.findByLabelText("Nombre");
+    expect(screen.queryByText("Parámetros del sistema")).not.toBeInTheDocument();
+  });
 });
