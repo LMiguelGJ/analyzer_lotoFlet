@@ -26,7 +26,7 @@ resultado cuánto devolvió cada peso apostado frente a la ventaja de la casa.
 
 - T1 — S1, S3: backend — validación de `stake_style`, reglas en el motor de laboratorios, tests (RED primero) con secuencias calculadas a mano; dorados de Loteka sin cambios. Commit: 17eb230.
 - T2 — S1, S2: frontend — los 5 estilos en el formulario con ayuda en español simple; retorno por peso y ventaja de la casa en el resultado; build. Commit: 17eb230.
-- T3 — S1: correr los 8 estilos en la búsqueda 5000 → 5500 de Leidsa (2019–2026) y crear los mejores en la app. Commit: n/a.
+- T3 — S1: correr los 8 estilos en la búsqueda 5000 → 5500 de Leidsa (2019–2026) y crear los mejores en la app. Done: informe odd/reports/leidsa-equilibrio-5000-5500.md; 6 laboratorios creados en la app.
 
 ## Log
 
