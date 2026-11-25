@@ -1,6 +1,8 @@
 """Laboratories and runs on the Quiniela Leidsa list: 3 positions and 9 systems (S3, S5, S6)."""
 
+import json
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,6 +30,19 @@ AVAILABLE_SYSTEMS = {
     "ensemble",
 }
 RANKING_SYSTEMS = AVAILABLE_SYSTEMS - {"parity"}
+
+
+def _leidsa_file_facts():
+    """Draw count and last label of the shipped Leidsa file, so new draws do not break tests."""
+    data = json.loads(LEIDSA_FILE.read_text(encoding="utf-8"))
+    days = [day for day, draws in sorted(data["sorteos_por_fecha"].items()) for _ in draws]
+    last_day = days[-1]
+    last_hour = data["sorteos_por_fecha"][last_day][-1]["hora"]
+    return len(days), f"{last_day} {last_hour}"
+
+
+LEIDSA_FILE = Path(__file__).resolve().parents[3] / "datos" / "leidsa_quiniela_history.json"
+LEIDSA_DRAWS, LEIDSA_LAST_LABEL = _leidsa_file_facts()
 
 
 @pytest.fixture
@@ -109,7 +124,7 @@ def test_leidsa_run_completes_with_three_positions_and_numbers_00_99(client, str
     assert run["config"]["rules"] == {"positions": 3, "prizes": [60, 8, 4], "minimum_stake": 1}
     assert run["config"]["history"]["list_id"] == LEIDSA
     window = run["summary"]["window"]
-    assert window["draws"] == window["ranked_draws"] == 5836
+    assert window["draws"] == window["ranked_draws"] == LEIDSA_DRAWS
     assert window["first_label"] == "2010-07-19 20:50"
     assert run["summary"]["totals"]["sessions"] >= 1
     sessions = client.get(f"/api/v1/runs/{run['id']}/sessions").json()["items"]
@@ -197,7 +212,7 @@ def test_run_options_for_leidsa_offer_exactly_the_nine_systems(client):
     default_systems = {c["system"] for c in options["defaults"]["strategy"]["components"]}
     assert default_systems <= RANKING_SYSTEMS
     assert options["limits"]["positions"] == {"min": 1, "max": 3}
-    assert options["history"]["draws"] == 5836
+    assert options["history"]["draws"] == LEIDSA_DRAWS
     assert options["history"]["first_label"] == "2010-07-19 20:50"
 
 
@@ -217,7 +232,7 @@ def test_lab_options_describe_the_active_list(client):
     options = client.get("/api/v1/laboratories/options").json()
     assert options["list"] == {"id": LEIDSA, "name": "Quiniela Leidsa", "positions": 3}
     assert options["prizes"] == [60, 8, 4]
-    assert options["window"] == {"start": "2010-07-19 20:50", "end": "2026-11-23 20:50"}
+    assert options["window"] == {"start": "2010-07-19 20:50", "end": LEIDSA_LAST_LABEL}
     assert options["history_sha256"] == leidsa_sha(client)
     available = {item["id"] for item in options["systems"] if item["available"]}
     assert available == AVAILABLE_SYSTEMS

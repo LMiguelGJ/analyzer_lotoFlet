@@ -11,6 +11,7 @@ import { stakeLabel, systemLabel } from "../reference-labs/lab-model";
 import { LaboratoryForm } from "./LaboratoryForm";
 import { LaboratoryPanel } from "./LaboratoryPanel";
 import { lastRunPresentation } from "./last-run";
+import { formatAbsoluteDOP } from "./result-model";
 import "../reference-labs/reference-labs.css";
 import "./laboratories.css";
 
@@ -25,7 +26,8 @@ function failureText(error: unknown): string {
 function summary(definition: LaboratoryListItem): string {
   const { config } = definition;
   const limit = config.max_session_draws === undefined ? "" : ` · máx ${config.max_session_draws} ${config.max_session_draws === 1 ? "día" : "días"}`;
-  return `${systemLabel(config.system)} · ${config.coverage} ${config.coverage === 1 ? "número" : "números"} · ${stakeLabel(config.stake_style)}${limit}`;
+  const cap = config.max_stake_per_number === undefined ? "" : ` · tope ${formatAbsoluteDOP(config.max_stake_per_number)}`;
+  return `${systemLabel(config.system)} · ${config.coverage} ${config.coverage === 1 ? "número" : "números"} · ${stakeLabel(config.stake_style)}${limit}${cap}`;
 }
 
 export function Workspace() {

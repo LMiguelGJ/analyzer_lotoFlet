@@ -5,19 +5,19 @@
     "origen": "https://www.leidsa.com/results",
     "endpoint": "https://premios.do/resultados-leidsa-AAAA-MM-DD",
     "zona_horaria": "America/Santo_Domingo",
-    "generado_utc": "2026-11-24T15:22:46.358104+00:00",
+    "generado_utc": "2026-11-25T04:59:26.186726+00:00",
     "rango_solicitado": {
       "desde": "2010-07-19",
-      "hasta": "2026-11-24"
+      "hasta": "2026-11-25"
     },
     "rango_seleccionado": {
       "desde": "2010-07-19",
-      "hasta": "2026-11-24"
+      "hasta": "2026-11-25"
     },
-    "dias_solicitados": 5973,
+    "dias_solicitados": 5974,
     "dias_limite": null,
-    "dias_completados": 5973,
-    "dias_con_sorteos": 5836,
+    "dias_completados": 5974,
+    "dias_con_sorteos": 5837,
     "dias_sin_resultados": [
       "2010-12-25",
       "2011-10-23",
@@ -155,20 +155,20 @@
       "2026-01-01",
       "2026-04-02",
       "2026-04-03",
-      "2026-11-24"
+      "2026-11-25"
     ],
-    "cantidad_sorteos": 5836,
+    "cantidad_sorteos": 5837,
     "filas_duplicadas_exactas_omitidas": 0,
     "cobertura_observada": {
       "primera_fecha_con_datos": "2010-07-19",
-      "ultima_fecha_con_datos": "2026-11-23"
+      "ultima_fecha_con_datos": "2026-11-24"
     },
     "fuentes": {
       "fecha_corte": "2023-01-04",
       "premios_do": {
         "url": "https://premios.do/resultados-leidsa-AAAA-MM-DD",
         "desde": "2023-01-04",
-        "hasta": "2026-11-24",
+        "hasta": "2026-11-25",
         "nota": "Fuente de verdad desde la fecha de corte; nunca se sobrescribe con el respaldo."
       },
       "respaldo_historico": {
@@ -64594,6 +64594,17 @@
         "source_url": "https://premios.do/resultados-leidsa-2026-11-24"
       }
     ],
-    "2026-11-24": []
+    "2026-11-24": [
+      {
+        "hora": "20:50",
+        "numeros": [
+          "62",
+          "93",
+          "96"
+        ],
+        "source_url": "https://premios.do/resultados-leidsa-2026-11-25"
+      }
+    ],
+    "2026-11-25": []
   }
 }

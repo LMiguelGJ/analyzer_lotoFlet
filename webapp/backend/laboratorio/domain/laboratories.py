@@ -19,6 +19,7 @@ FROZEN_HISTORY_SHA256 = "d1c0e9ec047dfa6ae61f870ef3d1b2ad21917dbd97aa3ca80d9f776
 MAX_FROZEN_DRAWS = 105_426
 MAX_SAFE_INTEGER = min(2**53 - 1, 2**63 - 1)
 MAX_SESSION_DRAWS_LIMIT = 10_000
+MAX_STAKE_PER_NUMBER_LIMIT = 1_000_000
 _REFERENCE_NAMESPACE = uuid.UUID("5531ba2c-7735-5a3c-a97f-8358244c0fb4")
 _SUPPORTED_SYSTEMS = frozenset(lab.system for lab in REFERENCE_LABS)  # Chance Express labs
 _REFERENCE_START = min(lab.window_start for lab in REFERENCE_LABS)
@@ -52,6 +53,16 @@ def _validate_max_session_draws(value):
         raise ValueError(
             "El máximo de días por sesión debe ser un número entero entre 1 y "
             f"{MAX_SESSION_DRAWS_LIMIT}, o quedar vacío para no poner límite."
+        )
+
+
+def _validate_max_stake_per_number(value):
+    if value is None:
+        return
+    if type(value) is not int or not 1 <= value <= MAX_STAKE_PER_NUMBER_LIMIT:
+        raise ValueError(
+            "La apuesta máxima por número debe ser un número entero entre 1 y "
+            f"{MAX_STAKE_PER_NUMBER_LIMIT}, o quedar vacía para no poner tope."
         )
 
 
@@ -120,6 +131,8 @@ class LaboratoryConfig:
     list_id: str = DEFAULT_LIST_ID
     # Optional per-session deadline in draws (one draw per day on Leidsa). ``None`` = unlimited.
     max_session_draws: int | None = None
+    # Optional bank cap: no number receives more than this per draw. ``None`` = no cap.
+    max_stake_per_number: int | None = None
 
     def __post_init__(self):
         number_list = get_list(self.list_id)
@@ -133,6 +146,7 @@ class LaboratoryConfig:
         elif self.system not in number_list.available_systems:
             raise ValueError(unavailable_message(self.system))
         _validate_max_session_draws(self.max_session_draws)
+        _validate_max_stake_per_number(self.max_stake_per_number)
         _strict_int(self.coverage, "coverage")
         if self.coverage > 50:
             raise ValueError("coverage must be between 1 and 50")
@@ -196,6 +210,8 @@ class LaboratoryConfig:
             mapping["list_id"] = self.list_id
         if self.max_session_draws is not None:
             mapping["max_session_draws"] = self.max_session_draws
+        if self.max_stake_per_number is not None:
+            mapping["max_stake_per_number"] = self.max_stake_per_number
         return mapping
 
     @classmethod
@@ -220,6 +236,8 @@ class LaboratoryConfig:
             keys = keys | {"list_id"}
         if type(value) is dict and "max_session_draws" in value:
             keys = keys | {"max_session_draws"}
+        if type(value) is dict and "max_stake_per_number" in value:
+            keys = keys | {"max_stake_per_number"}
         if (
             type(value) is not dict
             or set(value) != keys
@@ -239,6 +257,7 @@ class LaboratoryConfig:
             window_end=value["window_end"],
             list_id=list_id,
             max_session_draws=value.get("max_session_draws"),
+            max_stake_per_number=value.get("max_stake_per_number"),
         )
 
 
@@ -308,6 +327,7 @@ class LaboratoryDefinition:
             config.window_end,
             config.list_id,
             config.max_session_draws,
+            config.max_stake_per_number,
         )
 
 

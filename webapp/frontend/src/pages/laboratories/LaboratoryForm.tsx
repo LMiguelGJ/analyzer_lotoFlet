@@ -27,10 +27,11 @@ interface Props { onCreated: (definition: LaboratoryDefinition) => void }
 const FIELD_LABELS: Record<FormField, string> = {
   name: "Nombre", system: "Sistema de selección", stake_style: "Estilo de apuesta",
   coverage: "Cobertura (números)", capital: "Capital inicial", goal: "Meta de saldo", max_session_draws: "Máximo de días por sesión",
+  max_stake_per_number: "Apuesta máxima por número",
   prize_1: "Premio 1.º", prize_2: "Premio 2.º", prize_3: "Premio 3.º", prize_4: "Premio 4.º", prize_5: "Premio 5.º",
   window_start: "Ventana: inicio", window_end: "Ventana: fin",
 };
-const FIELD_ORDER: FormField[] = ["name", "system", "stake_style", "coverage", "capital", "goal", "max_session_draws", ...PRIZE_FIELDS, "window_start", "window_end"];
+const FIELD_ORDER: FormField[] = ["name", "system", "stake_style", "coverage", "capital", "goal", "max_session_draws", "max_stake_per_number", ...PRIZE_FIELDS, "window_start", "window_end"];
 
 function fieldId(field: FormField): string {
   if (field === "window_start") return "lab-window-start";
@@ -112,6 +113,7 @@ function LaboratoryFormBody({ options, onCreated }: Props & { options: Laborator
       <Field id="lab-capital" label="Capital inicial" inputMode="numeric" value={values.capital} onChange={(event) => set("capital")(event.target.value)} error={errors.capital} />
       <Field id="lab-goal" label="Meta de saldo" inputMode="numeric" value={values.goal} onChange={(event) => set("goal")(event.target.value)} error={errors.goal} />
       <Field id="lab-max_session_draws" label="Máximo de días por sesión" inputMode="numeric" value={values.max_session_draws} onChange={(event) => set("max_session_draws")(event.target.value)} error={errors.max_session_draws} hint="Si una sesión no llega a la meta en esos sorteos, termina y empieza otra." placeholder="Sin límite" />
+      <Field id="lab-max_stake_per_number" label="Apuesta máxima por número" inputMode="numeric" value={values.max_stake_per_number} onChange={(event) => set("max_stake_per_number")(event.target.value)} error={errors.max_stake_per_number} hint="Como el tope de la banca: ningún número recibe más que esto por sorteo." placeholder="Sin tope" />
     </div>
     <fieldset className="lab-prizes"><legend className="ledger-label">Premios por posición</legend>
       <div className="lab-form-row lab-form-row-prizes" style={{ ["--prize-count" as string]: prizeFields.length }}>{prizeFields.map((field, index) => <Field key={field} id={`lab-${field}`} label={`${index + 1}.º`} inputMode="numeric" value={values[field]} onChange={(event) => set(field)(event.target.value)} error={errors[field]} />)}</div>

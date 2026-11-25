@@ -511,6 +511,43 @@ describe("laboratory workspace", () => {
     expect(m.createLaboratory).toHaveBeenCalledWith("Con plazo", { ...config, max_session_draws: 30 });
   });
 
+  it("offers an optional maximum stake per number and sends it only when filled", async () => {
+    m.createLaboratory.mockResolvedValue(definition);
+    const user = userEvent.setup();
+    renderAt("/laboratorios/nuevo");
+    const field = await screen.findByLabelText("Apuesta máxima por número");
+    expect(field).toHaveValue("");
+    expect(screen.getByText("Como el tope de la banca: ningún número recibe más que esto por sorteo.")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Nombre"), "Con tope");
+    await user.type(field, "0");
+    await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
+    expect(await screen.findByText(/entre 1 y 1000000/, { selector: "p" })).toBeInTheDocument();
+    expect(m.createLaboratory).not.toHaveBeenCalled();
+    await user.clear(field);
+    await user.type(field, "500");
+    await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
+    await waitFor(() => expect(m.createLaboratory).toHaveBeenCalledTimes(1));
+    expect(m.createLaboratory).toHaveBeenCalledWith("Con tope", { ...config, max_stake_per_number: 500 });
+  });
+
+  it("shows the stake cap in the sidebar and in the panel rules when the lab has one", async () => {
+    const capped = { ...definition, config: { ...config, max_stake_per_number: 500 } };
+    m.listLaboratories.mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [capped] });
+    m.getLaboratory.mockResolvedValue({ definition: capped, owned_run_count: 1, owned_session_count: 4 });
+    renderAt(`/laboratorios/${ID}`);
+    expect(await screen.findByText(/· tope RD\$500/, { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /tope RD\$500/ })).toBeInTheDocument();
+    const rules = within(await screen.findByRole("region", { name: "Reglas del laboratorio" }));
+    expect(rules.getByText("Apuesta máxima por número").parentElement).toHaveTextContent("RD$500");
+  });
+
+  it("does not mention a stake cap when the lab has none", async () => {
+    renderAt(`/laboratorios/${ID}`);
+    const rules = within(await screen.findByRole("region", { name: "Reglas del laboratorio" }));
+    expect(rules.queryByText("Apuesta máxima por número")).not.toBeInTheDocument();
+    expect(screen.queryByText(/tope RD\$/)).not.toBeInTheDocument();
+  });
+
   it("validates before sending and creates with the exact payload", async () => {
     m.createLaboratory.mockResolvedValue(definition);
     const user = userEvent.setup();

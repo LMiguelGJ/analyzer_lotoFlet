@@ -28,7 +28,7 @@ export function stakeChoices(options: LaboratoryOptions): { value: StakeStyle; l
 
 export const PRIZE_FIELDS = ["prize_1", "prize_2", "prize_3", "prize_4", "prize_5"] as const;
 export type FormField =
-  | "name" | "system" | "coverage" | "stake_style" | "capital" | "goal" | "max_session_draws"
+  | "name" | "system" | "coverage" | "stake_style" | "capital" | "goal" | "max_session_draws" | "max_stake_per_number"
   | (typeof PRIZE_FIELDS)[number] | "window_start" | "window_end";
 export type FormValues = Record<FormField, string>;
 export type FormErrors = Partial<Record<FormField, string>>;
@@ -42,6 +42,7 @@ export const DEFAULT_FORM: FormValues = {
   capital: "2000",
   goal: "2800",
   max_session_draws: "",
+  max_stake_per_number: "",
   prize_1: "80", prize_2: "8", prize_3: "4", prize_4: "2", prize_5: "1",
   window_start: "2025-09-02 05:10",
   window_end: "2026-09-25 18:20",
@@ -77,6 +78,7 @@ function needsPrizeAboveCoverage(style: string): boolean {
 const MAX_NAME_BYTES = 120;
 const SAFE_MAX = Number.MAX_SAFE_INTEGER;
 export const MAX_SESSION_DRAWS_LIMIT = 10000;
+export const MAX_STAKE_PER_NUMBER_LIMIT = 1000000;
 const WINDOW = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
 
 function positiveInt(raw: string): number | null {
@@ -128,6 +130,15 @@ export function parseLaboratoryForm(values: FormValues, positions: number = PRIZ
     }
   }
 
+  let maxStakePerNumber: number | null = null;
+  if (values.max_stake_per_number.trim() !== "") {
+    maxStakePerNumber = positiveInt(values.max_stake_per_number);
+    if (maxStakePerNumber === null || maxStakePerNumber > MAX_STAKE_PER_NUMBER_LIMIT) {
+      maxStakePerNumber = null;
+      errors.max_stake_per_number = `Escribí un número entero entre 1 y ${MAX_STAKE_PER_NUMBER_LIMIT}, o dejalo vacío para no poner tope.`;
+    }
+  }
+
   const prizes = prizeFields.map((field) => {
     const prize = positiveInt(values[field]);
     if (prize === null) errors[field] = "El premio es un entero positivo.";
@@ -159,6 +170,7 @@ export function parseLaboratoryForm(values: FormValues, positions: number = PRIZ
         window_start: values.window_start,
         window_end: values.window_end,
         ...(maxSessionDraws === null ? {} : { max_session_draws: maxSessionDraws }),
+        ...(maxStakePerNumber === null ? {} : { max_stake_per_number: maxStakePerNumber }),
       },
     },
   };

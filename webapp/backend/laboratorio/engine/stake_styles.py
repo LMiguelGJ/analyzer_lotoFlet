@@ -2,9 +2,10 @@
 
 ``b`` is the stake on every played number; the draw stake is ``b x coverage``. A draw is "won"
 only when what it paid is strictly greater than what it cost. The stake actually placed is
-``min(b, balance // coverage)``; when that is 0 the session is a ruin. When the cap binds, the
-progression state is lowered to the stake that was really placed, so ``b`` never outgrows the
-balance. Flat, ladder and bold are not progressions and keep their original engine path.
+``min(b, max_stake_per_number, balance // coverage)`` (the middle bound only when the laboratory
+sets one); when that is 0 the session is a ruin. When a cap binds, the progression state is
+lowered to the stake that was really placed, so ``b`` never outgrows the balance or the bank cap.
+Flat, ladder and bold are not progressions and keep their original engine path.
 """
 
 from abc import ABC, abstractmethod
@@ -21,12 +22,18 @@ def _ceil_div(numerator: int, denominator: int) -> int:
 class _Progression(ABC):
     """Common shape: ``bet`` places the next stake, ``settle`` learns the draw outcome."""
 
-    def __init__(self, coverage: int):
+    def __init__(self, coverage: int, max_stake: int | None = None):
         self.coverage = coverage
+        self.max_stake = max_stake
         self.b = 1
 
+    def _affordable(self, balance: int) -> int:
+        """Largest stake per number allowed by the balance and the optional bank cap."""
+        cap = balance // self.coverage
+        return cap if self.max_stake is None else min(cap, self.max_stake)
+
     def bet(self, balance: int) -> int:
-        per_number = min(self.b, balance // self.coverage)
+        per_number = min(self.b, self._affordable(balance))
         self.b = per_number
         return per_number
 
@@ -41,8 +48,8 @@ class _Martingale(_Progression):
 
 
 class _Paroli(_Progression):
-    def __init__(self, coverage):
-        super().__init__(coverage)
+    def __init__(self, coverage, max_stake=None):
+        super().__init__(coverage, max_stake)
         self.streak = 0
 
     def settle(self, wagered, paid):
@@ -64,8 +71,8 @@ class _DAlembert(_Progression):
 class _Fibonacci(_Progression):
     """Index ``i`` over the terms 1, 1, 2, 3, 5, 8...: lose ``i + 1``, win ``max(0, i - 2)``."""
 
-    def __init__(self, coverage):
-        super().__init__(coverage)
+    def __init__(self, coverage, max_stake=None):
+        super().__init__(coverage, max_stake)
         self.terms = [1, 1]
         self.index = 0
 
@@ -75,7 +82,7 @@ class _Fibonacci(_Progression):
         return self.terms[index]
 
     def bet(self, balance):
-        cap = balance // self.coverage
+        cap = self._affordable(balance)
         if self._term(self.index) > cap and cap > 0:
             # Largest index whose term fits: the state follows the stake really placed.
             while self.terms[-1] <= cap:
@@ -90,8 +97,8 @@ class _Fibonacci(_Progression):
 class _OscarsGrind(_Progression):
     """A cycle aims at ``+coverage``; a loss keeps ``b``; a win raises it only as far as needed."""
 
-    def __init__(self, coverage, first_prize):
-        super().__init__(coverage)
+    def __init__(self, coverage, first_prize, max_stake=None):
+        super().__init__(coverage, max_stake)
         self.gain_per_number = first_prize - coverage
         self.profit = 0
 
@@ -107,19 +114,24 @@ class _OscarsGrind(_Progression):
         self.b = min(self.b + 1, needed)
 
 
-def make_progression(style: str, coverage: int, first_prize: int, goal: int) -> _Progression:
-    """Fresh state for one session. ``goal`` is part of the engine contract of every style."""
+def make_progression(
+    style: str, coverage: int, first_prize: int, goal: int, max_stake: int | None = None
+) -> _Progression:
+    """Fresh state for one session. ``goal`` is part of the engine contract of every style.
+
+    ``max_stake`` is the optional bank cap on the stake per number (``None`` = no cap).
+    """
     del goal  # progressions never size a stake from the goal (bold does)
     if style == "martingale":
-        return _Martingale(coverage)
+        return _Martingale(coverage, max_stake)
     if style == "paroli":
-        return _Paroli(coverage)
+        return _Paroli(coverage, max_stake)
     if style == "dalembert":
-        return _DAlembert(coverage)
+        return _DAlembert(coverage, max_stake)
     if style == "fibonacci":
-        return _Fibonacci(coverage)
+        return _Fibonacci(coverage, max_stake)
     if style == "oscars_grind":
         if first_prize <= coverage:
             raise ValueError("Oscar's Grind necesita un primer premio mayor que la cobertura.")
-        return _OscarsGrind(coverage, first_prize)
+        return _OscarsGrind(coverage, first_prize, max_stake)
     raise ValueError(f"{style} is not a progression stake style")

@@ -16,6 +16,8 @@ export interface LaboratoryConfig {
   window_end: string;
   /** Optional deadline in draws per session (one draw per day on Leidsa); absent = no limit. */
   max_session_draws?: number;
+  /** Optional bank cap: no number receives more than this per draw; absent = no cap. */
+  max_stake_per_number?: number;
 }
 export interface LaboratoryDefinition {
   schema_version: number;

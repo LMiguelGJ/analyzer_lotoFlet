@@ -56,6 +56,21 @@ describe("laboratory form model", () => {
     expect(!result.ok && result.errors.max_session_draws).toMatch(/entre 1 y 10000/);
   });
 
+  it("leaves the stake cap out of the config when the field is empty and sends it when set", () => {
+    const empty = parseLaboratoryForm({ ...valid, max_stake_per_number: "   " });
+    expect(empty.ok && "max_stake_per_number" in empty.value.config).toBe(false);
+    const set = parseLaboratoryForm({ ...valid, max_stake_per_number: " 500 " });
+    expect(set.ok && set.value.config.max_stake_per_number).toBe(500);
+    const limit = parseLaboratoryForm({ ...valid, max_stake_per_number: "1000000" });
+    expect(limit.ok && limit.value.config.max_stake_per_number).toBe(1000000);
+  });
+
+  it.each(["0", "-3", "1.5", "abc", "1000001"])("refuses %s as maximum stake per number", (raw) => {
+    const result = parseLaboratoryForm({ ...valid, max_stake_per_number: raw });
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.errors.max_stake_per_number).toMatch(/entre 1 y 1000000/);
+  });
+
   it("rejects names above 120 UTF-8 bytes and control characters", () => {
     expect(parseLaboratoryForm({ ...valid, name: "é".repeat(61) }).ok).toBe(false);
     expect(parseLaboratoryForm({ ...valid, name: "é".repeat(60) }).ok).toBe(true);

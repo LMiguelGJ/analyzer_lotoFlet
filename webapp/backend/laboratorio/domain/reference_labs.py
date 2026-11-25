@@ -39,6 +39,8 @@ class ReferenceLab:
     # Optional deadline: a session that has not reached its goal (or ruin) after this many
     # draws ends as a "timeout". ``None`` keeps sessions unlimited, exactly as before.
     max_session_draws: int | None = None
+    # Optional bank cap on the stake per number in every draw (``None`` = no cap, as before).
+    max_stake_per_number: int | None = None
 
 
 REFERENCE_LABS = (

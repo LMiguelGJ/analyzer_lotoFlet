@@ -170,7 +170,7 @@ export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
 
   return <section className="reference-page" aria-labelledby="lab-title">
     <header className="reference-heading">
-      <div><h2 id="lab-title">{definition.name}</h2><p>{systemLabel(config.system)} · {config.coverage} {config.coverage === 1 ? "número" : "números"} · {stakeLabel(config.stake_style)}{config.max_session_draws === undefined ? "" : ` · máx ${config.max_session_draws} ${config.max_session_draws === 1 ? "día" : "días"}`}</p></div>
+      <div><h2 id="lab-title">{definition.name}</h2><p>{systemLabel(config.system)} · {config.coverage} {config.coverage === 1 ? "número" : "números"} · {stakeLabel(config.stake_style)}{config.max_session_draws === undefined ? "" : ` · máx ${config.max_session_draws} ${config.max_session_draws === 1 ? "día" : "días"}`}{config.max_stake_per_number === undefined ? "" : ` · tope ${formatAbsoluteDOP(config.max_stake_per_number)}`}</p></div>
       <Button variant="ghost" onClick={() => { setDeleteError(null); setConfirmDelete(true); }}>Eliminar laboratorio</Button>
     </header>
     {deleteError && <div className="reference-action-error" role="alert"><p>{deleteError}</p><Button onClick={() => setDeleteError(null)}>Cerrar</Button></div>}
@@ -183,6 +183,7 @@ export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
         <div><dt>Estilo de apuesta</dt><dd>{stakeLabel(config.stake_style)}</dd></div>
         <div><dt>Capital inicial</dt><dd>{money(config.capital)}</dd></div>
         <div><dt>Meta de saldo</dt><dd>{money(config.goal)}</dd></div>
+        {config.max_stake_per_number !== undefined && <div><dt>Apuesta máxima por número</dt><dd>{formatAbsoluteDOP(config.max_stake_per_number)}</dd></div>}
         <div><dt>Premios</dt><dd>{config.prizes.map((prize, index) => `${index + 1}.º ${money(prize)}`).join(" · ")}</dd></div>
         <div><dt>Ventana</dt><dd>{config.window_start} – {config.window_end}</dd></div>
         <div><dt>Corridas guardadas</dt><dd>{formatNumber(detail.owned_run_count)}</dd></div>

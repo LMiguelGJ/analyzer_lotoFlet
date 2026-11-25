@@ -76,7 +76,9 @@ def _new_progression(lab: ReferenceLab):
     """Fresh stake state for one session of a progression style (``None`` for the others)."""
     if lab.stake_style not in PROGRESSION_STYLES:
         return None
-    return make_progression(lab.stake_style, lab.coverage, lab.prizes[0], lab.goal)
+    return make_progression(
+        lab.stake_style, lab.coverage, lab.prizes[0], lab.goal, lab.max_stake_per_number
+    )
 
 
 def _bet_per_number(
@@ -87,15 +89,23 @@ def _bet_per_number(
     round_index: int,
     goal: int,
     ladder: tuple[int, ...],
+    max_stake: int | None = None,
 ) -> int:
+    """Stake per number for flat, ladder and bold; ``max_stake`` is the optional bank cap.
+
+    Ladder keeps its historical rule (no balance cap: the session ruins when it cannot pay the
+    stake), so the cap only lowers its stake; bold also stays within ``balance // coverage``.
+    """
     if style == "flat":
         return 1
     if style == "ladder":
-        return ladder[round_index]
-    return min(
-        (goal - balance + first_prize - coverage - 1) // (first_prize - coverage),
-        balance // coverage,
-    )
+        per_number = ladder[round_index]
+    else:
+        per_number = min(
+            (goal - balance + first_prize - coverage - 1) // (first_prize - coverage),
+            balance // coverage,
+        )
+    return per_number if max_stake is None else min(per_number, max_stake)
 
 
 def _selected_payments(
@@ -133,6 +143,7 @@ def run_reference_lab(
         window_end=lab.window_end,
         list_id=lab.list_id,
         max_session_draws=lab.max_session_draws,
+        max_stake_per_number=lab.max_stake_per_number,
     )
     max_draws = lab.max_session_draws
     expected_selection = "parity" if lab.system == "parity" else config.selection_kind
@@ -183,6 +194,7 @@ def run_reference_lab(
                 round_index,
                 lab.goal,
                 ladder,
+                lab.max_stake_per_number,
             )
         else:
             per_number = progression.bet(balance)
@@ -205,6 +217,7 @@ def run_reference_lab(
                     round_index,
                     lab.goal,
                     ladder,
+                    lab.max_stake_per_number,
                 )
             else:
                 per_number = progression.bet(balance)
@@ -234,6 +247,7 @@ def run_reference_lab(
                     round_index,
                     lab.goal,
                     ladder,
+                    lab.max_stake_per_number,
                 )
             if balance < lab.coverage or balance < lab.coverage * next_per_number:
                 outcome = "ruin"
