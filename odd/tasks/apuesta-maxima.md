@@ -12,7 +12,7 @@ las simulaciones respeten reglas reales.
 ## Tasks
 
 - T1 — S1–S3: backend + frontend del campo `max_stake_per_number`. Commit: 396b51f.
-- T2 — S1: búsqueda 2023–2026 con tope 500 y 1.000 y laboratorios de las mejores en la app. Commit: n/a.
+- T2 — S1: búsqueda 2023–2026 con tope 500 y 1.000 y laboratorios de las mejores en la app. Done: odd/reports/leidsa-2023-2026-tope-y-mas-numeros.md.
 
 ## Log
 
