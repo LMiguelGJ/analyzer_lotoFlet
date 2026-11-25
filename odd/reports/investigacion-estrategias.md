@@ -94,3 +94,51 @@ La quiniela directa es la modalidad que menos pierde.
 
 Agregar a la app, para Leidsa, los sistemas Transición, Ciclo vencido, Terminaciones/decenas y Ensamble,
 y probarlos eligiendo con un período y confirmando con otro, empezando por 2019–2026.
+
+## 6. Formas de apostar (staking) y qué se puede aprender de Stake.com
+
+Fecha: 2026-11-24. Fuentes: `gh search repos --topic martingale|betting-strategy` y help.stake.com
+(stake.com responde 403 de Cloudflare a clientes automáticos; se leyó su centro de ayuda).
+
+### Sistemas de apuesta conocidos
+
+| Sistema | Regla | Qué hace con el riesgo |
+|---|---|---|
+| Plana (ya en la app) | Siempre el mismo monto | Pérdida lenta y pareja |
+| Escalera (ya en la app) | Sube tras fallar, vuelve al inicio al acertar | Parecido a una martingala suave |
+| Audaz (ya en la app) | Lo justo para llegar a la meta de un golpe | Pocas pérdidas grandes |
+| Martingala | Duplica tras perder | Ganancias chicas, quiebra rara pero total |
+| Paroli (martingala inversa) | Duplica tras ganar, vuelve al inicio al perder | Pérdidas chicas, ganancias en rachas |
+| D'Alembert | +1 unidad tras perder, −1 tras ganar | Martingala más lenta |
+| Fibonacci | Sube según la serie 1,1,2,3,5… tras perder | Intermedio |
+| Labouchère | Tacha números de una lista al ganar | Variante de martingala |
+| Oscar's Grind | Busca +1 unidad por ciclo | Muy lenta, pocas quiebras |
+| Kelly | Apuesta una fracción proporcional a la ventaja | Con ventaja negativa indica **no apostar** |
+
+Ningún sistema cambia lo que devuelve cada peso apostado: si el juego paga 0,72 por peso, todos pierden
+28 % de lo que apuestan; solo cambian cuándo y cuánto de golpe.
+
+### GitHub
+
+Los repositorios más populares son bots de casino (Aviator, Bloxflip con martingala, Binary.com) sin
+evidencia de ganancia, y bots de **arbitraje** (Polymarket ↔ Kalshi, casas de apuestas deportivas). El
+arbitraje es la única ganancia sin riesgo documentada, pero necesita **dos operadores que paguen distinto
+por el mismo resultado**; con una sola lotería no aplica.
+
+### Stake.com
+
+- **Ventaja de la casa:** su centro de ayuda llama "house edge" al porcentaje que se queda la casa. La
+  quiniela 60/8/4 se queda el **28 %**; un juego de casino típico entre 1 % y 5 %.
+- **Rakeback:** devuelve 3,5 % de la ventaja de la casa (ej. sobre 1 BTC apostado en un juego de 2 % de
+  ventaja: 0,0007 BTC). No cambia el signo del resultado.
+- **Límites de pérdida y de apuesta** diarios, semanales y mensuales, con 24 h de espera para subirlos.
+- **Juego demostrablemente justo** (provably fair): cada resultado se puede verificar; en Leidsa no.
+
+### Lo aplicable a la app
+
+1. Agregar Martingala, Paroli, D'Alembert, Fibonacci y Oscar's Grind como estilos de apuesta, para
+   compararlos con los mismos datos.
+2. Agregar **límite de pérdida y límite de ganancia** por día, semana o mes (stop-loss / stop-win), como
+   hace Stake; reduce el tamaño de las pérdidas, no la pérdida esperada.
+3. Mostrar en cada resultado el **retorno por peso apostado** y la ventaja de la casa, para que se vea que
+   ronda 0,72.
