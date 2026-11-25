@@ -8,6 +8,7 @@ import numpy as np
 
 from laboratorio.domain.laboratories import LaboratoryConfig
 from laboratorio.domain.reference_labs import ReferenceLab
+from laboratorio.engine.stake_styles import PROGRESSION_STYLES, make_progression
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +70,13 @@ def _ladder(coverage: int, first_prize: int) -> tuple[int, ...]:
         stakes.append(stake)
         invested += coverage * stake
     return tuple(stakes)
+
+
+def _new_progression(lab: ReferenceLab):
+    """Fresh stake state for one session of a progression style (``None`` for the others)."""
+    if lab.stake_style not in PROGRESSION_STYLES:
+        return None
+    return make_progression(lab.stake_style, lab.coverage, lab.prizes[0], lab.goal)
 
 
 def _bet_per_number(
@@ -161,28 +169,12 @@ def run_reference_lab(
     ladder = _ladder(lab.coverage, first_prize) if lab.stake_style == "ladder" else ()
     sessions: list[ReferenceSession] = []
     balance, round_index = lab.capital, 0
+    progression = _new_progression(lab)
     start = 0
     draws = wagered = paid = 0
     outcomes = zip(payments.tolist(), first_hits.tolist(), strict=True)
     for index, (payment, first_hit) in enumerate(outcomes):
-        per_number = _bet_per_number(
-            lab.stake_style,
-            lab.coverage,
-            first_prize,
-            balance,
-            round_index,
-            lab.goal,
-            ladder,
-        )
-        stake = lab.coverage * per_number
-        if balance < stake:
-            if draws:
-                sessions.append(
-                    ReferenceSession("ruin", start, index - 1, draws, balance, wagered, paid)
-                )
-            balance, round_index = lab.capital, 0
-            start = index
-            draws = wagered = paid = 0
+        if progression is None:
             per_number = _bet_per_number(
                 lab.stake_style,
                 lab.coverage,
@@ -192,8 +184,32 @@ def run_reference_lab(
                 lab.goal,
                 ladder,
             )
+        else:
+            per_number = progression.bet(balance)
+        stake = lab.coverage * per_number
+        if balance < stake or per_number == 0:
+            if draws:
+                sessions.append(
+                    ReferenceSession("ruin", start, index - 1, draws, balance, wagered, paid)
+                )
+            balance, round_index = lab.capital, 0
+            progression = _new_progression(lab)
+            start = index
+            draws = wagered = paid = 0
+            if progression is None:
+                per_number = _bet_per_number(
+                    lab.stake_style,
+                    lab.coverage,
+                    first_prize,
+                    balance,
+                    round_index,
+                    lab.goal,
+                    ladder,
+                )
+            else:
+                per_number = progression.bet(balance)
             stake = lab.coverage * per_number
-            if balance < stake:
+            if balance < stake or per_number == 0:
                 raise ValueError("initial stake is unaffordable")
         winnings = per_number * payment
         balance += winnings - stake
@@ -202,17 +218,23 @@ def run_reference_lab(
         paid += winnings
         if lab.stake_style == "ladder":
             round_index = 0 if first_hit else (round_index + 1) % len(ladder)
+        if progression is not None:
+            progression.settle(stake, winnings)
         outcome = "goal" if balance >= lab.goal else None
         if outcome is None:
-            next_per_number = _bet_per_number(
-                lab.stake_style,
-                lab.coverage,
-                first_prize,
-                balance,
-                round_index,
-                lab.goal,
-                ladder,
-            )
+            if progression is not None:
+                # The next stake is cut to what the balance affords: ruin only at 0 per number.
+                next_per_number = 1
+            else:
+                next_per_number = _bet_per_number(
+                    lab.stake_style,
+                    lab.coverage,
+                    first_prize,
+                    balance,
+                    round_index,
+                    lab.goal,
+                    ladder,
+                )
             if balance < lab.coverage or balance < lab.coverage * next_per_number:
                 outcome = "ruin"
         if outcome is None and max_draws is not None and draws >= max_draws:
@@ -220,6 +242,7 @@ def run_reference_lab(
         if outcome is not None:
             sessions.append(ReferenceSession(outcome, start, index, draws, balance, wagered, paid))
             balance, round_index = lab.capital, 0
+            progression = _new_progression(lab)
             start = index + 1
             draws = wagered = paid = 0
     if draws:

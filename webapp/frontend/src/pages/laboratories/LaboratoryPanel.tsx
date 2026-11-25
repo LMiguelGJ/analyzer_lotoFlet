@@ -13,7 +13,7 @@ import { formatNumber, formatSignedDOP } from "../../lib/format";
 import { stakeLabel, systemLabel } from "../reference-labs/lab-model";
 import { count } from "./count";
 import { formatMean } from "./mean";
-import { deadlineSummary, formatAbsoluteDOP, formatAverageDays, formatPercentShare, formatReturnOnWagered, isValidLaboratoryWallet, returnOnWagered } from "./result-model";
+import { deadlineSummary, expectedReturnPerPeso, formatAbsoluteDOP, formatAverageDays, formatHouseEdge, formatPercentShare, formatReturnOnWagered, formatReturnPerPeso, houseEdgePercent, isValidLaboratoryWallet, returnOnWagered, returnPerPeso } from "./result-model";
 import "../reference-labs/reference-labs.css";
 
 const RUN_PAGE = 200;
@@ -231,6 +231,11 @@ export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
         <div><span>Premios recibidos</span><strong>{money(totals.total_paid)}</strong></div>
         <div><span>Retorno sobre apostado</span><strong>{formatReturnOnWagered(returnOnWagered(totals.total_net, totals.total_wagered))}</strong></div>
       </div>
+      <dl className="lab-evaluation lab-house-edge" aria-label="Retorno por peso y ventaja de la casa">
+        <div><dt>Retorno por peso apostado</dt><dd>{formatReturnPerPeso(returnPerPeso(totals.total_paid, totals.total_wagered))}</dd></div>
+        <div><dt>Ventaja de la casa</dt><dd>{formatHouseEdge(houseEdgePercent(config.prizes))}</dd></div>
+      </dl>
+      <p className="lab-house-edge-hint">Por cada peso apostado, el juego devuelve en promedio {expectedReturnPerPeso(config.prizes)}</p>
       </section>
       <section className="lab-result-summary" aria-label="Resumen de sesiones">
       <div className="lab-result-grid lab-result-counts">

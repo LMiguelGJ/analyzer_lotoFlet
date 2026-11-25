@@ -90,6 +90,9 @@ const listSystems: Record<string, OptionExplanation & { label: string }> = {
   },
 };
 
+/** Closing note of every progression: staking systems move the risk around, not the average return per peso. */
+const HONEST_NOTE = "Ningún sistema de apuestas cambia lo que devuelve en promedio cada peso: solo cambia cuánto arriesgás y cuándo.";
+
 const stakes: Record<(typeof STAKE_STYLES)[number]["value"], OptionExplanation> = {
   bold: {
     what: "Calcula cuánto apostar por número para alcanzar la meta con un acierto en el primer premio, sin superar el saldo disponible.",
@@ -105,6 +108,31 @@ const stakes: Record<(typeof STAKE_STYLES)[number]["value"], OptionExplanation> 
     what: "Apuesta una unidad por número en cada sorteo.",
     effect: "El importe no aumenta para recuperar pérdidas ni se ajusta a la meta.",
     example: "Con cobertura de 5 números, apostás 5 unidades por sorteo.",
+  },
+  martingale: {
+    what: "Si el sorteo pierde, duplica la apuesta por número; si gana, vuelve a una unidad. «Ganar» es cobrar más de lo apostado ese día.",
+    effect: `Una sola ganada recupera lo perdido, pero tras una mala racha la apuesta crece muy rápido y el saldo puede no alcanzar. ${HONEST_NOTE}`,
+    example: "Apuesta 1, pierde; apuesta 2, pierde; apuesta 4, gana; vuelve a apostar 1 por número.",
+  },
+  paroli: {
+    what: "Si el sorteo gana, duplica la apuesta por número; tras tres ganadas seguidas, o si pierde, vuelve a una unidad.",
+    effect: `Arriesga solo lo recién ganado para aprovechar rachas, y una pérdida corta la racha con poco daño. ${HONEST_NOTE}`,
+    example: "Apuesta 1, gana; apuesta 2, gana; apuesta 4, gana; vuelve a apostar 1 por número.",
+  },
+  dalembert: {
+    what: "Si el sorteo pierde, suma una unidad a la apuesta por número; si gana, resta una, sin bajar de una unidad.",
+    effect: `Sube y baja de a poco, así que es más suave que duplicar. Después de varias pérdidas sigue apostando más que al inicio. ${HONEST_NOTE}`,
+    example: "Apuesta 1, pierde; apuesta 2, pierde; apuesta 3, gana; baja a apostar 2 por número.",
+  },
+  fibonacci: {
+    what: "La apuesta por número sigue la secuencia 1, 1, 2, 3, 5, 8…: si el sorteo pierde avanza un paso; si gana retrocede dos.",
+    effect: `Crece más despacio que duplicar y se recupera retrocediendo dos pasos al ganar. ${HONEST_NOTE}`,
+    example: "Pierde cuatro veces seguidas y apuesta 1, 1, 2, 3; si gana con 3, retrocede dos pasos y apuesta 1 por número.",
+  },
+  oscars_grind: {
+    what: "Trabaja por ciclos con objetivo de ganar una unidad por número. Si pierde, mantiene la apuesta; si gana, la sube una unidad sin pasar de lo necesario para cerrar el ciclo, y al llegar al objetivo empieza otro ciclo con una unidad.",
+    effect: `Mantiene las apuestas pequeñas y nunca persigue las pérdidas subiendo la apuesta. Necesita un primer premio mayor que la cobertura. ${HONEST_NOTE}`,
+    example: "Con cobertura 1 apuesta 1 hasta que un sorteo cierre el ciclo con ganancia; entonces empieza un ciclo nuevo con apuesta 1.",
   },
 };
 
@@ -130,7 +158,7 @@ export function systemHelpOptions(values: readonly string[], listId?: string): H
 export function stakeHelpOptions(firstPrize: number): HelpOption[] {
   return STAKE_STYLES.map((option) => {
     const base = { ...option, ...stakes[option.value] };
-    if (firstPrize === 80 || option.value === "flat") return base;
+    if (firstPrize === 80 || !["bold", "ladder"].includes(option.value)) return base;
     return { ...base, example: `Con primer premio ${firstPrize} y cobertura 10, la apuesta por número se recalcula en cada sorteo según el saldo y la meta.` };
   });
 }

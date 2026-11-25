@@ -2,7 +2,7 @@ import { request } from "./client";
 import type { SystemOption } from "./types";
 import type { ReferenceCapabilities, ReferencePage, ReferenceSessionPage, ReferenceTotals, PageParams } from "./referenceLabs";
 
-export type StakeStyle = "bold" | "ladder" | "flat";
+export type StakeStyle = "bold" | "ladder" | "flat" | "martingale" | "paroli" | "dalembert" | "fibonacci" | "oscars_grind";
 
 export interface LaboratoryConfig {
   schema_version: number;
@@ -90,6 +90,8 @@ export interface LaboratoryOptions {
   prizes: number[];
   window: { start: string | null; end: string | null };
   history_sha256: string;
+  /** Stake styles the server offers; older servers omit it and the form uses its local map. */
+  stake_styles?: { id: string; label: string }[];
 }
 
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;

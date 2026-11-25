@@ -94,6 +94,11 @@ class StakingStyle(StrEnum):
     FLAT = "flat"
     LADDER = "ladder"
     BOLD = "bold"
+    MARTINGALE = "martingale"
+    PAROLI = "paroli"
+    DALEMBERT = "dalembert"
+    FIBONACCI = "fibonacci"
+    OSCARS_GRIND = "oscars_grind"
 
 
 class _Frozen(BaseModel):

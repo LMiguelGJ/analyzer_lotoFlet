@@ -14,6 +14,7 @@ from laboratorio.domain.number_lists import (
     UNAVAILABLE_REASON,
     system_label,
 )
+from laboratorio.domain.reference_labs import STAKE_STYLE_LABELS
 from laboratorio.engine.list_catalog import ListError
 from laboratorio.storage.laboratory_store import (
     LaboratoryDefinitionConflict,
@@ -105,6 +106,9 @@ def laboratory_options(request: Request):
         "prizes": lists.prizes(active.id),
         "window": {"start": start, "end": end},
         "history_sha256": history.sha256,
+        "stake_styles": [
+            {"id": style, "label": label} for style, label in STAKE_STYLE_LABELS.items()
+        ],
     }
 
 

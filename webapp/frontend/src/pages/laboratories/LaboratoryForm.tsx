@@ -5,7 +5,7 @@ import { createLaboratory, getLaboratoryOptions } from "../../api/laboratories";
 import type { LaboratoryDefinition, LaboratoryOptions } from "../../api/laboratories";
 import { Button, Field } from "../../components/ui/Controls";
 import { ErrorBanner, Loading } from "../../components/ui/Feedback";
-import { PRIZE_FIELDS, STAKE_STYLES, buildDefaultForm, parseLaboratoryForm, prizeFieldsFor, systemChoices } from "./form-model";
+import { PRIZE_FIELDS, buildDefaultForm, parseLaboratoryForm, prizeFieldsFor, stakeChoices, systemChoices } from "./form-model";
 import type { FormErrors, FormField, FormValues } from "./form-model";
 import { LaboratoryOptionHelp } from "./LaboratoryOptionHelp";
 import type { HelpKind } from "./option-help";
@@ -105,7 +105,7 @@ function LaboratoryFormBody({ options, onCreated }: Props & { options: Laborator
         <select id="lab-system" className="ledger-control" value={values.system} onChange={(event) => set("system")(event.target.value)}>{choices.map((system) => <option key={system.value} value={system.value} disabled={!system.available}>{system.available ? system.label : `${system.label} — ${system.reason ?? "No disponible para esta lista"}`}</option>)}</select></div>
       <div className="ledger-field"><div className="lab-field-label"><label className="ledger-label" htmlFor="lab-stake">Estilo de apuesta</label>
         <LaboratoryOptionHelp kind="stake_style" firstPrize={options.prizes[0]} value={values.stake_style} open={help === "stake_style"} onOpen={() => setHelp("stake_style")} onClose={() => setHelp(null)} /></div>
-        <select id="lab-stake" className="ledger-control" value={values.stake_style} onChange={(event) => set("stake_style")(event.target.value)}>{STAKE_STYLES.map((style) => <option key={style.value} value={style.value}>{style.label}</option>)}</select></div>
+        <select id="lab-stake" className="ledger-control" value={values.stake_style} onChange={(event) => set("stake_style")(event.target.value)}>{stakeChoices(options).map((style) => <option key={style.value} value={style.value}>{style.label}</option>)}</select></div>
       <Field id="lab-coverage" label="Cobertura (números)" inputMode="numeric" value={values.coverage} onChange={(event) => set("coverage")(event.target.value)} error={errors.coverage} hint="De 1 a 50." />
     </div>
     <div className="lab-form-row">

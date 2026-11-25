@@ -1,4 +1,5 @@
 import type { LaboratoryConfig, LaboratoryOptions, StakeStyle } from "../../api/laboratories";
+import { stakeLabel } from "../reference-labs/lab-model";
 
 export const SYSTEMS = [
   { value: "transition", label: "Transición" },
@@ -17,11 +18,13 @@ export function systemChoices(options: LaboratoryOptions): SystemChoice[] {
   if (options.list.id === CHANCE_LIST_ID) return SYSTEMS.map((system) => ({ value: system.value, label: system.label, available: true }));
   return options.systems.map((system) => ({ value: system.id, label: system.label, available: system.available !== false, reason: system.reason }));
 }
-export const STAKE_STYLES: { value: StakeStyle; label: string }[] = [
-  { value: "bold", label: "Audaz" },
-  { value: "ladder", label: "Escalera" },
-  { value: "flat", label: "Plana" },
-];
+const STAKE_STYLE_IDS: StakeStyle[] = ["bold", "ladder", "flat", "martingale", "paroli", "dalembert", "fibonacci", "oscars_grind"];
+export const STAKE_STYLES: { value: StakeStyle; label: string }[] = STAKE_STYLE_IDS.map((value) => ({ value, label: stakeLabel(value) }));
+/** Styles the form offers; the server's labels win when it reports them, the local map covers older servers. */
+export function stakeChoices(options: LaboratoryOptions): { value: StakeStyle; label: string }[] {
+  const reported = new Map((options.stake_styles ?? []).map((style) => [style.id, style.label]));
+  return STAKE_STYLES.map((style) => ({ value: style.value, label: reported.get(style.value) ?? style.label }));
+}
 
 export const PRIZE_FIELDS = ["prize_1", "prize_2", "prize_3", "prize_4", "prize_5"] as const;
 export type FormField =
@@ -64,6 +67,11 @@ export function buildDefaultForm(options: LaboratoryOptions): FormValues {
   if (options.window.start) form.window_start = options.window.start;
   if (options.window.end) form.window_end = options.window.end;
   return form;
+}
+
+/** Bold, ladder and Oscar's Grind size their stake from the first prize minus the coverage, so it must be larger. */
+function needsPrizeAboveCoverage(style: string): boolean {
+  return style === "bold" || style === "ladder" || style === "oscars_grind";
 }
 
 const MAX_NAME_BYTES = 120;
@@ -125,7 +133,7 @@ export function parseLaboratoryForm(values: FormValues, positions: number = PRIZ
     if (prize === null) errors[field] = "El premio es un entero positivo.";
     return prize;
   });
-  if (!errors.prize_1 && prizes[0] !== null && coverage !== null && values.stake_style !== "flat" && prizes[0] <= coverage) {
+  if (!errors.prize_1 && prizes[0] !== null && coverage !== null && needsPrizeAboveCoverage(values.stake_style) && prizes[0] <= coverage) {
     errors.prize_1 = "El primer premio debe ser mayor que la cobertura.";
   }
 

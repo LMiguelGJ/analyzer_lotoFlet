@@ -744,4 +744,47 @@ describe("laboratory workspace", () => {
     const { axe } = await import("jest-axe");
     expect(await axe(document.body)).toHaveNoViolations();
   });
+
+  it("names the new stake styles in the sidebar and in the panel", async () => {
+    const martingale = { ...definition, name: "Martingala propia", config: { ...config, stake_style: "martingale" as const } };
+    m.listLaboratories.mockResolvedValue({ total: 1, offset: 0, limit: 20, items: [martingale] });
+    m.getLaboratory.mockResolvedValue({ definition: martingale, owned_run_count: 0, owned_session_count: 0 });
+    renderAt(`/laboratorios/${ID}`);
+    const link = await screen.findByRole("link", { name: /Martingala propia/ });
+    expect(within(link).getByText("Transición · 1 número · Martingala")).toHaveClass("lab-list-meta");
+    const rules = await screen.findByRole("region", { name: "Reglas del laboratorio" });
+    expect(within(rules).getByText("Estilo de apuesta").parentElement).toHaveTextContent("Martingala");
+  });
+
+  describe("return per peso and house edge", () => {
+    async function openResult(prizes: number[], wagered: number, paid: number) {
+      const own = { ...definition, config: { ...config, prizes } };
+      m.getLaboratory.mockResolvedValue({ definition: own, owned_run_count: 1, owned_session_count: 4 });
+      m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, totals: { ...totals, total_wagered: wagered, total_paid: paid, total_net: paid - wagered } } });
+      const user = userEvent.setup();
+      renderAt(`/laboratorios/${ID}`);
+      await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+      return within(await screen.findByRole("region", { name: "Resultado guardado" }));
+    }
+
+    it("shows paid / wagered with two decimals and the house edge of 60/8/4", async () => {
+      const result = await openResult([60, 8, 4], 1000, 720);
+      expect(result.getByText("Retorno por peso apostado").parentElement).toHaveTextContent("0,72");
+      expect(result.getByText("Ventaja de la casa").parentElement).toHaveTextContent("28 %");
+      expect(result.getByText("Por cada peso apostado, el juego devuelve en promedio 0,72")).toBeInTheDocument();
+    });
+
+    it("computes the house edge of the 80/8/4/2/1 prizes as 5 %", async () => {
+      const result = await openResult([80, 8, 4, 2, 1], 1000, 1100);
+      expect(result.getByText("Retorno por peso apostado").parentElement).toHaveTextContent("1,10");
+      expect(result.getByText("Ventaja de la casa").parentElement).toHaveTextContent("5 %");
+      expect(result.getByText("Por cada peso apostado, el juego devuelve en promedio 0,95")).toBeInTheDocument();
+    });
+
+    it("says Sin apuestas when nothing was wagered", async () => {
+      const result = await openResult([60, 8, 4], 0, 0);
+      expect(result.getByText("Retorno por peso apostado").parentElement).toHaveTextContent("Sin apuestas");
+      expect(result.getByText("Ventaja de la casa").parentElement).toHaveTextContent("28 %");
+    });
+  });
 });

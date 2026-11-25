@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from laboratorio.domain.number_lists import DEFAULT_LIST_ID, get_list, unavailable_message
-from laboratorio.domain.reference_labs import REFERENCE_LABS, ReferenceLab, StakeStyle
+from laboratorio.domain.reference_labs import (
+    REFERENCE_LABS,
+    STAKE_STYLE_LABELS,
+    ReferenceLab,
+    StakeStyle,
+)
 
 SNAPSHOT_VERSION = 1
 # This draw-count bound is valid only for the history digest pinned by the service.
@@ -133,8 +138,12 @@ class LaboratoryConfig:
             raise ValueError("coverage must be between 1 and 50")
         if self.system == "parity" and self.coverage != 50:
             raise ValueError("parity selection requires all 50 numbers")
-        if type(self.stake_style) is not str or self.stake_style not in {"bold", "ladder", "flat"}:
-            raise ValueError("stake_style must be bold, ladder, or flat")
+        if type(self.stake_style) is not str or self.stake_style not in STAKE_STYLE_LABELS:
+            raise ValueError(
+                "El estilo de apuesta no es válido. Estilos disponibles: "
+                + ", ".join(STAKE_STYLE_LABELS)
+                + "."
+            )
         _strict_int(self.capital, "capital")
         if self.capital < self.coverage:
             raise ValueError("capital must fund at least one unit on every selected number")
@@ -149,6 +158,10 @@ class LaboratoryConfig:
             _strict_int(prize, "prize")
         if self.stake_style in {"bold", "ladder"} and self.prizes[0] <= self.coverage:
             raise ValueError("bold and ladder require first prize greater than coverage")
+        if self.stake_style == "oscars_grind" and self.prizes[0] <= self.coverage:
+            raise ValueError(
+                "Oscar's Grind necesita que el premio del primer puesto sea mayor que la cobertura."
+            )
         if self.stake_style == "ladder":
             first_ladder_unit = max(
                 1, (10 + self.prizes[0] - self.coverage - 1) // (self.prizes[0] - self.coverage)

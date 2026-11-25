@@ -5,7 +5,20 @@ from types import MappingProxyType
 from typing import Literal
 
 SelectionKind = Literal["ranking", "parity"]
-StakeStyle = Literal["bold", "ladder", "flat"]
+StakeStyle = Literal[
+    "bold", "ladder", "flat", "martingale", "paroli", "dalembert", "fibonacci", "oscars_grind"
+]
+# Offered stake styles in display order, with their Spanish labels.
+STAKE_STYLE_LABELS = {
+    "flat": "Plana",
+    "ladder": "Escalera",
+    "bold": "Audaz",
+    "martingale": "Martingala",
+    "paroli": "Paroli",
+    "dalembert": "D'Alembert",
+    "fibonacci": "Fibonacci",
+    "oscars_grind": "Oscar's Grind",
+}
 
 
 @dataclass(frozen=True, slots=True)

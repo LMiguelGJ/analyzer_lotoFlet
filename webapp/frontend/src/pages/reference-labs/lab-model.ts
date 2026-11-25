@@ -13,16 +13,21 @@ const SYSTEM_LABELS: Record<string, string> = {
   overdue: "Ciclo vencido",
   digits: "Terminaciones y decenas",
 };
-const STAKE_LABELS: Record<ReferenceLab["stake_style"], string> = {
+const STAKE_LABELS: Record<string, string> = {
   bold: "Audaz",
   ladder: "Escalera",
   flat: "Plana",
+  martingale: "Martingala",
+  paroli: "Paroli",
+  dalembert: "D'Alembert",
+  fibonacci: "Fibonacci",
+  oscars_grind: "Oscar's Grind",
 };
 export function systemLabel(system: string): string {
   return SYSTEM_LABELS[system] ?? system;
 }
-export function stakeLabel(style: ReferenceLab["stake_style"]): string {
-  return STAKE_LABELS[style];
+export function stakeLabel(style: string): string {
+  return STAKE_LABELS[style] ?? style;
 }
 export function labTitle(lab: ReferenceLab): string {
   return `${systemLabel(lab.system)} · ${lab.coverage} ${lab.coverage === 1 ? "número" : "números"} · ${stakeLabel(lab.stake_style)}`;

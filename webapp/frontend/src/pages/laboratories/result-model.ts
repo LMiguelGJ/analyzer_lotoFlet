@@ -36,6 +36,28 @@ export function formatReturnOnWagered(value: number | null): string {
   return `${percentage.format(value).replace(/^-0,00$/, "+0,00").replace("-", "−")} %`;
 }
 
+/** Two decimals with a comma, like the rest of the app ("0,72"); the runtime es-DO locale would print a point. */
+const ratioFormat = { format: (value: number): string => value.toFixed(2).replace(".", ",") };
+
+/** What each peso wagered gave back (paid / wagered), or null when nothing was wagered. */
+export function returnPerPeso(paid: number, wagered: number): number | null {
+  return wagered === 0 ? null : paid / wagered;
+}
+export function formatReturnPerPeso(value: number | null): string {
+  return value === null ? "Sin apuestas" : ratioFormat.format(value);
+}
+/** The game's built-in margin: 1 − sum(prizes)/100, in percentage points (28 for 60/8/4). */
+export function houseEdgePercent(prizes: readonly number[]): number {
+  return 100 - prizes.reduce((sum, prize) => sum + prize, 0);
+}
+export function formatHouseEdge(percent: number): string {
+  return `${formatNumber(percent)} %`;
+}
+/** Average return per peso implied by the prizes alone: 1 − house edge. */
+export function expectedReturnPerPeso(prizes: readonly number[]): string {
+  return ratioFormat.format((100 - houseEdgePercent(prizes)) / 100);
+}
+
 export interface DeadlineSummary {
   goalsInTime: number;
   timeouts: number;

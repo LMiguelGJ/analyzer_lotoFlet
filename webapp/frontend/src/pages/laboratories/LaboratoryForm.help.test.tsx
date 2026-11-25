@@ -28,11 +28,24 @@ const cases = [
   ["Estilo de apuesta", "stake_style", "bold", "Audaz", /saldo disponible/i],
   ["Estilo de apuesta", "stake_style", "ladder", "Escalera", /diez rondas/i],
   ["Estilo de apuesta", "stake_style", "flat", "Plana", /una unidad por número/i],
+  ["Estilo de apuesta", "stake_style", "martingale", "Martingala", /duplica la apuesta/i],
+  ["Estilo de apuesta", "stake_style", "paroli", "Paroli", /tres ganadas seguidas/i],
+  ["Estilo de apuesta", "stake_style", "dalembert", "D'Alembert", /suma una unidad/i],
+  ["Estilo de apuesta", "stake_style", "fibonacci", "Fibonacci", /1, 1, 2, 3, 5, 8/],
+  ["Estilo de apuesta", "stake_style", "oscars_grind", "Oscar's Grind", /objetivo de ganar una unidad/i],
 ] as const;
 
 function helpButton(group: string) { return screen.getByRole("button", { name: `Ayuda sobre ${group.toLowerCase()}` }); }
 
 describe("laboratory option help", () => {
+  it.each(["martingale", "paroli", "dalembert", "fibonacci", "oscars_grind"])("%s help says honestly that no staking system changes the average return per peso", async (value) => {
+    const user = userEvent.setup();
+    await renderForm();
+    await user.selectOptions(screen.getByLabelText("Estilo de apuesta"), value);
+    await user.click(helpButton("Estilo de apuesta"));
+    expect(within(screen.getByRole("dialog")).getByText(/ningún sistema de apuestas cambia lo que devuelve en promedio cada peso/i)).toBeVisible();
+  });
+
   it("keeps help hidden until requested and preserves native option lists", async () => {
     await renderForm();
     expect(helpButton("Sistema de selección")).toHaveAttribute("aria-expanded", "false");
@@ -44,7 +57,11 @@ describe("laboratory option help", () => {
     expect(systems.tagName).toBe("SELECT");
     expect(styles.tagName).toBe("SELECT");
     expect(within(systems).getAllByRole("option")).toHaveLength(6);
-    expect(within(styles).getAllByRole("option")).toHaveLength(3);
+    expect(within(styles).getAllByRole("option")).toHaveLength(8);
+    expect(within(styles).getAllByRole("option").map((node) => [(node as HTMLOptionElement).value, node.textContent])).toEqual([
+      ["bold", "Audaz"], ["ladder", "Escalera"], ["flat", "Plana"], ["martingale", "Martingala"], ["paroli", "Paroli"],
+      ["dalembert", "D'Alembert"], ["fibonacci", "Fibonacci"], ["oscars_grind", "Oscar's Grind"],
+    ]);
     expect(systems).toHaveValue("transition");
     expect(styles).toHaveValue("bold");
   });
@@ -73,7 +90,7 @@ describe("laboratory option help", () => {
     await user.click(helpButton("Estilo de apuesta"));
     await user.click(screen.getByRole("button", { name: "Comparar opciones" }));
     const panel = screen.getByRole("dialog", { name: "Estilos de apuesta" });
-    expect(within(panel).getAllByRole("heading", { level: 4 }).map((node) => node.textContent)).toEqual(["Audaz", "Escalera", "Plana"]);
+    expect(within(panel).getAllByRole("heading", { level: 4 }).map((node) => node.textContent)).toEqual(["Audaz", "Escalera", "Plana", "Martingala", "Paroli", "D'Alembert", "Fibonacci", "Oscar's Grind"]);
     expect(within(panel).getByText("Seleccionado").closest("li")).toHaveAttribute("aria-current", "true");
     expect(within(panel).getByText("Seleccionado").closest("li")).toHaveTextContent("Plana");
     await user.click(screen.getByRole("button", { name: "Volver a la opción elegida" }));
