@@ -16,9 +16,10 @@ Los laboratorios de referencia de Loteka Chance Express y sus resultados dorados
 - T1 — S1, S4, S5: parámetros de ranking por laboratorio (`ranking_params`), Ensamble que los respeta y sin votos repetidos/opuestos, desempate, calentamiento por defecto, validación prizes[0] > cobertura para progresiones nuevas. Route: worker. Commit: 9669701.
 - T2 — S2, S5: reglas de apuesta v2 (Escalera ligada a la meta, sin reinicio silencioso, acotada al saldo y al tope; progresiones que reinician solo al recuperar el ciclo), opt-in para laboratorios nuevos. Route: worker. Commit: 3fea931.
 - T3 — S3, S5: desglose por año en el resultado del laboratorio (backend aditivo + tabla en el panel). Route: worker. Commit: f055cca.
-- T4 — S1–S5: verificación, reinicio de la app y laboratorio "Decaimiento 300" creado en la app. Route: inline. Commit: n/a.
+- T4 — S1–S5: verificación, reinicio de la app y laboratorio "Decaimiento 300" creado en la app. Route: inline. Done: decay vida media 300 (2019–2026) = +16.959, 0 quiebras, 10.000 → 26.959 en la app; tabla por año en las 97 corridas guardadas tras el fix 003ebd9.
 
 ## Log
 
 - L1 — Pedido: "si haz variaziones cambia este valor y todos que entiendas que este afectante a que no consigamos los resultados deseados y analiza bien todo los demas metodos para punto de mejoras". Judgment Day APPROVED sin severos (commit eda668a), 19 hallazgos informativos.
 - L2 — Respuesta del usuario a "¿Cuáles arreglo o agrego en la app?": "Ventana y half-life configurables, Arreglar Escalera y progresiones, Resultado por año en la app, Validación y Ensamble".
+- L3 — Cierre T4: la tabla por año exigía la misma huella del archivo de historial y faltaba en 59 de 97 corridas (cada descarga reescribe metadatos); corregido en 003ebd9 para comparar solo las etiquetas de los sorteos. Verificado: 97/97 con tabla.
