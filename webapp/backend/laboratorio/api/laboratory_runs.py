@@ -81,30 +81,27 @@ def _stored(request, owner_id, run_id):
 def _by_year(request, snapshot, summary, sessions=None, *, owner_id=None, run_id=None):
     """Per-year result of a saved run, computed on read; ``None`` when it cannot be certified.
 
-    Nothing is stored: the draw labels come from the list's current history, which must be the
-    one the run replayed (same SHA-256, same eligible draws, first and last label).
+    Nothing is stored: the draw labels come from the list's current history. Only the labels are
+    used (each session keeps its own stored balance), so the file fingerprint may differ (a
+    re-download rewrites its metadata, or appends later draws); the labels up to the run's last
+    draw must still match it exactly (same eligible draws, first and last label).
     """
     config = snapshot.definition.config
     try:
         data = request.app.state.lists.lab_data(config.list_id)
     except ListError:
         return None
-    if snapshot.history_sha256 != data.history.sha256:
+    labels = eligible_labels(data.history, data.rankings, config.window_start, config.window_end)
+    labels = [label for label in labels if label <= summary["last"]]
+    if len(labels) != summary["eligible_draws"]:
         return None
-    key = (
-        summary["session_sha256"],
-        data.history.sha256,
-        config.window_start,
-        config.window_end,
-        config.capital,
-    )
+    # Keyed by the resolved labels themselves, not the file fingerprint: the fingerprint can
+    # change while the labels stay the same, and the labels can change under the same key.
+    key = (summary["session_sha256"], hash(tuple(labels)), config.capital)
     with _by_year_lock:
         if key in _by_year_cache:
             _by_year_cache.move_to_end(key)
             return copy.deepcopy(_by_year_cache[key])
-    labels = eligible_labels(data.history, data.rankings, config.window_start, config.window_end)
-    if len(labels) != summary["eligible_draws"]:
-        return None
     if sessions is None:
         try:
             record = request.app.state.repo.get_owned_laboratory_run(owner_id, run_id)

@@ -281,13 +281,32 @@ def test_by_year_is_additive_and_does_not_touch_stored_results(client):
     }
 
 
-def test_history_that_no_longer_matches_the_run_gives_null_without_error(client):
+def test_a_new_file_fingerprint_with_the_same_draws_still_gives_the_years(client):
+    # Re-downloading rewrites the file metadata, so its SHA-256 changes while the draws stay.
+    sha = _activate_leidsa(client)
+    lab = _known_lab(client)
+    run = _run(client, lab, sha)
+    expected = client.get(f"/api/v1/laboratories/{lab['id']}/runs/{run['id']}").json()
+    lists = client.app.state.lists
+    real = lists.lab_data(LEIDSA)
+    changed = replace(real, history=replace(real.history, sha256="f" * 64))
+    lists.lab_data = lambda list_id: changed if list_id == LEIDSA else real
+    response = client.get(f"/api/v1/laboratories/{lab['id']}/runs/{run['id']}")
+    assert response.status_code == 200
+    assert response.json()["summary"]["by_year"] == expected["summary"]["by_year"]
+    assert expected["summary"]["by_year"]
+
+
+def test_history_whose_draws_no_longer_match_the_run_gives_null_without_error(client):
     sha = _activate_leidsa(client)
     lab = _known_lab(client)
     run = _run(client, lab, sha)
     lists = client.app.state.lists
     real = lists.lab_data(LEIDSA)
-    changed = replace(real, history=replace(real.history, sha256="f" * 64))
+    labels = list(real.history.labels)
+    first = next(i for i, label in enumerate(labels) if label >= "2019-01-01")
+    labels[first] = labels[first].replace("20:50", "20:51")
+    changed = replace(real, history=replace(real.history, sha256="f" * 64, labels=tuple(labels)))
     lists.lab_data = lambda list_id: changed if list_id == LEIDSA else real
     response = client.get(f"/api/v1/laboratories/{lab['id']}/runs/{run['id']}")
     assert response.status_code == 200
