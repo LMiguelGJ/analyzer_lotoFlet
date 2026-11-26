@@ -15,7 +15,7 @@ Los laboratorios de referencia de Loteka Chance Express y sus resultados dorados
 
 - T1 — S1, S4, S5: parámetros de ranking por laboratorio (`ranking_params`), Ensamble que los respeta y sin votos repetidos/opuestos, desempate, calentamiento por defecto, validación prizes[0] > cobertura para progresiones nuevas. Route: worker. Commit: 9669701.
 - T2 — S2, S5: reglas de apuesta v2 (Escalera ligada a la meta, sin reinicio silencioso, acotada al saldo y al tope; progresiones que reinician solo al recuperar el ciclo), opt-in para laboratorios nuevos. Route: worker. Commit: 3fea931.
-- T3 — S3, S5: desglose por año en el resultado del laboratorio (backend aditivo + tabla en el panel). Route: worker. Commit: pending.
+- T3 — S3, S5: desglose por año en el resultado del laboratorio (backend aditivo + tabla en el panel). Route: worker. Commit: f055cca.
 - T4 — S1–S5: verificación, reinicio de la app y laboratorio "Decaimiento 300" creado en la app. Route: inline. Commit: n/a.
 
 ## Log
