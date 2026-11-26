@@ -74,10 +74,17 @@ def _ladder(coverage: int, first_prize: int) -> tuple[int, ...]:
 
 def _new_progression(lab: ReferenceLab):
     """Fresh stake state for one session of a progression style (``None`` for the others)."""
-    if lab.stake_style not in PROGRESSION_STYLES:
+    ladder_v2 = lab.stake_style == "ladder" and lab.stake_rules == 2
+    if lab.stake_style not in PROGRESSION_STYLES and not ladder_v2:
         return None
     return make_progression(
-        lab.stake_style, lab.coverage, lab.prizes[0], lab.goal, lab.max_stake_per_number
+        lab.stake_style,
+        lab.coverage,
+        lab.prizes[0],
+        lab.goal,
+        lab.max_stake_per_number,
+        rules=lab.stake_rules,
+        capital=lab.capital,
     )
 
 
@@ -144,6 +151,7 @@ def run_reference_lab(
         list_id=lab.list_id,
         max_session_draws=lab.max_session_draws,
         max_stake_per_number=lab.max_stake_per_number,
+        stake_rules=lab.stake_rules,
     )
     max_draws = lab.max_session_draws
     expected_selection = "parity" if lab.system == "parity" else config.selection_kind
@@ -177,7 +185,8 @@ def run_reference_lab(
         np.asarray(history.nums)[eligible], orders, lab.coverage, lab.prizes
     )
     first_prize = lab.prizes[0]
-    ladder = _ladder(lab.coverage, first_prize) if lab.stake_style == "ladder" else ()
+    ladder_v1 = lab.stake_style == "ladder" and lab.stake_rules == 1
+    ladder = _ladder(lab.coverage, first_prize) if ladder_v1 else ()
     sessions: list[ReferenceSession] = []
     balance, round_index = lab.capital, 0
     progression = _new_progression(lab)
@@ -229,7 +238,7 @@ def run_reference_lab(
         draws += 1
         wagered += stake
         paid += winnings
-        if lab.stake_style == "ladder":
+        if ladder_v1:
             round_index = 0 if first_hit else (round_index + 1) % len(ladder)
         if progression is not None:
             progression.settle(stake, winnings)

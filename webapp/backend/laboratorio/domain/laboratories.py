@@ -70,6 +70,19 @@ def _validate_max_stake_per_number(value):
         )
 
 
+STAKE_RULES_MESSAGE = "Las reglas de apuesta deben ser 1 (las de siempre) o 2 (corregidas)."
+
+
+def _validate_stake_rules(value):
+    if type(value) is not int or value not in (1, 2):
+        raise ValueError(STAKE_RULES_MESSAGE)
+
+
+def ladder_target_profit(capital, goal):
+    """Rules 2: the profit a ladder cycle aims at, a tenth of the way to the goal (at least 1)."""
+    return max(1, -(-(goal - capital) // 10))
+
+
 def _validate_name(name):
     if type(name) is not str or not name or name != name.strip():
         raise ValueError("name must be non-empty and trimmed")
@@ -109,7 +122,7 @@ def _financial_bounds(config):
     totals = max(max_wagered, max_paid, max_balance, abs(max_paid - max_wagered))
     if totals > MAX_SAFE_INTEGER:
         raise ValueError("financial replay bound exceeds safe SQLite/browser integer range")
-    if config.stake_style == "ladder":
+    if config.stake_style == "ladder" and config.stake_rules == 1:
         gain = config.prizes[0] - config.coverage
         invested = 0
         for _ in range(10):
@@ -140,6 +153,8 @@ class LaboratoryConfig:
     # Optional overrides of the ranking system (window, half-life, scope, components, tie-break).
     # ``None`` keeps today's fixed defaults and is never serialized (see ``ranking_params``).
     ranking_params: dict | None = field(default=None, hash=False)
+    # 1 (absent, never serialized) = historical stake rules; 2 = corrected ladder/progressions.
+    stake_rules: int = 1
 
     def __post_init__(self):
         number_list = get_list(self.list_id)
@@ -154,6 +169,7 @@ class LaboratoryConfig:
             raise ValueError(unavailable_message(self.system))
         _validate_max_session_draws(self.max_session_draws)
         _validate_max_stake_per_number(self.max_stake_per_number)
+        _validate_stake_rules(self.stake_rules)
         object.__setattr__(
             self,
             "ranking_params",
@@ -188,7 +204,7 @@ class LaboratoryConfig:
             raise ValueError(
                 "Oscar's Grind necesita que el premio del primer puesto sea mayor que la cobertura."
             )
-        if self.stake_style == "ladder":
+        if self.stake_style == "ladder" and self.stake_rules == 1:
             first_ladder_unit = max(
                 1, (10 + self.prizes[0] - self.coverage - 1) // (self.prizes[0] - self.coverage)
             )
@@ -226,6 +242,8 @@ class LaboratoryConfig:
             mapping["max_stake_per_number"] = self.max_stake_per_number
         if self.ranking_params is not None:
             mapping["ranking_params"] = copy.deepcopy(self.ranking_params)
+        if self.stake_rules != 1:
+            mapping["stake_rules"] = self.stake_rules
         return mapping
 
     @classmethod
@@ -254,6 +272,8 @@ class LaboratoryConfig:
             keys = keys | {"max_stake_per_number"}
         if type(value) is dict and "ranking_params" in value:
             keys = keys | {"ranking_params"}
+        if type(value) is dict and "stake_rules" in value:
+            keys = keys | {"stake_rules"}
         if (
             type(value) is not dict
             or set(value) != keys
@@ -275,6 +295,7 @@ class LaboratoryConfig:
             max_session_draws=value.get("max_session_draws"),
             max_stake_per_number=value.get("max_stake_per_number"),
             ranking_params=value.get("ranking_params"),
+            stake_rules=value.get("stake_rules", 1),
         )
 
 
@@ -345,6 +366,7 @@ class LaboratoryDefinition:
             config.list_id,
             config.max_session_draws,
             config.max_stake_per_number,
+            config.stake_rules,
         )
 
 

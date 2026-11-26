@@ -41,6 +41,9 @@ class ReferenceLab:
     max_session_draws: int | None = None
     # Optional bank cap on the stake per number in every draw (``None`` = no cap, as before).
     max_stake_per_number: int | None = None
+    # Stake rules: 1 = the historical ones (every Chance reference lab), 2 = corrected ladder and
+    # progressions (see ``engine.stake_styles``). Only opt-in owned laboratories use 2.
+    stake_rules: int = 1
 
 
 REFERENCE_LABS = (

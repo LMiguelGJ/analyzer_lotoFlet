@@ -37,6 +37,8 @@ export interface LaboratoryConfig {
   max_stake_per_number?: number;
   /** Optional ranking overrides (window, half-life, scope, components, tie-break). */
   ranking_params?: RankingParams;
+  /** Stake rules: absent = 1 (historical); 2 = corrected ladder and progressions (new labs send 2). */
+  stake_rules?: 1 | 2;
 }
 export interface LaboratoryDefinition {
   schema_version: number;

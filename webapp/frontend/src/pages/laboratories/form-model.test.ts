@@ -20,6 +20,7 @@ describe("laboratory form model", () => {
         prizes: [80, 8, 4, 2, 1],
         window_start: "2025-09-02 05:10",
         window_end: "2026-09-25 18:20",
+        stake_rules: 2,
       },
     });
   });

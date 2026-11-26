@@ -508,7 +508,7 @@ describe("laboratory workspace", () => {
     await user.type(field, "30");
     await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
     await waitFor(() => expect(m.createLaboratory).toHaveBeenCalledTimes(1));
-    expect(m.createLaboratory).toHaveBeenCalledWith("Con plazo", { ...config, max_session_draws: 30 });
+    expect(m.createLaboratory).toHaveBeenCalledWith("Con plazo", { ...config, stake_rules: 2, max_session_draws: 30 });
   });
 
   it("offers an optional maximum stake per number and sends it only when filled", async () => {
@@ -527,7 +527,7 @@ describe("laboratory workspace", () => {
     await user.type(field, "500");
     await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
     await waitFor(() => expect(m.createLaboratory).toHaveBeenCalledTimes(1));
-    expect(m.createLaboratory).toHaveBeenCalledWith("Con tope", { ...config, max_stake_per_number: 500 });
+    expect(m.createLaboratory).toHaveBeenCalledWith("Con tope", { ...config, stake_rules: 2, max_stake_per_number: 500 });
   });
 
   it("shows the stake cap in the sidebar and in the panel rules when the lab has one", async () => {
@@ -539,6 +539,20 @@ describe("laboratory workspace", () => {
     expect(screen.getByRole("link", { name: /tope RD\$500/ })).toBeInTheDocument();
     const rules = within(await screen.findByRole("region", { name: "Reglas del laboratorio" }));
     expect(rules.getByText("Apuesta máxima por número").parentElement).toHaveTextContent("RD$500");
+  });
+
+  it("shows which stake rules a lab uses: v1 for saved labs, v2 for corrected ones", async () => {
+    renderAt(`/laboratorios/${ID}`);
+    const old = within(await screen.findByRole("region", { name: "Reglas del laboratorio" }));
+    expect(old.getByText("Reglas de apuesta").parentElement).toHaveTextContent("Reglas v1");
+  });
+
+  it("shows Reglas v2 for a lab saved with the corrected rules", async () => {
+    const v2 = { ...definition, config: { ...config, stake_rules: 2 as const } };
+    m.getLaboratory.mockResolvedValue({ definition: v2, owned_run_count: 1, owned_session_count: 4 });
+    renderAt(`/laboratorios/${ID}`);
+    const rules = within(await screen.findByRole("region", { name: "Reglas del laboratorio" }));
+    expect(rules.getByText("Reglas de apuesta").parentElement).toHaveTextContent("Reglas v2");
   });
 
   it("does not mention a stake cap when the lab has none", async () => {
@@ -558,7 +572,7 @@ describe("laboratory workspace", () => {
     await user.type(screen.getByLabelText("Nombre"), "Transición propia");
     await user.click(screen.getByRole("button", { name: "Crear laboratorio" }));
     await waitFor(() => expect(m.createLaboratory).toHaveBeenCalledTimes(1));
-    expect(m.createLaboratory).toHaveBeenCalledWith("Transición propia", config);
+    expect(m.createLaboratory).toHaveBeenCalledWith("Transición propia", { ...config, stake_rules: 2 });
     expect(await screen.findByRole("heading", { name: "Transición propia", level: 2 })).toBeInTheDocument();
   });
 

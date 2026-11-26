@@ -127,6 +127,7 @@ function LaboratoryFormBody({ options, onCreated }: Props & { options: Laborator
       <Field id="lab-max_session_draws" label="Máximo de días por sesión" inputMode="numeric" value={values.max_session_draws} onChange={(event) => set("max_session_draws")(event.target.value)} error={errors.max_session_draws} hint="Si una sesión no llega a la meta en esos sorteos, termina y empieza otra." placeholder="Sin límite" />
       <Field id="lab-max_stake_per_number" label="Apuesta máxima por número" inputMode="numeric" value={values.max_stake_per_number} onChange={(event) => set("max_stake_per_number")(event.target.value)} error={errors.max_stake_per_number} hint="Como el tope de la banca: ningún número recibe más que esto por sorteo." placeholder="Sin tope" />
     </div>
+    <p className="ledger-hint lab-stake-rules-note">Reglas de apuesta corregidas (v2)</p>
     {anyParam && <Disclosure summary="Parámetros del sistema" className="lab-system-params">
       <p className="ledger-hint">Todo es opcional: vacío usa el valor por defecto (500 sorteos de ventana o vida media). Una ventana corta reacciona más rápido a los últimos sorteos.</p>
       <div className="lab-form-row">

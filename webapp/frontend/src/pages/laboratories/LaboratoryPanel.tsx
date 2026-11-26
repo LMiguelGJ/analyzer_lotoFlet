@@ -183,6 +183,7 @@ export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
         <div><dt>Cobertura</dt><dd>{config.coverage} {config.coverage === 1 ? "número seleccionado" : "números seleccionados"}</dd></div>
         {config.ranking_params !== undefined && <div><dt>Parámetros del sistema</dt><dd>{rankingParamsText(config.ranking_params).slice(3)}</dd></div>}
         <div><dt>Estilo de apuesta</dt><dd>{stakeLabel(config.stake_style)}</dd></div>
+        <div><dt>Reglas de apuesta</dt><dd>{config.stake_rules === 2 ? "Reglas v2" : "Reglas v1"}</dd></div>
         <div><dt>Capital inicial</dt><dd>{money(config.capital)}</dd></div>
         <div><dt>Meta de saldo</dt><dd>{money(config.goal)}</dd></div>
         {config.max_stake_per_number !== undefined && <div><dt>Apuesta máxima por número</dt><dd>{formatAbsoluteDOP(config.max_stake_per_number)}</dd></div>}

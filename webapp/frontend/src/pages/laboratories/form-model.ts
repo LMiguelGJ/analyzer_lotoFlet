@@ -240,6 +240,7 @@ export function parseLaboratoryForm(values: FormValues, positions: number = PRIZ
         ...(maxSessionDraws === null ? {} : { max_session_draws: maxSessionDraws }),
         ...(maxStakePerNumber === null ? {} : { max_stake_per_number: maxStakePerNumber }),
         ...(Object.keys(rankingParams).length === 0 ? {} : { ranking_params: rankingParams }),
+        stake_rules: 2,
       },
     },
   };
