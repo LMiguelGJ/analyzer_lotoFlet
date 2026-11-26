@@ -74,6 +74,17 @@ export interface LaboratoryWallet {
   out_of_pocket: number;
   final_wealth: number;
 }
+/** Result of the sessions that closed in one calendar year; the open session counts in its last draw's year. */
+export interface LaboratoryYearResult {
+  year: number;
+  net: number;
+  goals: number;
+  ruins: number;
+  timeouts: number;
+  sessions_closed: number;
+  /** Percentage points of the starting capital. */
+  return_pct: number;
+}
 export interface LaboratoryRunSummary {
   eligible_draws: number;
   gaps: number;
@@ -82,6 +93,8 @@ export interface LaboratoryRunSummary {
   session_sha256: string;
   session_count: number;
   wallet?: LaboratoryWallet;
+  /** Computed on read; null when the history no longer matches the run, absent on older servers. */
+  by_year?: LaboratoryYearResult[] | null;
   totals: ReferenceTotals;
 }
 export interface LaboratoryRun {

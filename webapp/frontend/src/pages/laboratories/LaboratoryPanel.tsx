@@ -14,7 +14,7 @@ import { stakeLabel, systemLabel } from "../reference-labs/lab-model";
 import { rankingParamsText } from "./form-model";
 import { count } from "./count";
 import { formatMean } from "./mean";
-import { deadlineSummary, expectedReturnPerPeso, formatAbsoluteDOP, formatAverageDays, formatHouseEdge, formatPercentShare, formatReturnOnWagered, formatReturnPerPeso, houseEdgePercent, isValidLaboratoryWallet, returnOnWagered, returnPerPeso } from "./result-model";
+import { deadlineSummary, expectedReturnPerPeso, formatAbsoluteDOP, formatAverageDays, formatHouseEdge, formatPercentShare, formatReturnOnWagered, formatReturnPerPeso, houseEdgePercent, isValidLaboratoryWallet, returnOnWagered, returnPerPeso, validYearResults, yearRowPresentation } from "./result-model";
 import "../reference-labs/reference-labs.css";
 
 const RUN_PAGE = 200;
@@ -167,6 +167,7 @@ export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
   const config = definition.config;
   const totals = selected?.summary.totals;
   const deadline = totals ? deadlineSummary(totals) : null;
+  const years = selected ? validYearResults(selected.summary.by_year) : null;
   const wallet = selected && totals && isValidLaboratoryWallet(selected.summary.wallet, totals.total_net) ? selected.summary.wallet : null;
 
   return <section className="reference-page" aria-labelledby="lab-title">
@@ -259,6 +260,13 @@ export function LaboratoryPanel({ labId, onDeleted, onRunsChanged }: Props) {
         <div><dt>Sin ranking entre extremos</dt><dd>{formatNumber(selected.summary.gaps)}</dd></div>
       </dl>
       </section>
+      {years && <section className="lab-result-years" aria-labelledby="lab-years-title">
+        <h4 id="lab-years-title" className="lab-result-subheading">Resultado por año</h4>
+        <div className="reference-table-wrap" role="region" aria-label="Resultado por año, tabla" tabIndex={0}><table className="reference-table lab-years-table"><thead><tr><th scope="col">Año</th><th scope="col">Ganancia/pérdida</th><th scope="col">% sobre el capital</th><th scope="col">Metas</th><th scope="col">Quiebras</th></tr></thead><tbody>
+          {years.map((row) => { const view = yearRowPresentation(row); return <tr key={row.year}><th scope="row">{row.year}</th><td><span className="lab-year-net" data-state={view.state}>{view.net}</span><span className="lab-sr-only">{view.label}</span></td><td>{view.percent}</td><td>{formatNumber(row.goals)}</td><td>{formatNumber(row.ruins)}</td></tr>; })}
+        </tbody></table></div>
+        <p className="lab-years-hint">Cada sesión cuenta en el año en que cierra; la sesión abierta, en el año de su último sorteo.</p>
+      </section>}
       <div className="lab-result-details">
       <details className="lab-session-detail">
         <summary>Detalle de sesiones</summary>

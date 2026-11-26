@@ -242,6 +242,46 @@ describe("laboratory workspace", () => {
     expect(within(result).getByText("Incompletas").parentElement).toHaveTextContent("1");
   });
 
+  it("shows the result by year with signs, colours, percentages, goals and ruins", async () => {
+    const by_year = [
+      { year: 2019, net: 379, goals: 80, ruins: 0, timeouts: 0, sessions_closed: 80, return_pct: 7.58 },
+      { year: 2020, net: -1250, goals: 10, ruins: 2, timeouts: 0, sessions_closed: 12, return_pct: -25 },
+      { year: 2021, net: 0, goals: 0, ruins: 0, timeouts: 0, sessions_closed: 0, return_pct: 0 },
+    ];
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, by_year } });
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    const section = within(result).getByRole("region", { name: "Resultado por año" });
+    expect(within(section).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Año", "Ganancia/pérdida", "% sobre el capital", "Metas", "Quiebras"]);
+    const rows = within(section).getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(3);
+    const [gain, loss, even] = rows;
+    expect(within(gain).getByRole("rowheader")).toHaveTextContent("2019");
+    const gainNet = within(gain).getByText("▲ +RD$379");
+    expect(gainNet).toHaveAttribute("data-state", "gain");
+    expect(within(gain).getByText("+7,58 %")).toBeInTheDocument();
+    expect(within(gain).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["▲ +RD$379ganancia de RD$379", "+7,58 %", "80", "0"]);
+    const lossNet = within(loss).getByText("▼ −RD$1.250");
+    expect(lossNet).toHaveAttribute("data-state", "loss");
+    expect(within(loss).getByText("−25,00 %")).toBeInTheDocument();
+    expect(within(loss).getAllByRole("cell")[2]).toHaveTextContent("10");
+    expect(within(loss).getAllByRole("cell")[3]).toHaveTextContent("2");
+    expect(within(even).getByText("= RD$0")).toHaveAttribute("data-state", "even");
+    expect(within(section).getByText("pérdida de RD$1.250")).toBeInTheDocument();
+  });
+
+  it.each([["null", null], ["absent", undefined], ["empty", []]])("hides the result by year when it is %s", async (_name, by_year) => {
+    m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, by_year } });
+    const user = userEvent.setup();
+    renderAt(`/laboratorios/${ID}`);
+    await user.click(await screen.findByRole("button", { name: "Ver resultado" }));
+    const result = await screen.findByRole("region", { name: "Resultado guardado" });
+    expect(within(result).queryByRole("region", { name: "Resultado por año" })).not.toBeInTheDocument();
+    expect(within(result).queryByText("Resultado por año")).not.toBeInTheDocument();
+  });
+
   it("keeps result hierarchy semantic without interrupting the wallet or session summary", async () => {
     m.getLaboratoryRun.mockResolvedValue({ ...run, summary: { ...run.summary, totals: { ...totals, total_net: 800 } } });
     const user = userEvent.setup();

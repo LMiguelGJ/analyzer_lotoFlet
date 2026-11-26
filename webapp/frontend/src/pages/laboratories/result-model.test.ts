@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deadlineSummary, formatAbsoluteDOP, formatAverageDays, formatPercentShare, formatReturnOnWagered, isValidLaboratoryWallet, returnOnWagered } from "./result-model";
+import { deadlineSummary, formatAbsoluteDOP, formatAverageDays, formatPercentShare, formatReturnOnWagered, isValidLaboratoryWallet, returnOnWagered, validYearResults, yearRowPresentation } from "./result-model";
 
 describe("certified wallet presentation", () => {
   const wallet = { policy: "retain-gains-top-up-v1", out_of_pocket: 2000, final_wealth: 2800 } as const;
@@ -55,5 +55,23 @@ describe("deadline presentation", () => {
     expect(empty).toMatchObject({ inTimePercent: null, averageDaysToGoal: null, timeoutNet: null });
     expect(formatPercentShare(null)).toBe("No disponible");
     expect(formatAverageDays(null)).toBe("No disponible");
+  });
+});
+
+describe("result by year presentation", () => {
+  const row = { year: 2019, net: 379, goals: 80, ruins: 0, timeouts: 0, sessions_closed: 80, return_pct: 7.58 };
+  it("marks gains with an up arrow, losses with a down arrow and zero as even; colour is never the only cue", () => {
+    expect(yearRowPresentation(row)).toEqual({ state: "gain", net: "▲ +RD$379", label: "ganancia de RD$379", percent: "+7,58 %" });
+    expect(yearRowPresentation({ ...row, net: -1250, return_pct: -25 })).toEqual({ state: "loss", net: "▼ −RD$1.250", label: "pérdida de RD$1.250", percent: "−25,00 %" });
+    expect(yearRowPresentation({ ...row, net: 0, return_pct: 0 })).toEqual({ state: "even", net: "= RD$0", label: "sin ganancia ni pérdida", percent: "+0,00 %" });
+  });
+  it("accepts only a non-empty list of well-formed rows, otherwise the table stays hidden", () => {
+    expect(validYearResults([row])).toEqual([row]);
+    expect(validYearResults(null)).toBeNull();
+    expect(validYearResults(undefined)).toBeNull();
+    expect(validYearResults([])).toBeNull();
+    expect(validYearResults([{ ...row, net: 1.5 }])).toBeNull();
+    expect(validYearResults([{ ...row, year: "2019" }])).toBeNull();
+    expect(validYearResults([row, { year: 2020 }])).toBeNull();
   });
 });

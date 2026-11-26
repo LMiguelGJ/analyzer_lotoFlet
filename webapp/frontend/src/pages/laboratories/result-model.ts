@@ -1,6 +1,6 @@
-import type { LaboratoryWallet } from "../../api/laboratories";
+import type { LaboratoryWallet, LaboratoryYearResult } from "../../api/laboratories";
 import type { ReferenceTotals } from "../../api/referenceLabs";
-import { formatNumber } from "../../lib/format";
+import { formatNumber, formatSignedDOP } from "../../lib/format";
 
 const percentage = new Intl.NumberFormat("es-ES", {
   minimumFractionDigits: 2,
@@ -86,3 +86,30 @@ export function deadlineSummary(totals: ReferenceTotals): DeadlineSummary | null
 const oneDecimal = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: false });
 export const formatPercentShare = (value: number | null): string => (value === null ? "No disponible" : `${oneDecimal.format(value)} %`);
 export const formatAverageDays = (value: number | null): string => (value === null ? "No disponible" : `${oneDecimal.format(value)} días`);
+
+const YEAR_FIELDS = ["year", "net", "goals", "ruins", "timeouts", "sessions_closed"] as const;
+
+/** The by-year rows when the server sent a non-empty, well-formed list; null hides the table. */
+export function validYearResults(value: unknown): LaboratoryYearResult[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const valid = value.every((row) => typeof row === "object" && row !== null
+    && YEAR_FIELDS.every((key) => Number.isSafeInteger((row as Record<string, unknown>)[key]))
+    && Number.isFinite((row as Record<string, unknown>).return_pct));
+  return valid ? (value as LaboratoryYearResult[]) : null;
+}
+
+export interface YearRowPresentation {
+  state: "gain" | "loss" | "even";
+  /** Visible text: the arrow and sign carry the meaning so colour is never the only cue. */
+  net: string;
+  /** Spoken equivalent, e.g. "ganancia de RD$379". */
+  label: string;
+  percent: string;
+}
+
+export function yearRowPresentation(row: LaboratoryYearResult): YearRowPresentation {
+  const percent = formatReturnOnWagered(row.return_pct);
+  if (row.net > 0) return { state: "gain", net: `▲ ${formatSignedDOP(row.net)}`, label: `ganancia de ${formatAbsoluteDOP(row.net)}`, percent };
+  if (row.net < 0) return { state: "loss", net: `▼ ${formatSignedDOP(row.net)}`, label: `pérdida de ${formatAbsoluteDOP(-row.net)}`, percent };
+  return { state: "even", net: `= ${formatAbsoluteDOP(0)}`, label: "sin ganancia ni pérdida", percent };
+}

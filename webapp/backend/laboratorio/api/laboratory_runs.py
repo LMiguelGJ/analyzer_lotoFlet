@@ -1,8 +1,11 @@
 """Owner-scoped execution and historical results for managed laboratories."""
 
+import copy
 import logging
 import sqlite3
+import threading
 import uuid
+from collections import OrderedDict
 from dataclasses import asdict
 from typing import NoReturn
 
@@ -18,6 +21,7 @@ from laboratorio.engine.owned_laboratory_service import (
     OwnedLaboratoryServiceError,
     execute_owned_laboratory,
 )
+from laboratorio.engine.yearly_results import eligible_labels, results_by_year
 from laboratorio.storage.laboratory_store import LaboratoryStoreError
 from laboratorio.storage.owned_laboratory_run_store import (
     OwnedLaboratoryRunCapacityError,
@@ -30,6 +34,9 @@ router = APIRouter(prefix="/laboratories")
 _MAX_I64 = 2**63 - 1
 _CAPABILITIES = {"session_summary": True, "per_bet_trace": False}
 _LOG = logging.getLogger(__name__)
+_BY_YEAR_CACHE_LIMIT = 128
+_by_year_cache: OrderedDict = OrderedDict()
+_by_year_lock = threading.Lock()
 
 
 class CreateLaboratoryRun(StrictBody):
@@ -71,13 +78,65 @@ def _stored(request, owner_id, run_id):
     return record
 
 
-def _projection(record):
+def _by_year(request, snapshot, summary, sessions=None, *, owner_id=None, run_id=None):
+    """Per-year result of a saved run, computed on read; ``None`` when it cannot be certified.
+
+    Nothing is stored: the draw labels come from the list's current history, which must be the
+    one the run replayed (same SHA-256, same eligible draws, first and last label).
+    """
+    config = snapshot.definition.config
+    try:
+        data = request.app.state.lists.lab_data(config.list_id)
+    except ListError:
+        return None
+    if snapshot.history_sha256 != data.history.sha256:
+        return None
+    key = (
+        summary["session_sha256"],
+        data.history.sha256,
+        config.window_start,
+        config.window_end,
+        config.capital,
+    )
+    with _by_year_lock:
+        if key in _by_year_cache:
+            _by_year_cache.move_to_end(key)
+            return copy.deepcopy(_by_year_cache[key])
+    labels = eligible_labels(data.history, data.rankings, config.window_start, config.window_end)
+    if len(labels) != summary["eligible_draws"]:
+        return None
+    if sessions is None:
+        try:
+            record = request.app.state.repo.get_owned_laboratory_run(owner_id, run_id)
+        except OwnedLaboratoryRunStoreError:
+            return None
+        if record is None:
+            return None
+        sessions = record["sessions"]
+    rows = results_by_year(
+        sessions,
+        labels,
+        capital=config.capital,
+        eligible_draws=summary["eligible_draws"],
+        first=summary["first"],
+        last=summary["last"],
+    )
+    if rows is not None:
+        with _by_year_lock:
+            _by_year_cache[key] = rows
+            while len(_by_year_cache) > _BY_YEAR_CACHE_LIMIT:
+                _by_year_cache.popitem(last=False)
+        rows = copy.deepcopy(rows)
+    return rows
+
+
+def _projection(request, record):
     result = record["result"]
     snapshot = OwnedLaboratoryRunSnapshot.from_mapping(record["snapshot"])
     wallet = derive_wallet(
         record["sessions"], snapshot.definition.config.capital, result["totals"]["total_net"]
     )
-    return {
+    projection = {
         **{
             key: record[key]
             for key in ("id", "owner_laboratory_id", "lab_id", "contract_version", "created_at")
@@ -94,16 +153,25 @@ def _projection(record):
         },
         "capabilities": dict(_CAPABILITIES),
     }
+    projection["summary"]["by_year"] = _by_year(
+        request, snapshot, projection["summary"], record["sessions"]
+    )
+    return projection
 
 
-def _compact_projection(record):
+def _compact_projection(request, record):
+    snapshot = OwnedLaboratoryRunSnapshot.from_mapping(record["snapshot"])
+    summary = dict(record["summary"])
+    summary["by_year"] = _by_year(
+        request, snapshot, summary, owner_id=record["owner_laboratory_id"], run_id=record["id"]
+    )
     return {
         **{
             key: record[key]
             for key in ("id", "owner_laboratory_id", "lab_id", "contract_version", "created_at")
         },
         "snapshot": record["snapshot"],
-        "summary": record["summary"],
+        "summary": summary,
         "capabilities": dict(_CAPABILITIES),
     }
 
@@ -183,7 +251,7 @@ def create_laboratory_run(laboratory_id: str, body: CreateLaboratoryRun, request
             raise HTTPException(500, "No se pudo guardar la corrida.") from None
         if record is None:
             raise HTTPException(500, "La corrida ya no está disponible después de guardarla.")
-    return _projection(record)
+    return _projection(request, record)
 
 
 @router.get("/{laboratory_id}/runs")
@@ -235,4 +303,4 @@ def get_laboratory_run(laboratory_id: str, run_id: str, request: Request):
     _definition(request, laboratory_id)
     with request.app.state.reference_lab_lock:
         record = _stored_compact(request, laboratory_id, run_id)
-    return _compact_projection(record)
+    return _compact_projection(request, record)
